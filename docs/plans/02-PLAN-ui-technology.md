@@ -1,6 +1,7 @@
 # Plan 02: UI technology: WebView2, native, or both
 
-Status: draft 2026-11-10, revised 2026-11-10 (option A, shell namespace, Evergreen); spike not started.
+Status: draft 2026-11-10, revised 2026-11-10 (option A, shell namespace, Evergreen); spike executed 2026-11-10 except
+the checks by hand (5.3); see 5. As built.
 
 ## 1. What this is about
 
@@ -127,8 +128,10 @@ The page only draws drags; every drag that leaves or enters Foldex, and every fi
 
 ### 3.7 The spike
 
-Done before plans 03 to 05 go into detail on screen behaviour. A throwaway branch on top of plan 01's host, with a
-minimal page; each check pass or fail, timings only from what was measured:
+Done before plans 03 to 05 go into detail on screen behaviour, on the branch `plan01-foundation` on top of plan 01's
+host. Its host code is not thrown away: the listing, icons, Explorer's menu, drag, file operations, preview handlers
+and the helper are the host services Foldex keeps (`src/Shell`, `ElevatedHelper.cs`); only the page is a stand-in
+until plan 03. Each check pass or fail, timings only from what was measured; the results are in 5.
 
 1. A folder with very many files listed in the page with virtual scrolling and icons from the host: time to show,
    scrolling, sorting. The same folder in a native `ListView` (option B) as the yardstick.
@@ -144,12 +147,68 @@ minimal page; each check pass or fail, timings only from what was measured:
 9. Outlook mails and attachments dragged into the page (3.6); if WebView2 does not pass them, the host's own drop
    target with `AllowExternalDrop` off.
 
-The outcome goes into this plan (how each risk is solved, with the measured figures) and the spike branch is deleted.
-
 ### 3.8 Tests
 
-The spike is its own test. After it: unit tests for the host, and the CDP-driven test copy as in LexPen.
+The spike is its own test (5). Unit tests for the host services (`tests/Foldex.Tests/ShellTests.cs`), and the
+CDP-driven test copy as in LexPen.
 
 ## 4. Open questions
 
-None.
+1. **Closing Foldex while a file operation runs.** Closing the last window ends the process, and with it the copy
+   (5.2, item 8). Foldex keeps running without a window until the operations are done (Windows' own progress dialog
+   stays), or asks first, or both? Suggestion: ask, with "Keep running until done" as the default answer.
+
+## 5. As built (spike, 2026-11-10)
+
+### 5.1 What was built
+
+- `src/Shell/`: `ShellNative.cs` (the shell's COM interfaces and functions), `StaWorker.cs` (an STA thread for shell work;
+  a thread of its own per listing), `ShellListing.cs` (folders on disk with .NET, everything else as shell items; in
+  batches every 250 ms; cancellable), `ShellIcons.cs` (system image list, icon by type, own icons of exe/lnk/ico/...
+  per row in view, PNG per index), `ShellMenu.cs` (Explorer's menu from the items' shell array, IContextMenu3 message
+  forwarding, verbs by name), `ShellDrag.cs` (`SHDoDragDrop` with a shell data object), `FileOps.cs` (IFileOperation on
+  an STA thread per operation, progress sink, state kept by the host), `PreviewHost.cs` (a preview handler in a native
+  panel over the page's area; snapshot by `PrintWindow`).
+- `ElevatedHelper.cs`: `Foldex.exe --elevated-helper <pipe> <parent>`, started with `runas`; the pipe's access for the
+  user only, the helper accepting only its parent, Foldex accepting only the helper it started; one operation (list).
+- Items whose parsing name does not lead back to them (the Recycle Bin's) get an id `pidl:n` for an ID list the host
+  keeps (`Native.IdOf`); the page still never sees an ID list.
+- The page (`web/`): a stand-in for plan 03 with one list (virtual scrolling), the preview area, the operations, a popup
+  to test airspace.
+- `Program.cs`: shell names on the command line (`shell:RecycleBinFolder`, `::{...}`) are no longer made into paths.
+
+### 5.2 Results
+
+Measured on this PC with the debug build in a test copy (`FOLDEX_DATA` in the scratchpad, debugging port 9333).
+
+| # | Check | Result |
+|---|---|---|
+| 1 | 50,000 empty files in 10 types | The page: host listing 285 ms, shown 857 ms (warm; 1320 ms cold); the native `ListView` yardstick: listing 464 ms, first paint 1040 ms. First try took 6880 ms: per-file icons of the 5000 `.exe` files (6935 ms of the host's time) and `localeCompare` sorting (195 ms against 17 ms with `Intl.Collator`); fixed by type icons first and own icons per row in view, and a Collator. Pass |
+| 2 | Drag out and in | Built (`dragOut`, `drop`); not tried: needs a real mouse. By hand, 5.3 |
+| 3 | Explorer's menu | One folder's items: Explorer's full menu with every extension (LexPen's entries, 7-Zip, TortoiseGit, PowerRename, Foxit, ...). Showing it with the mouse and owner-drawn submenus: by hand, 5.3. Pass for building it |
+| 4 | Preview handler and airspace | Word (.docx), PDF, markdown and HTML handlers ran out of process (local server, initialised with the file) in the native panel over the page's area. A page popup opened over it does not show at all (covered). With the snapshot swap (the panel drawn by `PrintWindow`, hidden, its picture in the area) the popup shows over the document. A first version read the snapshot from the screen and captured whatever window lay on top: never read the screen. Pass |
+| 5 | This PC, Network, Recycle Bin | This PC: the drives with their icons. Network: 0 items on this PC [why not yet checked: network discovery]. Recycle Bin: 6871 items in 122577 ms, in batches (4974 shown after 3 s); the shell's own enumerator is the slow part (13321 ms of 15013 ms in a probe), so listings run on a thread each and a new location cancels the old. Delete to the Recycle Bin and Restore (its own verb `undelete` on the bin's item) worked; by path the item gets an ordinary file's menu without Restore, hence the `pidl:n` ids. Pass |
+| 6 | Elevated helper | Built; refusal of anything outside the set unit-tested. Listing through UAC: by hand, 5.3 |
+| 7 | Items of different folders | No Explorer menu (E_FAIL from the shell array). A try through the desktop folder's `GetUIObjectOf` with full ID lists ended in an access violation in coreclr (my declaration or the shell: not pursued). So such a selection gets Foldex's own menu (plan 06, 3.4). Dragging them out: by hand, 5.3 |
+| 8 | Recovery during a copy | Copy of the 50,000 files: renderer killed at 2%, browser process killed at 3%; the page came back each time with the copy's progress (6% after the second), the copy went on (1696, then 2820 files on disk). Closing Foldex during the copy stopped it (25944 files, no change after 3 s): open question 1. Pass |
+| 9 | Outlook mails into the page | Built (the drop reports what came along); by hand, 5.3 |
+
+### 5.3 By hand (a real mouse, Outlook, the UAC prompt)
+
+Start the debug build or `C:\win32app\Foldex\Foldex.exe`, then:
+
+1. Drag a file and a selection of files from the list into Explorer, into an Outlook mail, into LexPen; Shift and Ctrl
+   while dropping (move, copy). The status line reports a failure.
+2. Drag files from Explorer onto the list and onto a folder in it: copied there, progress at the bottom.
+3. Drag a mail and an attachment from Outlook onto the list: the status line says what came along when nothing could be
+   copied.
+4. Right-click a file: Explorer's menu at the mouse; open 7-Zip's and TortoiseGit's submenus (drawn by the extensions);
+   Shift+right-click for the extended verbs; Properties, Delete.
+5. A folder you cannot read (for example `C:\Program Files\WindowsApps`): the button List as administrator; Yes at the
+   prompt lists it, No reports it.
+
+### 5.4 Known limits of the stand-in page
+
+- The selection is kept by position, so a batch arriving after a selection can move it; plan 03's panes keep it by id.
+- Tokens (`pidl:n`) are kept for the session and never freed.
+- Rename from Explorer's menu does nothing yet (plan 03).

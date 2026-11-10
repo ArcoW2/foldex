@@ -86,6 +86,20 @@ sealed class AppHost : ApplicationContext
 
     public IReadOnlyList<MainForm> Windows => windows;
 
+    /// <summary>Shell work off the UI thread (listing, icons).</summary>
+    public Shell.StaWorker ShellWork { get; } = new("shell");
+
+    /// <summary>The file operations of every window; each window is told of every change.</summary>
+    public Shell.FileOps FileOps { get; }
+
+    public AppHost()
+    {
+        FileOps = new Shell.FileOps(op =>
+        {
+            foreach (var w in windows) w.Post(new JsonObject { ["event"] = "fileOp", ["op"] = op.ToJson() });
+        });
+    }
+
     /// <summary>The browser environment every window shares: its own data folder in State\ (so its processes are
     /// Foldex's own, not shared with other apps' WebView2), no other process allowed in (docs/plans/02, 3.5).</summary>
     public Task<CoreWebView2Environment> WebEnvironment()

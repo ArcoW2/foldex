@@ -12,10 +12,16 @@ static class Program
     [STAThread]
     static void Main(string[] args)
     {
+        // The elevated helper (docs/plans/05-PLAN-elevation.md 3.3): no window, no instance of its own.
+        if (args.Length == 3 && args[0] == ElevatedHelper.Switch && int.TryParse(args[2], out var parent))
+        {
+            ElevatedHelper.Run(args[1], parent);
+            return;
+        }
         ApplicationConfiguration.Initialize();
         var (newWindow, rest) = ParseArgs(args);
         var shift = newWindow || (Control.ModifierKeys & Keys.Shift) != 0;
-        var paths = rest.Select(Path.GetFullPath).ToArray();   // against this process's current folder
+        var paths = rest.Select(FullName).ToArray();
 
         // One instance per user and exe: a debug build and the published one do not meet.
         var name = PipeName(Environment.ProcessPath ?? AppContext.BaseDirectory, WindowsIdentity.GetCurrent().User?.Value);
@@ -49,6 +55,10 @@ static class Program
         static bool IsNewWindow(string a) => a is "-n" or "--new-window";
         return (args.Any(IsNewWindow), args.Where(a => !IsNewWindow(a)).ToArray());
     }
+
+    /// <summary>A path against this process's current folder; a shell name ("::{guid}", "shell:RecycleBinFolder") as it is.</summary>
+    internal static string FullName(string arg) =>
+        arg.StartsWith("::", StringComparison.Ordinal) || arg.StartsWith("shell:", StringComparison.OrdinalIgnoreCase) ? arg : Path.GetFullPath(arg);
 
     // Hands the paths to the running instance; false when it does not answer.
     static bool Send(string name, string[] paths, bool shift)

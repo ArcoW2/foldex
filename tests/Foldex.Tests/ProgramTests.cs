@@ -18,6 +18,21 @@ public class ProgramTests
         Assert.Equal([@"C:\Temp"], paths);
     }
 
+    [Theory]
+    [InlineData("shell:RecycleBinFolder")]
+    [InlineData("::{20D04FE0-3AEA-1069-A2D8-08002B30309D}")]
+    [InlineData(@"C:\Windows")]
+    public void ShellNamesAndFullPathsStayAsTheyAre(string arg)
+    {
+        Assert.Equal(arg, Program.FullName(arg));
+    }
+
+    [Fact]
+    public void RelativePathsBecomeFull()
+    {
+        Assert.Equal(Path.Combine(Environment.CurrentDirectory, "sub"), Program.FullName("sub"));
+    }
+
     [Fact]
     public void PipeNameIsPerUserAndExeIgnoringCase()
     {

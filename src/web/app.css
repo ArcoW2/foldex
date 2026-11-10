@@ -2,7 +2,11 @@
   --bg: #ffffff;
   --fg: #1f2328;
   --muted: #656d76;
+  --line: #d0d7de;
+  --hover: #f3f4f6;
+  --selected: #cfe3ff;
   --warn: #9a6700;
+  --row: 22px;
   color-scheme: light;
 }
 
@@ -10,6 +14,9 @@
   --bg: #1e1e1e;
   --fg: #d4d4d4;
   --muted: #9da5b4;
+  --line: #3c3c3c;
+  --hover: #2a2d2e;
+  --selected: #094771;
   --warn: #d29922;
   color-scheme: dark;
 }
@@ -19,23 +26,137 @@ html, body {
   height: 100%;
   background: var(--bg);
   color: var(--fg);
-  font: 14px "Segoe UI", system-ui, sans-serif;
+  font: 13px "Segoe UI", system-ui, sans-serif;
 }
 
-#start {
-  padding: 32px 40px;
+body {
+  display: flex;
+  flex-direction: column;
 }
 
-#start h1 {
-  margin: 0 0 4px;
-  font-size: 28px;
+#bar {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+#brand {
   font-weight: 600;
+  margin-right: 8px;
 }
 
-#version, .note {
+#version {
+  color: var(--muted);
+  font-weight: normal;
+}
+
+#location {
+  flex: 1;
+  min-width: 100px;
+}
+
+#body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  position: relative;
+}
+
+#list {
+  flex: 1;
+  overflow-y: auto;
+  position: relative;
+  outline: none;
+}
+
+#rows {
+  position: relative;
+}
+
+.row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: var(--row);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.row:hover {
+  background: var(--hover);
+}
+
+.row.selected {
+  background: var(--selected);
+}
+
+.row img {
+  width: 16px;
+  height: 16px;
+}
+
+.row .name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.row .size, .row .date {
+  color: var(--muted);
+  width: 140px;
+  text-align: right;
+}
+
+.row.hidden .name {
+  opacity: 0.6;
+}
+
+#preview {
+  width: 40%;
+  border-left: 1px solid var(--line);
+  background-size: 100% 100%;
+  position: relative;
+}
+
+#previewText {
+  padding: 12px;
   color: var(--muted);
 }
 
-#problems li {
+#menu {
+  position: absolute;
+  right: 20%;
+  top: 40px;
+  width: 340px;
+  padding: 12px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+}
+
+footer {
+  border-top: 1px solid var(--line);
+  padding: 4px 8px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+#status {
+  color: var(--muted);
+}
+
+#status.warn {
   color: var(--warn);
+}
+
+#ops {
+  margin: 0;
+  padding-left: 18px;
 }

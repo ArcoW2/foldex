@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json.Nodes;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
+using Foldex.Shell;
 
 namespace Foldex;
 
@@ -31,7 +32,10 @@ sealed class MainForm : Form
         if (app.Windows.Count > 0) Location += new Size(32, 32);   // a second window not exactly over the first
         if (app.State?.Maximized == true) WindowState = FormWindowState.Maximized;
         AddBrowser();
+        preview = new PreviewHost(this);
     }
+
+    readonly PreviewHost preview;
 
     static Rectangle DefaultBounds()
     {
@@ -105,10 +109,12 @@ sealed class MainForm : Form
         core.ContextMenuRequested += (_, m) => WebFiles.BrowserMenu(m);
         core.DocumentTitleChanged += (_, _) => Text = core.DocumentTitle is { Length: > 0 } t ? t : "Foldex";
         // Not inside a WebView2 event handler: dialogs and long work must not run there.
+        // Files dropped from Explorer come along as objects that carry their path (docs/plans/02 3.6).
         core.WebMessageReceived += (_, m) =>
         {
             var json = m.WebMessageAsJson;
-            BeginInvoke(() => OnMessage(json));
+            var files = m.AdditionalObjects?.OfType<CoreWebView2File>().Select(f => f.Path).ToArray() ?? [];
+            BeginInvoke(() => OnMessage(json, files));
         };
         core.ProcessFailed += OnProcessFailed;
         core.Navigate($"https://{WebFiles.Host}/index.html");
@@ -138,9 +144,10 @@ sealed class MainForm : Form
         });
     }
 
-    void OnMessage(string json)
+    async void OnMessage(string json, string[] files)
     {
         if (JsonNode.Parse(json) is not JsonObject msg) return;
+        var ids = msg["ids"]?.AsArray().Select(n => n!.GetValue<string>()).ToList() ?? [];
         switch (msg["op"]?.GetValue<string>())
         {
             case "ready":
@@ -153,11 +160,200 @@ sealed class MainForm : Form
                     ["commit"] = commit,
                     ["settings"] = SettingsFile.Load(AppHost.DataDir),
                     ["paths"] = PathsArray(paths),
+                    ["ops"] = new JsonArray(app.FileOps.All.Select(o => (JsonNode)o.ToJson()).ToArray()),
                 });
                 foreach (var queued in queue) web.CoreWebView2.PostWebMessageAsJson(queued);
                 queue.Clear();
                 break;
+            case "list":
+                await List(msg["location"]!.GetValue<string>(), msg["req"]?.GetValue<int>() ?? 0);
+                break;
+            case "listElevated":
+                await ListElevated(msg["location"]!.GetValue<string>(), msg["req"]?.GetValue<int>() ?? 0);
+                break;
+            case "icons":
+                var wanted = msg["indexes"]!.AsArray().Select(n => n!.GetValue<int>()).ToList();
+                var icons = await app.ShellWork.Run(() =>
+                {
+                    var o = new JsonObject();
+                    foreach (var i in wanted) o[i.ToString()] = ShellIcons.Png(i);
+                    return o;
+                });
+                Post(new JsonObject { ["event"] = "icons", ["icons"] = icons });
+                break;
+            case "ownIcons":
+            {
+                var own = await app.ShellWork.Run(() =>
+                {
+                    var o = new JsonObject();
+                    foreach (var id in ids) o[id] = ShellIcons.OwnOf(id);
+                    return o;
+                });
+                Post(new JsonObject { ["event"] = "ownIcons", ["icons"] = own });
+                break;
+            }
+            case "menu":
+                ShowMenu(ids, ToScreen(msg), msg["extended"]?.GetValue<bool>() == true);
+                break;
+            case "menuTexts":
+            {
+                var (menu, error) = ShellMenu.Create(ids, false);
+                using (menu)
+                    Post(new JsonObject
+                    {
+                        ["event"] = "menuTexts", ["error"] = error,
+                        ["texts"] = new JsonArray((menu?.Texts() ?? []).Select(t => (JsonNode?)t).ToArray()),
+                    });
+                break;
+            }
+            case "invokeVerb":
+            {
+                var (menu, error) = ShellMenu.Create(ids, false);
+                using (menu)
+                {
+                    var ok = menu?.InvokeVerb(this, msg["verb"]!.GetValue<string>()) == true;
+                    Post(new JsonObject { ["event"] = "verbDone", ["ok"] = ok, ["error"] = error });
+                }
+                break;
+            }
+            case "dragOut":
+            {
+                var (effect, error, source) = ShellDrag.Start(this, ids);
+                Post(new JsonObject { ["event"] = "dragDone", ["effect"] = effect, ["error"] = error, ["source"] = source });
+                break;
+            }
+            case "drop":
+                // Files from Explorer onto a folder of the page: copied there (the spike's rule; plan 03 decides more).
+                Post(new JsonObject
+                {
+                    ["event"] = "dropped", ["count"] = files.Length,
+                    ["types"] = msg["types"]?.DeepClone(), ["target"] = msg["target"]?.DeepClone(),
+                });
+                if (files.Length > 0 && msg["target"]?.GetValue<string>() is { } target)
+                    app.FileOps.Start("copy", files, target, Handle, false);
+                break;
+            case "fileOp":
+                app.FileOps.Start(msg["kind"]!.GetValue<string>(), ids, msg["target"]?.GetValue<string>(), Handle,
+                    msg["confirmed"]?.GetValue<bool>() == true);
+                break;
+            case "preview":
+            {
+                var path = msg["path"]!.GetValue<string>();
+                var (handler, error) = preview.Show(path, AreaOf(msg["rect"]!));
+                Post(new JsonObject { ["event"] = "previewShown", ["path"] = path, ["handler"] = handler, ["error"] = error });
+                break;
+            }
+            case "previewMove":
+                preview.Move(AreaOf(msg["rect"]!));
+                break;
+            case "previewSnapshot":
+                Post(new JsonObject { ["event"] = "previewSnapshot", ["url"] = preview.Snapshot() });
+                break;
+            case "previewRestore":
+                preview.Restore();
+                break;
+            case "previewClose":
+                preview.Unload();
+                break;
+            case "nativeList":
+                Post(await NativeListYardstick(msg["location"]!.GetValue<string>()));
+                break;
         }
+    }
+
+    CancellationTokenSource? listing;   // the listing running for this window; a new one stops it
+
+    // On a thread of its own: a slow location never holds up the next one; what is read so far comes in batches.
+    async Task List(string location, int req)
+    {
+        listing?.Cancel();
+        var cancel = listing = new CancellationTokenSource();
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        var r = await StaWorker.Once("listing", () => ShellListing.List(location,
+            part => BeginInvoke(() => Post(new JsonObject { ["event"] = "listing", ["req"] = req, ["entries"] = part })),
+            cancel.Token));
+        if (r.Cancelled) return;
+        var name = await StaWorker.Once("name", () => ShellListing.NameOf(location));
+        var answer = new JsonObject
+        {
+            ["event"] = "listed", ["req"] = req, ["location"] = location, ["name"] = name, ["kind"] = r.Kind,
+            ["entries"] = r.Entries, ["error"] = r.Error, ["denied"] = r.Denied, ["enumMs"] = r.Milliseconds, ["iconMs"] = r.IconMs,
+        };
+        answer["hostMs"] = clock.ElapsedMilliseconds;
+        Post(answer);
+    }
+
+    // A folder the user cannot read, listed by the elevated helper (UAC asks); its icons are this process's own.
+    async Task ListElevated(string location, int req)
+    {
+        var r = await ElevatedHelper.List(location);
+        if (r["entries"] is JsonArray entries)
+            await app.ShellWork.Run(() =>
+            {
+                foreach (var e in entries)
+                    e!["icon"] = ShellIcons.Of(e["id"]!.GetValue<string>(), e["folder"]!.GetValue<bool>());
+                return 0;
+            });
+        r["event"] = "listed";
+        r["req"] = req;
+        r["location"] = location;
+        r["name"] = Path.GetFileName(location);
+        r["elevated"] = true;
+        Post(r);
+    }
+
+    void ShowMenu(List<string> ids, Point screen, bool extended)
+    {
+        var (menu, error) = ShellMenu.Create(ids, extended);
+        if (menu is null)
+        {
+            Post(new JsonObject { ["event"] = "menuDone", ["error"] = error });
+            return;
+        }
+        using (menu)
+        {
+            var verb = menu.Show(this, screen);
+            Post(new JsonObject { ["event"] = "menuDone", ["verb"] = verb });
+        }
+    }
+
+    // The page gives positions in its own pixels times devicePixelRatio: the browser's client pixels.
+    Point ToScreen(JsonObject msg) =>
+        web.PointToScreen(new Point((int)msg["x"]!.GetValue<double>(), (int)msg["y"]!.GetValue<double>()));
+
+    Rectangle AreaOf(JsonNode rect) => new(web.Left + (int)rect["x"]!.GetValue<double>(), web.Top + (int)rect["y"]!.GetValue<double>(),
+        (int)rect["width"]!.GetValue<double>(), (int)rect["height"]!.GetValue<double>());
+
+    // The yardstick of plan 02 3.7 item 1: the same folder in a native ListView in virtual mode, timed from the start of
+    // the listing to the list's first paint.
+    async Task<JsonObject> NativeListYardstick(string location)
+    {
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        var r = await app.ShellWork.Run(() => ShellListing.List(location));
+        var listed = clock.ElapsedMilliseconds;
+        var painted = new TaskCompletionSource<long>();
+        var form = new Form { Text = "Foldex: native list (yardstick)", Width = 900, Height = 700, StartPosition = FormStartPosition.CenterParent };
+        var list = new ListView { Dock = DockStyle.Fill, View = View.Details, VirtualMode = true, FullRowSelect = true };
+        list.Columns.Add("Name", 400);
+        list.Columns.Add("Size", 120);
+        var entries = r.Entries;
+        list.RetrieveVirtualItem += (_, e) =>
+        {
+            var x = entries[e.ItemIndex]!;
+            e.Item = new ListViewItem([x["name"]!.GetValue<string>(), x["size"]?.ToString() ?? ""]);
+        };
+        list.VirtualListSize = entries.Count;
+        form.Controls.Add(list);
+        form.Shown += (_, _) => BeginInvoke(() => painted.TrySetResult(clock.ElapsedMilliseconds));
+        form.Show(this);
+        var shown = await painted.Task;
+        return new JsonObject { ["event"] = "nativeListed", ["count"] = entries.Count, ["listedMs"] = listed, ["shownMs"] = shown };
+    }
+
+    protected override void WndProc(ref Message m)
+    {
+        if (ShellMenu.HandleMessage(ref m)) return;
+        base.WndProc(ref m);
     }
 
     /// <summary>Tells the page; kept until it is ready.</summary>

@@ -1,0 +1,113 @@
+using System.Text.Json.Nodes;
+using Foldex.Shell;
+
+namespace Foldex.Tests;
+
+public class ShellTests : IDisposable
+{
+    readonly string dir = Path.Combine(Path.GetTempPath(), "foldex-tests-" + Guid.NewGuid().ToString("N"));
+
+    public ShellTests()
+    {
+        Directory.CreateDirectory(Path.Combine(dir, "sub"));
+        File.WriteAllText(Path.Combine(dir, "a.txt"), "abc");
+        File.WriteAllText(Path.Combine(dir, "b.exe"), "");
+    }
+
+    public void Dispose() => Directory.Delete(dir, true);
+
+    [Fact]
+    public async Task FolderOnDiskIsListedWithSizesAndOwnIconMarks()
+    {
+        var r = await StaWorker.Once("t", () => ShellListing.List(dir));
+        Assert.Equal("disk", r.Kind);
+        Assert.Null(r.Error);
+        var byName = r.Entries.ToDictionary(e => e!["name"]!.GetValue<string>(), e => e!);
+        Assert.True(byName["sub"]["folder"]!.GetValue<bool>());
+        Assert.Equal(3, byName["a.txt"]["size"]!.GetValue<long>());
+        Assert.Equal(Path.Combine(dir, "a.txt"), byName["a.txt"]["id"]!.GetValue<string>());
+        Assert.False(byName["a.txt"]["own"]!.GetValue<bool>());
+        Assert.True(byName["b.exe"]["own"]!.GetValue<bool>());
+    }
+
+    [Fact]
+    public async Task BatchesAndRestHoldEveryEntry()
+    {
+        var parts = new List<JsonArray>();
+        var r = await StaWorker.Once("t", () => ShellListing.List(dir, parts.Add));
+        Assert.Equal(3, parts.Sum(p => p.Count) + r.Entries.Count);
+    }
+
+    [Fact]
+    public async Task CancelledListingSaysSo()
+    {
+        using var cancel = new CancellationTokenSource();
+        cancel.Cancel();
+        var r = await StaWorker.Once("t", () => ShellListing.List(dir, null, cancel.Token));
+        Assert.True(r.Cancelled);
+        Assert.Empty(r.Entries);
+    }
+
+    [Fact]
+    public async Task ThisPCIsAShellFolderOfDrives()
+    {
+        var r = await StaWorker.Once("t", () => ShellListing.List("::{20D04FE0-3AEA-1069-A2D8-08002B30309D}"));
+        Assert.Equal("shell", r.Kind);
+        Assert.Null(r.Error);
+        Assert.Contains(r.Entries, e => e!["id"]!.GetValue<string>().Equals(@"C:\", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task MissingFolderIsAnErrorNotAnException()
+    {
+        var r = await StaWorker.Once("t", () => ShellListing.List(Path.Combine(dir, "nope")));
+        Assert.NotNull(r.Error);
+    }
+
+    [Fact]
+    public async Task ItemsOfTwoFoldersGetNoExplorerMenu()
+    {
+        Directory.CreateDirectory(Path.Combine(dir, "other"));
+        File.WriteAllText(Path.Combine(dir, "other", "c.txt"), "");
+        var error = await StaWorker.Once("t", () =>
+        {
+            var (menu, error) = ShellMenu.Create([Path.Combine(dir, "a.txt"), Path.Combine(dir, "other", "c.txt")], false);
+            menu?.Dispose();
+            return error;
+        });
+        Assert.NotNull(error);
+    }
+
+    [Fact]
+    public async Task ItemsOfOneFolderGetExplorersMenuWithDelete()
+    {
+        var texts = await StaWorker.Once("t", () =>
+        {
+            var (menu, error) = ShellMenu.Create([Path.Combine(dir, "a.txt")], false);
+            Assert.Null(error);
+            using (menu) return menu!.Texts();
+        });
+        Assert.Contains(texts, t => t.Replace("&", "") == "Delete");
+    }
+}
+
+public class ElevatedHelperTests
+{
+    [Theory]
+    [InlineData("not json")]
+    [InlineData("""{ "op": "run", "path": "C:\\" }""")]
+    [InlineData("""{ "op": "list", "path": "relative" }""")]
+    [InlineData("""{ "op": "list" }""")]
+    public void AnythingOutsideTheSetIsRefused(string line)
+    {
+        Assert.NotNull(ElevatedHelper.Answer(line)["error"]);
+        Assert.Null(ElevatedHelper.Answer(line)["entries"]);
+    }
+
+    [Fact]
+    public void ListingAFullPathAnswersEntries()
+    {
+        var answer = ElevatedHelper.Answer(new JsonObject { ["op"] = "list", ["path"] = Path.GetTempPath() }.ToJsonString());
+        Assert.NotNull(answer["entries"]);
+    }
+}

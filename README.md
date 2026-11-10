@@ -20,8 +20,10 @@ From the top folder:
 dotnet build                                  # debug build (Foldex and its tests)
 dotnet run --project src -- C:\Windows        # run, optionally with a folder
 dotnet test                                   # unit tests (tests\Foldex.Tests)
-dotnet publish src -c Release -o publish      # release build into .\publish
+dotnet publish src -c Release -o C:\win32app\Foldex   # release build, where Foldex is installed
 ```
+
+Close Foldex before publishing over it (the running exe is locked).
 
 Arguments are folders to show, plus `-n` / `--new-window` for a new window (also: Shift held while starting). A
 later launch hands its arguments to the running Foldex.

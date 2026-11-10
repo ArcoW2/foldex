@@ -62,8 +62,10 @@ an item out of the collection; Alt+Delete deletes it from disk and from the pane
 - Copying or moving all go through `IFileOperation` (plan 05), so two files with the same name from different folders
   get Windows' own conflict dialog.
 - Deleting from disk from several folders: one confirmation listing the folders involved.
-- Explorer's context menu, dragging out and the shell clipboard for items from different folders need a data object
-  and a menu over items without one common parent folder [not yet checked]; a check for the spike of plan 02.
+- Explorer's context menu does not exist for items from different folders (plan 02, 5.2 item 7): the shell makes none.
+  Such a selection gets Foldex's own menu (Copy, Cut, Delete, Alt+Delete, Properties per item, ...); a selection
+  within one folder keeps Explorer's. Dragging them out and the shell clipboard for them: [not yet checked] (plan 02,
+  5.3).
 - The keys are in `keys.json` like all keys; Alt+Delete and Alt+Shift+Delete are free in Windows [not yet checked
   against PowerToys and the like on this PC].
 
