@@ -9,6 +9,7 @@ const $ = s => document.querySelector(s);
 const ui = { search: $('.st-search'), problems: $('.st-problems'), list: $('.st-list') };
 let look = null;   // { settings: { values, user, defaults, problems }, themes: { themes, problems } }
 const rows = [];   // { def, el, show }
+const SliderDelay = 200;   // ms a slider rests before the host gets its value
 let fonts = [];    // the installed font families (Fonts.cs), asked once
 
 const post = msg => host.postMessage(msg);
@@ -24,17 +25,35 @@ function control(def) {
     input.addEventListener('change', () => set(def.name, input.checked));
     return { el: input, show: v => input.checked = !!v };
   }
-  // A size in points (docs/plans/08-PLAN-fonts.md 3.2), 4 to 36, or a percentage, 0 to 200; written when the box is
-  // left or Enter.
-  if (def.kind === 'size' || def.kind === 'percent') {
-    const [min, max, step] = def.kind === 'size' ? [4, 36, 0.5] : [0, 200, 5];
+  // A size in points (docs/plans/08-PLAN-fonts.md 3.2), 4 to 36; written when the box is left or Enter.
+  if (def.kind === 'size') {
     const input = document.createElement('input');
-    Object.assign(input, { type: 'number', min, max, step });
+    Object.assign(input, { type: 'number', min: 4, max: 36, step: 0.5 });
     input.addEventListener('change', () => {
       const v = Number(input.value);
-      if (Number.isFinite(v) && v >= min && v <= max) set(def.name, v);
+      if (Number.isFinite(v) && v >= 4 && v <= 36) set(def.name, v);
     });
     return { el: input, show: v => input.value = v };
+  }
+  // A slider (range: min, max, step) with its value, as LexPen's: the value shows while dragging, the host gets it once
+  // the slider rests SliderDelay ms (each step would redraw every window), and at once on release.
+  if (def.kind === 'range') {
+    const [min, max, step] = def.range;
+    const box = document.createElement('span');
+    box.className = 'st-range';
+    const input = Object.assign(document.createElement('input'), { type: 'range', min, max, step });
+    const value = document.createElement('span');
+    value.className = 'st-range-value';
+    let timer = 0;
+    const apply = () => { clearTimeout(timer); timer = 0; set(def.name, +input.value); };
+    input.addEventListener('input', () => {
+      value.textContent = input.value + def.unit;
+      clearTimeout(timer);
+      timer = setTimeout(apply, SliderDelay);
+    });
+    input.addEventListener('change', () => { if (timer) apply(); });
+    box.append(input, value);
+    return { el: box, show: v => { input.value = v; value.textContent = input.value + def.unit; } };
   }
   const select = document.createElement('select');
   select.addEventListener('change', () => set(def.name, select.value));

@@ -62,6 +62,23 @@
   max-width: 340px;
 }
 
+.st-range {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.st-range input {
+  width: 160px;
+  accent-color: var(--accent);
+}
+
+.st-range-value {
+  min-width: 3.5em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 .st-reset {
   visibility: hidden;
 }
