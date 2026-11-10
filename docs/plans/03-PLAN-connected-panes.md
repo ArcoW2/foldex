@@ -20,7 +20,8 @@ pane above it restore its state for that branch. The preview (plan 04) is a foll
 
 A window opens with two panes: on the left the root, a folder pane that shows folders only and cannot be closed, and
 filling the rest a follower showing files and folders of the folder focused in the root. Double-clicking an item
-executes it: a file opens as Windows opens it, a folder is opened by the pane's source, so the follower then shows it.
+executes it: a file opens as Windows opens it; a folder is opened by the pane's source, so the follower then shows it,
+and in a pane without a source (the root) the folder expands in place, as in a tree.
 
 ## 3. Details
 
@@ -71,9 +72,10 @@ second red pane as thumbnails.
 | Nothing (empty folder) | Stays as it is | Empty |
 
 - **Executing** (double-click, Enter): a file opens as Windows opens it (its default verb, through the host). A folder
-  is opened by the pane's source: the source focuses that folder (open question 7: what that means in a tree and in
-  a list), and the pane, following it, shows the folder. A pane without a source (the root) opens the folder itself.
-- **Other navigation inside a follower** (Backspace, typing a path): open question 8.
+  in a pane with a source is opened by that source: the source focuses the folder and shows it in its tree (expanded
+  down to it), and the pane, following it, shows the folder. A folder in a pane without a source (the root, or a pane
+  disconnected later) expands in place, as in a tree, and is focused.
+- **Other navigation inside a follower** (Backspace, typing a path): open question 7.
 - **Pinned follower**: a pin in the pane header stops it following until unpinned; its connection and colour stay.
 - **Debounce**: arrowing quickly through a source updates followers once the cursor rests, so a long walk does not
   load every folder on the way. The delay is a setting [default not yet decided].
@@ -141,10 +143,7 @@ Every folder shown is watched for changes; panes showing the same folder share o
 6. **View settings per branch?** The branch state holds what is shown and selected. The view settings (content, view,
    sort, filter, hidden files) stay per pane (suggestion), or are they part of the branch state too, so A could be a
    tree for red and details for blue?
-7. **Opening a folder in the source.** The root shows folders only: as a tree (opening a folder expands the tree down to
-   it and selects it; suggestion) or as a list of one folder's subfolders (opening a folder goes into it, so the root
-   then lists that folder's subfolders)?
-8. **Backspace and typing a path in a follower.** The same rule as executing a folder: the source goes up or to the
+7. **Backspace and typing a path in a follower.** The same rule as executing a folder: the source goes up or to the
    path, and the follower follows (suggestion); or the follower moves on its own until the source changes again?
-9. **Closing other panes without a source.** Only the root has no source by default; a pane disconnected later has none
+8. **Closing other panes without a source.** Only the root has no source by default; a pane disconnected later has none
    either. May that one be closed (suggestion: yes), or does "no source" always mean "cannot be closed"?
