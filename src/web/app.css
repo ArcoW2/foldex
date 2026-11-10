@@ -414,6 +414,13 @@ body.connecting, body.connecting * {
   background: var(--select);
 }
 
+/* Selected in a pane without the keyboard, or in any pane while another window has the focus (which pane gets the
+   keys back is not known then): a little less strong. */
+.pane:not(.active) .row.selected,
+body[data-focus-away] .row.selected {
+  background: color-mix(in srgb, var(--select) 55%, var(--bg));
+}
+
 .body:focus .row.focused {
   outline: 1px dotted var(--accent);
   outline-offset: -1px;
