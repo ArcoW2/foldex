@@ -76,6 +76,9 @@ second red pane as thumbnails.
   in a pane with a parent is opened by that parent: the parent focuses the folder and shows it in its tree (expanded
   down to it), and the child, following it, shows the folder. A folder in a pane without a parent expands in place, as
   in a tree, and is focused.
+- **Open** (the ribbon's button) is a switch for a folder: open (expanded in its tree) or closed; a file has none. In a
+  tree it opens or closes the focused folder there; in a child its parent opens the folder (expanded, focused) and the
+  child follows; lit while the folder is open. Enter is executing (as a double-click), not Open.
 - **Up and typing a path in a child** (Backspace, the location box): the parent goes up, or to the path, and the child
   follows.
 - **Pinned child**: a pin in the pane header stops it following until unpinned; its connection and colour stay.

@@ -3,7 +3,7 @@
 // Moving the cursor in a pane (arrows, Page Up / Down, Home, End, with Shift and Ctrl) is fixed, not in this file.
 {
   "F1": "palette",
-  "Enter": "item.open",
+  "Enter": "item.execute",
   "Alt+Enter": "item.properties",
   "Del": "item.delete",
   "Ctrl+C": "item.copy",

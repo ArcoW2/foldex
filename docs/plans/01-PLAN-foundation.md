@@ -120,7 +120,7 @@ locations, the theme set; saved continuously, opened from the Projects menu and 
   saving: no change mode yet), `web/keys.js` (in a text box the keys that edit text stay the box's), `web/ribbonmodel.js`
   (unchanged).
 - On LexPen's pattern, for Foldex: `web/actions.js` (name, title, group, run, enabled, checked, variants; items,
-  folders, panes, view), `web/palette.js` (F1: every action with its keys, searchable), `web/ribbon.js` (tabs, groups,
+  folders, panes, view; Open is a switch for a folder, Execute is Enter), `web/palette.js` (F1: every action with its keys, searchable), `web/ribbon.js` (tabs, groups,
   large and small buttons stacked by `ribbonColumns`, greyed out and lit as the actions say).
 - `defaults/keys.json` and `defaults/ribbon.json` with Foldex's actions: open, properties, delete, copy, cut, paste
   (Explorer's clipboard formats, `Shell/ShellClipboard.cs`), copy path, select all, new folder (IFileOperation), up,

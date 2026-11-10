@@ -768,6 +768,36 @@ function focusedItem() {
   return null;
 }
 
+// The tree that shows a pane's folders: the pane itself when it is a tree, else its parent when that is one.
+function treeFor(paneId) {
+  const v = views.get(paneId);
+  if (v instanceof TreeView) return v;
+  const parent = views.get(layout.pane(paneId)?.source);
+  return parent instanceof TreeView ? parent : null;
+}
+
+// Open, the switch (actions.js): a folder is open when its tree has it expanded.
+function folderOpen(item) {
+  return !!item?.folder && !!treeFor(activePane)?.node(item.id)?.expanded;
+}
+
+async function toggleFolder(item) {
+  if (!item?.folder) return;
+  const tree = treeFor(activePane);
+  if (!tree) return execute(activePane, item);   // no tree to open it in: as a double-click
+  const node = tree.node(item.id);
+  if (node?.expanded) await tree.expand(node, false);
+  else {
+    // In a child the parent opens it, and the child follows (3.3).
+    if (tree.id !== activePane) {
+      await tree.reveal(item.id);
+      apply(layout.focus(tree.id, item));
+    }
+    if (tree.node(item.id)) await tree.expand(tree.node(item.id));
+  }
+  ribbonRefresh();
+}
+
 // The folder new things go into: the list's folder, the tree's focused folder; only folders on disk.
 function currentFolder() {
   const v = activeView();

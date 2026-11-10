@@ -40,10 +40,12 @@ function runAction(name, params = [], ctx = {}) {
 const anySelected = () => selectedIds().length > 0;
 const onDisk = () => selectedIds().length > 0 && selectedIds().every(id => /^[A-Za-z]:\\|^\\\\/.test(id));
 
-action('item.open', { title: 'Open', group: 'items', enabled: () => !!focusedItem(), run: () => {
-  const item = focusedItem();
-  if (item) execute(activePane, item);
-} });
+// Open is a switch for a folder: open (expanded in its tree) or not; a file has no open state.
+action('item.open', { title: 'Open', hint: 'a folder open or closed in its tree', group: 'items',
+  enabled: () => !!focusedItem()?.folder, checked: () => folderOpen(focusedItem()), run: () => toggleFolder(focusedItem()) });
+// As a double-click: a file starts in its program, a folder is opened by the parent (docs/plans/03 3.3).
+action('item.execute', { title: 'Execute', hint: 'as a double-click: a file starts, a folder opens', group: 'items',
+  enabled: () => !!focusedItem(), run: () => execute(activePane, focusedItem()) });
 action('item.properties', { title: 'Properties', group: 'items', enabled: anySelected,
   run: () => post({ op: 'invokeVerb', ids: selectedIds(), verb: 'properties' }) });
 action('item.delete', { title: 'Delete to the Recycle Bin', group: 'items', enabled: anySelected, run: () => {
