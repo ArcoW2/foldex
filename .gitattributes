@@ -1,0 +1,6 @@
+# All text files use LF, in the repository and in working copies (overrides core.autocrlf).
+* text=auto eol=lf
+
+*.ico binary
+*.png binary
+*.woff2 binary
