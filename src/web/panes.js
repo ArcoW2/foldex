@@ -1,8 +1,8 @@
 // The panes of a window and how they are connected (docs/plans/03-PLAN-connected-panes.md 3.1): no DOM, so the tests
 // run it under Jint. app.js draws what this decides.
 //
-// A pane follows at most one source; the window's first pane, the root, follows none and cannot be closed. Each
-// connection has a branch colour. A pane keeps a state (location, focus, selection) per colour of the connections
+// A pane (a child) follows at most one other (its parent; `source` here); a pane without one is a root, as the window's
+// first pane. Any pane can be closed. Each connection has a branch colour. A pane keeps a state (location, focus, selection) per colour of the connections
 // leaving it ('' for a pane without followers) and shows the state of its active colour: the colour of the path down
 // to the pane activated last.
 'use strict';
@@ -16,8 +16,8 @@ class Layout {
     this.next = 1;
   }
 
-  // A new pane; with a source it follows that one, in `colour` or else the colour its source shows (a new follower joins
-  // the active branch). The first pane added is the root.
+  // A new pane; with a source (its parent) it follows that one, in `colour` or else the colour its parent shows (a new
+  // child joins the active branch). `root` is the window's first pane still there.
   add({ source = null, colour = null, kind = 'list', content = 'both', location = null } = {}) {
     const id = `p${this.next++}`;
     const pane = { id, source: null, colour: null, kind, content, pinned: false, activeKey: null, states: {} };
@@ -30,9 +30,9 @@ class Layout {
 
   pane(id) { return this.panes.get(id); }
 
-  // Connects a pane to a source; false (and nothing changed) when that would make a cycle, or for the root.
+  // Connects a pane to a parent; false (and nothing changed) when that would make a cycle.
   connect(id, source, colour = null) {
-    if (id === this.root || !this.panes.has(source)) return false;
+    if (!this.panes.has(source)) return false;
     for (let p = source; p !== null; p = this.pane(p).source) if (p === id) return false;
     const pane = this.pane(id);
     pane.source = source;
@@ -41,25 +41,16 @@ class Layout {
     return true;
   }
 
-  // The pane follows nothing any more (it may then be closed: 3.1).
-  disconnect(id) {
-    if (id === this.root) return false;
-    this.pane(id).source = null;
-    this.pane(id).colour = null;
-    return true;
-  }
-
-  closable(id) { return id !== this.root; }
-
-  // Removes a pane; its followers follow its source instead, in their own colours (open question 3, suggestion).
+  // Closes a pane (any pane, 3.4): its children get its parent, in their own colours; a root's children become roots.
   remove(id) {
-    if (!this.closable(id) || !this.panes.has(id)) return false;
+    if (!this.panes.has(id)) return false;
     const gone = this.pane(id);
     for (const f of this.followers(id)) {
       f.source = gone.source;
       if (gone.source === null) f.colour = null;
     }
     this.panes.delete(id);
+    if (this.root === id) this.root = [...this.panes.values()].find(p => p.source === null)?.id ?? null;
     return true;
   }
 

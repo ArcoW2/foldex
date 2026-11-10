@@ -27,11 +27,38 @@ public class PanesTests
     static string Str(JsonElement e) => e.ValueKind == JsonValueKind.Null ? "null" : e.ToString();
 
     [Fact]
-    public void TheFirstPaneIsTheRootAndCannotBeClosed()
+    public void TheFirstPaneIsTheRoot()
     {
         var r = Run("const l = new Layout(); const A = l.add({ kind: 'tree' }); const B = l.add({ source: A });",
-            "[l.root === A, l.closable(A), l.closable(B), l.remove(A), l.panes.size]");
-        Assert.Equal("[true,false,true,false,2]", r.GetRawText());
+            "[l.root === A, l.pane(A).source, l.pane(B).source === A]");
+        Assert.Equal("[true,null,true]", r.GetRawText());
+    }
+
+    [Fact]
+    public void ClosingTheRootMakesItsChildrenRoots()
+    {
+        var r = Run(Example + "l.remove(A);", "[l.root, l.pane(B).source, l.pane(C).source, l.pane(D).source]");
+        Assert.Equal("""["p2",null,null,"p2"]""", r.GetRawText());
+    }
+
+    [Fact]
+    public void TheLastPaneCanBeClosedAndANewOneIsARoot()
+    {
+        var r = Run("""
+            const l = new Layout(); const A = l.add({ kind: 'tree' }); l.remove(A);
+            const before = [l.root, l.panes.size]; const N = l.add();
+            """, "[before, l.root === N]");
+        Assert.Equal("[[null,0],true]", r.GetRawText());
+    }
+
+    [Fact]
+    public void AFileFocusedInTheParentLeavesAFolderChildAsItIs()
+    {
+        var r = Run(Example + """
+            l.activate(B); l.focus(A, { id: 'C:\\X', folder: true });
+            const u = l.focus(A, { id: 'C:\\a.txt', folder: false });
+            """, "[u.length, l.state(B).location]");
+        Assert.Equal("""[0,"C:\\X"]""", r.GetRawText());
     }
 
     [Fact]
@@ -114,10 +141,10 @@ public class PanesTests
     }
 
     [Fact]
-    public void ADisconnectedListExpandsAFolderInPlaceToo()
+    public void AListThatBecameARootExpandsAFolderInPlaceToo()
     {
-        var r = Run(Example + "l.disconnect(B); const x = l.execute(B, { id: 'C:\\\\X', folder: true });", "[x.expand, l.state(A).focus]");
-        Assert.Equal("""[{"pane":"p2","item":"C:\\X"},null]""", r.GetRawText());
+        var r = Run(Example + "l.remove(A); const x = l.execute(B, { id: 'C:\\\\X', folder: true });", "x.expand");
+        Assert.Equal("""{"pane":"p2","item":"C:\\X"}""", r.GetRawText());
     }
 
     [Fact]
@@ -128,17 +155,10 @@ public class PanesTests
     }
 
     [Fact]
-    public void RemovingAMiddlePaneConnectsItsFollowersToItsSource()
+    public void ClosingAMiddlePaneGivesItsChildrenItsParent()
     {
-        var r = Run(Example + "l.remove(B);", "[l.pane(D).source, l.panes.has(B)]");
-        Assert.Equal("""["p1",false]""", r.GetRawText());
-    }
-
-    [Fact]
-    public void ADisconnectedPaneMayBeClosed()
-    {
-        var r = Run(Example + "l.disconnect(C);", "[l.pane(C).source, l.closable(C), l.remove(C)]");
-        Assert.Equal("[null,true,true]", r.GetRawText());
+        var r = Run(Example + "l.remove(B);", "[l.pane(D).source, l.pane(D).colour, l.panes.has(B)]");
+        Assert.Equal("""["p1","blue",false]""", r.GetRawText());
     }
 
     [Fact]
