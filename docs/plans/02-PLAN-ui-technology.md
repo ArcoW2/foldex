@@ -34,7 +34,7 @@ in progress. A spike checks the risky parts first and records how each is solved
 - **File operations** with Windows' own progress, conflict and permission dialogs (`IFileOperation`; plan 05).
 - **Inline rename, type-ahead, keyboard speed**, accessibility (screen readers).
 - **The shell namespace**: items without a file path (This PC, Network, Recycle Bin, phones, a zip as a folder) are
-  PIDLs, not paths. Whether that is in scope is open question 1; it weighs on the choice.
+  PIDLs, not paths. Whether that is in scope is open question 1; with option A, PIDLs are the host's work.
 
 ### 3.2 The options, and why A
 
