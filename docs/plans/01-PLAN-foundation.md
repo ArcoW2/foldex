@@ -57,7 +57,7 @@ tests/
 | Keys and actions | `KeysFile.cs`, `web/actions.js` | Explorer actions (3.4) |
 | Ribbon | `RibbonFile.cs`, the ribbon page code, `PLAN-ribbon*` | Other tabs and groups |
 | Macros | `MacroStore.cs`, macro recording, `PLAN-macros.md` | Own file extension; steps act on panes and selections |
-| Themes, theme sets | `ThemeFile.cs`, `ThemeSetFile.cs`, `ThemeColoursForm.cs` | Colours for lists, branch colours (plan 03) |
+| Themes, theme sets | `ThemeFile.cs`, `ThemeSetFile.cs`, `ThemeColoursForm.cs` | Plan 07: no editor colours, a list of branch colours |
 | Projects, window sessions | `ProjectStore.cs`, `ProjectsForm.cs`, `VirtualDesktop.cs`, `Monitors.cs` | A project holds panes and connections (plan 03) |
 | Docking | `web/docks.js`, `DockMoves.cs`, `PLAN-docking.md` | Panes of plan 03 are the dock items |
 | Rename, folder compare, git status | `FileRename.cs`, `FolderCompare.cs`, folder pane | Reused as explorer features later |
@@ -132,7 +132,7 @@ locations, the theme set; saved continuously, opened from the Projects menu and 
 ### 5.3 Not built yet
 
 From LexPen: the ribbon's icons, split buttons and drop-down lists, key tips, change mode and collapsing; the menus;
-macros; themes and theme sets; the settings window; projects; docking; the viewers (plan 04). The order is open
+macros; themes and theme sets (plan 07); the settings window; projects; docking; the viewers (plan 04). The order is open
 question 1.
 
 ### 5.4 How it was tested
