@@ -1,22 +1,9 @@
-# Plan 09: The features of xplorer2 Ultimate, against Foldex
+# xplorer2 Ultimate's features, against Foldex
 
-Status: draft 2026-11-10; not started. A list to choose from, not a build plan: what is chosen goes into the plan of
-its area (or a new one).
+A reference list, not a plan: the features of xplorer2 Ultimate, read from zabkat.com on 2026-11-10, with where
+Foldex stands for each. Plans are made from it when wanted. Keep the Foldex column up to date as plans are built.
 
-## 1. What this is about
-
-Foldex is meant to replace xplorer2 Ultimate in daily use. Nothing yet says which of xplorer2's features Foldex has,
-which a plan already covers, and which are missing, so it is not clear what Foldex lacks before it can take over.
-
-## 2. The solution, in brief
-
-One table of xplorer2 Ultimate's features, read from zabkat.com, grouped by area, with for each the edition that has
-it, where Foldex stands (built, in a plan, or not planned) and a column for you to mark what you want. The features
-you mark are then added to the plans of their area, or get a plan of their own.
-
-## 3. Details
-
-### 3.1 Source and how to read the table
+## Source and how to read the table
 
 - Read from zabkat.com on 2026-11-10: the manual chapters (`x2h_*.htm`), the editions (`x2buy.htm`, `x2lite.htm`),
   the comparison `blog/ultimate-vs-professional.htm`, the release posts of v6.0, v6.3, v6.4 and the older news page.
@@ -26,10 +13,10 @@ you mark are then added to the plans of their area, or get a plan of their own.
   text, so `P+` is partly inferred.
 - **Foldex**: `built` (in the code now), `part` (some of it built), `plan NN` (in that plan, not built), `--` (in no
   plan).
-- **Want**: for you to fill in: `yes`, `no`, `later`. Empty: not decided.
+- **Want**: yours to fill in when it matters (`yes`, `no`, `later`); a `yes` becomes a plan when you ask for one.
 - Foldex's connected panes (plan 03) replace dual panes, tabs and Miller columns as a concept; those rows say so.
 
-### 3.2 Panes, layout, navigation
+## Panes, layout, navigation
 
 | Feature | Edition | Foldex | Want |
 |---|---|---|---|
@@ -53,12 +40,12 @@ you mark are then added to the plans of their area, or get a plan of their own.
 | Mirror browsing / scrolling | P+ | -- | |
 | Spring-loaded tabs and tree during drag | P+ | -- | |
 
-### 3.3 Lists, filtering, selection
+## Lists, filtering, selection
 
 | Feature | Edition | Foldex | Want |
 |---|---|---|---|
-| Views: details, list, thumbnails, Ctrl+wheel thumbnail zoom | All | part: details-like list; Ctrl+wheel font plan 08 | |
-| Columns: shell properties, column sets | P+ | -- | |
+| Views: details, list, thumbnails, Ctrl+wheel thumbnail zoom | All | part: details-like list; Ctrl+wheel font size built (plan 08); columns plan 11 | |
+| Columns: shell properties, column sets | P+ | plan 11 | |
 | Over 1000 system properties as columns | U | -- | |
 | Programmable columns (expressions) | U | -- | |
 | Cloud status columns | P+ | -- | |
@@ -75,7 +62,7 @@ you mark are then added to the plans of their area, or get a plan of their own.
 | Colour coding by rule | P+ | -- | |
 | Colour tags on files | All | -- | |
 
-### 3.4 Search, scrap
+## Search, scrap
 
 | Feature | Edition | Foldex | Want |
 |---|---|---|---|
@@ -88,7 +75,7 @@ you mark are then added to the plans of their area, or get a plan of their own.
 | Scrap containers (collect from many folders, save) | P+ | plan 06 | |
 | Mini scrap (docked drop stack) | P+ | -- | |
 
-### 3.5 File operations
+## File operations
 
 | Feature | Edition | Foldex | Want |
 |---|---|---|---|
@@ -105,7 +92,7 @@ you mark are then added to the plans of their area, or get a plan of their own.
 | Paths over 260 characters | P+ | [not yet checked] | |
 | CSV export, copy path | P+ | part: copy path built | |
 
-### 3.6 Compare, sync, disk usage
+## Compare, sync, disk usage
 
 | Feature | Edition | Foldex | Want |
 |---|---|---|---|
@@ -118,7 +105,7 @@ you mark are then added to the plans of their area, or get a plan of their own.
 | Similar photos, blur detection | P+ | -- | |
 | Text compare | P+ | -- | |
 
-### 3.7 Preview, shell, archives, network
+## Preview, shell, archives, network
 
 | Feature | Edition | Foldex | Want |
 |---|---|---|---|
@@ -133,14 +120,14 @@ you mark are then added to the plans of their area, or get a plan of their own.
 | UNC paths, map network drive | P+ | part: UNC listed; Network shows nothing here [not yet checked why] | |
 | Elevated window | P+ | part: list as administrator (plan 05); no elevated window by design | |
 
-### 3.8 Customisation and automation
+## Customisation and automation
 
 | Feature | Edition | Foldex | Want |
 |---|---|---|---|
 | Keyboard remapping, command finder | P+ | built (keys.json, F1) | |
 | Custom toolbars, skins | P+ | part: ribbon.json; icons -- | |
 | Dark mode, themes | P+ | built (plan 07) | |
-| Fonts | P+ | plan 08 | |
+| Fonts | P+ | built (plan 08) | |
 | Options window with search | P+ | built (plan 07) | |
 | Settings export / import | P+ | built (settings.json is a file) | |
 | Portable mode (settings in a file) | U | part: FOLDEX_DATA | |
@@ -148,17 +135,3 @@ you mark are then added to the plans of their area, or get a plan of their own.
 | Built-in console | P+ | -- | |
 | User commands (tools with tokens) | P+ | -- | |
 | UI macros, macro recorder | P+ | plan 01 (macros) | |
-
-### 3.9 What follows
-
-When the Want column is filled in, each `yes` goes to the plan of its area (03 panes, 04 preview, 06 search and
-scrap, 08 fonts, plan 01 for rename, compare, macros and projects), or into a new plan per area for what has none
-yet (filtering and selection, columns, robust copy, bookmarks).
-
-## 4. Open questions
-
-1. **The Want column.** Fill it in here (or say which areas matter most), so the plans can follow.
-
-## 5. As built
-
-Not built yet.

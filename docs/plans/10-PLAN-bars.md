@@ -38,7 +38,7 @@ right-click menu, and Foldex writes your copy.
   optional thin free-space mark. A click: the active pane's parent goes to that drive, as a typed path. Drives that
   come or go (a USB stick, a mapped drive) are added or taken away at once (the host listens to Windows' device
   messages). Default `content`, min one button, max [open question 1].
-- Later kinds, each with its own plan when chosen (plan 09): bookmarks, a quick filter, user commands, the status line.
+- Later kinds, each with its own plan when chosen (`docs/xplorer2-features.md`): bookmarks, a quick filter, user commands, the status line.
 - The name and version move to the window title and F1's About; the strip they are in now becomes the default first
   row: drives, path.
 
