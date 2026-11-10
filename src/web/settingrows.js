@@ -26,6 +26,9 @@ const SETTING_ROWS = [
     hint: 'Hidden and system files and folders shown (Ctrl+H, View > Hidden items).' },
   { group: 'Panes', name: 'paneBgFocused', kind: 'range', range: [0, 200, 5], unit: '%', title: 'Background of the focused pane',
     hint: '100% is the theme colour; lower is darker (0% black), higher is lighter (200% white).' },
+  { group: 'Panes', name: 'paneBgBranch', kind: 'range', range: [0, 200, 5], unit: '%',
+    title: 'Background of the panes in its branch',
+    hint: 'The same way, for the parents of the focused pane and its children in that branch.' },
   { group: 'Panes', name: 'paneBgOther', kind: 'range', range: [0, 200, 5], unit: '%', title: 'Background of the other panes',
-    hint: 'The same way, for the panes without the keyboard.' },
+    hint: 'The same way, for the panes in no branch of the focused pane.' },
 ];

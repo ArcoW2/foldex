@@ -188,8 +188,11 @@ function activate(id) {
 // first rightmost, app.css), so a mark keeps its place; the active one full and larger. A click switches to one.
 function drawHeads() {
   tellLayout();
+  // The panes of the active pane's branch (its parents and the children down that branch), for their background.
+  const branch = activePane !== null && layout.pane(activePane) ? branchChain(activePane).chain : [];
   for (const v of views.values()) {
     const pane = layout.pane(v.id);
+    v.el.classList.toggle('in-branch', v.id !== activePane && branch.includes(v.id));
     const key = pane.source === null ? layout.keyOf(v.id) : pane.colour;
     v.el.style.setProperty('--branch', key !== '' && key !== null ? `var(--branch-${key})` : '');
     v.el.classList.toggle('child', pane.source !== null);

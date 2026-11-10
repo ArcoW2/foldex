@@ -355,11 +355,15 @@ body[data-focus-away] .dock-tab.active {
   position: relative;
   /* The colour of the branch it shows (app.js drawHeads); a pane without one: the accent. */
   --pane-colour: var(--branch, var(--accent));
-  /* Its background: its own (--pane-base) made darker or lighter by the settings paneBgOther and paneBgFocused
-     (look.js applyPaneBackgrounds). */
+  /* Its background: its own (--pane-base) made darker or lighter by the settings paneBgOther, paneBgBranch and
+     paneBgFocused (look.js applyPaneBackgrounds). */
   --pane-base: var(--bg);
   --pane-bg: color-mix(in srgb, var(--pane-base) var(--pane-keep-other, 100%), var(--pane-to-other, white));
   background: var(--pane-bg);
+}
+
+.pane.in-branch {
+  --pane-bg: color-mix(in srgb, var(--pane-base) var(--pane-keep-branch, 100%), var(--pane-to-branch, white));
 }
 
 .pane.active {

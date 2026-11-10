@@ -17,5 +17,6 @@
   // ---------- Panes ----------
   "showHidden": false,            // hidden and system files and folders shown (Ctrl+H, View > Hidden items)
   "paneBgFocused": 100,           // the background of the pane with the keyboard, in %: 100 the theme's, 0 black, 200 white
+  "paneBgBranch": 100,            // the background of the other panes in its branch (its parents, its children), the same way
   "paneBgOther": 100,             // the background of the other panes, the same way
 }

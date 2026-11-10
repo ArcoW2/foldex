@@ -37,13 +37,13 @@ function applyFonts(settings) {
   applyPaneBackgrounds(settings);
 }
 
-// The panes' backgrounds (paneBgFocused, paneBgOther), in %: 100 the theme's, toward 0 mixed with black, toward 200
+// The panes' backgrounds (paneBgFocused, paneBgBranch, paneBgOther), in %: 100 the theme's, toward 0 mixed with black, toward 200
 // with white. app.css mixes each pane's own background (--pane-base) with --pane-to by --pane-keep.
 const percent = v => Number.isFinite(v) ? Math.min(200, Math.max(0, v)) : 100;
 
 function applyPaneBackgrounds(settings) {
   const root = document.documentElement.style;
-  for (const [name, which] of [['paneBgFocused', 'focused'], ['paneBgOther', 'other']]) {
+  for (const [name, which] of [['paneBgFocused', 'focused'], ['paneBgBranch', 'branch'], ['paneBgOther', 'other']]) {
     const p = percent(settings[name]);
     root.setProperty(`--pane-to-${which}`, p < 100 ? 'black' : 'white');
     root.setProperty(`--pane-keep-${which}`, `${p < 100 ? p : 200 - p}%`);
