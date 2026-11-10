@@ -24,13 +24,13 @@ function control(def) {
     input.addEventListener('change', () => set(def.name, input.checked));
     return { el: input, show: v => input.checked = !!v };
   }
-  // A size in points (docs/plans/08-PLAN-fonts.md 3.2): 0 the default; written when the box is left or Enter.
+  // A size in points (docs/plans/08-PLAN-fonts.md 3.2), 4 to 36; written when the box is left or Enter.
   if (def.kind === 'size') {
     const input = document.createElement('input');
-    Object.assign(input, { type: 'number', min: 0, max: 36, step: 0.5 });
+    Object.assign(input, { type: 'number', min: 4, max: 36, step: 0.5 });
     input.addEventListener('change', () => {
       const v = Number(input.value);
-      if (Number.isFinite(v) && v >= 0 && v <= 36) set(def.name, v);
+      if (Number.isFinite(v) && v >= 4 && v <= 36) set(def.name, v);
     });
     return { el: input, show: v => input.value = v };
   }

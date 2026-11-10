@@ -19,10 +19,12 @@ function applyLook(settings, themes) {
 }
 
 // The fonts (docs/plans/08-PLAN-fonts.md): the window's (appFont, appSize) and the panes' rows (paneFont, paneSize), in
-// points, 0 the default. The row height follows the pane font (paneRowHeight).
-const DefaultSize = 9.75;   // pt: 13 px, the size before there were settings
+// points (4 to 36). The row height follows the pane font (paneRowHeight).
+const DefaultSize = 10;   // pt, as defaults\settings.json; for a value that is not a size (0 in an old settings.json)
 const fontStack = name => name ? `"${name.replace(/["\\]/g, '')}", "Segoe UI", system-ui, sans-serif` : '"Segoe UI", system-ui, sans-serif';
-const sizePx = pt => (pt || DefaultSize) * 96 / 72;
+// A size as used: 0 (an old settings.json) the default, anything else held between 4 and 36 (a hand-edited 0.5).
+const pointSize = pt => pt ? Math.min(36, Math.max(4, pt)) : DefaultSize;
+const sizePx = pt => pointSize(pt) * 96 / 72;
 const paneRowHeight = settings => Math.max(16, Math.round(sizePx(settings.paneSize) * 22 / 13));
 
 function applyFonts(settings) {

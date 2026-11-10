@@ -44,12 +44,12 @@ function setRowHeight(height) {
 
 // Ctrl+mouse wheel over a tree or a list: the pane font one point larger or smaller, every pane alike (3.3). The
 // panes follow at once; the setting is written once the wheel rests.
-const PaneSizes = { min: 6, max: 36, rest: 200 };
+const PaneSizes = { min: 4, max: 36, rest: 200 };
 let paneSizeTimer = 0;
 document.addEventListener('wheel', e => {
   if (!e.ctrlKey || !e.target.closest?.('.pane.tree, .pane.list')) return;
   e.preventDefault();
-  const now = settings.paneSize || DefaultSize;
+  const now = pointSize(settings.paneSize);
   const next = Math.min(PaneSizes.max, Math.max(PaneSizes.min, now + (e.deltaY < 0 ? 1 : -1)));
   if (next === now) return;
   settings.paneSize = next;

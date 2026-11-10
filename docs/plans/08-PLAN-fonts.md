@@ -22,9 +22,9 @@ grow and shrink with the pane font.
 | Setting | Default | What |
 |---|---|---|
 | `appFont` | `""` (Segoe UI) | The window: ribbon, pane heads, location box, status line, F1, the settings window |
-| `appSize` | `0` (9.75 pt, today's 13 px) | In points |
+| `appSize` | `10` | In points, 4 to 36 |
 | `paneFont` | `""` (Segoe UI) | The rows of every pane: trees and lists |
-| `paneSize` | `0` (9.75 pt) | In points; also Ctrl+mouse wheel |
+| `paneSize` | `10` | In points, 4 to 36; also Ctrl+mouse wheel |
 
 - A font name is one of the installed families. The host lists them (`Fonts.cs`, from LexPen's, without the
   monospaced mark, which an explorer does not need) for the settings window.
@@ -34,12 +34,12 @@ grow and shrink with the pane font.
 ### 3.2 The settings window
 
 - A row kind `font`: a list of the installed families, each shown in itself, with "Segoe UI (default)" first.
-- A row kind `size`: a number box in points, with 0 meaning the default; steps of 0.5.
+- A row kind `size`: a number box in points, 4 to 36, steps of 0.5. A size outside that in a hand-edited settings.json is held to it; 0 (an older default) counts as 10.
 - The four rows in a group "Fonts".
 
 ### 3.3 Ctrl+mouse wheel
 
-- Over any pane (tree or list), Ctrl+wheel up makes `paneSize` one point larger, down one smaller, between 6 and 36
+- Over any pane (tree or list), Ctrl+wheel up makes `paneSize` one point larger, down one smaller, between 4 and 36
   points. All panes change together, in every window: it is the setting, written to your settings.json.
 - Writing is held back until the wheel rests (as LexPen's sliders), so a fast turn does not write the file at every
   step; the panes follow at once.
@@ -58,7 +58,7 @@ grow and shrink with the pane font.
   without the vertical `@` variants.
 - In the test copy: a pane font chosen in the settings window changes the rows and not the ribbon; an app font the
   ribbon and not the rows; Ctrl+wheel over a list makes every pane's rows larger, the row height following, and
-  settings.json holds the new `paneSize` once the wheel rests; at 6 and 36 points the wheel stops.
+  settings.json holds the new `paneSize` once the wheel rests; at 4 and 36 points the wheel stops.
 
 ## 4. Open questions
 
@@ -72,15 +72,18 @@ grow and shrink with the pane font.
 - `Fonts.cs` (LexPen's, without the monospaced mark); the settings window asks for the list (`fonts`), built on another
   thread.
 - `defaults/settings.json`: `appFont`, `appSize`, `paneFont`, `paneSize` in a Fonts group; `web/settingrows.js` with the
-  row kinds `font` (the families, each drawn in itself, "Segoe UI (default)" first) and `size` (a number box, 0 to 36,
+  row kinds `font` (the families, each drawn in itself, "Segoe UI (default)" first) and `size` (a number box, 4 to 36,
   steps of 0.5).
+- Changed after use (2026-11-10): the sizes default to 10 pt instead of 0 ("the default"), and the least size is
+  4 pt for the box and the wheel (the box's up arrow from 0 gave 0.5); look.js holds any stored size between 4 and
+  36.
 - `web/look.js` `applyFonts`: CSS variables `--app-font`, `--app-size`, `--pane-font`, `--pane-size`, `--row-height`;
   the row height is the pane font size times 22 / 13 (today's 22 px at 13 px), at least 16 px.
 - `app.css`: the page in the window font, inputs and buttons inheriting it, the pane bodies in the pane font, rows of
   `--row-height`; the small texts (ribbon group names, link marks) and the size and date columns in `em`, so they
   scale with their font.
 - `app.js`: `RowHeight` follows the setting; a change draws every tree and list again, the same rows at the top and
-  the focused one in view; Ctrl+mouse wheel over a tree or list (not the preview) one point up or down, 6 to 36,
+  the focused one in view; Ctrl+mouse wheel over a tree or list (not the preview) one point up or down, 4 to 36,
   written after 200 ms of rest.
 - Found on the way and fixed: the tree's focused folder ended up just below the bottom edge at the start (the status
   line came in after the tree had scrolled); a tree made shorter keeps its focused folder in view.

@@ -10,9 +10,9 @@
 
   // ---------- Fonts ----------
   "appFont": "",                  // the window: ribbon, pane heads, location, status line; "" is Segoe UI
-  "appSize": 0,                   // in points; 0 is 9.75 pt
+  "appSize": 10,                  // in points, 4 to 36
   "paneFont": "",                 // the rows of every pane; "" is Segoe UI
-  "paneSize": 0,                  // in points; 0 is 9.75 pt (also Ctrl+mouse wheel over a pane)
+  "paneSize": 10,                 // in points, 4 to 36 (also Ctrl+mouse wheel over a pane)
 
   // ---------- Panes ----------
   "showHidden": false,            // hidden and system files and folders shown (Ctrl+H, View > Hidden items)
