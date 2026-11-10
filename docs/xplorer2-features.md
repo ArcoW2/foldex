@@ -61,7 +61,7 @@ updated whenever a plan is written, built or closed that touches a feature here.
 | Selection clipboard, sticky selection, checkboxes | P+ | -- | 3 | -- |
 | Type-ahead | P+ | -- | 3 | -- |
 | Programmable columns (expressions) | U | -- | 2 | Columns |
-| Per-folder view settings | P+ | -- (view is per pane, plan 03) | 1 | Columns (column sets per folder, plan 11) |
+| Per-folder view settings | P+ | plan 11 (a column set per folder) | 1 | Columns (column sets per folder, plan 11) |
 | Browse flat (folder and subfolders as one list) | P+ | -- | 1 | Columns (the path column) |
 | Over 1000 system properties as columns | U | -- | No idea | Columns |
 
