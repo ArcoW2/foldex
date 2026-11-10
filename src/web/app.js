@@ -166,6 +166,10 @@ function paneElement(id, kind, title) {
 
 // A pane activated: the panes above it show their state for its branch (3.1).
 function activate(id) {
+  if (!docks.visible(id) && docks.find(id)) {   // a pane in a tab not shown: its tab comes forward
+    docks.show(id);
+    renderDock();
+  }
   if (activePane === id) return;
   activePane = id;
   queueMicrotask(ribbonRefresh);
@@ -199,6 +203,7 @@ function drawHeads() {
       return dot;
     }));
   }
+  drawTabs();
 }
 
 // Followers take what a pane focused once the cursor rests (3.3, debounce).
@@ -453,6 +458,8 @@ class TreeView {
   }
 
   locationText() { return layout.state(this.id).focus ?? ''; }
+
+  tabTitle() { return 'Folders'; }
 }
 
 const described = new Map();
@@ -552,6 +559,7 @@ class ListView {
     window.__spike.lists.push({ location: m.location, count: this.entries.length, enumMs: m.enumMs });
     if (m.error) status(`${m.name}: ${m.error}`, true);
     else status(`${m.name}${m.elevated ? ' (as administrator)' : ''}: ${this.entries.length} items`);
+    drawTabs();   // the tab shows the folder's name
     // The focus of this branch, as it was left, comes back when it is still there.
     const focus = layout.state(this.id).focus;
     if (focus && this.entries.some(x => same(x.id, focus))) this.select(this.entries.find(x => same(x.id, focus)), {}, true);
@@ -687,6 +695,8 @@ class ListView {
   }
 
   locationText() { return this.location ?? ''; }
+
+  tabTitle() { return this.name ?? (this.location ?? '').split('\\').filter(x => x).pop() ?? 'Files'; }
 }
 
 // ---------- A preview (plan 04): Windows' preview handler in the host, over this pane's area ----------
@@ -698,7 +708,19 @@ class PreviewView {
     this.el = paneElement(id, 'preview', 'Preview');
     this.body = this.el.querySelector('.body');
     this.rows = this.el.querySelector('.rows');
-    new ResizeObserver(() => { if (this.path) post({ op: 'previewMove', rect: this.rect() }); }).observe(this.body);
+    // Windows' preview lies over this pane's area: it moves with it, goes when the pane is a tab not shown, and comes
+    // back when it is shown again.
+    new ResizeObserver(() => {
+      if (!this.path) return;
+      const r = this.body.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) {
+        if (!this.away) post({ op: 'previewClose' });
+        this.away = true;
+      } else if (this.away) {
+        this.away = false;
+        post({ op: 'preview', path: this.path, rect: this.rect() });
+      } else post({ op: 'previewMove', rect: this.rect() });
+    }).observe(this.body);
     this.message('Select a file to preview it.');
   }
 
@@ -737,6 +759,8 @@ class PreviewView {
 
   locationText() { return this.path ?? ''; }
 
+  tabTitle() { return 'Preview'; }
+
   close() { post({ op: 'previewClose' }); }
 }
 
@@ -751,29 +775,149 @@ function dropTarget(body, targetOf) {
   });
 }
 
-// ---------- The default layout (3.5) ----------
+// ---------- Docking (plan 12 3.1): the areas, groups as tabs, splits; docks.js decides, this draws ----------
 
+const docks = new Docks();
 let preview = null;
 
-function addView(view, after) {
+// A view docked at `place` (docks.js add) and drawn.
+function placeView(view, place) {
   views.set(view.id, view);
-  const panes = $('panes');
-  if (after) after.el.after(view.el); else panes.append(view.el);
+  docks.add(view.id, place);
+  renderDock();
   return view;
 }
 
-function splitter(left) {
+// The window's panes drawn from the dock model: top, then left | center | right, then bottom; each area its node: a
+// group (its tabs when more than one, the shown pane) or a split (its nodes with splitters between). The panes' own
+// elements are moved, not made again, so what they show stays; their scroll positions are put back.
+function renderDock() {
+  const scrolls = [...views.values()].map(v => [v, v.body.scrollTop]);
+  const root = $('panes');
+  const middle = document.createElement('div');
+  middle.className = 'dock-middle';
+  const area = name => {
+    const node = docks.areas[name];
+    if (!node) return null;
+    const el = document.createElement('div');
+    el.className = `dock-area dock-${name}`;
+    if (name === 'left' || name === 'right') el.style.width = `${docks.sizes[name]}px`;
+    if (name === 'top' || name === 'bottom') el.style.height = `${docks.sizes[name]}px`;
+    el.append(drawNode(node));
+    return el;
+  };
+  const [top, left, center, right, bottom] = ['top', 'left', 'center', 'right', 'bottom'].map(area);
+  const centerEl = center ?? Object.assign(document.createElement('div'), { className: 'dock-area dock-center dock-empty' });
+  middle.append(...[left, left && areaSplitter('left'), centerEl, right && areaSplitter('right'), right].filter(x => x));
+  root.replaceChildren(...[top, top && areaSplitter('top'), middle, bottom && areaSplitter('bottom'), bottom].filter(x => x));
+  for (const v of views.values()) v.el.hidden = !docks.visible(v.id);
+  for (const [v, top] of scrolls) v.body.scrollTop = top;
+  drawTabs();
+}
+
+function drawNode(node) {
+  if (node.type === 'group') {
+    const el = document.createElement('div');
+    el.className = 'dock-group';
+    if (node.panes.length > 1) {
+      const tabs = document.createElement('div');
+      tabs.className = 'dock-tabs';
+      tabs.dataset.group = node.panes.join(' ');
+      el.append(tabs);
+    }
+    for (const id of node.panes) if (views.get(id)) el.append(views.get(id).el);
+    return el;
+  }
+  const el = document.createElement('div');
+  el.className = `dock-split dock-${node.dir}`;   // not "row": that is a list row's class
+  node.children.forEach((child, k) => {
+    if (k > 0) el.append(splitSplitter(node, k));
+    const cell = document.createElement('div');
+    cell.className = 'dock-cell';
+    cell.style.flexGrow = node.shares[k] ?? 1;
+    cell.append(drawNode(child));
+    el.append(cell);
+  });
+  return el;
+}
+
+// The tabs of each group: the pane's title, in its branch colour; a click shows that pane and makes it active (the
+// parent then shows its state for that tab's branch, plan 03 3.1).
+function drawTabs() {
+  for (const strip of document.querySelectorAll('.dock-tabs')) {
+    const shown = docks.find(strip.dataset.group.split(' ')[0])?.group.shown;
+    strip.replaceChildren(...strip.dataset.group.split(' ').filter(id => views.get(id)).map(id => {
+      const tab = document.createElement('button');
+      tab.className = 'dock-tab' + (id === shown ? ' on' : '');
+      tab.textContent = views.get(id).tabTitle();
+      const pane = layout.pane(id);
+      const key = pane.source === null ? layout.keyOf(id) : pane.colour;
+      tab.style.setProperty('--branch', key !== '' && key !== null ? `var(--branch-${key})` : '');
+      tab.addEventListener('mousedown', e => {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        showPane(id);
+      });
+      return tab;
+    }));
+  }
+}
+
+// A pane brought on screen (its tab shown), made active and given the keyboard.
+function showPane(id) {
+  if (!docks.visible(id)) {
+    docks.show(id);
+    renderDock();
+  }
+  activate(id);
+  views.get(id)?.body.focus();
+}
+
+// The splitter of a side area: dragging it sets the area's size.
+function areaSplitter(side) {
   const bar = document.createElement('div');
-  bar.className = 'splitter';
+  bar.className = `splitter ${side === 'left' || side === 'right' ? 'splitter-col' : 'splitter-row'}`;
   bar.addEventListener('mousedown', e => {
-    const start = e.clientX, width = left.el.getBoundingClientRect().width;
-    const move = m => { left.el.style.width = `${Math.max(120, width + m.clientX - start)}px`; };
+    e.preventDefault();
+    const across = side === 'left' || side === 'right';
+    const start = across ? e.clientX : e.clientY, size = docks.sizes[side];
+    const sign = side === 'left' || side === 'top' ? 1 : -1;
+    const el = document.querySelector(`.dock-${side}`);
+    const move = m => {
+      docks.sizes[side] = Math.max(80, size + sign * ((across ? m.clientX : m.clientY) - start));
+      el.style[across ? 'width' : 'height'] = `${docks.sizes[side]}px`;
+    };
     const up = () => { removeEventListener('mousemove', move); removeEventListener('mouseup', up); };
     addEventListener('mousemove', move);
     addEventListener('mouseup', up);
-    e.preventDefault();
   });
-  left.el.after(bar);
+  return bar;
+}
+
+// The splitter between two nodes of a split: dragging it moves share from one to the other.
+function splitSplitter(split, k) {
+  const bar = document.createElement('div');
+  bar.className = `splitter ${split.dir === 'row' ? 'splitter-col' : 'splitter-row'}`;
+  bar.addEventListener('mousedown', e => {
+    e.preventDefault();
+    const row = split.dir === 'row';
+    const before = bar.previousElementSibling, after = bar.nextElementSibling;
+    const a = before.getBoundingClientRect(), b = after.getBoundingClientRect();
+    const total = row ? a.width + b.width : a.height + b.height;
+    const shares = split.shares[k - 1] + split.shares[k];
+    const start = row ? e.clientX : e.clientY, first = row ? a.width : a.height;
+    const move = m => {
+      const size = Math.min(total - 60, Math.max(60, first + (row ? m.clientX : m.clientY) - start));
+      split.shares[k - 1] = shares * size / total;
+      split.shares[k] = shares - split.shares[k - 1];
+      before.style.flexGrow = split.shares[k - 1];
+      after.style.flexGrow = split.shares[k];
+    };
+    const up = () => { removeEventListener('mousemove', move); removeEventListener('mouseup', up); };
+    addEventListener('mousemove', move);
+    addEventListener('mouseup', up);
+  });
+  return bar;
 }
 
 async function start(paths) {
@@ -783,35 +927,49 @@ async function start(paths) {
   list.body.focus();
 }
 
-// A new root: a tree of folders (3.4, New pane), at the end of the window, on `path` or else This PC.
+// A new root: a tree of folders (3.4, New pane), in the left area, on `path` or else This PC.
 function newRootPane(path) {
   const id = layout.add({ kind: 'tree', content: 'folders' });
-  const tree = addView(new TreeView(id));
-  splitter(tree);
+  const tree = placeView(new TreeView(id), { area: 'left' });
   activate(id);
   tree.ready = tree.init().then(() => path ? tree.reveal(path) : tree.select(ThisPC));
   return tree;
 }
 
-// A new child of a pane, after the panes already following it (3.4, New child pane), with the settings of the parent's
-// current child; it shows what the parent focuses.
-function newChildPane(parentId) {
+// Where a new child goes (plan 12 3.2): 'right' or 'below' its parent, or as a 'tab' in the parent's group. A child of
+// a pane in a side area goes to the center when it is to be at the right (the default layout: tree left, list center).
+function childPlace(parentId, where) {
+  if (where === 'tab') return { pane: parentId, side: 'tab' };
+  if (where === 'below') return { pane: parentId, side: 'bottom' };
+  const area = docks.areaOf(parentId);
+  if (area && area !== 'center') {
+    const centerPanes = docks.groups().filter(g => g.area === 'center').flatMap(g => g.group.panes);
+    return centerPanes.length ? { pane: centerPanes.at(-1), side: 'right' } : { area: 'center' };
+  }
+  return { pane: parentId, side: 'right' };
+}
+
+// A new child of a pane (3.4, New child pane), with the settings of the parent's current child; it shows what the
+// parent focuses.
+function newChildPane(parentId, where = 'right') {
   const id = layout.add({ source: parentId, ...layout.childSettings(parentId) });
-  const siblings = [...views.values()].filter(v => layout.pane(v.id).source === parentId);
-  const after = siblings.at(-1)?.el ?? views.get(parentId).el;
-  const place = after.nextElementSibling?.classList.contains('splitter') ? after.nextElementSibling : after;
-  const view = new ListView(id);
-  views.set(id, view);
-  place.after(view.el);
+  const view = placeView(new ListView(id), childPlace(parentId, where));
   // Its branch active first (a new one starts from a copy of the parent's state), then it shows the parent's focused
   // item when that is a folder (3.3); the other branches' children stay as they are.
   activate(id);
-  const focus = layout.state(parentId).focus;
-  const parent = views.get(parentId);
-  const folder = parent instanceof TreeView || !!parent.entries?.find(x => same(x.id, focus))?.folder;
-  if (focus && folder) apply(layout.follow(parentId, { id: focus, folder: true }));
+  followParent(id);
   drawHeads();
   return view;
+}
+
+// A child shows what its parent focuses, when that is a folder.
+function followParent(id) {
+  const parentId = layout.pane(id)?.source;
+  if (parentId == null) return;
+  const focus = layout.state(parentId).focus;
+  const parent = views.get(parentId);
+  const folder = parent instanceof TreeView || !!parent?.entries?.find(x => same(x.id, focus))?.folder;
+  if (focus && folder) apply(layout.follow(parentId, { id: focus, folder: true }).filter(u => u.pane === id));
 }
 
 // Closes a pane (3.4): its children get its parent; with none left, New pane makes one.
@@ -822,34 +980,34 @@ function closePane(id) {
     preview.close();
     preview = null;
   }
-  if (view.el.nextElementSibling?.classList.contains('splitter')) view.el.nextElementSibling.remove();
   view.el.remove();
   views.delete(id);
   iconUsers.delete(view);
   layout.remove(id);
+  docks.remove(id);
+  renderDock();
   activePane = null;
-  const next = [...views.values()][0];
+  const next = docks.panes().find(p => docks.visible(p) && views.get(p));
   if (next) {
-    activate(next.id);
-    next.body.focus();
+    activate(next);
+    views.get(next).body.focus();
   } else status('No panes left: New pane (View > Panes, Ctrl+Alt+Shift+N) makes one.');
   drawHeads();
   ribbonRefresh();
 }
 
-// The preview pane (Preview on the ribbon, Alt+P): a child of the active list, or of the first list.
+// The preview pane (Preview on the ribbon, Alt+P): a child of the active list, or of the first list, at its right.
 function togglePreview() {
   if (preview) return closePane(preview.id);
   const list = activeView() instanceof ListView ? activeView() : [...views.values()].find(v => v instanceof ListView);
   if (!list) return status('A preview follows a list: make one with New child pane.', true);
   const id = layout.add({ source: list.id, kind: 'preview' });
-  preview = addView(new PreviewView(id), list);
+  preview = placeView(new PreviewView(id), { pane: list.id, side: 'right' });
   preview.show(layout.state(list.id).focus);
   drawHeads();
 }
-
 function cyclePane(step) {
-  const order = [...document.querySelectorAll('#panes .pane')].map(el => el.dataset.pane);
+  const order = docks.panes().filter(id => docks.visible(id) && views.get(id));
   const next = order[(order.indexOf(activePane) + step + order.length) % order.length];
   views.get(next)?.body.focus();
 }

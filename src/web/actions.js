@@ -74,7 +74,9 @@ action('refresh', { title: 'Refresh', group: 'folders', enabled: () => !!activeV
 
 action('pane.new', { title: 'New pane', hint: 'a folder tree of its own, without a parent', group: 'panes', run: () => newRootPane() });
 action('pane.newChild', { title: 'New child pane', group: 'panes', enabled: () => !!activeView() && !(activeView() instanceof PreviewView),
-  variants: [['right']], variantTitles: { right: 'New child pane at the right' }, run: () => newChildPane(activePane) });
+  variants: [['right'], ['below'], ['tab']],
+  variantTitles: { right: 'New child pane at the right', below: 'New child pane below', tab: 'New child pane as a tab' },
+  run: params => newChildPane(activePane, params[0] ?? 'right') });
 action('pane.close', { title: 'Close pane', group: 'panes', enabled: () => !!activeView(), run: () => closePane(activePane) });
 const isChild = () => layout.pane(activePane)?.source != null;
 action('pane.detach', { title: 'Detach from parent', hint: 'the pane stops following and goes its own way', group: 'panes',
