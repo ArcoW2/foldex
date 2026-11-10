@@ -48,6 +48,13 @@ html, body {
   color: var(--fg);
   /* The window font (look.js applyFonts; the defaults until the settings are there). */
   font: var(--app-size, 13px) var(--app-font, "Segoe UI", system-ui, sans-serif);
+  /* No browser text selection over rows, heads and buttons (a mouse let go during a confirmation left one); text
+     boxes keep theirs. */
+  user-select: none;
+}
+
+input, textarea {
+  user-select: text;
 }
 
 input, select, button, textarea {
@@ -611,4 +618,68 @@ footer {
 
 body.docking, body.docking * {
   cursor: move !important;
+}
+
+/* The page's own menus (menu.js). */
+.menu {
+  position: fixed;
+  z-index: 60;
+  min-width: 180px;
+  padding: 3px 0;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .3);
+  outline: none;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 22px 3px 8px;
+  white-space: nowrap;
+  cursor: default;
+  position: relative;
+}
+
+.menu-item.hot {
+  background: var(--select);
+}
+
+.menu-item.off {
+  opacity: .45;
+}
+
+.menu-item.sub::after {
+  content: ">";
+  position: absolute;
+  right: 8px;
+  color: var(--fg-dim);
+}
+
+.menu-check {
+  width: 10px;
+  height: 10px;
+  flex: none;
+}
+
+.menu-check.on:not(.swatch) {
+  border-radius: 50%;
+  background: var(--fg);
+  transform: scale(.6);
+}
+
+.menu-check.swatch {
+  border-radius: 50%;
+}
+
+.menu-check.swatch.on {
+  box-shadow: 0 0 0 2px var(--fg);
+}
+
+.menu-line {
+  height: 1px;
+  margin: 3px 0;
+  background: var(--border);
 }

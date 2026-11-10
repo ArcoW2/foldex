@@ -163,6 +163,7 @@ function paneElement(id, kind, title) {
   el.querySelector('.head').addEventListener('mousedown', e => {
     if (!e.target.closest('.connector, .pin, .marks span')) dragToDock(id, e);
   });
+  el.querySelector('.head').addEventListener('contextmenu', e => openPaneMenu(id, e));
   el.addEventListener('mousedown', () => activate(id), true);
   el.addEventListener('focusin', () => activate(id));
   return el;
@@ -863,6 +864,7 @@ function drawTabs() {
         showPane(id);
         dragToDock(id, e);
       });
+      tab.addEventListener('contextmenu', e => openPaneMenu(id, e));
       return tab;
     }));
   }
@@ -932,6 +934,69 @@ function dragToDock(id, e) {
   addEventListener('mouseup', up);
 }
 
+// New tab (plan 12 3.2): a copy of the pane as a tab in its group: the same kind and settings, the same parent, in a
+// new branch, so it starts on the same folder and then goes its own way. A tab of a root is a new root on its folder.
+function newTab(id) {
+  const pane = layout.pane(id), view = views.get(id);
+  if (!pane || view instanceof PreviewView) return;
+  const place = { pane: id, side: 'tab' };
+  if (pane.source !== null) {
+    const tab = layout.add({ source: pane.source, colour: layout.newColour(), kind: pane.kind, content: pane.content });
+    placeView(new ListView(tab), place);
+    activate(tab);   // its branch active: the parent's state for it starts as a copy of the one shown
+    followParent(tab);
+    drawHeads();
+    return views.get(tab).body.focus();
+  }
+  if (view instanceof TreeView) return newRootPane(layout.state(id).focus, place);
+  const root = layout.add({ kind: pane.kind, content: pane.content });
+  placeView(new ListView(root), place);
+  activate(root);
+  views.get(root).reveal(view.location);
+  drawHeads();
+}
+
+// The pane head's menu (plan 12 3.2), on a right-click on a head or a tab.
+function paneMenu(id) {
+  const pane = layout.pane(id);
+  const child = pane.source !== null;
+  const title = p => `${views.get(p)?.tabTitle() ?? p}${layout.pane(p).kind === 'tree' ? ' (tree)' : ''}`;
+  const colourOf = p => {
+    const k = layout.pane(p).source === null ? layout.keyOf(p) : layout.pane(p).colour;
+    return k !== '' && k !== null ? `var(--branch-${k})` : 'var(--accent)';
+  };
+  // The panes it can follow: not itself, not one below it (a cycle), not a preview, not its parent now.
+  const below = p => { for (let q = p; q !== null; q = layout.pane(q).source) if (q === id) return true; return false; };
+  const parents = docks.panes().filter(p => views.get(p) && !below(p) && layout.pane(p).kind !== 'preview' && p !== pane.source);
+  const free = Branches.filter(b => !layout.followers(pane.source ?? '').some(f => f.colour === b && f.id !== id));
+  return [
+    { label: 'New child pane', enabled: !(views.get(id) instanceof PreviewView), items: [
+      { label: 'At the right', run: () => newChildPane(id, 'right') },
+      { label: 'Below', run: () => newChildPane(id, 'below') },
+      { label: 'As a tab', run: () => newChildPane(id, 'tab') } ] },
+    { label: 'New tab', enabled: !(views.get(id) instanceof PreviewView), run: () => newTab(id) },
+    '-',
+    { label: 'Detach from parent', enabled: child, run: () => detachPane(id) },
+    { label: 'Attach to', enabled: parents.length > 0, items: parents.map(p => ({ label: title(p), swatch: colourOf(p), run: () => attachPane(id, p) })) },
+    { label: 'Branch colour', enabled: child, items: Branches.map(b => ({
+      label: `Branch ${b + 1}${free.includes(b) ? '' : ' (with a sibling)'}`, swatch: `var(--branch-${b})`, checked: pane.colour === b,
+      run: () => setBranchColour(id, b) })) },
+    { label: 'Pin', enabled: child, checked: pane.pinned, run: () => togglePin(id) },
+    '-',
+    { label: 'Move to', items: ['left', 'right', 'top', 'bottom', 'center'].map(area => ({
+      label: area[0].toUpperCase() + area.slice(1), checked: docks.areaOf(id) === area,
+      run: () => { docks.add(id, { area }); renderDock(); showPane(id); } })) },
+    '-',
+    { label: 'Close pane', run: () => closePane(id) },
+  ];
+}
+
+function openPaneMenu(id, e) {
+  e.preventDefault();
+  activate(id);
+  openMenu(e.clientX, e.clientY, paneMenu(id));
+}
+
 // A pane brought on screen (its tab shown), made active and given the keyboard.
 function showPane(id) {
   if (!docks.visible(id)) {
@@ -996,10 +1061,10 @@ async function start(paths) {
   list.body.focus();
 }
 
-// A new root: a tree of folders (3.4, New pane), in the left area, on `path` or else This PC.
-function newRootPane(path) {
+// A new root: a tree of folders (3.4, New pane), in the left area (or at `place`), on `path` or else This PC.
+function newRootPane(path, place = { area: 'left' }) {
   const id = layout.add({ kind: 'tree', content: 'folders' });
-  const tree = placeView(new TreeView(id), { area: 'left' });
+  const tree = placeView(new TreeView(id), place);
   activate(id);
   tree.ready = tree.init().then(() => path ? tree.reveal(path) : tree.select(ThisPC));
   return tree;
