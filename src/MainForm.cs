@@ -163,6 +163,7 @@ sealed class MainForm : Form
                     ["keys"] = KeysFile.Load(AppHost.DataDir),
                     ["ribbon"] = RibbonFile.Load(AppHost.DataDir, Path.Combine(AppHost.DefaultsDir, RibbonFile.Name)),
                     ["paths"] = PathsArray(paths),
+                    ["layout"] = pageLayout?.DeepClone() ?? app.TakeSavedLayout(),
                     ["ops"] = new JsonArray(app.FileOps.All.Select(o => (JsonNode)o.ToJson()).ToArray()),
                 });
                 foreach (var queued in queue) web.CoreWebView2.PostWebMessageAsJson(queued);
@@ -266,6 +267,9 @@ sealed class MainForm : Form
                 {
                     Post(new JsonObject { ["event"] = "settingFailed", ["error"] = ex.Message });
                 }
+                break;
+            case "layout":
+                pageLayout = msg["layout"]?.DeepClone() as JsonObject;
                 break;
             case "watch":
                 app.Folders?.Set(this, msg["folders"]?.AsArray().Select(n => n!.GetValue<string>()) ?? []);
@@ -414,6 +418,10 @@ sealed class MainForm : Form
         else queue.Add(json);
     }
 
+    // The page's layout as it told it last (plan 12 3.4): kept with the window's place when it closes, and given back to a
+    // new page after a failure.
+    JsonObject? pageLayout;
+
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
         base.OnFormClosing(e);
@@ -422,6 +430,7 @@ sealed class MainForm : Form
         {
             X = b.X, Y = b.Y, Width = b.Width, Height = b.Height,
             Maximized = WindowState == FormWindowState.Maximized,
+            Layout = pageLayout ?? app.State?.Layout,
         });
     }
 }

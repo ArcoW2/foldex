@@ -24,6 +24,7 @@
   "Alt+P": "preview.toggle",
   "Ctrl+Alt+N": ["pane.newChild", "right"],
   "Ctrl+Alt+Shift+N": "pane.new",
+  "Ctrl+T": "pane.newTab",
   "Ctrl+W": "pane.close",
   "F6": "pane.next",
   "Shift+F6": "pane.previous",

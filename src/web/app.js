@@ -180,13 +180,14 @@ function activate(id) {
   queueMicrotask(ribbonRefresh);
   for (const changed of layout.activate(id)) views.get(changed)?.restore();
   for (const v of views.values()) v.el.classList.toggle('active', v.id === id);
-  drawHeads();
+  drawHeads();   // and the tabs (drawTabs): the active pane's tab is the bright one
   $('location').value = views.get(id)?.locationText() ?? '';
 }
 
 // Each head in the colour it shows; a parent has a mark per branch it feeds, in the order the branches were made (the
 // first rightmost, app.css), so a mark keeps its place; the active one full and larger. A click switches to one.
 function drawHeads() {
+  tellLayout();
   for (const v of views.values()) {
     const pane = layout.pane(v.id);
     const key = pane.source === null ? layout.keyOf(v.id) : pane.colour;
@@ -331,6 +332,28 @@ class TreeView {
       });
     });
     return n.loading;
+  }
+
+  // A folder changed on disk (3.8): its subfolders read again beside the ones shown, put in only when the names
+  // differ (a folder's own date changing, as a watcher also reports, changes nothing); the focused row stays where it
+  // is on screen.
+  reread(n) {
+    const kids = [];
+    list(`tree:${this.id}:${n.id}`, n.id, true, part => kids.push(...part), m => {
+      if (m.error) return;
+      const next = kids.concat(m.entries).sort(byName).map(e => this.add(e, n));
+      if (n.children && next.length === n.children.length && next.every((c, k) => c === n.children[k])) return;
+      const focus = this.node(layout.state(this.id).focus);
+      const offset = focus ? this.flat.indexOf(focus) * RowHeight - this.body.scrollTop : 0;
+      for (const gone of n.children ?? []) if (!next.includes(gone)) this.nodes.delete(gone.id.toLowerCase());
+      n.children = next;
+      this.flatten();
+      const at = focus ? this.flat.indexOf(focus) : -1;
+      if (at >= 0) {
+        this.body.scrollTop = at * RowHeight - offset;
+        this.render();
+      }
+    });
   }
 
   async expand(n, open = true) {
@@ -797,6 +820,7 @@ function placeView(view, place) {
 // group (its tabs when more than one, the shown pane) or a split (its nodes with splitters between). The panes' own
 // elements are moved, not made again, so what they show stays; their scroll positions are put back.
 function renderDock() {
+  tellLayout();
   const scrolls = [...views.values()].map(v => [v, v.body.scrollTop]);
   const root = $('panes');
   const middle = document.createElement('div');
@@ -853,7 +877,7 @@ function drawTabs() {
     const shown = docks.find(strip.dataset.group.split(' ')[0])?.group.shown;
     strip.replaceChildren(...strip.dataset.group.split(' ').filter(id => views.get(id)).map(id => {
       const tab = document.createElement('button');
-      tab.className = 'dock-tab' + (id === shown ? ' on' : '');
+      tab.className = 'dock-tab' + (id === shown ? ' on' : '') + (id === activePane ? ' active' : '');
       tab.textContent = views.get(id).tabTitle();
       const pane = layout.pane(id);
       const key = pane.source === null ? layout.keyOf(id) : pane.colour;
@@ -972,8 +996,7 @@ function paneMenu(id) {
   return [
     { label: 'New child pane', enabled: !(views.get(id) instanceof PreviewView), items: [
       { label: 'At the right', run: () => newChildPane(id, 'right') },
-      { label: 'Below', run: () => newChildPane(id, 'below') },
-      { label: 'As a tab', run: () => newChildPane(id, 'tab') } ] },
+      { label: 'Below', run: () => newChildPane(id, 'below') } ] },
     { label: 'New tab', enabled: !(views.get(id) instanceof PreviewView), run: () => newTab(id) },
     '-',
     { label: 'Detach from parent', enabled: child, run: () => detachPane(id) },
@@ -1054,11 +1077,62 @@ function splitSplitter(split, k) {
   return bar;
 }
 
-async function start(paths) {
+async function start(paths, saved) {
+  if (saved && restoreLayout(saved, paths[0])) return;
   const tree = newRootPane(paths[0]);
-  const list = newChildPane(tree.id);
+  const list = newChildPane(tree.id, 'right', { area: 'center' });
   await tree.ready;
   list.body.focus();
+}
+
+// ---------- The layout kept (plan 12 3.4): told to the host, which keeps the last closed window's ----------
+
+let layoutTimer = 0;
+function tellLayout() {
+  clearTimeout(layoutTimer);
+  layoutTimer = setTimeout(() => post({ op: 'layout', layout: { panes: layout.toJSON(), docks: docks.toJSON(), active: activePane } }), 800);
+}
+
+// The panes, their connections and branch states, and the docks, as they were: a view per pane, each back on what it
+// showed (a tree reveals its folder, a list loads its own). A path given on the command line goes to the first tree.
+// False (nothing made) when the saved layout has no pane the docks place.
+function restoreLayout(saved, path) {
+  try {
+    const panes = Layout.fromJSON(saved.panes);
+    const placed = Docks.fromJSON(saved.docks);
+    const ids = placed.panes().filter(id => panes.pane(id));
+    if (!ids.length) return false;
+    Object.assign(layout, { panes: panes.panes, root: panes.root, next: panes.next });
+    Object.assign(docks, { areas: placed.areas, sizes: placed.sizes });
+    for (const id of placed.panes()) if (!layout.pane(id)) docks.remove(id);
+    for (const id of [...layout.panes.keys()]) if (!docks.find(id)) layout.remove(id);
+    for (const id of docks.panes()) {
+      const kind = layout.pane(id).kind;
+      const view = kind === 'tree' ? new TreeView(id) : kind === 'preview' ? new PreviewView(id) : new ListView(id);
+      views.set(id, view);
+      if (view instanceof PreviewView) preview = view;
+    }
+    renderDock();
+    let firstTree = path ? null : true;
+    for (const [id, view] of views) {
+      if (view instanceof TreeView) {
+        const focus = firstTree === null ? path : layout.state(id).focus;
+        firstTree = true;
+        view.ready = view.init().then(() => focus ? view.reveal(focus) : view.select(ThisPC));
+      } else if (view instanceof ListView) {
+        const s = layout.state(id);
+        if (s.location) view.load(s.location);
+      }
+    }
+    const active = views.has(saved.active) ? saved.active : docks.panes()[0];
+    activate(active);
+    drawHeads();
+    views.get(active)?.body.focus();
+    return true;
+  } catch (e) {
+    status(`The saved layout could not be used: ${e.message}`, true);
+    return false;
+  }
 }
 
 // A new root: a tree of folders (3.4, New pane), in the left area (or at `place`), on `path` or else This PC.
@@ -1070,24 +1144,12 @@ function newRootPane(path, place = { area: 'left' }) {
   return tree;
 }
 
-// Where a new child goes (plan 12 3.2): 'right' or 'below' its parent, or as a 'tab' in the parent's group. A child of
-// a pane in a side area goes to the center when it is to be at the right (the default layout: tree left, list center).
-function childPlace(parentId, where) {
-  if (where === 'tab') return { pane: parentId, side: 'tab' };
-  if (where === 'below') return { pane: parentId, side: 'bottom' };
-  const area = docks.areaOf(parentId);
-  if (area && area !== 'center') {
-    const centerPanes = docks.groups().filter(g => g.area === 'center').flatMap(g => g.group.panes);
-    return centerPanes.length ? { pane: centerPanes.at(-1), side: 'right' } : { area: 'center' };
-  }
-  return { pane: parentId, side: 'right' };
-}
-
-// A new child of a pane (3.4, New child pane), with the settings of the parent's current child; it shows what the
-// parent focuses.
-function newChildPane(parentId, where = 'right') {
+// A new child of a pane (3.4, New child pane; plan 12 3.2): directly at the right of that pane, or below it (`where`),
+// or at `place` (the default layout puts the first list in the center); with the settings of the parent's current child;
+// it shows what the parent focuses. A tab is New tab, not a child.
+function newChildPane(parentId, where = 'right', place = null) {
   const id = layout.add({ source: parentId, ...layout.childSettings(parentId) });
-  const view = placeView(new ListView(id), childPlace(parentId, where));
+  const view = placeView(new ListView(id), place ?? { pane: parentId, side: where === 'below' ? 'bottom' : 'right' });
   // Its branch active first (a new one starts from a copy of the parent's state), then it shows the parent's focused
   // item when that is a folder (3.3); the other branches' children stay as they are.
   activate(id);
@@ -1171,10 +1233,7 @@ function folderChanged(folder) {
     if (v instanceof ListView && same(v.location, folder)) v.reread();
     if (v instanceof TreeView) {
       const n = v.node(folder);
-      if (n?.children) {
-        n.children = null;
-        v.expand(n, n.expanded);
-      }
+      if (n?.children) v.reread(n);
     }
   }
 }
@@ -1211,6 +1270,7 @@ const placesOf = step => step.map(x => `${x.id}=${(views.get(x.id) instanceof Tr
 // are the same (a selection made there is kept with it), else a new step (a step forward from where back left it drops
 // the steps after it, as a browser does).
 function recordStep() {
+  tellLayout();
   if (restoring || activePane === null) return;
   clearTimeout(recordTimer);
   recordTimer = setTimeout(() => {
@@ -1457,7 +1517,7 @@ const events = {
     for (const o of m.ops) ops.set(o.id, o);
     showOps();
     settingsProblems(m);
-    start(m.paths);
+    start(m.paths, m.layout);
   },
   // Settings or themes changed (the settings window, a file edited by hand): every window is told.
   settings(m) {

@@ -49,9 +49,11 @@ sealed class AppHost : ApplicationContext
         return (version, commit);
     }
 
-    /// <summary>What Foldex remembers by itself: the last window's position and size.</summary>
+    /// <summary>What Foldex remembers by itself: the last window's position and size, and its panes and docks (plan 12
+    /// 3.4, until projects keep them).</summary>
     public sealed class AppState
     {
+        public JsonObject? Layout { get; set; }
         public int X { get; set; }
         public int Y { get; set; }
         public int Width { get; set; }
@@ -67,6 +69,16 @@ sealed class AppHost : ApplicationContext
     {
         try { return File.Exists(StatePath) ? JsonSerializer.Deserialize<AppState>(File.ReadAllText(StatePath)) : null; }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException) { return null; }
+    }
+
+    bool layoutTaken;
+
+    /// <summary>The saved layout, for the first window of this run only (later windows open with the default one).</summary>
+    public JsonObject? TakeSavedLayout()
+    {
+        if (layoutTaken) return null;
+        layoutTaken = true;
+        return State?.Layout?.DeepClone() as JsonObject;
     }
 
     public void SaveState(AppState state)
