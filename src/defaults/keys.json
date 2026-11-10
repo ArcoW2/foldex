@@ -19,6 +19,8 @@
   "Alt+Shift+Left": "pane.toParent",
   "Alt+Shift+Right": "pane.toChild",
   "Alt+Shift+Down": "branch.next",
+  "Tab": "branch.down",
+  "Shift+Tab": "branch.up",
   "F5": "refresh",
   "Ctrl+H": "hidden.toggle",
   "Alt+P": "preview.toggle",

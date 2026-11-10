@@ -1320,6 +1320,13 @@ function focusPane(id) {
   if (id && views.get(id)) views.get(id).body.focus();
 }
 
+// Along the active pane's branch (Tab, Shift+Tab): from its root down through the children of the branch shown, round.
+function alongBranch(step) {
+  const { chain } = branchChain(activePane);
+  if (chain.length < 2) return;
+  focusPane(chain[(chain.indexOf(activePane) + step + chain.length) % chain.length]);
+}
+
 function nextBranch() {
   const pane = layout.pane(activePane);
   if (!pane) return;

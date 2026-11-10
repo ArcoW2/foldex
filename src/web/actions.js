@@ -99,6 +99,10 @@ action('pane.toParent', { title: 'To the parent pane', group: 'panes', enabled: 
 action('pane.toChild', { title: 'To the child pane', hint: 'the child in the branch shown', group: 'panes',
   enabled: () => !!activePane && layout.followers(activePane, layout.keyOf(activePane)).length > 0,
   run: () => focusPane(layout.followers(activePane, layout.keyOf(activePane))[0].id) });
+action('branch.down', { title: 'Down the branch', hint: 'the next pane of the branch, from the last to the first',
+  group: 'panes', enabled: () => !!activePane, run: () => alongBranch(1) });
+action('branch.up', { title: 'Up the branch', hint: 'the pane before in the branch, from the first to the last',
+  group: 'panes', enabled: () => !!activePane, run: () => alongBranch(-1) });
 action('branch.next', { title: 'Next branch', hint: 'the next child branch of the parent', group: 'panes',
   enabled: () => !!activePane, run: () => nextBranch() });
 action('pane.next', { title: 'Next pane', group: 'panes', enabled: () => views.size > 1, run: () => cyclePane(1) });
