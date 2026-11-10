@@ -1,6 +1,6 @@
 # Plan 05: Elevated rights
 
-Status: draft 2026-11-10; not started.
+Status: draft 2026-11-10, revised 2026-11-10; not started.
 
 ## 1. What this is about
 
@@ -26,6 +26,8 @@ Whether a whole Foldex window can also run as administrator, and which of the tw
 | Permissions, ownership (take ownership) | Elevated helper |
 | Symbolic links and junctions without developer mode | Elevated helper |
 | Listing a folder the user cannot read | Elevated helper, or an elevated window (open question 1) |
+| Folders owned by SYSTEM or TrustedInstaller (`System Volume Information`, `WindowsApps`) | Elevated helper, after taking ownership; elevation alone is not enough |
+| Compatibility junctions that deny listing to everyone (`C:\Documents and Settings`) | No elevation: Foldex opens the junction's target instead |
 | Editing a protected file in place | Not Foldex's: LexPen's |
 
 ### 3.2 Why not run everything elevated

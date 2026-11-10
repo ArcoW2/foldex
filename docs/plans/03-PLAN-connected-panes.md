@@ -1,6 +1,6 @@
 # Plan 03: Connected panes and branches
 
-Status: draft 2026-11-10; not started. The core idea of Foldex.
+Status: draft 2026-11-10, revised 2026-11-10 (collection panes, plan 06); not started. The core idea of Foldex.
 
 ## 1. What this is about
 
@@ -20,7 +20,7 @@ so the next click there drives that branch. The preview (plan 04) is a follower 
 
 ### 3.1 Terms
 
-- **Pane**: shows one location. Its own settings: content (folders, files, both), view (tree, list, details, icons),
+- **Pane**: shows one location, or a collection of items from anywhere (search results, a scrap: plan 06). Its own settings: content (folders, files, both), view (tree, list, details, icons),
   sort, filter, hidden files.
 - **Connection**: from a source pane to a follower. A follower has at most one source; a source any number of
   followers. No cycles: a connection that would make one is refused.

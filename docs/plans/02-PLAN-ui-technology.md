@@ -1,6 +1,6 @@
 # Plan 02: UI technology: WebView2, native, or both
 
-Status: draft 2026-11-10; not started. An investigation: its outcome is a decision and a spike, not a feature.
+Status: draft 2026-11-10, revised 2026-11-10; not started. An investigation: its outcome is a decision and a spike, not a feature.
 
 ## 1. What this is about
 
@@ -76,6 +76,13 @@ WebView2 in an elevated process, and an elevated and a normal instance side by s
 process) [not yet checked]; see plan 05. Dragging from a normal Explorer into an elevated window is blocked by Windows
 (UIPI) whatever the UI technology, so elevation does not favour any option.
 
+Protected folders are not a WebView2 matter: the host lists folders and sends the result to the page, so what can be
+read is decided by the host process's rights. A preview that lets WebView2 load files itself (virtual host mapping,
+`file://`) reads with the same rights; streaming through the host (`WebResourceRequested`) keeps one place that
+checks. Checked on this PC (2026-11-10, not elevated): `C:\Windows` lists; `C:\System Volume Information` and
+`C:\Program Files\WindowsApps` are denied; `C:\Documents and Settings` (a compatibility junction to `C:\Users`) has
+`Everyone:(DENY)(RD)` on the junction itself, so listing it is denied even to administrators. Plan 05, 3.1.
+
 ### 3.5 The spike
 
 A throwaway branch with a minimal host and page, each check pass or fail, timings only from what was measured:
@@ -87,6 +94,7 @@ A throwaway branch with a minimal host and page, each check pass or fail, timing
 4. A Windows preview handler (a .docx or .xlsx) beside the page, with a ribbon drop-down opening over it.
 5. `IExplorerBrowser` hosted next to the page, filtered to folders only, for comparison.
 6. The same host run elevated once (plan 05).
+7. Explorer's context menu, dragging out and copying for items from different folders (plan 06, 3.4).
 
 The outcome goes into this plan (the brief solution changes to the decision) and the spike branch is deleted.
 
