@@ -923,10 +923,13 @@ function dragToDock(id, e) {
     const r = groupEl.getBoundingClientRect();
     const fx = (x - r.left) / r.width, fy = (y - r.top) / r.height;
     const shown = docks.find(target).group.shown ?? target;
-    if (fx < 0.25) return { place: { pane: shown, side: 'left' }, rect: [r.left, r.top, r.width / 2, r.height] };
-    if (fx > 0.75) return { place: { pane: shown, side: 'right' }, rect: [r.left + r.width / 2, r.top, r.width / 2, r.height] };
-    if (fy < 0.25) return { place: { pane: shown, side: 'top' }, rect: [r.left, r.top, r.width, r.height / 2] };
-    if (fy > 0.75) return { place: { pane: shown, side: 'bottom' }, rect: [r.left, r.top + r.height / 2, r.width, r.height / 2] };
+    // The nearest edge wins (low in a group near its right side is below, not right of it); its outer quarter only.
+    const near = [['left', fx], ['right', 1 - fx], ['top', fy], ['bottom', 1 - fy]].sort((a, b) => a[1] - b[1])[0];
+    const rects = {
+      left: [r.left, r.top, r.width / 2, r.height], right: [r.left + r.width / 2, r.top, r.width / 2, r.height],
+      top: [r.left, r.top, r.width, r.height / 2], bottom: [r.left, r.top + r.height / 2, r.width, r.height / 2],
+    };
+    if (near[1] < 0.25) return { place: { pane: shown, side: near[0] }, rect: rects[near[0]] };
     if (own?.panes.includes(target)) return null;   // a tab into its own group: it is there already
     return { place: { pane: shown, side: 'tab' }, rect: [r.left, r.top, r.width, r.height] };
   };

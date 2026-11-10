@@ -130,7 +130,9 @@ A right-click on a pane's header (or its tab):
 - Decided during the build: a dock split's CSS classes are not `row` / `column` (a list row's class is `row`); a drop
   onto the pane's own group when it is alone there does nothing; Ctrl+T for New tab.
 - Changed after use: New child pane as a tab dropped (that is New tab); a new child goes directly at the right of its
-  parent, also in a side area (it went to the center first); tabs coloured whole, not only underlined.
+  parent, also in a side area (it went to the center first); tabs coloured whole, not only underlined; dropping beside
+  a group: the nearest edge wins (left and right were tried first, so low near a group's right side gave right, not
+  below; checked over CDP: a drop there now lands below).
 - Found on the way and fixed: no browser text selection over the panes (a mouse let go during the Delete confirmation
   left one); a tree read a watched folder's subfolders again whenever a subfolder's date changed (SynologyDrive and
   the browser's own files on D: do that all the time), and collapsed and jumped while doing so; now the names are
