@@ -104,9 +104,11 @@ public class ThemeFileTests
     [Fact]
     public void EverySettingsRowNamesASetting()
     {
-        var rows = File.ReadAllText(Path.Combine(Web, "settingrows.js"));
+        // Run, not read: a script that does not parse leaves the settings window empty.
+        var engine = new Jint.Engine();
+        engine.Execute(File.ReadAllText(Path.Combine(Web, "settingrows.js")));
         var defaults = SettingsFile.Merge(File.ReadAllText(Path.Combine(Defaults, SettingsFile.Name)), null)["defaults"]!.AsObject();
-        var names = System.Text.RegularExpressions.Regex.Matches(rows, @"name: '([^']+)'").Select(m => m.Groups[1].Value).ToList();
+        var names = engine.Evaluate("SETTING_ROWS.map(r => r.name).join('\\n')").ToString().Split('\n').ToList();
         Assert.NotEmpty(names);
         foreach (var name in names) Assert.True(defaults.ContainsKey(name), $"settingrows.js: {name} is not a setting");
     }

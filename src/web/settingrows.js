@@ -2,7 +2,7 @@
 // The rows of the settings window (docs/plans/07-PLAN-themes.md 3.5), described once: settings.js draws them, the tests
 // check that each names a setting of defaults\settings.json. A row: { group, name, title, hint, kind } with kind
 // "toggle" (true / false), "choice" (options: [value, label]), "theme" (every theme, from the host), "font" (the
-// installed fonts, from the host; "" the default) or "size" (points, 4 to 36).
+// installed fonts, from the host; "" the default), "size" (points, 4 to 36) or "percent" (0 to 200).
 
 const SETTING_GROUPS = ['General', 'Fonts', 'Panes'];
 
@@ -23,4 +23,8 @@ const SETTING_ROWS = [
     hint: 'In points, 4 to 36. Also Ctrl+mouse wheel over a pane: every pane alike.' },
   { group: 'Panes', name: 'showHidden', kind: 'toggle', title: 'Hidden items',
     hint: 'Hidden and system files and folders shown (Ctrl+H, View > Hidden items).' },
+  { group: 'Panes', name: 'paneBgFocused', kind: 'percent', title: 'Background of the focused pane',
+    hint: 'In %, 0 to 200: 100 is the theme colour, lower is darker (0 black), higher is lighter (200 white).' },
+  { group: 'Panes', name: 'paneBgOther', kind: 'percent', title: 'Background of the other panes',
+    hint: 'In %, 0 to 200, the same way: the panes without the keyboard.' },
 ];

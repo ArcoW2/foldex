@@ -355,6 +355,15 @@ body[data-focus-away] .dock-tab.active {
   position: relative;
   /* The colour of the branch it shows (app.js drawHeads); a pane without one: the accent. */
   --pane-colour: var(--branch, var(--accent));
+  /* Its background: its own (--pane-base) made darker or lighter by the settings paneBgOther and paneBgFocused
+     (look.js applyPaneBackgrounds). */
+  --pane-base: var(--bg);
+  --pane-bg: color-mix(in srgb, var(--pane-base) var(--pane-keep-other, 100%), var(--pane-to-other, white));
+  background: var(--pane-bg);
+}
+
+.pane.active {
+  --pane-bg: color-mix(in srgb, var(--pane-base) var(--pane-keep-focused, 100%), var(--pane-to-focused, white));
 }
 
 /* The pane with the keyboard (as LexPen's focus ring): a border laid over it in its branch colour, dimmed while the
@@ -373,7 +382,7 @@ body[data-focus-away] .pane.active::after {
 }
 
 .pane.tree {
-  background: var(--bg-side);
+  --pane-base: var(--bg-side);
 }
 
 .pane > .head {
@@ -546,7 +555,7 @@ body.connecting, body.connecting * {
    keys back is not known then): a little less strong. */
 .pane:not(.active) .row.selected,
 body[data-focus-away] .row.selected {
-  background: color-mix(in srgb, var(--select) 55%, var(--bg));
+  background: color-mix(in srgb, var(--select) 55%, var(--pane-bg, var(--bg)));
 }
 
 .body:focus .row.focused {
