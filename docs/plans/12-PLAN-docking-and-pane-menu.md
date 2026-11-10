@@ -1,7 +1,7 @@
 # Plan 12: Docking panes, tabs, and the pane header's menu
 
-Status: draft 2026-11-10; partly executed 2026-11-10 (detach, attach by the connector, branch colour as an action, a
-list without a parent opening folders in itself); see 5. Status and 6. As built. Takes the docking row of plan 01 3.3
+Status: draft 2026-11-10, revised 2026-11-10 (a new child at the right of or below its parent; a tab is New tab);
+executed 2026-11-10 except floating panes (open question 1); see 5. Status and 6. As built. Takes the docking row of plan 01 3.3
 into a plan of its own, for Foldex's panes; changes plan 03 (a pane can now be detached and attached).
 
 ## 1. What this is about
@@ -41,9 +41,9 @@ no tab mechanism of their own.
 
 A right-click on a pane's header (or its tab):
 
-- **New child pane**: at the right, under it, or as a tab in its group; it follows this pane (plan 03), in a new
-  branch when this pane already has children, with the settings of its current child.
-- **New tab**: a copy of this pane as a tab in its own group: the same kind and settings, the same location, the same
+- **New child pane**: directly at the right of this pane, or below it; it follows this pane (plan 03), in a new
+  branch when this pane already has children, with the settings of its current child. Not as a tab: a tab is New tab.
+- **New tab** (Ctrl+T, View > Panes): a copy of this pane as a tab in its own group: the same kind and settings, the same location, the same
   parent, in a new branch. Because it is another branch, each tab keeps its own folder; activating a tab makes the
   parent show its state for that branch (plan 03 3.1), as switching branches does. A tab of a pane without a parent
   (a root) is a new root on the same folder.
@@ -61,7 +61,7 @@ A right-click on a pane's header (or its tab):
 - A pane can be detached and attached (3.2 above); plan 03 3.1 "a pane cannot be disconnected (for now)" goes.
 - Executing a folder in a pane without a parent: a tree expands it in place (as now); a list opens it in itself (a
   detached list navigates on its own, as a pane in Explorer).
-- New child pane at the right, below or as a tab; New tab.
+- New child pane at the right of or below its parent; New tab.
 
 ### 3.4 Kept
 
@@ -90,19 +90,61 @@ A right-click on a pane's header (or its tab):
 ### Built
 
 - Detach: a child becomes a root on the folder it shows and keeps its children (3.2).
-- Attach by dragging the connector in the header onto another pane; a cycle refused (3.2).
-- Branch colour, as an action; not yet in a header menu (3.2).
+- Attach by dragging the connector in the header onto another pane, and from the menu's Attach to; a cycle refused
+  (3.2).
+- Branch colour, as an action and in the menu (3.2).
 - A list without a parent opens a double-clicked folder in itself (3.3).
+- Docking: the five areas, groups shown as tabs, splits with splitters, the side areas' sizes (3.1).
+- Moving a pane by dragging its head or its tab onto a window edge, beside a group, into a group as a tab, or into an
+  empty center (3.1).
+- Tabs in their branch colour; a click on a tab shows it and switches to its branch (3.1, 3.2).
+- The pane head's menu, also on tabs: New child pane (right, below), New tab, Detach, Attach to, Branch colour, Pin,
+  Move to, Close pane (3.2).
+- New tab (Ctrl+T): the same parent, a branch of its own, starting on the same folder; a root's tab is a new root
+  (3.2).
+- The layout of the last closed window kept in `State\state.json` and brought back at the next start (3.4).
 
 ### Not yet built
 
-- Docking: the areas, groups, tabs, splits with splitters, moving a pane by dragging its header (3.1).
-- The pane header's right-click menu (3.2), with Attach to as a submenu and the docking moves.
-- New child pane below or as a tab; New tab (3.2, 3.3).
-- The layout kept in `State\state.json` until projects are built, then in the project (3.4).
 - Floating panes: open question 1.
+- The layout in the project (3.4), once plan 01's projects are built.
 
 ## 6. As built
 
-Built with plan 03's code (2026-11-10, branch `plan01-foundation`): see 5. Status, Built. What differs from the plan
-and how it was tested: [not yet recorded].
+### 6.1 Built (2026-11-10, branch `plan01-foundation`)
+
+- With plan 03's code: detach, attach by the connector, branch colour, a list without a parent opening folders in
+  itself (see plan 03 6.2).
+- `web/docks.js`: the dock model without DOM: areas, groups (panes as tabs, one shown), splits with shares; add (to an
+  area, beside a group, as a tab), remove (a group left empty goes, a split of one is replaced by it), show, JSON.
+- `app.js`: `renderDock` draws the areas (top; left, center, right; bottom), splits and groups, moving the panes'
+  own elements (their scroll positions put back); splitters for the side areas and between nodes; `drawTabs`;
+  `dragToDock` with a mark showing where a pane lands; `paneMenu` and `newTab`; the layout told to the host
+  (`tellLayout`, 800 ms after a change) and `restoreLayout` at the start. The default layout: the tree in the left
+  area, its child in the center; a new root goes to the left area.
+- `web/menu.js`: a menu of the page's own (check marks, colour swatches, submenus; Up, Down, Right, Left, Enter,
+  Esc; a submenu opens with the mouse on hover, with the keys only on Right or Enter).
+- A preview in a tab not shown closes Windows' preview window, and opens it again when shown.
+- Host: `AppState.Layout`; the window keeps the layout its page told last and saves it with its place when it
+  closes; the first window of a run gets it back (`TakeSavedLayout`), a page made again after a failure its own.
+- Decided during the build: a dock split's CSS classes are not `row` / `column` (a list row's class is `row`); a drop
+  onto the pane's own group when it is alone there does nothing; Ctrl+T for New tab.
+- Changed after use: New child pane as a tab dropped (that is New tab); a new child goes directly at the right of its
+  parent, also in a side area (it went to the center first); tabs coloured whole, not only underlined.
+- Found on the way and fixed: no browser text selection over the panes (a mouse let go during the Delete confirmation
+  left one); a tree read a watched folder's subfolders again whenever a subfolder's date changed (SynologyDrive and
+  the browser's own files on D: do that all the time), and collapsed and jumped while doing so; now the names are
+  compared and the focused row stays in place.
+
+### 6.2 How it was tested
+
+- `dotnet test`: Failed 0, Passed 89 (`DocksTests`: the default layout, a tab, beside and under a group, removing the
+  last pane of a group and of an area, removing the shown tab, moving between groups and areas, a split of one
+  replaced, JSON back).
+- A test copy over CDP: placements (a child below, a second child at the right, a pane as a tab); two lists as tabs
+  of one group, each a branch of the tree: clicking a tab brought the tree to that tab's folder (`one`, `two`); the
+  preview at the right of the list; dragging heads: to the bottom edge, into the tree's group as a tab, beside a group
+  at its right; a click on a head moved nothing; the head menu's items, New tab, Move to > Bottom, the keys in the
+  menu; a layout with a tree at the right, two tabs (one pinned) back the same after closing and starting again, the
+  lists showing their folders; `PrintWindow` pictures of the docks, the menu with the branch colour submenu, and the
+  coloured tabs.
