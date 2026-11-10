@@ -20,7 +20,8 @@ so the next click there drives that branch. The preview (plan 04) is a follower 
 
 ### 3.1 Terms
 
-- **Pane**: shows one location, or a collection of items from anywhere (search results, a scrap: plan 06). Its own settings: content (folders, files, both), view (tree, list, details, icons),
+- **Pane**: shows one location (a folder on disk or a shell folder such as This PC, Network, Recycle Bin: plan 02
+  3.1), or a collection of items from anywhere (search results, a scrap: plan 06). Its own settings: content (folders, files, both), view (tree, list, details, icons),
   sort, filter, hidden files.
 - **Connection**: from a source pane to a follower. A follower has at most one source; a source any number of
   followers. No cycles: a connection that would make one is refused.

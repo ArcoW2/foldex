@@ -1,6 +1,6 @@
 # Plan 02: UI technology: WebView2, native, or both
 
-Status: draft 2026-11-10, revised 2026-11-10 (option A chosen); spike not started.
+Status: draft 2026-11-10, revised 2026-11-10 (option A, shell namespace, Evergreen); spike not started.
 
 ## 1. What this is about
 
@@ -15,9 +15,11 @@ everything, for the preview only, or not at all.
 Option A, the LexPen shape, with a thicker native host. The page draws everything (ribbon, panes, lists, preview), in
 LexPen's themed look with the system's icons, so LexPen's ribbon, actions, themes and docking carry over; the host
 does all shell work: icons, Explorer's context menu, starting drags, file operations, watching folders, and Windows'
-own preview handlers, all asynchronous to the page. WebView2 runs in processes of Foldex's own and is never elevated;
-elevated work is the host's or the helper's (plan 05). The host recreates the page when it fails without stopping work
-in progress. A spike checks the risky parts first and records how each is solved.
+own preview handlers, all asynchronous to the page. The panes show the whole shell namespace (This PC, Network, Recycle
+Bin as well as folders on disk), which the host walks as shell items. WebView2 (the Evergreen runtime) runs in
+processes of Foldex's own and is never elevated; elevated work is the host's or the helper's (plan 05). The host
+recreates the page when it fails without stopping work in progress. A spike checks the risky parts before plans 03 to
+05 go into detail on screen behaviour, and records how each is solved.
 
 ## 3. Details
 
@@ -33,14 +35,17 @@ in progress. A spike checks the risky parts first and records how each is solved
 - **Cut, copy, paste** with the shell's clipboard formats, so Explorer can paste what Foldex copied and the reverse.
 - **File operations** with Windows' own progress, conflict and permission dialogs (`IFileOperation`; plan 05).
 - **Inline rename, type-ahead, keyboard speed**, accessibility (screen readers).
-- **The shell namespace**: items without a file path (This PC, Network, Recycle Bin, phones, a zip as a folder) are
-  PIDLs, not paths. Whether that is in scope is open question 1; with option A, PIDLs are the host's work.
+- **The shell namespace**: in scope. Items without a file path (This PC, Network, Recycle Bin, and the like: phones,
+  a zip as a folder) are PIDLs, not paths. The host enumerates every location as shell items (`IShellItem`,
+  `IEnumShellItems`) and identifies each by its parsing name, which is the full path for items on disk; the page never
+  sees a PIDL. `IFileOperation` takes shell items, so file operations work on both kinds alike. Restoring from the Recycle
+  Bin goes through its own context menu verb [not yet checked].
 
 ### 3.2 The options, and why A
 
 A is chosen: it gives the most control (look, the connected panes and branches of plan 03), it is fast enough when
 every exchange between page and host is asynchronous, and LexPen's code carries over. B to D stay here as the record
-of what was weighed.
+of what was weighed; D is out entirely.
 
 **A. WebView2 for everything (LexPen's way).**
 - For: reuse of LexPen's page code (ribbon, actions, themes, docking, viewers); full control of the look; the
@@ -61,18 +66,15 @@ of what was weighed.
   Foldex does not need. None reuses LexPen, all need the same shell interop as A and B. Only WPF is worth a second look,
   and only if A fails.
 
-**D. Explorer's own view inside Foldex (`IExplorerBrowser`).**
-- The shell's own folder view hosted in a native window: icons, thumbnails, columns, context menu, drag and drop,
-  rename and every shell namespace for free. `ICommDlgBrowser::IncludeObject` lets the host leave items out, which is
-  exactly "folders, files or both" of plan 03.
-- Against: little control over the look (how it follows a dark theme [not yet checked]); branch marks of plan 03 cannot
-  be drawn inside it; native windows inside the page area (3.3).
+**D. Explorer's own view inside Foldex (`IExplorerBrowser`).** Out: the shell's own folder view in a native window
+gives the shell's behaviour for free, but leaves no control over the look, cannot show the branch marks of plan 03,
+and puts native windows inside the page area (3.3).
 
 ### 3.3 Airspace: native windows next to the page
 
 A native window placed over the WebView2 area always covers the page's popups. LexPen met this in its docking plan
-(native docking dropped because the menus would be cut off at the panes). It applies to option D and to Windows preview
-handlers in option A. Ways out: keep native windows in a region the page's popups do not reach; hide the native window
+(native docking dropped because the menus would be cut off at the panes). With option A it applies to Windows preview
+handlers (plan 04). Ways out: keep native windows in a region the page's popups do not reach; hide the native window
 (or show a snapshot of it) while a page popup is open; or make the popups native. Which one works is part of the spike.
 
 ### 3.4 Elevated
@@ -100,9 +102,10 @@ stop its work.
   the data folder's `State\` (as LexPen's, `AppHost.cs` `WebEnvironment`) gives it processes of its own, not shared with
   Teams, Outlook, Edge or LexPen. The environment option for exclusive access to the user data folder
   (`ExclusiveUserDataFolderAccess`) keeps every other process out of it [not yet checked].
-- **Still shared**: the Evergreen runtime's files and its updates, the GPU driver, Windows. A Fixed Version runtime
-  shipped with Foldex takes the runtime out of that list, at the price of shipping and updating it ourselves (size
-  [not yet checked]); open question 4.
+- **Still shared**: the Evergreen runtime's files and its updates, the GPU driver, Windows. Foldex uses the Evergreen
+  runtime, as LexPen. A Fixed Version runtime shipped with Foldex would take the runtime out of that list, at the price
+  of shipping and updating it ourselves (size [not yet checked]); it is reconsidered only when the spike or daily use
+  shows a runtime update breaking Foldex.
 - **The page itself**: the host never waits synchronously on the page, so a hung renderer does not freeze the host's
   UI thread. `ProcessFailed` reports a renderer that stopped responding or exited, and a browser process that
   exited; the host then recreates the page and restores it from the project (panes, connections, locations, plan 03
@@ -124,14 +127,16 @@ The page only draws drags; every drag that leaves or enters Foldex, and every fi
 
 ### 3.7 The spike
 
-A throwaway branch with a minimal host and page, each check pass or fail, timings only from what was measured:
+Done before plans 03 to 05 go into detail on screen behaviour. A throwaway branch on top of plan 01's host, with a
+minimal page; each check pass or fail, timings only from what was measured:
 
 1. A folder with very many files listed in the page with virtual scrolling and icons from the host: time to show,
    scrolling, sorting. The same folder in a native `ListView` (option B) as the yardstick.
 2. Dragging files from the page into Explorer, Outlook, LexPen; from Explorer into the page.
 3. Explorer's context menu on a right-click in the page, with extension submenus (for example Synology Drive, 7-Zip).
 4. A Windows preview handler (a .docx or .xlsx) beside the page, with a ribbon drop-down opening over it.
-5. `IExplorerBrowser` hosted next to the page, filtered to folders only, for comparison.
+5. This PC, Network and the Recycle Bin listed through the host as shell items, with icons; a file deleted to the
+   Recycle Bin and restored from it.
 6. The elevated helper (plan 05) listing a folder only administrators can read, the host showing it in the page.
 7. Explorer's context menu, dragging out and copying for items from different folders (plan 06, 3.4).
 8. Recovery (3.5): the renderer killed and the browser process killed during a long copy run by the host; the page
@@ -147,9 +152,4 @@ The spike is its own test. After it: unit tests for the host, and the CDP-driven
 
 ## 4. Open questions
 
-1. **The shell namespace.** Only the file system (drives, UNC paths), or also This PC, Network, Recycle Bin, phones,
-   zip files as folders? The second weighs toward D or toward PIDL handling in the host.
-2. **Spike first?** Suggestion: yes, before plans 03 to 05 go into detail on screen behaviour.
-3. **Evergreen or Fixed Version runtime?** Evergreen (updated by Windows, shared with other apps' WebView2 files, as
-   LexPen) or a Fixed Version shipped with Foldex (independent of other apps, updated by us)? Suggestion: Evergreen,
-   unless the spike or daily use shows a runtime update breaking Foldex.
+None.

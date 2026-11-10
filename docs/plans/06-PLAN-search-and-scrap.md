@@ -21,7 +21,7 @@ an item out of the collection; Alt+Delete deletes it from disk and from the pane
 
 ### 3.1 Collections
 
-- An entry is the full path of a file or folder; the pane shows its name and, as a column, the folder it is in.
+- An entry is a shell item's parsing name (the full path for a file or folder on disk, plan 02 3.1); the pane shows its name and, as a column, the folder it is in.
   Grouping by that folder is a view option.
 - Entries are watched: renamed or moved by Foldex, the entry follows; removed outside Foldex, the entry is marked as
   missing (open question 3).
