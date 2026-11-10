@@ -27,19 +27,19 @@ updated whenever a plan is written, built or closed that touches a feature here.
 | Two trees (one per pane) | P+ | built (any number of roots) | 5 | -- |
 | Ribbon or menu bar, quick access toolbar | All | part: ribbon built; menus, QAT -- | 5 | -- |
 | Drive bar with free space | P+ | plan 10 (drives bar) | 5 | bars (plan 10) |
-| Detachable, floating, docked panes | P+ | plan 01 (docking), plan 03 | 4 | docking (plan 01) |
+| Detachable, floating, docked panes | P+ | plan 12 (floating: open question) | 4 | -- |
 | Miller columns | P+ | plan 03 (preset "columns") | 4 | presets (plan 03) |
 | Named window layouts (workspaces) | P+ | plan 01 (projects) | 4 | projects (plan 01) |
 | Address bar: breadcrumbs, typed path, autocomplete | P+ | part: typed path built; as a bar: plan 10 | 4 | bars (plan 10) |
 | Back / forward / up | P+ | part: up built; back/forward plan 03 3.6 | 4 | -- |
 | Frequent folders, jump list | P+ | -- | 4 | Back / forward / up (the history) |
 | Bookmarks (keys, icons, dual bookmarks) | P+ | -- | 4 | bars (plan 10), for a bookmark bar |
-| Folder tabs (lock, colour, rename, reopen closed) | All / P+ | -- (branches instead) | 3 | -- |
+| Folder tabs (lock, colour, rename, reopen closed) | All / P+ | plan 12 (a tab is a pane in a new branch); lock, rename, reopen -- | 3 | Detachable, floating, docked panes |
 | Details pane, infobar, multi-part status bar | P+ | -- | 3 | bars (plan 10) |
 | Full screen; clone window | P+ | part: new window (-n) built | 3 | -- |
 | Mirror browsing / scrolling | P+ | -- | 3 | -- |
 | Spring-loaded tabs and tree during drag | P+ | -- | 3 | -- |
-| Dual pane, vertical or horizontal | All | part: connected panes side by side (plan 03); one below the other: plan 03 | 2 | Detachable, floating, docked panes (a child below) |
+| Dual pane, vertical or horizontal | All | part: connected panes side by side (plan 03); one below the other: plan 12 | 2 | Detachable, floating, docked panes (a child below) |
 | Folder groups (saved sets of tabs) | P+ | -- (projects, plan 01 3.5) | 2 | Named window layouts (projects) |
 | Hide a folder from the tree | P+ | -- | 2 | -- |
 

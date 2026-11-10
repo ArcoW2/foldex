@@ -1,7 +1,7 @@
 # Plan 03: Connected panes and branches
 
 Status: draft 2026-11-10, revised 2026-11-10 (collection panes, plan 06; state per branch; default layout, executing;
-parent and child, the open questions answered); partly executed 2026-11-10 (stage 1: the model, the default layout,
+parent and child, the open questions answered; detach, attach and tabs: plan 12); partly executed 2026-11-10 (stage 1: the model, the default layout,
 executing); see 5. As built. The core idea of Foldex.
 
 ## 1. What this is about
@@ -32,7 +32,8 @@ a parent the folder expands in place, as in a tree.
   3.1), or a collection of items from anywhere (search results, a scrap: plan 06). Its view settings are its own, not
   per branch: content (folders, files, both), view (tree, list, details, icons), sort, filter, hidden files.
 - **Parent and child**: a child follows its parent. A child has one parent; a parent any number of children. No
-  cycles: a connection that would make one is refused. A pane cannot be disconnected from its parent (for now).
+  cycles: a connection that would make one is refused. A child can be detached (it becomes a root) and a pane
+  attached to another (plan 12 3.2).
 - **Root**: a pane without a parent; the window's first pane is one.
 - **Branch**: a colour on parent-child connections. A parent's children of the same colour belong to one branch;
   different colours are different branches. A parent's first child continues the parent's branch (its colour); a
@@ -76,8 +77,8 @@ second red pane as thumbnails.
 
 - **Executing** (double-click, Enter): a file opens as Windows opens it (its default verb, through the host). A folder
   in a pane with a parent is opened by that parent: the parent focuses the folder and shows it in its tree (expanded
-  down to it), and the child, following it, shows the folder. A folder in a pane without a parent expands in place, as
-  in a tree, and is focused.
+  down to it), and the child, following it, shows the folder. A folder in a tree without a parent expands in place
+  and is focused; in a list without a parent (a detached one, plan 12) it opens in that list.
 - **Open** (the ribbon's button) is a switch for a folder: open (expanded in its tree) or closed; a file has none. In a
   tree it opens or closes the focused folder there; in a child its parent opens the folder (expanded, focused) and the
   child follows; lit while the folder is open. Enter is executing (as a double-click), not Open.
@@ -89,13 +90,14 @@ second red pane as thumbnails.
 
 ### 3.4 Making, closing and changing panes
 
-- Actions: New pane (a root, when there is none or as an extra one), New child pane (right of, below, floating),
-  Branch colour; from the ribbon and the menus.
+- Actions: New pane (a root, when there is none or as an extra one), New child pane (right of, below, as a tab), New
+  tab, Detach, Attach to, Branch colour; from the ribbon and the pane header's menu (plan 12 3.2).
 - With the mouse: drag the connector in a pane's header onto another pane to make it that pane's child.
 - **Closing**: any pane can be closed, the root and the last pane included. A closed pane's children get its parent as
   their parent, in their own colours; the children of a closed root become roots. With no pane left, the window is
   empty until a new pane is made from the ribbon or the menu.
-- Panes are dock items (LexPen's docking, plan 01); where a pane sits has nothing to do with its connections.
+- Panes are dock items (plan 12: sides, center, groups with tabs); where a pane sits has nothing to do with its
+  connections.
 - A pane's header shows the active branch's colour and the name of its parent. A parent shows a mark per branch it
   feeds, at the right of its header: the first branch rightmost, each keeping its place; the active one full and
   larger, the others smaller and fainter; a click on one switches to that branch.

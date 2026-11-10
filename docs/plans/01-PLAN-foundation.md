@@ -59,7 +59,7 @@ tests/
 | Macros | `MacroStore.cs`, macro recording, `PLAN-macros.md` | Own file extension; steps act on panes and selections |
 | Themes, theme sets | `ThemeFile.cs`, `ThemeSetFile.cs`, `ThemeColoursForm.cs` | Plan 07: no editor colours, a list of branch colours |
 | Projects, window sessions | `ProjectStore.cs`, `ProjectsForm.cs`, `VirtualDesktop.cs`, `Monitors.cs` | A project holds panes and connections (plan 03) |
-| Docking | `web/docks.js`, `DockMoves.cs`, `PLAN-docking.md` | Panes of plan 03 are the dock items |
+| Docking | `web/docks.js`, `DockMoves.cs`, `PLAN-docking.md` | Plan 12: panes of plan 03 as dock items, tabs |
 | Rename, folder compare, git status | `FileRename.cs`, `FolderCompare.cs`, folder pane | Reused as explorer features later |
 | Viewers | markdown, code colouring, hex, CSV, PDF in `web/` | The preview of plan 04 |
 
