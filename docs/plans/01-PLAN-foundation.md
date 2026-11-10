@@ -1,20 +1,21 @@
 # Plan 01: Foundation: solution layout and what comes from LexPen
 
-Status: draft 2026-11-10; not started. The number in the file name is the priority; rename to reorder.
+Status: draft 2026-11-10, revised 2026-11-10; not started. The number in the file name is the priority; rename to
+reorder.
 
 ## 1. What this is about
 
-Foldex (working name, from the folder name) is a file explorer for Windows, built the way LexPen is built: projects,
-a ribbon, actions with keys, macros, themes, a preview. The repository holds no code yet: no solution, no `src`, no
+Foldex is a file explorer for Windows, built the way LexPen is built: projects, a ribbon, actions with keys, macros,
+themes, a preview. The repository (`https://github.com/ArcoW2/foldex`) holds no code yet: no solution, no `src`, no
 tests. Before any feature, the skeleton has to exist and it has to be clear which parts come from LexPen and how.
 
 ## 2. The solution, in brief
 
 The same layout and host shape as LexPen: `Foldex.sln` at the top, the app in `src`, its tests in `tests`, plans in
 `docs/plans`. A .NET 10 WinForms exe, framework-dependent, published as one file, versioned by git commit count, with a
-data folder in `%LOCALAPPDATA%\Foldex` and read-only defaults next to the exe. LexPen's generic parts (ribbon,
-actions and keys, macros, themes, settings, projects, docking) start as a copy and are adapted; whether they later
-move into a library shared by both apps is open question 2. How the UI is drawn follows plan 02.
+data folder in `%LOCALAPPDATA%\Foldex` and read-only defaults next to the exe. This plan creates `src` and `tests`.
+LexPen's generic parts (ribbon, actions and keys, macros, themes, settings, projects, docking) are copied and adapted:
+Foldex and LexPen are separate projects and share no code. How the UI is drawn follows plan 02.
 
 ## 3. Details
 
@@ -61,7 +62,8 @@ tests/
 | Rename, folder compare, git status | `FileRename.cs`, `FolderCompare.cs`, folder pane | Reused as explorer features later |
 | Viewers | markdown, code colouring, hex, CSV, PDF in `web/` | The preview of plan 04 |
 
-Whether a part is copied as-is depends on plan 02: if the lists end up native, much of the page code does not carry over.
+Each part is a copy that Foldex owns from then on; a later fix in LexPen is carried over by hand when wanted. How much
+of the page code is copied depends on plan 02: if the lists end up native, much of it does not carry over.
 
 ### 3.4 Actions
 
@@ -84,12 +86,4 @@ locations, the theme set; saved continuously, opened from the Projects menu and 
 
 ## 4. Open questions
 
-1. **The `src` project.** The request said `src` already holds a project; this repository has no `src` at all (checked
-   2026-11-10, no commits either). Is it elsewhere, or not yet synced by Synology Drive, or should this plan create it?
-2. **Shared code with LexPen.** Copy now and let both diverge, or a shared library from day one (a project in a third
-   repository, referenced by both, or a git submodule)? Suggestion: copy now; decide on sharing once plan 02 has
-   settled what Foldex's UI is made of, because that decides how much is shared at all.
-3. **Name.** Foldex as the final name? LexPen had a name check (web, GitHub, winget, trademark registers) before it was
-   fixed; the same for Foldex [not yet checked].
-4. **GitHub.** A private repository like LexPen, with the same squash-merge habit? The commit email for this
-   repository is set to the GitHub noreply address, as LexPen's HANDOFF says every personal repository needs.
+None.

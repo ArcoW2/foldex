@@ -1,6 +1,6 @@
 # Plan 04: Preview
 
-Status: draft 2026-11-10; not started. Depends on plan 02 (how the UI is drawn) and plan 03 (the preview is a follower).
+Status: draft 2026-11-10, revised 2026-11-10; not started. Depends on plan 02 (how the UI is drawn) and plan 03 (the preview is a follower).
 
 ## 1. What this is about
 
@@ -11,7 +11,7 @@ it in another program.
 ## 2. The solution, in brief
 
 The preview is a pane connected like any other (plan 03) and shows the file focused in its source. Types Foldex renders
-itself, in the page, reuse LexPen's viewers: text and code coloured, markdown rendered, images, PDF, media, hex, CSV,
+itself, in the page, use copies of LexPen's viewers (plan 01, 3.3): text and code coloured, markdown rendered, images, PDF, media, hex, CSV,
 an archive's listing, a folder's summary. Every other type goes to the Windows preview handler registered for it
 (Office and the like), hosted in a native window. Open in LexPen is one action away.
 
@@ -70,7 +70,5 @@ text, zoom, the bar above the preview as LexPen's (theme or original for PDF, pa
 
 ## 4. Open questions
 
-1. **LexPen's viewers: copied or shared?** Same choice as plan 01 question 2, for the viewer code in particular (the
-   largest part that could be shared).
-2. **Remote content.** Remote images in markdown and HTML previews: off, on, or per folder?
-3. **Text preview editable?** Suggestion: no, read-only; editing is LexPen's, one action away.
+1. **Remote content.** Remote images in markdown and HTML previews: off, on, or per folder?
+2. **Text preview editable?** Suggestion: no, read-only; editing is LexPen's, one action away.
