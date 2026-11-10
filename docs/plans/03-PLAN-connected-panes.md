@@ -1,6 +1,7 @@
 # Plan 03: Connected panes and branches
 
-Status: draft 2026-11-10, revised 2026-11-10 (collection panes, plan 06; state per branch); not started. The core idea of Foldex.
+Status: draft 2026-11-10, revised 2026-11-10 (collection panes, plan 06; state per branch; default layout, executing);
+not started. The core idea of Foldex.
 
 ## 1. What this is about
 
@@ -17,6 +18,10 @@ followers, so the connections form a tree per window; each connection has a bran
 branch's colour. A click in a pane changes only the active branch; activating a pane in another branch makes every
 pane above it restore its state for that branch. The preview (plan 04) is a follower like any other.
 
+A window opens with two panes: on the left the root, a folder pane that shows folders only and cannot be closed, and
+filling the rest a follower showing files and folders of the folder focused in the root. Double-clicking an item
+executes it: a file opens as Windows opens it, a folder is opened by the pane's source, so the follower then shows it.
+
 ## 3. Details
 
 ### 3.1 Terms
@@ -24,6 +29,7 @@ pane above it restore its state for that branch. The preview (plan 04) is a foll
 - **Pane**: shows one location (a folder on disk or a shell folder such as This PC, Network, Recycle Bin: plan 02
   3.1), or a collection of items from anywhere (search results, a scrap: plan 06). Its own settings: content (folders, files, both), view (tree, list, details, icons),
   sort, filter, hidden files.
+- **Root**: the window's first pane. It has no source, so it cannot be closed; every other pane descends from it.
 - **Connection**: from a source pane to a follower. A follower has at most one source; a source any number of
   followers. No cycles: a connection that would make one is refused.
 - **Branch**: a colour on connections. Connections out of one pane with the same colour belong to one branch; different
@@ -64,9 +70,10 @@ second red pane as thumbnails.
 | Several items | Open question 2 | The focused one |
 | Nothing (empty folder) | Stays as it is | Empty |
 
-- **Navigating inside a follower** (double-click, Backspace, typing a path) changes that follower's state for the active
-  branch and everything downstream of it in that branch; its source stays as it is. The next change in the source
-  takes the follower back.
+- **Executing** (double-click, Enter): a file opens as Windows opens it (its default verb, through the host). A folder
+  is opened by the pane's source: the source focuses that folder (open question 7: what that means in a tree and in
+  a list), and the pane, following it, shows the folder. A pane without a source (the root) opens the folder itself.
+- **Other navigation inside a follower** (Backspace, typing a path): open question 8.
 - **Pinned follower**: a pin in the pane header stops it following until unpinned; its connection and colour stay.
 - **Debounce**: arrowing quickly through a source updates followers once the cursor rests, so a long walk does not
   load every folder on the way. The delay is a setting [default not yet decided].
@@ -79,11 +86,21 @@ second red pane as thumbnails.
 - A pane's header shows the active branch's colour and the name of its source; a source also shows small marks in the
   colours of the other branches it feeds, to switch to one with a click.
 
-### 3.5 Presets
+### 3.5 The default layout and presets
 
-Common shapes as a starting point, each just panes and connections: classic (tree drives a list), dual (tree drives two
-lists in two colours), columns (a chain of folder panes, as Finder's column view), list with preview. Saved layouts of
-the user's own: open question 5.
+A new window opens with:
+
+- **The root**, docked left: folders only, linked folders included (junctions, symbolic links, and the shell's folders
+  such as This PC, Network and the Recycle Bin, plan 02 3.1), each link marked as one. It cannot be closed.
+- **A follower** filling the rest of the window: files and folders of the folder focused in the root, in the root's
+  branch colour.
+
+The location the root starts on: the folder given on the command line, else the window's last state in its project
+(3.7), else This PC.
+
+Other shapes as a starting point, each just panes and connections: dual (the root drives two followers in two colours),
+columns (a chain of folder panes, as Finder's column view), with preview (a preview follower added to the default).
+Saved layouts of the user's own: open question 5.
 
 ### 3.6 Keyboard
 
@@ -105,7 +122,11 @@ Every folder shown is watched for changes; panes showing the same folder share o
   starting from a copy of the source's state, a click changing only the active branch's state, activation restoring
   every upstream pane's state for that branch, a pinned follower not following, removing a pane in the middle (open
   question 3), saving and reading back.
-- In the test copy: the example of 3.2 clicked through; the presets; dragging a connector.
+- Unit: executing a folder in a follower moves its source's focus, a folder executed in the root opens in the root,
+  the root refuses to close.
+- In the test copy: a new window has the default layout of 3.5 (root left, folders only, links marked; the follower
+  showing the root's folder); a double-clicked folder in the follower is focused in the root and shown in the follower;
+  a double-clicked file opens in its program; the example of 3.2 clicked through; the presets; dragging a connector.
 
 ## 4. Open questions
 
@@ -120,3 +141,10 @@ Every folder shown is watched for changes; panes showing the same folder share o
 6. **View settings per branch?** The branch state holds what is shown and selected. The view settings (content, view,
    sort, filter, hidden files) stay per pane (suggestion), or are they part of the branch state too, so A could be a
    tree for red and details for blue?
+7. **Opening a folder in the source.** The root shows folders only: as a tree (opening a folder expands the tree down to
+   it and selects it; suggestion) or as a list of one folder's subfolders (opening a folder goes into it, so the root
+   then lists that folder's subfolders)?
+8. **Backspace and typing a path in a follower.** The same rule as executing a folder: the source goes up or to the
+   path, and the follower follows (suggestion); or the follower moves on its own until the source changes again?
+9. **Closing other panes without a source.** Only the root has no source by default; a pane disconnected later has none
+   either. May that one be closed (suggestion: yes), or does "no source" always mean "cannot be closed"?
