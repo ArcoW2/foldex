@@ -111,3 +111,15 @@ public class ThemeFileTests
         foreach (var name in names) Assert.True(defaults.ContainsKey(name), $"settingrows.js: {name} is not a setting");
     }
 }
+
+// The installed fonts for the font settings (docs/plans/08-PLAN-fonts.md 3.1).
+public class FontsTests
+{
+    [Fact]
+    public void TheFontsAreInstalledFamiliesWithoutVerticalVariants()
+    {
+        var list = Fonts.List();
+        Assert.Contains("Segoe UI", list);
+        Assert.DoesNotContain(list, f => f.StartsWith('@'));
+    }
+}

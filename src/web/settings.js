@@ -9,6 +9,7 @@ const $ = s => document.querySelector(s);
 const ui = { search: $('.st-search'), problems: $('.st-problems'), list: $('.st-list') };
 let look = null;   // { settings: { values, user, defaults, problems }, themes: { themes, problems } }
 const rows = [];   // { def, el, show }
+let fonts = [];    // the installed font families (Fonts.cs), asked once
 
 const post = msg => host.postMessage(msg);
 
@@ -23,17 +24,29 @@ function control(def) {
     input.addEventListener('change', () => set(def.name, input.checked));
     return { el: input, show: v => input.checked = !!v };
   }
+  // A size in points (docs/plans/08-PLAN-fonts.md 3.2): 0 the default; written when the box is left or Enter.
+  if (def.kind === 'size') {
+    const input = document.createElement('input');
+    Object.assign(input, { type: 'number', min: 0, max: 36, step: 0.5 });
+    input.addEventListener('change', () => {
+      const v = Number(input.value);
+      if (Number.isFinite(v) && v >= 0 && v <= 36) set(def.name, v);
+    });
+    return { el: input, show: v => input.value = v };
+  }
   const select = document.createElement('select');
   select.addEventListener('change', () => set(def.name, select.value));
   const fill = () => {
     const options = def.kind === 'theme'
       ? Object.entries(look.themes.themes).map(([id, t]) =>
           [id, `${t.name}${t.description ? ` - ${t.description}` : ''}${t.mine ? ' (yours)' : ''}`])
+      : def.kind === 'font' ? [['', 'Segoe UI (default)'], ...fonts.map(f => [f, f])]
       : def.options;
     select.replaceChildren(...options.map(([value, label]) => {
       const o = document.createElement('option');
       o.value = value;
       o.textContent = label;
+      if (def.kind === 'font' && value) o.style.fontFamily = `"${value.replace(/["\\]/g, '')}"`;   // each in itself
       return o;
     }));
   };
@@ -96,10 +109,16 @@ document.querySelector('[data-open=settings]').addEventListener('click', () => p
 darkQuery.addEventListener('change', () => look && show());
 
 host.addEventListener('message', e => {
+  if (e.data.event === 'fonts') {
+    fonts = e.data.fonts;
+    if (look) show();
+    return;
+  }
   if (e.data.event !== 'settings') return;
   look = e.data;
   if (!rows.length) build();
   show();
 });
 post({ op: 'ready' });
+post({ op: 'fonts' });
 ui.search.focus();

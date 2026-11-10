@@ -19,10 +19,45 @@ function post(msg) {
   host.postMessage(msg);
 }
 
-// Light or dark and the theme of that mode (look.js).
+// Light or dark, the theme of that mode and the fonts (look.js).
 function applyTheme() {
   applyLook(settings, themes);
+  setRowHeight(paneRowHeight(settings));
 }
+
+// Rows of another height: every tree and list drawn again, the same rows at the top, the focused one kept in view.
+function setRowHeight(height) {
+  if (height === RowHeight) return;
+  const old = RowHeight;
+  RowHeight = height;
+  for (const v of views.values()) {
+    if (!v.rows) continue;
+    const top = v.body.scrollTop * height / old;
+    v.render();   // the new height first, so the scroll position fits
+    v.body.scrollTop = top;
+    const items = v.flat ?? v.entries ?? [];
+    const i = items.findIndex(x => same(x.id, layout.state(v.id).focus));
+    if (i >= 0) scrollIntoView(v.body, i);
+    v.render();
+  }
+}
+
+// Ctrl+mouse wheel over a tree or a list: the pane font one point larger or smaller, every pane alike (3.3). The
+// panes follow at once; the setting is written once the wheel rests.
+const PaneSizes = { min: 6, max: 36, rest: 200 };
+let paneSizeTimer = 0;
+document.addEventListener('wheel', e => {
+  if (!e.ctrlKey || !e.target.closest?.('.pane.tree, .pane.list')) return;
+  e.preventDefault();
+  const now = settings.paneSize || DefaultSize;
+  const next = Math.min(PaneSizes.max, Math.max(PaneSizes.min, now + (e.deltaY < 0 ? 1 : -1)));
+  if (next === now) return;
+  settings.paneSize = next;
+  applyFonts(settings);
+  setRowHeight(paneRowHeight(settings));
+  clearTimeout(paneSizeTimer);
+  paneSizeTimer = setTimeout(() => post({ op: 'setSetting', name: 'paneSize', value: settings.paneSize }), PaneSizes.rest);
+}, { passive: false });
 
 function status(text, warn = false) {
   $('status').textContent = text;
@@ -62,7 +97,7 @@ function list(channel, location, foldersOnly, onPart, onDone, elevated = false) 
 
 // ---------- Rows in view only ----------
 
-const RowHeight = 22;
+let RowHeight = 22;   // follows the pane font (look.js paneRowHeight; docs/plans/08-PLAN-fonts.md 3.4)
 
 function visibleRange(body, count) {
   const first = Math.max(0, Math.floor(body.scrollTop / RowHeight) - 5);
@@ -212,6 +247,17 @@ class TreeView {
     });
     dropTarget(this.body, e => this.nodeAt(e.target)?.id ?? null);
     iconUsers.add(this);
+    // Made shorter (the ribbon or the status line coming in, the window resized): the focused folder, in view at the
+    // old height, stays in view.
+    let height = 0;
+    new ResizeObserver(() => {
+      const before = height;
+      height = this.body.clientHeight;
+      if (height >= before) return;
+      const i = this.flat.findIndex(x => same(x.id, layout.state(this.id).focus));
+      const top = i * RowHeight - this.body.scrollTop;
+      if (i >= 0 && top >= 0 && top + RowHeight <= before) scrollIntoView(this.body, i);
+    }).observe(this.body);
   }
 
   node(id) { return id == null ? undefined : this.nodes.get(id.toLowerCase()); }

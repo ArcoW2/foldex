@@ -46,7 +46,13 @@ html, body {
   height: 100%;
   background: var(--bg);
   color: var(--fg);
-  font: 13px "Segoe UI", system-ui, sans-serif;
+  /* The window font (look.js applyFonts; the defaults until the settings are there). */
+  font: var(--app-size, 13px) var(--app-font, "Segoe UI", system-ui, sans-serif);
+}
+
+input, select, button, textarea {
+  font-family: inherit;
+  font-size: inherit;
 }
 
 body {
@@ -170,7 +176,7 @@ body {
 .rb-name {
   text-align: center;
   color: var(--fg-dim);
-  font-size: 11px;
+  font-size: 0.85em;
   padding: 1px 0 2px;
 }
 
@@ -328,6 +334,9 @@ body[data-focus-away] .pane.active > .head {
 
 .body {
   flex: 1;
+  /* The rows: the pane font (look.js), not the window's. */
+  font-family: var(--pane-font, inherit);
+  font-size: var(--pane-size, inherit);
   overflow-y: auto;
   position: relative;
   outline: none;
@@ -341,7 +350,7 @@ body[data-focus-away] .pane.active > .head {
   position: absolute;
   left: 0;
   right: 0;
-  height: 22px;
+  height: var(--row-height, 22px);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -384,12 +393,12 @@ body[data-focus-away] .pane.active > .head {
 
 .row .link {
   color: var(--fg-dim);
-  font-size: 11px;
+  font-size: 0.85em;
 }
 
 .row .size, .row .date {
   color: var(--fg-dim);
-  width: 130px;
+  width: 10em;   /* grows with the pane font */
   text-align: right;
   flex: none;
 }

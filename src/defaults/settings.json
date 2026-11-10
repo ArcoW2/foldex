@@ -8,6 +8,12 @@
   "themeLight": "light",          // the theme in light mode (a file name in themes\ without .json)
   "themeDark": "dark",            // the theme in dark mode
 
+  // ---------- Fonts ----------
+  "appFont": "",                  // the window: ribbon, pane heads, location, status line; "" is Segoe UI
+  "appSize": 0,                   // in points; 0 is 9.75 pt
+  "paneFont": "",                 // the rows of every pane; "" is Segoe UI
+  "paneSize": 0,                  // in points; 0 is 9.75 pt (also Ctrl+mouse wheel over a pane)
+
   // ---------- Panes ----------
   "showHidden": false,            // hidden and system files and folders shown (Ctrl+H, View > Hidden items)
 }

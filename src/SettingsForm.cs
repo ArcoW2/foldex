@@ -55,7 +55,7 @@ sealed class SettingsForm : Form
         if (pageReady && !IsDisposed) web.CoreWebView2.PostWebMessageAsJson(message.ToJsonString());
     }
 
-    void OnMessage(string json)
+    async void OnMessage(string json)
     {
         if (IsDisposed || JsonNode.Parse(json) is not JsonObject msg) return;
         switch (msg["op"]?.GetValue<string>())
@@ -75,6 +75,12 @@ sealed class SettingsForm : Form
                     MessageBox.Show(this, ex.Message, "Settings - Foldex", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
                 break;
+            case "fonts":
+            {
+                var list = await Task.Run(Fonts.List);
+                Post(new JsonObject { ["event"] = "fonts", ["fonts"] = new JsonArray(list.Select(f => (JsonNode?)f).ToArray()) });
+                break;
+            }
             case "openSettingsFile":
                 OpenSettingsFile();
                 break;

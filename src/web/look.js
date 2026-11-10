@@ -15,4 +15,21 @@ function applyLook(settings, themes) {
   for (const name of lookVars) root.style.removeProperty(name);
   lookVars = Object.keys(theme?.vars ?? {});
   for (const name of lookVars) root.style.setProperty(name, theme.vars[name]);
+  applyFonts(settings);
+}
+
+// The fonts (docs/plans/08-PLAN-fonts.md): the window's (appFont, appSize) and the panes' rows (paneFont, paneSize), in
+// points, 0 the default. The row height follows the pane font (paneRowHeight).
+const DefaultSize = 9.75;   // pt: 13 px, the size before there were settings
+const fontStack = name => name ? `"${name.replace(/["\\]/g, '')}", "Segoe UI", system-ui, sans-serif` : '"Segoe UI", system-ui, sans-serif';
+const sizePx = pt => (pt || DefaultSize) * 96 / 72;
+const paneRowHeight = settings => Math.max(16, Math.round(sizePx(settings.paneSize) * 22 / 13));
+
+function applyFonts(settings) {
+  const root = document.documentElement.style;
+  root.setProperty('--app-font', fontStack(settings.appFont));
+  root.setProperty('--app-size', `${sizePx(settings.appSize)}px`);
+  root.setProperty('--pane-font', fontStack(settings.paneFont));
+  root.setProperty('--pane-size', `${sizePx(settings.paneSize)}px`);
+  root.setProperty('--row-height', `${paneRowHeight(settings)}px`);
 }

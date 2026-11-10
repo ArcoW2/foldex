@@ -1,6 +1,6 @@
 # Plan 08: Fonts for the window and the panes
 
-Status: draft 2026-11-10; not started.
+Status: draft 2026-11-10; executed 2026-11-10 with 16 px icons (open question 1 still open); see 5. As built.
 
 ## 1. What this is about
 
@@ -67,4 +67,31 @@ grow and shrink with the pane font.
 
 ## 5. As built
 
-Not built yet.
+### 5.1 Built (2026-11-10, branch `plan01-foundation`)
+
+- `Fonts.cs` (LexPen's, without the monospaced mark); the settings window asks for the list (`fonts`), built on another
+  thread.
+- `defaults/settings.json`: `appFont`, `appSize`, `paneFont`, `paneSize` in a Fonts group; `web/settingrows.js` with the
+  row kinds `font` (the families, each drawn in itself, "Segoe UI (default)" first) and `size` (a number box, 0 to 36,
+  steps of 0.5).
+- `web/look.js` `applyFonts`: CSS variables `--app-font`, `--app-size`, `--pane-font`, `--pane-size`, `--row-height`;
+  the row height is the pane font size times 22 / 13 (today's 22 px at 13 px), at least 16 px.
+- `app.css`: the page in the window font, inputs and buttons inheriting it, the pane bodies in the pane font, rows of
+  `--row-height`; the small texts (ribbon group names, link marks) and the size and date columns in `em`, so they
+  scale with their font.
+- `app.js`: `RowHeight` follows the setting; a change draws every tree and list again, the same rows at the top and
+  the focused one in view; Ctrl+mouse wheel over a tree or list (not the preview) one point up or down, 6 to 36,
+  written after 200 ms of rest.
+- Found on the way and fixed: the tree's focused folder ended up just below the bottom edge at the start (the status
+  line came in after the tree had scrolled); a tree made shorter keeps its focused folder in view.
+
+### 5.2 How it was tested
+
+- `dotnet test`: Failed 0, Passed 78 (`FontsTests`: Segoe UI there, no `@` families; the rows check covers the four
+  settings).
+- A test copy over CDP: three Ctrl+wheel steps up over the list made the rows 29 px and the font 17 px at once, the
+  ribbon stayed 13 px, settings.json got `"paneSize": 12.75` after the wheel rested; forty steps down stopped at 6 pt
+  (16 px rows). In the settings window (groups General, Fonts, Panes): Consolas as pane font changed the rows only; 12
+  pt as window size changed the ribbon, the location box and the settings window to 16 px. `PrintWindow` of both
+  windows: the Fonts rows with Reset on the changed size; Consolas rows at a large size with the dates whole after the
+  `em` fix (before it they were cut off).
