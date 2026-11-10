@@ -628,6 +628,7 @@ class ListView {
       this.anchor = x.id;
     }
     layout.state(this.id).selection = [...this.selected];
+    layout.state(this.id).focus = x.id;   // before drawing: the focus outline moves with the click
     scrollIntoView(this.body, index);
     this.render();
     if (!quiet) {

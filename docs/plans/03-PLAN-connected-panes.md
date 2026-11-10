@@ -230,6 +230,8 @@ None.
   and Pin on View > Panes); the history per branch (`branchChain`, `recordStep`, `goHistory`; at most 100 steps per
   branch); the keys of 3.6; folders shown told to the host (`watch`), lists read again in place (`reread`).
 - Host: `Shell/FolderWatch.cs` (a `FileSystemWatcher` per folder, shared, told after 300 ms of quiet), the `watch` op.
+- Fixed after use: in a list the focus outline stayed on the item clicked before until the window was drawn again
+  (the list drew before its focus was set); checked over CDP: a click on another item moves the outline at once.
 
 ### 6.3 How it was tested
 
