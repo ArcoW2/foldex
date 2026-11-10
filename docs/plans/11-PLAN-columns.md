@@ -120,6 +120,21 @@ Settings (the settings window, group Panes; the same for every list):
 
 None.
 
-## 5. As built
+## 5. Status
 
-Not built yet.
+### Built
+
+Nothing yet.
+
+### Not yet built
+
+- The own columns of the catalogue (3.1).
+- The Git status column (3.1).
+- Shell property columns, read for the rows in view; sorting by them (3.1).
+- Generic columns per pane, remembered (3.2).
+- A set for a folder, with or without its subfolders; `foldercolumns.json` (3.2).
+- Column sets: shipped and yours, `columnsets.json`; Manage sets (3.3).
+- The header: sorting, moving, resizing, its menu (3.4).
+- Fit columns (Ctrl+R) and Fit by themselves (3.4).
+- Rows: `rowLines`, `rowLinesIntensity`, `rowHeight` (3.5).
+- The host: the `columns` op, `GitStatus.cs`, `ColumnSetsFile.cs` (3.6).

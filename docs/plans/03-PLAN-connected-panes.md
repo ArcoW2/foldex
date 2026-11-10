@@ -1,8 +1,9 @@
 # Plan 03: Connected panes and branches
 
 Status: draft 2026-11-10, revised 2026-11-10 (collection panes, plan 06; state per branch; default layout, executing;
-parent and child, the open questions answered; detach, attach and tabs: plan 12); partly executed 2026-11-10 (stage 1: the model, the default layout,
-executing); see 5. As built. The core idea of Foldex.
+parent and child, the open questions answered; detach, attach and tabs: plan 12); partly executed 2026-11-10 (stage 1:
+the model, the default layout, executing; then detach, attach, branch colour, pinning, keys, back and forward,
+watching folders); see 5. Status and 6. As built. The core idea of Foldex.
 
 ## 1. What this is about
 
@@ -123,9 +124,16 @@ user's own, saved by name, come later.
 
 ### 3.6 Keyboard, back and forward
 
-To the child, to the parent, to the next branch (keys [not yet decided], in `keys.json` as all keys). Back and forward
-are per branch: one step back restores every pane of the active branch as it was, because a click in a parent changes
-several panes at once.
+To the parent, to the child, to the next branch: Alt+Shift+Left, Alt+Shift+Right, Alt+Shift+Down (in `keys.json`, as
+all keys; Ctrl+arrows stay the panes' own, Ctrl+Shift+arrows select words in the location box, Ctrl+Alt+arrows turn
+the screen on some graphics drivers). Back and forward: Alt+Left and Alt+Right, as Explorer, and on the ribbon (Home >
+Go).
+
+Back and forward are per branch: one step back restores every pane of the active branch as it was, because a click in
+a parent changes several panes at once. A branch here is the chain below one child of the root (each branch of the
+root, each tab of plan 12, has its own history): the root, that child, and down from it each pane's child in the
+branch it shows. A new step is kept when a folder in the chain changes; a selection made while the folders stay the
+same is kept with the current step, so going back brings the selected item back too.
 
 ### 3.7 Saved in the project
 
@@ -134,7 +142,10 @@ active branch.
 
 ### 3.8 Watching folders
 
-Every folder shown is watched for changes; panes showing the same folder share one watcher.
+Every folder shown is watched for changes (the lists' folders, the folders open in a tree; folders on disk and on
+shares, not the shell's own such as This PC); panes and windows showing the same folder share one watcher. A change
+is told once the folder has been quiet for 300 ms; a list reads its folder again where it is (selection and scroll
+position kept), a tree the folder's subfolders.
 
 ### 3.9 Tests
 
@@ -153,9 +164,43 @@ Every folder shown is watched for changes; panes showing the same folder share o
 
 None.
 
-## 5. As built
+## 5. Status
 
-### 5.1 Stage 1 (2026-11-10, branch `plan01-foundation`)
+### Built
+
+- The model of 3.1 without DOM: panes, roots, parent and child, a cycle refused, branch colours, a state per branch,
+  activation restoring the panes above, JSON for the project (6.1).
+- Following, with the debounce (3.3).
+- Executing: a file opens; a folder in a child is opened by its parent; in a tree without a parent it expands in
+  place; in a list without a parent it opens in that list (3.3).
+- Open as a switch; Up and a typed path in a child go through the parent (3.3).
+- Pinning a child: a pin button in the head; unpinned, it catches up (3.3).
+- The default layout: the root tree at the left, folders only, links marked; its child list (3.5; 6.1).
+- New pane, New child pane (at the right), Close pane, Next and Previous pane (3.4; 6.1).
+- A new child starts a new branch in an unused colour and copies the settings (kind, content) of the current child
+  (3.1).
+- Detach: a child becomes a root on what it shows and keeps its children (3.1; plan 12 3.2).
+- Attach: the connector in a pane's head dragged onto another pane; a cycle refused (3.4).
+- Branch colour, as the action `branch.colour` 1 to 6: a free colour makes a branch of its own, a sibling's colour
+  joins that branch (3.1, 3.4).
+- Heads in the branch colour; the branch marks in a parent's head (3.4).
+- Focus as LexPen's: the ring and the head in the branch colour (3.4).
+- Keys between panes: to the parent, the child, the next branch (3.6).
+- Back and forward per branch, a selection kept with its step (3.6).
+- Watching folders (3.8).
+
+### Not yet built
+
+- A child below, as a tab or floating; New tab; Attach to as a submenu; the pane header's menu: moved to plan 12.
+- View settings per pane that can be changed: content, view, sort, filter (3.1); a list ignores content.
+- Hidden files as a view setting per pane (3.1); for now one setting for every pane, `showHidden` (plan 01 6.2).
+- The debounce delay as a setting (3.3); it is fixed at 150 ms (6.1).
+- Saving the layout in the project (3.7, needs plan 01's projects).
+- The presets other than the default (3.5).
+
+## 6. As built
+
+### 6.1 Stage 1 (2026-11-10, branch `plan01-foundation`)
 
 - `web/panes.js`: the model of 3.1 without DOM: panes, roots, parent-child connections (a cycle refused), branch
   colours, a state per colour, activation restoring the panes above, following (3.3), executing (a file opens; a folder
@@ -175,16 +220,18 @@ None.
   for the tree, links marked (junctions and symbolic links; the shell's link flag), `describe` for the tree's top,
   `execute` running the default command of Explorer's menu (as a double-click in Explorer).
 
-### 5.2 Not built yet
+### 6.2 Since (2026-11-10)
 
-Connector dragging (3.4), a child below or floating (only at the right now), choosing a branch colour (a further
-child gets a new one; joining a sibling's branch is not possible yet), view settings per pane (a new child copies
-kind and content from the current child, but no action changes them yet and a list ignores content), pinning in the page, docking (plan 01), keys and back and
-forward per branch (3.6), saving the layout in the project (3.7, needs plan 01's projects), folder watching (3.8), the
-presets other than the default (3.5), the hidden files setting (hidden and system folders such as
-`System Volume Information` show for now).
+- `panes.js`: `detach`, `attach` (a cycle refused; a new branch beside other children), `setColour` (a free colour:
+  a branch of its own from the parent's state; a sibling's: joins it, the parent's old state going when no child is
+  left in it); a parent whose last child leaves keeps what it showed; executing a folder in a list without a parent
+  (or pinned) opens it in that list.
+- `app.js`: the connector and the pin in each head (drawn in CSS), Detach, Pin and Branch colour as actions (Detach
+  and Pin on View > Panes); the history per branch (`branchChain`, `recordStep`, `goHistory`; at most 100 steps per
+  branch); the keys of 3.6; folders shown told to the host (`watch`), lists read again in place (`reread`).
+- Host: `Shell/FolderWatch.cs` (a `FileSystemWatcher` per folder, shared, told after 300 ms of quiet), the `watch` op.
 
-### 5.3 How it was tested
+### 6.3 How it was tested
 
 - `dotnet test`: `PanesTests` runs `panes.js` under Jint (the example of 3.2, executing, closing, JSON); the count of
   the last run is in the commit's report.
@@ -196,3 +243,14 @@ presets other than the default (3.5), the hidden files setting (hidden and syste
   `two` for red and `one` for blue, and switching between the two lists brought the tree's focus and colour back each
   time, the other list staying as it was.
 - Executing a file (its program starting on the desktop) is left for the checks by hand.
+- Unit (`PanesTests`): detach (a root keeping its children; the parent forgetting the branch, or keeping what it
+  showed when it was the last child), attach (a cycle refused, a new branch), another colour (its own branch, joining
+  a sibling's), a list without a parent opening a folder in itself.
+- Test copy: Detach on the list, then a double-click on `deep` opened it in the list while the tree stayed; the
+  connector dragged onto the tree attached it again; a second child set to branch colour 1 joined the first and showed
+  its folder; pinned, the list stayed on `one` while the tree went to `deep`, and unpinned it went to `deep`. Back and
+  forward: the tree to `one`, `deep`, `two`, then Back twice (`one`) and Forward (`deep`), list with it; `b.txt`
+  selected in `one`, then `two`, then Alt+Left: `one` with `b.txt` selected again; Alt+Shift+Left / Right / Down
+  went to the tree, back to the list, and to a second branch. Watching: a file made and removed in the list's folder
+  from outside appeared and went, `b.txt` staying selected; a folder made and removed in a folder open in the tree
+  appeared and went there.

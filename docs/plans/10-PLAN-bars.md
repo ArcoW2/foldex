@@ -98,6 +98,19 @@ menu, and Foldex writes your copy.
    - both, the smaller one winning ("at most 400 px and at most half").
    Px, a share, or both?
 
-## 5. As built
+## 5. Status
 
-Not built yet.
+### Built
+
+Nothing yet.
+
+### Not yet built
+
+- Bars at any dock side, in lines (3.1).
+- The size modes `fixed`, `fill` and `content` with min and max (3.1).
+- Overflow per bar: `more` or `scroll` (3.1).
+- The path bar (3.2).
+- The drives bar, with drives that come and go (3.2).
+- The name and version in the window title and F1's About; the default first row (3.2).
+- `bars.json`, and changing the bars in the window: dragging, the bar's menu (3.3).
+- `BarsFile.cs` and `web/bars.js` (3.4).

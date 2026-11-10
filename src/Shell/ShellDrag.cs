@@ -62,7 +62,7 @@ static class ShellDrag
 
     // The default drop source reads the button from this thread's input state, which never sees the release: the mouse
     // belongs to WebView2's window, in the browser's process. The drag then never dropped and never ended, and Foldex
-    // could not be closed (plan 02 5.2, item 2). This one reads the real button state.
+    // could not be closed (plan 02 6.2, item 2). This one reads the real button state.
     [ComVisible(true)]
     internal sealed class DropSource : IDropSource
     {

@@ -345,6 +345,7 @@ class TreeView {
     };
     walk(this.top);
     this.render();
+    tellWatched();
   }
 
   render() {
@@ -513,9 +514,24 @@ class ListView {
     this.el.querySelector('.title').textContent = location ?? '';
     if (activePane === this.id) $('location').value = location ?? '';
     this.render();
+    tellWatched();
     if (!location) return;
     let first = true;
     list(this.id, location, false, part => this.take(part, first && !(first = false)), m => this.done(m, first), elevated);
+  }
+
+  // The folder changed on disk (3.8): read again where it is, the selection and the scroll position kept.
+  reread() {
+    if (!this.location || this.message) return;
+    const keep = new Set(this.selected), top = this.body.scrollTop;
+    let first = true;
+    list(this.id, this.location, false, part => this.take(part, first && !(first = false)), m => {
+      this.done(m, first);
+      this.selected = new Set([...keep].filter(id => this.entries.some(x => x.id === id)));
+      layout.state(this.id).selection = [...this.selected];
+      this.body.scrollTop = top;
+      this.render();
+    });
   }
 
   take(entries, reset) {
@@ -835,6 +851,39 @@ function cyclePane(step) {
   const order = [...document.querySelectorAll('#panes .pane')].map(el => el.dataset.pane);
   const next = order[(order.indexOf(activePane) + step + order.length) % order.length];
   views.get(next)?.body.focus();
+}
+
+// ---------- Folders shown are watched (3.8) ----------
+
+// The host is told which folders this window shows (every list's folder, the folders open in a tree), once that rests.
+let watchTimer = 0, watchedNow = '';
+function tellWatched() {
+  clearTimeout(watchTimer);
+  watchTimer = setTimeout(() => {
+    const folders = new Set();
+    for (const v of views.values()) {
+      if (v instanceof ListView && v.location) folders.add(v.location);
+      if (v instanceof TreeView) for (const n of v.flat) if (n.expanded) folders.add(n.id);
+    }
+    const list = [...folders].sort();
+    if (list.join('|') === watchedNow) return;
+    watchedNow = list.join('|');
+    post({ op: 'watch', folders: list });
+  }, 500);
+}
+
+// A folder shown changed on disk: the lists showing it read it again where they are, a tree its subfolders.
+function folderChanged(folder) {
+  for (const v of views.values()) {
+    if (v instanceof ListView && same(v.location, folder)) v.reread();
+    if (v instanceof TreeView) {
+      const n = v.node(folder);
+      if (n?.children) {
+        n.children = null;
+        v.expand(n, n.expanded);
+      }
+    }
+  }
 }
 
 // ---------- Between panes, and back and forward per branch (3.6) ----------
@@ -1164,6 +1213,7 @@ const events = {
   menuTexts(m) { window.__spike.events.push({ menuTexts: m.texts, error: m.error }); },
   verbDone(m) { window.__spike.events.push({ verbDone: m.ok, error: m.error }); setTimeout(reloadLists, 300); },
   executeFailed(m) { status(m.error, true); },
+  folderChanged(m) { folderChanged(m.folder); },
   clipboardDone(m) { if (m.error) status(m.error, true); },
   settingFailed(m) { status(`settings.json: ${m.error}`, true); },
   dragDone(m) {

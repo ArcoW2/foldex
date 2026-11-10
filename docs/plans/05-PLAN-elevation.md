@@ -1,6 +1,7 @@
 # Plan 05: Elevated rights
 
-Status: draft 2026-11-10, revised 2026-11-10; not started.
+Status: draft 2026-11-10, revised 2026-11-10; partly built 2026-11-10 through plan 02's spike (the elevated helper,
+listing only; file operations through `IFileOperation`) and the compatibility junctions; see 5. Status.
 
 ## 1. What this is about
 
@@ -63,3 +64,22 @@ window.
 ## 4. Open questions
 
 None.
+
+## 5. Status
+
+### Built
+
+- File operations through `IFileOperation` (plan 02 6.1); copying into a protected location with Windows' prompt not
+  tried yet (3.4).
+- The elevated helper: started with `runas`, the pipe for the user only, the helper accepting only its parent, one
+  operation: listing a folder (3.3; plan 02 6.1); "List as administrator" when access is denied (plan 03 6.1).
+  Listing through UAC: by hand (plan 02 6.3).
+- Compatibility junctions that deny listing: the junction's target listed instead (3.1).
+
+### Not yet built
+
+- Permissions and ownership (take ownership) through the helper (3.1).
+- Symbolic links and junctions without developer mode (3.1).
+- Folders owned by SYSTEM or TrustedInstaller, after taking ownership (3.1).
+- The helper staying a while after its last operation, the time as a setting, the shield in the ribbon (3.3).
+- The checks by hand of 3.4.

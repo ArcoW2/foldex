@@ -1,6 +1,8 @@
 # Plan 04: Preview
 
-Status: draft 2026-11-10, revised 2026-11-10; not started. Depends on plan 02 (how the UI is drawn) and plan 03 (the preview is a follower).
+Status: draft 2026-11-10, revised 2026-11-10; partly built 2026-11-10 through plans 02 and 03 (Windows preview
+handlers in a preview child), the rest not started; see 5. Status. Depends on plan 02 (how the UI is drawn) and plan 03
+(the preview is a follower).
 
 ## 1. What this is about
 
@@ -72,3 +74,19 @@ text, zoom, the bar above the preview as LexPen's (theme or original for PDF, pa
 
 1. **Remote content.** Remote images in markdown and HTML previews: off, on, or per folder?
 2. **Text preview editable?** Suggestion: no, read-only; editing is LexPen's, one action away.
+
+## 5. Status
+
+### Built
+
+- Windows preview handlers in a native window over the page's area, with the snapshot swap for page popups (3.2;
+  plan 02 6.1 and 6.2 item 4).
+- The preview as a child that follows (the Preview action; plan 03 6.1).
+
+### Not yet built
+
+- Foldex's own viewers: text and code, markdown, images, PDF, audio and video, CSV, zip listing, hex (3.1).
+- A folder's summary; properties for anything else (3.1).
+- The order of viewers and the setting per type preferring the Windows handler (3.1).
+- Care: cloud placeholders, large files, locked files, no scripts or network in HTML and markdown (3.3).
+- The actions: Open in LexPen, open with the default program, copy the text, zoom, the bar above the preview (3.4).

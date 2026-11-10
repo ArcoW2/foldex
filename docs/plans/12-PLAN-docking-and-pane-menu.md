@@ -1,7 +1,8 @@
 # Plan 12: Docking panes, tabs, and the pane header's menu
 
-Status: draft 2026-11-10; not started. Takes the docking row of plan 01 3.3 into a plan of its own, for Foldex's
-panes; changes plan 03 (a pane can now be detached and attached).
+Status: draft 2026-11-10; partly executed 2026-11-10 (detach, attach by the connector, branch colour as an action, a
+list without a parent opening folders in itself); see 5. Status and 6. As built. Takes the docking row of plan 01 3.3
+into a plan of its own, for Foldex's panes; changes plan 03 (a pane can now be detached and attached).
 
 ## 1. What this is about
 
@@ -84,6 +85,24 @@ A right-click on a pane's header (or its tab):
 1. **Floating panes.** LexPen's panes can also float as a window of their own (for another monitor). Wanted for
    Foldex's panes too, later, or not?
 
-## 5. As built
+## 5. Status
 
-Not built yet.
+### Built
+
+- Detach: a child becomes a root on the folder it shows and keeps its children (3.2).
+- Attach by dragging the connector in the header onto another pane; a cycle refused (3.2).
+- Branch colour, as an action; not yet in a header menu (3.2).
+- A list without a parent opens a double-clicked folder in itself (3.3).
+
+### Not yet built
+
+- Docking: the areas, groups, tabs, splits with splitters, moving a pane by dragging its header (3.1).
+- The pane header's right-click menu (3.2), with Attach to as a submenu and the docking moves.
+- New child pane below or as a tab; New tab (3.2, 3.3).
+- The layout kept in `State\state.json` until projects are built, then in the project (3.4).
+- Floating panes: open question 1.
+
+## 6. As built
+
+Built with plan 03's code (2026-11-10, branch `plan01-foundation`): see 5. Status, Built. What differs from the plan
+and how it was tested: [not yet recorded].

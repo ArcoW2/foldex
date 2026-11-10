@@ -62,10 +62,10 @@ an item out of the collection; Alt+Delete deletes it from disk and from the pane
 - Copying or moving all go through `IFileOperation` (plan 05), so two files with the same name from different folders
   get Windows' own conflict dialog.
 - Deleting from disk from several folders: one confirmation listing the folders involved.
-- Explorer's context menu does not exist for items from different folders (plan 02, 5.2 item 7): the shell makes none.
+- Explorer's context menu does not exist for items from different folders (plan 02, 6.2 item 7): the shell makes none.
   Such a selection gets Foldex's own menu (Copy, Cut, Delete, Alt+Delete, Properties per item, ...); a selection
   within one folder keeps Explorer's. Dragging them out and the shell clipboard for them: [not yet checked] (plan 02,
-  5.3).
+  6.3).
 - The keys are in `keys.json` like all keys; Alt+Delete and Alt+Shift+Delete are free in Windows [not yet checked
   against PowerToys and the like on this PC].
 
@@ -91,3 +91,17 @@ an item out of the collection; Alt+Delete deletes it from disk and from the pane
 5. **Search engines.** Foldex's own walk only, or also the Windows Search index and Everything when present?
 6. **Collections in collections.** A scrap holding a search pane's current results as a snapshot (Add all to scrap):
    wanted?
+
+## 5. Status
+
+### Built
+
+Nothing yet.
+
+### Not yet built
+
+- Collections: entries by parsing name, the folder column, grouping, watched entries, branches (3.1).
+- The search pane: criteria, scope, streaming results, engines, saved criteria (3.2).
+- The scrap pane: filled by drag, action and paste, saved in the project, more than one (3.3).
+- File actions on a collection, Delete, Alt+Delete and Alt+Shift+Delete (3.4).
+- Foldex's own menu for items from different folders (3.4).

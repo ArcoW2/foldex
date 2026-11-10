@@ -1,6 +1,6 @@
 # Plan 08: Fonts for the window and the panes
 
-Status: draft 2026-11-10; executed 2026-11-10, revised and executed 2026-11-10 (icons that grow with the rows); see 5. As built.
+Status: draft 2026-11-10; executed 2026-11-10, revised and executed 2026-11-10 (icons that grow with the rows); see 6. As built.
 
 ## 1. What this is about
 
@@ -68,9 +68,22 @@ and their icons grow and shrink with the pane font.
 
 None.
 
-## 5. As built
+## 5. Status
 
-### 5.1 Built (2026-11-10, branch `plan01-foundation`)
+### Built
+
+- The settings `appFont`, `appSize`, `paneFont`, `paneSize` (3.1).
+- The settings window's rows `font` and `size`, in a group Fonts (3.2).
+- Ctrl+mouse wheel over a pane, written once the wheel rests (3.3).
+- Rows that follow the pane font; icons that grow with the rows from the 16, 32 or 48 px source (3.4).
+
+### Not yet built
+
+Nothing.
+
+## 6. As built
+
+### 6.1 Built (2026-11-10, branch `plan01-foundation`)
 
 - `Fonts.cs` (LexPen's, without the monospaced mark); the settings window asks for the list (`fonts`), built on another
   thread.
@@ -93,7 +106,7 @@ None.
 - Found on the way and fixed: the tree's focused folder ended up just below the bottom edge at the start (the status
   line came in after the tree had scrolled); a tree made shorter keeps its focused folder in view.
 
-### 5.2 How it was tested
+### 6.2 How it was tested
 
 - `dotnet test`: Failed 0, Passed 78 (`FontsTests`: Segoe UI there, no `@` families; the rows check covers the four
   settings).
@@ -102,7 +115,7 @@ None.
   (16 px rows). In the settings window (groups General, Fonts, Panes): Consolas as pane font changed the rows only; 12
   pt as window size changed the ribbon, the location box and the settings window to 16 px. `PrintWindow` of both
   windows: the Fonts rows with Reset on the changed size; Consolas rows at a large size with the dates whole after the
-  `em` fix (before it they were cut off). (This test ran before the least size became 4 pt, 5.1.)
+  `em` fix (before it they were cut off). (This test ran before the least size became 4 pt, 6.1.)
 - Icons: in C:\Windows\System32 at 10 pt the first build drew 17 px icons from the 32 px source; changed then to keep
   the 16 px icon as it is below 20 px (that case not measured again). Twelve Ctrl+wheel steps up made them 36 px from
   the 48 px source, more steps 48 px; `PrintWindow` showed sharp folder, exe and dll icons at that size.

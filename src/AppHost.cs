@@ -199,10 +199,17 @@ sealed class AppHost : ApplicationContext
         }
     }
 
+    /// <summary>The folders the windows show, watched (plan 03 3.8); made with the first window, on the UI thread.</summary>
+    public Shell.FolderWatch? Folders { get; private set; }
+
     void Open(IReadOnlyList<string> paths)
     {
         var w = new MainForm(this, paths);
         Watch();
+        Folders ??= new Shell.FolderWatch((folder, shown) =>
+        {
+            foreach (var window in shown.OfType<MainForm>()) window.Post(new JsonObject { ["event"] = "folderChanged", ["folder"] = folder });
+        });
         windows.Add(w);
         recent.Insert(0, w);
         w.Activated += (_, _) =>
@@ -212,6 +219,7 @@ sealed class AppHost : ApplicationContext
         };
         w.FormClosed += (_, _) =>
         {
+            Folders?.Forget(w);
             windows.Remove(w);
             recent.Remove(w);
             if (windows.Count == 0) ExitThread();

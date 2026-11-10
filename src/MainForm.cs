@@ -267,6 +267,9 @@ sealed class MainForm : Form
                     Post(new JsonObject { ["event"] = "settingFailed", ["error"] = ex.Message });
                 }
                 break;
+            case "watch":
+                app.Folders?.Set(this, msg["folders"]?.AsArray().Select(n => n!.GetValue<string>()) ?? []);
+                break;
             case "openSettings":
                 app.OpenSettings(this);
                 break;

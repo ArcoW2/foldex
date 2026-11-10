@@ -1,8 +1,8 @@
 # Plan 01: Foundation: solution layout and what comes from LexPen
 
 Status: draft 2026-11-10, revised 2026-11-10; partly executed 2026-11-10 (the host: 3.1, 3.2, 3.6; actions, keys, F1
-and the ribbon: 3.3, 3.4), the rest of 3.3 to 3.5 not started; see 5. As built. The number in the file name is the
-priority; rename to reorder.
+and the ribbon: 3.3, 3.4), the rest of 3.3 to 3.5 not started; see 5. Status and 6. As built. The number in the
+file name is the priority; rename to reorder.
 
 ## 1. What this is about
 
@@ -87,13 +87,44 @@ locations, the theme set; saved continuously, opened from the Projects menu and 
 
 ## 4. Open questions
 
-1. **The order of the rest (5.2).** Each part taken out of LexPen's editor page on its own, on top of the host.
-   Suggestion: first the plan 02 spike (it needs only this host); then actions and keys (F1), the ribbon, themes, the
-   settings window, projects, macros, docking; the viewers with plan 04.
+1. **The order of the rest (5. Status, Not yet built).** Each part taken out of LexPen's editor page on its own, on
+   top of the host. Suggestion: first the plan 02 spike (it needs only this host); then actions and keys (F1), the
+   ribbon, themes, the settings window, projects, macros, docking; the viewers with plan 04.
 
-## 5. As built
+## 5. Status
 
-### 5.1 Built (branch `plan01-foundation`)
+### Built
+
+- The folder layout: `Foldex.sln`, `src`, `tests`, `docs/plans` (3.1).
+- The host shape: .NET 10 WinForms, single file, version by commit count, one instance with a pipe, the data folder
+  and `FOLDEX_DATA`, defaults next to the exe (3.2; 6.1).
+- From LexPen: single instance, windows and pipe; the data folder and settings (3.3; 6.1).
+- The page recreated after a renderer or browser failure (plan 02 3.5; 6.1).
+- Actions and keys, F1 with every action (3.3, 3.4; 6.2).
+- The ribbon: tabs, groups, large and small buttons, greyed out and lit as the actions say (3.3; 6.2).
+- The first actions: open, properties, delete, copy, cut, paste, copy path, select all, new folder, up, refresh, hidden
+  items, preview, new pane, new child pane, close pane, next and previous pane (3.4; 6.2); detach, attach and branch
+  colour (plan 03).
+- Themes and the settings window: plan 07, built.
+- The tests project (3.6; 6.3).
+
+### Not yet built
+
+- The ribbon's icons, split buttons and drop-down lists, key tips, change mode and collapsing (3.3).
+- The menus (3.3).
+- Macros (3.3).
+- Projects and window sessions (3.3, 3.5).
+- Docking: moved to plan 12.
+- The viewers: plan 04.
+- Rename, folder compare, git status from LexPen (3.3; the Git status column: plan 11).
+- The rest of the actions of 3.4: open with, open in LexPen, back, forward, new file, rename, delete permanently,
+  select by pattern, filter, sort, view mode, next branch, take ownership (plan 05).
+- An icon of Foldex's own (6.1).
+- The order of all this: open question 1.
+
+## 6. As built
+
+### 6.1 Built (branch `plan01-foundation`)
 
 - `Foldex.sln` with `src/Foldex.csproj` and `tests/Foldex.Tests` in solution folders `src` and `tests`, as LexPen.
 - `Foldex.csproj`: the LexPen settings (net10.0-windows, WinForms, PerMonitorV2, win-x64, framework-dependent, single
@@ -114,7 +145,7 @@ locations, the theme set; saved continuously, opened from the Projects menu and 
   light or dark by Windows or the `theme` setting.
 - `README.md`.
 
-### 5.2 Built since (2026-11-10): actions, keys, F1, the ribbon
+### 6.2 Built since (2026-11-10): actions, keys, F1, the ribbon
 
 - From LexPen as they were: `KeysFile.cs` (without LexPen's renamed actions and macro keys), `RibbonFile.cs` (without
   saving: no change mode yet), `web/keys.js` (in a text box the keys that edit text stay the box's), `web/ribbonmodel.js`
@@ -129,13 +160,7 @@ locations, the theme set; saved continuously, opened from the Projects menu and 
 - The keys a pane handled itself before (Enter, Backspace, Delete, F5) are actions in `keys.json` now; moving the cursor
   stays the pane's own.
 
-### 5.3 Not built yet
-
-From LexPen: the ribbon's icons, split buttons and drop-down lists, key tips, change mode and collapsing; the menus;
-macros; projects; docking; the viewers (plan 04). Themes and the settings window: plan 07, built. The order is open
-question 1.
-
-### 5.4 How it was tested
+### 6.3 How it was tested
 
 - `dotnet build`: no warnings, no errors; version `1.0.8 4bf9c0d` at the time.
 - `dotnet test`: Failed 0, Passed 21 (ProgramTests, DataFolderTests, SettingsFileTests, WebFilesTests).
@@ -145,17 +170,17 @@ question 1.
   - a second launch with `D:\prive` exited and the first window showed `D:\prive`; one Foldex process stayed;
   - the renderer process killed: the page came back (a marker set before was gone, so it was a new page);
   - the browser process killed: a new browser process under Foldex, the page back, Foldex still running;
-  - after the fix of 5.4 (rebuilt): a second launch with `D:\prive`, then the renderer killed: the new page showed
+  - after the fix of 6.4 (rebuilt): a second launch with `D:\prive`, then the renderer killed: the new page showed
     `D:\prive`, not the start's `C:\Windows`;
   - closing the window wrote `State\state.json` with its position and size.
-- Actions, keys and the ribbon (5.2): `dotnet test` Failed 0, Passed 66 (`KeysAndRibbonTests`: key spelling, user keys,
+- Actions, keys and the ribbon (6.2): `dotnet test` Failed 0, Passed 66 (`KeysAndRibbonTests`: key spelling, user keys,
   ribbon items, every shipped key and ribbon button naming an action of `actions.js`). In the test copy: the ribbon
   showed Home and View; New folder made `New folder` on disk; New child pane added a pane following the list; Close pane
   and Preview worked; Hidden items wrote `"showHidden": true` to the test copy's settings.json; F1 listed 19 actions;
   Alt+P toggled the preview; Backspace in the location box stayed in the box. Copy, cut and paste were not tried (they
   use your real clipboard): by hand.
 
-### 5.5 Resolved during execution
+### 6.4 Resolved during execution
 
 | Item | Decision |
 |---|---|

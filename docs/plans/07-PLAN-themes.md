@@ -1,7 +1,7 @@
 # Plan 07: Themes, branch colours and the settings window
 
 Status: draft 2026-11-10, revised 2026-11-10 (no theme sets, every LexPen theme, six branch colours, the settings
-window); executed 2026-11-10; see 5. As built. Takes the themes row and the settings window of plan 01 3.3 out into a plan of their own.
+window); executed 2026-11-10; see 6. As built. Takes the themes row and the settings window of plan 01 3.3 out into a plan of their own.
 
 ## 1. What this is about
 
@@ -109,9 +109,24 @@ As LexPen's (`SettingsForm.cs`, `web/settings.html`, `settings.js`), cut down:
 
 None.
 
-## 5. As built
+## 5. Status
 
-### 5.1 Built (2026-11-10, branch `plan01-foundation`)
+### Built
+
+- Theme files: name, base, the colours that differ, six branch colours; yours replacing shipped ones (3.1).
+- Branches as places 0 to 5 in the theme's list (3.2).
+- Applying: `themeLight` and `themeDark`, the host resolving every chain, a change applied at once in every window,
+  problems in the status line (3.3).
+- Every LexPen theme shipped, `light` and `dark` as the roots (3.4).
+- The settings window (3.5).
+
+### Not yet built
+
+Nothing.
+
+## 6. As built
+
+### 6.1 Built (2026-11-10, branch `plan01-foundation`)
 
 - `ThemeFile.cs`: names from the first `:root` block of `app.css`, the chain, branch lists, problems; `Load` reads the
   shipped themes and yours and resolves every one to CSS variables (`--branch-0` to `--branch-5` for the list).
@@ -129,7 +144,7 @@ None.
   `web/settingrows.js`; action `settings.open` on View > Foldex. No key: LexPen has none either.
 - README: a Themes section with the colour names (the theme files point to it).
 
-### 5.2 How it was tested
+### 6.2 How it was tested
 
 - `dotnet test`: Failed 0, Passed 77 (`ThemeFileTests`: names, chain, missing and circular base, wrong name, value and
   branch list, yours replacing a shipped one, every shipped theme without problems, the roots complete, app.css equal
