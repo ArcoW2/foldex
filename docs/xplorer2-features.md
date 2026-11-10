@@ -1,7 +1,8 @@
 # xplorer2 Ultimate's features, against Foldex
 
-A reference list, not a plan: the features of xplorer2 Ultimate, read from zabkat.com on 2026-11-10, with where
-Foldex stands for each. Plans are made from it when wanted. Keep the Foldex column up to date as plans are built.
+A reference list and a status, not a plan: the features of xplorer2 Ultimate, read from zabkat.com on 2026-11-10,
+and for each where Foldex stands. Plans are made from it when wanted. The Foldex column is the status: it is
+updated whenever a plan is written, built or closed that touches a feature here.
 
 ## Source and how to read the table
 
@@ -32,10 +33,10 @@ Foldex stands for each. Plans are made from it when wanted. Keep the Foldex colu
 | Named window layouts (workspaces) | P+ | plan 01 (projects) | |
 | Ribbon or menu bar, quick access toolbar | All | part: ribbon built; menus, QAT -- | |
 | Full screen; clone window | P+ | part: new window (-n) built | |
-| Address bar: breadcrumbs, typed path, autocomplete | P+ | part: typed path built | |
+| Address bar: breadcrumbs, typed path, autocomplete | P+ | part: typed path built; as a bar: plan 10 | |
 | Back / forward / up | P+ | part: up built; back/forward plan 03 3.6 | |
 | Frequent folders, jump list | P+ | -- | |
-| Drive bar with free space | P+ | -- | |
+| Drive bar with free space | P+ | plan 10 (drives bar) | |
 | Bookmarks (keys, icons, dual bookmarks) | P+ | -- | |
 | Mirror browsing / scrolling | P+ | -- | |
 | Spring-loaded tabs and tree during drag | P+ | -- | |
@@ -125,7 +126,7 @@ Foldex stands for each. Plans are made from it when wanted. Keep the Foldex colu
 | Feature | Edition | Foldex | Want |
 |---|---|---|---|
 | Keyboard remapping, command finder | P+ | built (keys.json, F1) | |
-| Custom toolbars, skins | P+ | part: ribbon.json; icons -- | |
+| Custom toolbars, skins | P+ | part: ribbon.json; bars plan 10; icons -- | |
 | Dark mode, themes | P+ | built (plan 07) | |
 | Fonts | P+ | built (plan 08) | |
 | Options window with search | P+ | built (plan 07) | |

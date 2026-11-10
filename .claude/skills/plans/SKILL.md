@@ -53,5 +53,7 @@ The reader wants the shape of the answer first. Nothing goes between the problem
 - Only when asked. Branch first when on the default branch.
 - When done: Status "executed (<date>); see As built", add the As built section, move the file to the executed
   folder if the project has one, and fix references to its old path in code comments and docs.
+- Foldex: `docs/xplorer2-features.md` is the status of the features it lists. When a plan is written, built or
+  closed, update the Foldex column of every row it touches (`plan NN`, `part`, `built`).
 - Asked what is left of a plan: compare each part of the plan with the code and report built / not built per part,
   without building anything.
