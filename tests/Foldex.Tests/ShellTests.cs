@@ -58,6 +58,22 @@ public class ShellTests : IDisposable
     }
 
     [Fact]
+    public async Task ACompatibilityLinkThatDeniesListingShowsItsTarget()
+    {
+        // C:\Documents and Settings: a junction to C:\Users with Everyone:(DENY)(RD) on itself.
+        var r = await StaWorker.Once("t", () => ShellListing.List(@"C:\Documents and Settings"));
+        Assert.Null(r.Error);
+        Assert.Equal(@"C:\Users", r.Target);
+        Assert.Contains(r.Entries, e => e!["id"]!.GetValue<string>().StartsWith(@"C:\Users\", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void AFolderThatIsNoLinkHasNoTarget()
+    {
+        Assert.Null(ShellListing.LinkTarget(dir));
+    }
+
+    [Fact]
     public async Task MissingFolderIsAnErrorNotAnException()
     {
         var r = await StaWorker.Once("t", () => ShellListing.List(Path.Combine(dir, "nope")));

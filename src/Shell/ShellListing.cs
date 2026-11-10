@@ -16,8 +16,10 @@ namespace Foldex.Shell;
 /// </summary>
 static class ShellListing
 {
+    /// <summary>`Target`: the folder listed instead of the location, when the location is a link that may not be
+    /// listed itself.</summary>
     public sealed record Result(JsonArray Entries, string? Error, bool Denied, long Milliseconds, string Kind, long IconMs = 0,
-        bool Cancelled = false);
+        bool Cancelled = false, string? Target = null);
 
     /// <summary>Lists a location. `batch` gets the entries read so far every few hundred milliseconds (on this thread);
     /// the result holds the rest.</summary>
@@ -31,8 +33,17 @@ static class ShellListing
             if (Path.IsPathFullyQualified(location) && Directory.Exists(location))
             {
                 var icons = new Stopwatch();
-                ListFolder(location, icons, batcher, cancel, foldersOnly);
-                return new Result(batcher.Rest, null, false, clock.ElapsedMilliseconds, "disk", icons.ElapsedMilliseconds, cancel.IsCancellationRequested);
+                string? target = null;
+                try { ListFolder(location, icons, batcher, cancel, foldersOnly); }
+                catch (UnauthorizedAccessException) when (LinkTarget(location) is string to)
+                {
+                    // A compatibility link such as C:\Documents and Settings denies listing to everyone, administrators
+                    // included; its target is the folder meant (docs/plans/05-PLAN-elevation.md 3.1).
+                    target = to;
+                    ListFolder(to, icons, batcher, cancel, foldersOnly);
+                }
+                return new Result(batcher.Rest, null, false, clock.ElapsedMilliseconds, "disk", icons.ElapsedMilliseconds,
+                    cancel.IsCancellationRequested, target);
             }
             ListShell(location, batcher, cancel, foldersOnly);
             return new Result(batcher.Rest, null, false, clock.ElapsedMilliseconds, "shell", 0, cancel.IsCancellationRequested);
@@ -61,6 +72,18 @@ static class ShellListing
             Rest = [];
             since.Restart();
         }
+    }
+
+    /// <summary>The folder a junction or symbolic link finally points to, or null when the path is no link.</summary>
+    internal static string? LinkTarget(string path)
+    {
+        try
+        {
+            var dir = new DirectoryInfo(path);
+            if ((dir.Attributes & FileAttributes.ReparsePoint) == 0) return null;
+            return dir.ResolveLinkTarget(returnFinalTarget: true)?.FullName;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return null; }
     }
 
     static readonly EnumerationOptions All = new()

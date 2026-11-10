@@ -293,6 +293,7 @@ sealed class MainForm : Form
         {
             ["event"] = "listed", ["req"] = req, ["channel"] = channel, ["location"] = location, ["name"] = name, ["kind"] = r.Kind,
             ["entries"] = r.Entries, ["error"] = r.Error, ["denied"] = r.Denied, ["enumMs"] = r.Milliseconds, ["iconMs"] = r.IconMs,
+            ["target"] = r.Target,
         };
         answer["hostMs"] = clock.ElapsedMilliseconds;
         Post(answer);

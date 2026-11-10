@@ -436,7 +436,8 @@ class ListView {
 
   done(m, first) {
     this.take(m.entries, first);
-    this.el.querySelector('.title').textContent = m.name;
+    // A link that may not be listed itself shows its target's contents (plan 05 3.1).
+    this.el.querySelector('.title').textContent = m.target ? `${m.name} -> ${m.target}` : m.name;
     this.name = m.name;
     if (m.denied && !m.elevated) this.message = 'denied';
     else if (m.error) this.message = m.error;
