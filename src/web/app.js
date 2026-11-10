@@ -699,12 +699,13 @@ function newChildPane(parentId) {
   const view = new ListView(id);
   views.set(id, view);
   place.after(view.el);
-  // It shows the parent's focused item when that is a folder (3.3).
+  // Its branch active first (a new one starts from a copy of the parent's state), then it shows the parent's focused
+  // item when that is a folder (3.3); the other branches' children stay as they are.
+  activate(id);
   const focus = layout.state(parentId).focus;
   const parent = views.get(parentId);
   const folder = parent instanceof TreeView || !!parent.entries?.find(x => same(x.id, focus))?.folder;
   if (focus && folder) apply(layout.follow(parentId, { id: focus, folder: true }));
-  activate(id);
   drawHeads();
   return view;
 }

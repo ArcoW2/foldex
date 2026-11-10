@@ -35,8 +35,9 @@ a parent the folder expands in place, as in a tree.
   cycles: a connection that would make one is refused. A pane cannot be disconnected from its parent (for now).
 - **Root**: a pane without a parent; the window's first pane is one.
 - **Branch**: a colour on parent-child connections. A parent's children of the same colour belong to one branch;
-  different colours are different branches. A new child gets the colour of the branch its parent is in; a new colour is
-  a choice when connecting, or later.
+  different colours are different branches. A parent's first child continues the parent's branch (its colour); a
+  further child starts a new branch, in a colour not yet used in the window (with all taken, the one used least). Two
+  children in one branch (the same colour) is a choice when connecting, or later.
 - **Branch state**: a pane keeps its state per branch below it: the location it shows, the selection and the focused
   item (and the scroll position with them). A pane without children has one state. A new branch starts with a copy of
   the parent's state for the branch active at that moment.
@@ -169,8 +170,8 @@ None.
 
 ### 5.2 Not built yet
 
-Connector dragging (3.4), a child below or floating (only at the right now), a branch colour of its own for a new
-child (more branches in the page: the model has them), pinning in the page, docking (plan 01), keys and back and
+Connector dragging (3.4), a child below or floating (only at the right now), choosing a branch colour (a further
+child gets a new one; joining a sibling's branch is not possible yet), pinning in the page, docking (plan 01), keys and back and
 forward per branch (3.6), saving the layout in the project (3.7, needs plan 01's projects), folder watching (3.8), the
 presets other than the default (3.5), the hidden files setting (hidden and system folders such as
 `System Volume Information` show for now).
@@ -183,4 +184,7 @@ presets other than the default (3.5), the hidden files setting (hidden and syste
   listed its files; a folder executed in the child was focused in the tree and listed in the child; Backspace went
   back to the parent folder through the tree; Preview added a preview child in the same branch (`p3`, parent `p2`,
   blue) that showed `one.txt` through its Windows handler. The window drawn by `PrintWindow` showed the three panes.
+- A second child of the tree (New child pane with the tree active) came up red beside the blue one; the tree focused
+  `two` for red and `one` for blue, and switching between the two lists brought the tree's focus and colour back each
+  time, the other list staying as it was.
 - Executing a file (its program starting on the desktop) is left for the checks by hand.

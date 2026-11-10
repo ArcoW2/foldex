@@ -16,8 +16,8 @@ class Layout {
     this.next = 1;
   }
 
-  // A new pane; with a source (its parent) it follows that one, in `colour` or else the colour its parent shows (a new
-  // child joins the active branch). `root` is the window's first pane still there.
+  // A new pane; with a source (its parent) it follows that one, in `colour` or else as connect() says. `root` is the
+  // window's first pane still there.
   add({ source = null, colour = null, kind = 'list', content = 'both', location = null } = {}) {
     const id = `p${this.next++}`;
     const pane = { id, source: null, colour: null, kind, content, pinned: false, activeKey: null, states: {} };
@@ -30,15 +30,24 @@ class Layout {
 
   pane(id) { return this.panes.get(id); }
 
-  // Connects a pane to a parent; false (and nothing changed) when that would make a cycle.
+  // Connects a pane to a parent; false (and nothing changed) when that would make a cycle. Without a colour: the
+  // parent's first child continues the parent's branch; a further child starts a new branch, in a colour not yet used
+  // in the window.
   connect(id, source, colour = null) {
     if (!this.panes.has(source)) return false;
     for (let p = source; p !== null; p = this.pane(p).source) if (p === id) return false;
     const pane = this.pane(id);
+    const siblings = this.followers(source).filter(f => f.id !== id);
     pane.source = source;
-    pane.colour = colour ?? this.keyOf(source) ?? Branches[0];
-    if (pane.colour === '') pane.colour = Branches[0];
+    pane.colour = colour ?? (siblings.length ? this.newColour() : this.pane(source).colour ?? Branches[0]);
     return true;
+  }
+
+  // A colour no connection has yet; with all taken, the one used least.
+  newColour() {
+    const used = [...this.panes.values()].map(p => p.colour).filter(c => c);
+    const count = c => used.filter(u => u === c).length;
+    return Branches.reduce((best, c) => count(c) < count(best) ? c : best);
   }
 
   // Closes a pane (any pane, 3.4): its children get its parent, in their own colours; a root's children become roots.

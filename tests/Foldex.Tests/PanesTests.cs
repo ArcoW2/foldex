@@ -69,10 +69,23 @@ public class PanesTests
     }
 
     [Fact]
-    public void ANewFollowerJoinsTheActiveBranch()
+    public void AFirstChildContinuesItsParentsBranch()
     {
-        var r = Run(Example + "l.activate(C); const E = l.add({ source: A });", "l.pane(E).colour");
-        Assert.Equal("blue", Str(r));
+        var r = Run(Example + "const E = l.add({ source: C });", "[l.pane(D).colour, l.pane(E).colour]");
+        Assert.Equal("""["red","blue"]""", r.GetRawText());
+    }
+
+    [Fact]
+    public void AFurtherChildStartsANewBranchWithItsOwnState()
+    {
+        var r = Run("""
+            const l = new Layout(); const A = l.add({ kind: 'tree' });
+            const B = l.add({ source: A }); l.focus(A, { id: 'C:\\X', folder: true });
+            const C = l.add({ source: A }); l.activate(C); l.focus(A, { id: 'C:\\Y', folder: true });
+            const blue = l.pane(B).colour, red = l.pane(C).colour;
+            l.activate(B);
+            """, "[blue, red, l.state(A).focus, l.state(B).location, l.state(C).location]");
+        Assert.Equal("""["blue","red","C:\\X","C:\\X","C:\\Y"]""", r.GetRawText());
     }
 
     [Fact]
@@ -158,7 +171,8 @@ public class PanesTests
     public void ClosingAMiddlePaneGivesItsChildrenItsParent()
     {
         var r = Run(Example + "l.remove(B);", "[l.pane(D).source, l.pane(D).colour, l.panes.has(B)]");
-        Assert.Equal("""["p1","blue",false]""", r.GetRawText());
+        // D keeps its own colour, the red it took over from B.
+        Assert.Equal("""["p1","red",false]""", r.GetRawText());
     }
 
     [Fact]
