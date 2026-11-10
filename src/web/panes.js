@@ -31,16 +31,16 @@ class Layout {
 
   pane(id) { return this.panes.get(id); }
 
-  // Connects a pane to a parent; false (and nothing changed) when that would make a cycle. Without a colour: the
-  // parent's first child continues the parent's branch; a further child starts a new branch, in a colour not yet used
-  // in the window.
+  // Connects a pane to a parent; false (and nothing changed) when that would make a cycle. Without a colour: a child's
+  // first child continues its branch; a root's first child and a further child start a new branch, in the colour used
+  // least in the window (so the children of two roots differ).
   connect(id, source, colour = null) {
     if (!this.panes.has(source)) return false;
     for (let p = source; p !== null; p = this.pane(p).source) if (p === id) return false;
     const pane = this.pane(id);
     const siblings = this.followers(source).filter(f => f.id !== id);
     pane.source = source;
-    pane.colour = colour ?? (siblings.length ? this.newColour() : this.pane(source).colour ?? Branches[0]);
+    pane.colour = colour ?? (siblings.length ? null : this.pane(source).colour) ?? this.newColour();
     return true;
   }
 

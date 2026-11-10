@@ -101,6 +101,18 @@ public class PanesTests
     }
 
     [Fact]
+    public void TheChildrenOfTwoRootsTakeDifferentColours()
+    {
+        // A's children take branches 0 and 1; the first child of a second root E takes 2, not 0 again.
+        var r = Run("""
+            const l = new Layout(); const A = l.add({ kind: 'tree' });
+            l.add({ source: A }); l.add({ source: A });
+            const E = l.add({ kind: 'tree' }); const F = l.add({ source: E });
+            """, "[...l.panes.values()].map(p => p.colour)");
+        Assert.Equal("[null,0,1,null,2]", r.GetRawText());
+    }
+
+    [Fact]
     public void WithEveryBranchTakenANewChildGetsTheOneUsedLeast()
     {
         // Six children of A take branches 0 to 5; a child of p2 continues its branch 0 (used twice now); the next

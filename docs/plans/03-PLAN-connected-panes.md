@@ -37,8 +37,9 @@ a parent the folder expands in place, as in a tree.
   attached to another (plan 12 3.2).
 - **Root**: a pane without a parent; the window's first pane is one.
 - **Branch**: a colour on parent-child connections. A parent's children of the same colour belong to one branch;
-  different colours are different branches. A parent's first child continues the parent's branch (its colour); a
-  further child starts a new branch, in a colour not yet used in the window (with all taken, the one used least). Two
+  different colours are different branches. A child's first child continues its branch (its colour); a root's
+  first child and a further child start a new branch, in a colour not yet used in the window (with all taken, the one
+  used least), so the children of two roots differ. Two
   children in one branch (the same colour) is a choice when connecting, or later. A new child starts with the view
   settings of the parent's current child (the one in its active branch, not a preview), else the defaults.
 - **Branch state**: a pane keeps its state per branch below it: the location it shows, the selection and the focused
