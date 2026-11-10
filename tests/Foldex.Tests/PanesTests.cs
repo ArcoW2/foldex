@@ -76,6 +76,18 @@ public class PanesTests
     }
 
     [Fact]
+    public void ANewChildTakesTheSettingsOfTheCurrentChild()
+    {
+        var r = Run("""
+            const l = new Layout(); const A = l.add({ kind: 'tree' });
+            const B = l.add({ source: A, content: 'files' }); const P = l.add({ source: B, kind: 'preview' });
+            const first = l.childSettings(B);
+            """, "[l.childSettings(A), first]");
+        // A preview child is not copied: B's new child gets the defaults.
+        Assert.Equal("""[{"kind":"list","content":"files"},{"kind":"list","content":"both"}]""", r.GetRawText());
+    }
+
+    [Fact]
     public void AFurtherChildStartsANewBranchWithItsOwnState()
     {
         var r = Run("""

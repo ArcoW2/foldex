@@ -43,6 +43,13 @@ class Layout {
     return true;
   }
 
+  // The settings a new child of `source` starts with: those of its current child (the one in its active branch, not a
+  // preview), else the defaults.
+  childSettings(source) {
+    const current = this.followers(source, this.keyOf(source)).find(f => f.kind !== 'preview');
+    return current ? { kind: current.kind, content: current.content } : { kind: 'list', content: 'both' };
+  }
+
   // A colour no connection has yet; with all taken, the one used least.
   newColour() {
     const used = [...this.panes.values()].map(p => p.colour).filter(c => c);

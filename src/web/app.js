@@ -690,9 +690,10 @@ function newRootPane(path) {
   return tree;
 }
 
-// A new child of a pane, after the panes already following it (3.4, New child pane); it shows what the parent focuses.
+// A new child of a pane, after the panes already following it (3.4, New child pane), with the settings of the parent's
+// current child; it shows what the parent focuses.
 function newChildPane(parentId) {
-  const id = layout.add({ source: parentId });
+  const id = layout.add({ source: parentId, ...layout.childSettings(parentId) });
   const siblings = [...views.values()].filter(v => layout.pane(v.id).source === parentId);
   const after = siblings.at(-1)?.el ?? views.get(parentId).el;
   const place = after.nextElementSibling?.classList.contains('splitter') ? after.nextElementSibling : after;

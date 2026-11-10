@@ -37,7 +37,8 @@ a parent the folder expands in place, as in a tree.
 - **Branch**: a colour on parent-child connections. A parent's children of the same colour belong to one branch;
   different colours are different branches. A parent's first child continues the parent's branch (its colour); a
   further child starts a new branch, in a colour not yet used in the window (with all taken, the one used least). Two
-  children in one branch (the same colour) is a choice when connecting, or later.
+  children in one branch (the same colour) is a choice when connecting, or later. A new child starts with the view
+  settings of the parent's current child (the one in its active branch, not a preview), else the defaults.
 - **Branch state**: a pane keeps its state per branch below it: the location it shows, the selection and the focused
   item (and the scroll position with them). A pane without children has one state. A new branch starts with a copy of
   the parent's state for the branch active at that moment.
@@ -171,7 +172,8 @@ None.
 ### 5.2 Not built yet
 
 Connector dragging (3.4), a child below or floating (only at the right now), choosing a branch colour (a further
-child gets a new one; joining a sibling's branch is not possible yet), pinning in the page, docking (plan 01), keys and back and
+child gets a new one; joining a sibling's branch is not possible yet), view settings per pane (a new child copies
+kind and content from the current child, but no action changes them yet and a list ignores content), pinning in the page, docking (plan 01), keys and back and
 forward per branch (3.6), saving the layout in the project (3.7, needs plan 01's projects), folder watching (3.8), the
 presets other than the default (3.5), the hidden files setting (hidden and system folders such as
 `System Volume Information` show for now).
