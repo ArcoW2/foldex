@@ -76,6 +76,16 @@ action('pane.new', { title: 'New pane', hint: 'a folder tree of its own, without
 action('pane.newChild', { title: 'New child pane', group: 'panes', enabled: () => !!activeView() && !(activeView() instanceof PreviewView),
   variants: [['right']], variantTitles: { right: 'New child pane at the right' }, run: () => newChildPane(activePane) });
 action('pane.close', { title: 'Close pane', group: 'panes', enabled: () => !!activeView(), run: () => closePane(activePane) });
+const isChild = () => layout.pane(activePane)?.source != null;
+action('pane.detach', { title: 'Detach from parent', hint: 'the pane stops following and goes its own way', group: 'panes',
+  enabled: isChild, run: () => detachPane(activePane) });
+action('pane.pin', { title: 'Pin', hint: 'a child stops following its parent until unpinned', group: 'panes',
+  enabled: isChild, checked: () => !!layout.pane(activePane)?.pinned, run: () => togglePin(activePane) });
+action('branch.colour', { title: 'Branch colour', hint: 'a free colour: a branch of its own; a sibling\'s: that branch',
+  group: 'panes', enabled: isChild, checked: params => layout.pane(activePane)?.colour === Number(params[0]) - 1,
+  variants: Branches.map(b => [String(b + 1)]),
+  variantTitles: Object.fromEntries(Branches.map(b => [String(b + 1), `Branch colour ${b + 1}`])),
+  run: params => params[0] && setBranchColour(activePane, Number(params[0]) - 1) });
 action('pane.next', { title: 'Next pane', group: 'panes', enabled: () => views.size > 1, run: () => cyclePane(1) });
 action('pane.previous', { title: 'Previous pane', group: 'panes', enabled: () => views.size > 1, run: () => cyclePane(-1) });
 

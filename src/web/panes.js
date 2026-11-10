@@ -44,6 +44,50 @@ class Layout {
     return true;
   }
 
+  // A child no longer follows (plan 12 3.2, Detach): it becomes a root on what it shows; its own children stay. Its
+  // parent forgets the state of that branch when no other child is in it.
+  detach(id) {
+    const pane = this.pane(id);
+    if (!pane || pane.source === null) return false;
+    const parent = this.pane(pane.source), colour = pane.colour;
+    pane.source = null;
+    pane.colour = null;
+    if (!this.followers(parent.id, colour).length) {
+      // Its last child gone: what it showed for that branch is what it shows now, without children ('').
+      if (!this.followers(parent.id).length) parent.states[''] = parent.states[colour] ?? parent.states[''];
+      delete parent.states[colour];
+      if (parent.activeKey === colour) parent.activeKey = null;
+      if (parent.lastKey === colour) parent.lastKey = null;
+    }
+    return true;
+  }
+
+  // Connects a pane to another (Attach to): detached from its parent first; false (nothing changed) on a cycle.
+  attach(id, source) {
+    for (let p = source; p !== null; p = this.pane(p).source) if (p === id) return false;
+    this.detach(id);
+    return this.connect(id, source);
+  }
+
+  // Another branch colour for a child (Branch colour): a free one starts a new branch from the parent's state for the
+  // old one; a sibling's colour joins that branch. The parent's state of the old colour goes when no child is left in
+  // it. What the child shows now: [{ pane, location }] to follow, as focus() gives.
+  setColour(id, colour) {
+    const pane = this.pane(id);
+    if (!pane || pane.source === null || pane.colour === colour) return [];
+    const parent = this.pane(pane.source), old = pane.colour;
+    const joins = this.followers(parent.id, colour).length > 0;
+    const shown = this.keyOf(parent.id) === old;
+    pane.colour = colour;
+    const others = this.followers(parent.id, old).length > 0;
+    if (!joins && parent.states[old]) parent.states[colour] = others ? { ...parent.states[old], selection: [...parent.states[old].selection] } : parent.states[old];
+    if (!others) delete parent.states[old];
+    if (shown) parent.activeKey = colour;
+    if (parent.lastKey === old && !others) parent.lastKey = colour;
+    const focus = parent.states[colour]?.focus;
+    return focus && joins ? this.follow(parent.id, { id: focus, folder: true }).filter(u => u.pane === id) : [];
+  }
+
   // The settings a new child of `source` starts with: those of its current child (the one in its active branch, not a
   // preview), else the defaults.
   childSettings(source) {
@@ -143,12 +187,16 @@ class Layout {
   }
 
   // Executing an item (double-click, Enter; 3.3). A file: { open }. A folder in a pane with a source: opened by that
-  // source, which focuses it and shows it in its tree ({ reveal }), and the followers follow. A folder in a pane without
-  // a source (the root): expanded in place, as in a tree ({ expand }), and focused.
+  // source, which focuses it and shows it in its tree ({ reveal }), and the followers follow. A folder in a tree without
+  // a source (or pinned): expanded in place ({ expand }) and focused; in a list without one: opened in that list
+  // ({ reveal } of the list itself; plan 12 3.3).
   execute(id, item) {
     if (!item.folder) return { open: item.id, updates: [] };
     const pane = this.pane(id);
-    if (pane.source === null || pane.pinned) return { expand: { pane: id, item: item.id }, updates: this.focus(id, item) };
+    if (pane.source === null || pane.pinned) {
+      if (pane.kind === 'tree') return { expand: { pane: id, item: item.id }, updates: this.focus(id, item) };
+      return { reveal: { pane: id, item: item.id }, updates: [] };
+    }
     return { reveal: { pane: pane.source, item: item.id }, updates: this.focus(pane.source, item) };
   }
 

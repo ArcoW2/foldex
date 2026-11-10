@@ -21,8 +21,13 @@ description: How to write, revise and close a plan or design document. Use whene
    rejected alternatives.
 3. **Details**: everything else, in subsections: how, what does not work and why, alternatives, trade-offs, tests.
 4. **Open questions**: a main section of its own (usually section 4), never a subsection of the details.
-5. **As built** (only once executed): what differs from the plan, what was decided during the build, how it was
-   tested.
+5. **Status**: what of this plan is built and what is not, as two subsections, **Built** and **Not yet built**, each
+   a list of the plan's features (short, one line each, pointing to the details where useful). Every plan has it from
+   its first draft (then everything is under Not yet built, and Built says "Nothing yet."). Plans are not built one
+   after another, so this section is the record of where each plan stands: keep it current whenever a part is built,
+   a feature is added or dropped, or a part moves to another plan (say which).
+6. **As built** (once something is built): what differs from the plan, what was decided during the build, how it
+   was tested.
 
 The reader wants the shape of the answer first. Nothing goes between the problem and the brief solution.
 
@@ -51,9 +56,11 @@ The reader wants the shape of the answer first. Nothing goes between the problem
 ## Executing and closing
 
 - Only when asked. Branch first when on the default branch.
-- When done: Status "executed (<date>); see As built", add the As built section, move the file to the executed
+- After each part built: move it from Not yet built to Built in the Status section, and add how it was built and
+  tested to As built.
+- When done (Not yet built empty): Status line "executed (<date>); see As built", move the file to the executed
   folder if the project has one, and fix references to its old path in code comments and docs.
 - Foldex: `docs/xplorer2-features.md` is the status of the features it lists. When a plan is written, built or
   closed, update the Foldex column of every row it touches (`plan NN`, `part`, `built`).
-- Asked what is left of a plan: compare each part of the plan with the code and report built / not built per part,
-  without building anything.
+- Asked what is left of a plan: its Status section answers; when in doubt, compare each part with the code, correct
+  the Status section, and report built / not built per part, without building anything.

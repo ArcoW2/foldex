@@ -179,10 +179,50 @@ public class PanesTests
     }
 
     [Fact]
-    public void AListThatBecameARootExpandsAFolderInPlaceToo()
+    public void AListThatBecameARootOpensAFolderInItself()
     {
-        var r = Run(Example + "l.remove(A); const x = l.execute(B, { id: 'C:\\\\X', folder: true });", "x.expand");
-        Assert.Equal("""{"pane":"p2","item":"C:\\X"}""", r.GetRawText());
+        var r = Run(Example + "l.remove(A); const x = l.execute(B, { id: 'C:\\\\X', folder: true });", "[x.expand ?? null, x.reveal]");
+        Assert.Equal("""[null,{"pane":"p2","item":"C:\\X"}]""", r.GetRawText());
+    }
+
+    [Fact]
+    public void ADetachedChildBecomesARootKeepingItsChildrenAndTheParentForgetsTheBranch()
+    {
+        var r = Run(Example + "l.activate(B); l.focus(A, { id: 'C:\\\\X', folder: true }); l.activate(C); l.detach(B);",
+            "[l.pane(B).source, l.pane(B).colour, l.pane(D).source === B, Object.keys(l.pane(A).states).filter(k => k), l.state(B).location]");
+        Assert.Equal("""[null,null,true,["blue"],"C:\\X"]""", r.GetRawText());
+    }
+
+    [Fact]
+    public void AParentWhoseLastChildIsDetachedKeepsWhatItShowed()
+    {
+        var r = Run("""
+            const l = new Layout(); const A = l.add({ kind: 'tree' }); const B = l.add({ source: A });
+            l.focus(A, { id: 'C:\\X', folder: true }); l.detach(B);
+            """, "l.state(A).focus");
+        Assert.Equal(@"C:\X", Str(r));
+    }
+
+    [Fact]
+    public void AttachingRefusesACycleAndTakesANewBranchBesideOtherChildren()
+    {
+        var r = Run(Example + "const cycle = l.attach(A, D); const ok = l.attach(C, B);",
+            "[cycle, ok, l.pane(C).source === B, l.pane(C).colour !== l.pane(D).colour, l.followers(A).length]");
+        Assert.Equal("[false,true,true,true,1]", r.GetRawText());
+    }
+
+    [Fact]
+    public void AnotherColourStartsANewBranchOrJoinsASiblings()
+    {
+        var r = Run(Example + """
+            l.activate(B); l.focus(A, { id: 'C:\\X', folder: true });
+            l.activate(C); l.focus(A, { id: 'C:\\Y', folder: true });
+            l.setColour(C, 2);
+            const own = [l.pane(C).colour, l.state(A).focus, Object.keys(l.pane(A).states).filter(k => k).sort()];
+            const u = l.setColour(C, 'red');
+            """, "[own, u, l.state(A).focus, Object.keys(l.pane(A).states).filter(k => k)]");
+        // C keeps its folder in a branch of its own; joining red, it follows red's folder.
+        Assert.Equal("""[[2,"C:\\Y",["2","red"]],[{"pane":"p3","location":"C:\\X"}],"C:\\X",["red"]]""", r.GetRawText());
     }
 
     [Fact]

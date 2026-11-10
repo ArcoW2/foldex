@@ -153,8 +153,12 @@ function paneElement(id, kind, title) {
   const el = document.createElement('section');
   el.className = `pane ${kind}`;
   el.dataset.pane = id;
-  el.innerHTML = '<div class="head"><span class="title"></span><span class="marks"></span></div><div class="body" tabindex="0"><div class="rows"></div></div>';
+  el.innerHTML = '<div class="head"><span class="connector" title="Drag onto another pane to follow it"></span>' +
+    '<span class="title"></span><button class="pin" title="Pin: stop following the parent"></button><span class="marks"></span></div>' +
+    '<div class="body" tabindex="0"><div class="rows"></div></div>';
   el.querySelector('.title').textContent = title;
+  el.querySelector('.connector').addEventListener('mousedown', e => { activate(id); dragConnector(id, e); });
+  el.querySelector('.pin').addEventListener('click', () => togglePin(id));
   el.addEventListener('mousedown', () => activate(id), true);
   el.addEventListener('focusin', () => activate(id));
   return el;
@@ -178,6 +182,9 @@ function drawHeads() {
     const pane = layout.pane(v.id);
     const key = pane.source === null ? layout.keyOf(v.id) : pane.colour;
     v.el.style.setProperty('--branch', key !== '' && key !== null ? `var(--branch-${key})` : '');
+    v.el.classList.toggle('child', pane.source !== null);
+    v.el.classList.toggle('pinned', pane.pinned);
+    v.el.querySelector('.pin').title = pane.pinned ? 'Pinned: click to follow the parent again' : 'Pin: stop following the parent';
     const marks = v.el.querySelector('.marks');
     const colours = [...new Set(layout.followers(v.id).map(f => f.colour))];
     marks.replaceChildren(...colours.map(c => {
@@ -626,6 +633,15 @@ class ListView {
     this.render();
   }
 
+  // A folder opened in this list itself: a list without a parent (or pinned) goes there on its own (plan 12 3.3).
+  reveal(path) {
+    const s = layout.state(this.id);
+    s.location = path;
+    s.focus = null;
+    s.selection = [];
+    this.load(path);
+  }
+
   // Up through the parent (3.3).
   up() {
     if (this.location) goTo(this.id, parentOf(this.location));
@@ -811,6 +827,77 @@ function cyclePane(step) {
   const order = [...document.querySelectorAll('#panes .pane')].map(el => el.dataset.pane);
   const next = order[(order.indexOf(activePane) + step + order.length) % order.length];
   views.get(next)?.body.focus();
+}
+
+// ---------- Detach, attach, branch colour, pin (plan 12 3.2; plan 03 3.4) ----------
+
+// A child stops following: a root on what it shows; a list then opens folders in itself.
+function detachPane(id) {
+  if (!layout.detach(id)) return;
+  activePane = null;
+  activate(id);
+  drawHeads();
+  ribbonRefresh();
+}
+
+// A pane follows another from now on, and shows what that one focuses when it is a folder.
+function attachPane(id, target) {
+  if (id === target) return;
+  if (!layout.attach(id, target)) return status('That would connect the pane to itself, through its children.', true);
+  activePane = null;
+  activate(id);
+  const focus = layout.state(target).focus;
+  const parent = views.get(target);
+  if (focus && (parent instanceof TreeView || parent.entries?.find(x => same(x.id, focus))?.folder))
+    apply(layout.follow(target, { id: focus, folder: true }));
+  drawHeads();
+  ribbonRefresh();
+}
+
+// Another branch colour for a child: a free one, a branch of its own; a sibling's, it joins that branch.
+function setBranchColour(id, colour) {
+  const pane = layout.pane(id);
+  if (!pane?.source) return;
+  apply(layout.setColour(id, colour));
+  views.get(pane.source)?.restore();
+  drawHeads();
+  ribbonRefresh();
+}
+
+function togglePin(id) {
+  const pane = layout.pane(id);
+  if (!pane?.source) return;
+  pane.pinned = !pane.pinned;
+  // Unpinned: it catches up with what its parent focuses.
+  const focus = layout.state(pane.source).focus;
+  if (!pane.pinned && focus) apply(layout.follow(pane.source, { id: focus, folder: !!views.get(pane.source)?.node?.(focus) || !!views.get(pane.source)?.entries?.find(x => same(x.id, focus))?.folder }).filter(u => u.pane === id));
+  drawHeads();
+  ribbonRefresh();
+}
+
+// The connector in a child's head (or any head): dragged onto another pane, this pane becomes its child.
+function dragConnector(id, e) {
+  e.preventDefault();
+  e.stopPropagation();
+  const paneAt = m => document.elementFromPoint(m.clientX, m.clientY)?.closest('.pane')?.dataset.pane ?? null;
+  let over = null;
+  const mark = to => {
+    if (over) views.get(over)?.el.classList.remove('drop-target');
+    over = to && to !== id ? to : null;
+    if (over) views.get(over)?.el.classList.add('drop-target');
+  };
+  const move = m => mark(paneAt(m));
+  const up = m => {
+    removeEventListener('mousemove', move);
+    removeEventListener('mouseup', up);
+    const target = paneAt(m);
+    mark(null);
+    document.body.classList.remove('connecting');
+    if (target && target !== id) attachPane(id, target);
+  };
+  document.body.classList.add('connecting');
+  addEventListener('mousemove', move);
+  addEventListener('mouseup', up);
 }
 
 // ---------- What the actions act on (actions.js) ----------

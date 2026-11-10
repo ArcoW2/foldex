@@ -294,6 +294,53 @@ body[data-focus-away] .pane.active > .head {
   text-overflow: ellipsis;
 }
 
+/* The connector (drag it onto another pane to follow that one) and the pin (a child stops following), app.js. */
+.pane > .head .connector {
+  width: 8px;
+  height: 12px;
+  flex: none;
+  border-left: 2px dotted currentColor;
+  border-right: 2px dotted currentColor;
+  opacity: 0.6;
+  cursor: grab;
+}
+
+.pane > .head .pin {
+  display: none;
+  width: 11px;
+  height: 11px;
+  padding: 0;
+  flex: none;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+}
+
+.pane.child > .head .pin {
+  display: inline-block;
+}
+
+.pane.pinned > .head .pin {
+  background: currentColor;
+  opacity: 1;
+}
+
+body.connecting, body.connecting * {
+  cursor: alias !important;
+}
+
+.pane.drop-target::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  pointer-events: none;
+  z-index: 3;
+}
+
 /* A parent's branches (app.js drawHeads): the first rightmost, each keeping its place; the active one full and larger. */
 .pane > .head .marks {
   display: flex;

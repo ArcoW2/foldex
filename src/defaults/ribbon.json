@@ -23,7 +23,8 @@
       { "name": "Panes", "items": [
         { "action": "pane.newChild", "params": ["right"], "size": "large", "label": "New child\npane" },
         { "action": "pane.new", "label": "New pane" }, { "action": "pane.close", "label": "Close pane", "stack": true },
-        { "action": "pane.next", "label": "Next pane", "stack": true } ] },
+        { "action": "pane.next", "label": "Next pane", "stack": true },
+        { "action": "pane.detach", "label": "Detach" }, { "action": "pane.pin", "label": "Pin", "stack": true } ] },
       { "name": "Show", "items": [
         { "action": "preview.toggle", "size": "large", "label": "Preview" },
         { "action": "hidden.toggle", "label": "Hidden items" } ] },

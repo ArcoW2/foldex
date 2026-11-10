@@ -45,6 +45,7 @@ public class KeysAndRibbonTests
     public void ShippedKeysAndRibbonNameKnownActions()
     {
         var engine = new Jint.Engine();
+        engine.Execute(File.ReadAllText(Path.Combine(Web, "panes.js")));   // before actions.js, as index.html has it
         engine.Execute(File.ReadAllText(Path.Combine(Web, "actions.js")));
         var known = engine.Evaluate("JSON.stringify([...actions.keys()])").ToString();
         var names = JsonNode.Parse(known)!.AsArray().Select(n => n!.GetValue<string>()).ToHashSet();
