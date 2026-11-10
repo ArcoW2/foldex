@@ -223,6 +223,24 @@ body {
   flex-direction: column;
   min-width: 0;
   border-right: 1px solid var(--border);
+  position: relative;
+  /* The colour of the branch it shows (app.js drawHeads); a pane without one: the accent. */
+  --pane-colour: var(--branch, var(--accent));
+}
+
+/* The pane with the keyboard (as LexPen's focus ring): a border laid over it in its branch colour, dimmed while the
+   focus is in another window. */
+.pane.active::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--pane-colour);
+  pointer-events: none;
+  z-index: 2;
+}
+
+body[data-focus-away] .pane.active::after {
+  border-color: color-mix(in srgb, var(--pane-colour) 40%, transparent);
 }
 
 .pane.tree {
@@ -245,15 +263,23 @@ body {
   align-items: center;
   gap: 6px;
   padding: 3px 8px;
-  background: var(--bg-bar);
-  border-top: 3px solid var(--branch, var(--border));
+  /* The head in its branch colour: a tint while another pane has the keyboard, full (text in the background colour)
+     on the active one. */
+  background: color-mix(in srgb, var(--pane-colour) 22%, var(--bg-bar));
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
   overflow: hidden;
 }
 
 .pane.active > .head {
+  background: var(--pane-colour);
+  color: var(--bg);
   font-weight: 600;
+}
+
+body[data-focus-away] .pane.active > .head {
+  background: color-mix(in srgb, var(--pane-colour) 55%, var(--bg-bar));
+  color: var(--fg);
 }
 
 .pane > .head .title {
@@ -267,6 +293,7 @@ body {
   width: 10px;
   height: 10px;
   border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--bg);   /* seen on a head of any colour */
   margin-left: 3px;
   cursor: pointer;
 }

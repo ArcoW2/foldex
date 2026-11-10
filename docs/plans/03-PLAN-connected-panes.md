@@ -98,6 +98,9 @@ second red pane as thumbnails.
 - Panes are dock items (LexPen's docking, plan 01); where a pane sits has nothing to do with its connections.
 - A pane's header shows the active branch's colour and the name of its parent; a parent also shows small marks in the
   colours of the other branches it feeds, to switch to one with a click.
+- Focus, as LexPen's focus ring in the branch colour: the pane with the keyboard has a 2px border in its branch
+  colour and its header filled with it (text in the background colour); the other panes have their header tinted
+  with theirs. While the focus is in another window, the ring and the header are dimmed.
 
 ### 3.5 The default layout and presets
 

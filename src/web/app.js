@@ -944,5 +944,8 @@ const events = {
 };
 
 host.addEventListener('message', e => events[e.data.event]?.(e.data));
+// The focus in another window: the active pane's ring and head dimmed (app.css), as LexPen's.
+addEventListener('blur', () => document.body.toggleAttribute('data-focus-away', true));
+addEventListener('focus', () => document.body.toggleAttribute('data-focus-away', false));
 darkQuery.addEventListener('change', applyTheme);
 post({ op: 'ready' });
