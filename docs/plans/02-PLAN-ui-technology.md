@@ -14,7 +14,8 @@ everything, for the preview only, or not at all.
 
 Suggestion: the LexPen shape, with a thicker native host. The page draws everything (ribbon, panes, lists, preview), so
 LexPen's ribbon, actions, themes and docking carry over; the host does all shell work: icons, Explorer's context menu,
-starting drags, file operations, watching folders, and Windows' own preview handlers. This is decided only after a
+starting drags, file operations, watching folders, and Windows' own preview handlers. WebView2 runs in processes of
+Foldex's own, and the host recreates the page when it fails without stopping work in progress. This is decided only after a
 spike proves the risky parts: dragging files out of the page, very large folders, and a native preview window next to
 the page's menus. If the spike fails, the fallback is native lists (option B or D below) with WebView2 for the preview.
 
@@ -83,7 +84,40 @@ checks. Checked on this PC (2026-11-10, not elevated): `C:\Windows` lists; `C:\S
 `C:\Program Files\WindowsApps` are denied; `C:\Documents and Settings` (a compatibility junction to `C:\Users`) has
 `Everyone:(DENY)(RD)` on the junction itself, so listing it is denied even to administrators. Plan 05, 3.1.
 
-### 3.5 The spike
+### 3.5 Isolation and recovery
+
+Foldex replaces Explorer for daily work, so a hang elsewhere must not reach it, and a failure of its own page must not
+stop its work.
+
+- **Other apps**: WebView2 groups its processes (browser, renderer, GPU) per user data folder. Foldex's own folder in
+  the data folder's `State\` (as LexPen's, `AppHost.cs` `WebEnvironment`) gives it processes of its own, not shared with
+  Teams, Outlook, Edge or LexPen. The environment option for exclusive access to the user data folder
+  (`ExclusiveUserDataFolderAccess`) keeps every other process out of it [not yet checked].
+- **Still shared**: the Evergreen runtime's files and its updates, the GPU driver, Windows. A Fixed Version runtime
+  shipped with Foldex takes the runtime out of that list, at the price of shipping and updating it ourselves (size
+  [not yet checked]); open question 4.
+- **The page itself**: the host never waits synchronously on the page, so a hung renderer does not freeze the host's
+  UI thread. `ProcessFailed` reports a renderer that stopped responding or exited, and a browser process that
+  exited; the host then recreates the page and restores it from the project (panes, connections, locations, plan 03
+  3.7). LexPen does not handle `ProcessFailed` (a grep of its `src` finds no use); Foldex does from the start.
+- **Work lives in the host**: file operations, copy queues, folder watchers and the elevated helper (plan 05) belong to
+  the host, not the page, so recreating the page does not stop a running copy; the new page shows its progress again.
+- Foldex is not the Windows shell: when Foldex hangs, `explorer.exe` (taskbar, desktop) goes on.
+
+### 3.6 Drag and drop
+
+The page only draws drags; every drag that leaves or enters Foldex, and every file operation, goes through the host.
+
+| Drag | Served by |
+|---|---|
+| Between Foldex panes | The page (HTML drag); on the drop the page tells the host, which copies or moves (`IFileOperation`) |
+| From Foldex to Explorer, Outlook, LexPen | The host: the page reports a drag start with its items, the host starts the native drag (`SHDoDragDrop` with a shell data object, so Explorer's drag image and copy or move rules apply) [not yet checked from inside WebView2] |
+| From Explorer into Foldex | WebView2 takes the native drop and gives the page `File` objects; the page hands them to the host with `postMessageWithAdditionalObjects`, as LexPen does; the host does the work |
+| Outlook mails and attachments into Foldex | Virtual files (`FileGroupDescriptor` / `FileContents`), not on disk: whether WebView2 passes them to the page at all [not yet checked]; if not, the host needs a drop target of its own, with WebView2's own drop switched off (`AllowExternalDrop`) [not yet checked] |
+
+Dragging into an elevated Foldex from a normal program is blocked by Windows (3.4).
+
+### 3.7 The spike
 
 A throwaway branch with a minimal host and page, each check pass or fail, timings only from what was measured:
 
@@ -95,10 +129,14 @@ A throwaway branch with a minimal host and page, each check pass or fail, timing
 5. `IExplorerBrowser` hosted next to the page, filtered to folders only, for comparison.
 6. The same host run elevated once (plan 05).
 7. Explorer's context menu, dragging out and copying for items from different folders (plan 06, 3.4).
+8. Recovery (3.5): the renderer killed and the browser process killed during a long copy run by the host; the page
+   comes back with its panes and the copy's progress, the copy itself not interrupted.
+9. Outlook mails and attachments dragged into the page (3.6); if WebView2 does not pass them, the host's own drop
+   target with `AllowExternalDrop` off.
 
 The outcome goes into this plan (the brief solution changes to the decision) and the spike branch is deleted.
 
-### 3.6 Tests
+### 3.8 Tests
 
 The spike is its own test. After the decision: whatever unit tests the chosen host gets; the CDP-driven test copy as in
 LexPen if the page stays.
@@ -110,3 +148,6 @@ LexPen if the page stays.
 2. **The look.** Should the panes look like Explorer (system list, system icons) or like LexPen (themed, own colours)?
    The first favours D or B, the second A.
 3. **Spike first?** Suggestion: yes, before plans 03 to 05 go into detail on screen behaviour.
+4. **Evergreen or Fixed Version runtime?** Evergreen (updated by Windows, shared with other apps' WebView2 files, as
+   LexPen) or a Fixed Version shipped with Foldex (independent of other apps, updated by us)? Suggestion: Evergreen,
+   unless the spike or daily use shows a runtime update breaking Foldex.
