@@ -159,6 +159,8 @@ sealed class MainForm : Form
                     ["version"] = version,
                     ["commit"] = commit,
                     ["settings"] = SettingsFile.Load(AppHost.DataDir),
+                    ["keys"] = KeysFile.Load(AppHost.DataDir),
+                    ["ribbon"] = RibbonFile.Load(AppHost.DataDir, Path.Combine(AppHost.DefaultsDir, RibbonFile.Name)),
                     ["paths"] = PathsArray(paths),
                     ["ops"] = new JsonArray(app.FileOps.All.Select(o => (JsonNode)o.ToJson()).ToArray()),
                 });
@@ -244,6 +246,27 @@ sealed class MainForm : Form
                 });
                 if (files.Length > 0 && msg["target"]?.GetValue<string>() is { } target)
                     app.FileOps.Start("copy", files, target, Handle, false);
+                break;
+            case "clipboard":
+                // Copy and cut as Explorer puts them on the clipboard: the files, and whether a paste moves them.
+                Post(new JsonObject { ["event"] = "clipboardDone", ["error"] = ShellClipboard.Put(ids, msg["kind"]!.GetValue<string>() == "cut") });
+                break;
+            case "paste":
+            {
+                var (onClipboard, move) = ShellClipboard.Take();
+                if (onClipboard.Count == 0) Post(new JsonObject { ["event"] = "clipboardDone", ["error"] = "no files on the clipboard" });
+                else app.FileOps.Start(move ? "move" : "copy", onClipboard, msg["target"]!.GetValue<string>(), Handle, false);
+                break;
+            }
+            case "setSetting":
+                try { SettingsFile.Write(AppHost.DataDir, msg["name"]!.GetValue<string>(), msg["value"]?.DeepClone()); }
+                catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException)
+                {
+                    Post(new JsonObject { ["event"] = "settingFailed", ["error"] = ex.Message });
+                }
+                break;
+            case "copyText":
+                Clipboard.SetText(msg["text"]!.GetValue<string>());
                 break;
             case "fileOp":
                 app.FileOps.Start(msg["kind"]!.GetValue<string>(), ids, msg["target"]?.GetValue<string>(), Handle,

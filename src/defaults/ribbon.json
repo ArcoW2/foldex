@@ -1,0 +1,31 @@
+// The ribbon Foldex ships (as LexPen's, docs/plans/01-PLAN-foundation.md 3.3). A ribbon.json of your own in
+// %LOCALAPPDATA%\Foldex replaces it whole.
+// A tab: { name, groups }. A group: { name, items }. An item: "divider", or { action, params, size: "large" or "small"
+// (the default), stack: true (under the small one before it, at most three in a column), label (shorter than the
+// action's title) }.
+{
+  "tabs": [
+    { "name": "Home", "groups": [
+      { "name": "Clipboard", "items": [
+        { "action": "item.paste", "size": "large", "label": "Paste" },
+        { "action": "item.copy", "label": "Copy" }, { "action": "item.cut", "label": "Cut", "stack": true },
+        { "action": "item.copyPath", "label": "Copy path", "stack": true } ] },
+      { "name": "Organize", "items": [
+        { "action": "item.delete", "size": "large", "label": "Delete" },
+        { "action": "folder.new", "size": "large", "label": "New\nfolder" } ] },
+      { "name": "Open", "items": [
+        { "action": "item.open", "size": "large", "label": "Open" },
+        { "action": "item.properties", "label": "Properties" }, { "action": "item.selectAll", "label": "Select all", "stack": true } ] },
+      { "name": "Go", "items": [
+        { "action": "folder.up", "label": "Up" }, { "action": "refresh", "label": "Refresh", "stack": true } ] } ] },
+
+    { "name": "View", "groups": [
+      { "name": "Panes", "items": [
+        { "action": "pane.newChild", "params": ["right"], "size": "large", "label": "New child\npane" },
+        { "action": "pane.new", "label": "New pane" }, { "action": "pane.close", "label": "Close pane", "stack": true },
+        { "action": "pane.next", "label": "Next pane", "stack": true } ] },
+      { "name": "Show", "items": [
+        { "action": "preview.toggle", "size": "large", "label": "Preview" },
+        { "action": "hidden.toggle", "label": "Hidden items" } ] } ] }
+  ]
+}

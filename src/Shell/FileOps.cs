@@ -43,8 +43,9 @@ sealed class FileOps
 
     public IReadOnlyList<Operation> All => operations;
 
-    /// <summary>Starts a copy or move of items (parsing names) into a folder, or a delete (to the Recycle Bin; `confirmed`:
-    /// Foldex asked already, Windows does not ask again). Returns at once.</summary>
+    /// <summary>Starts a copy or move of items (parsing names) into a folder, a delete (to the Recycle Bin; `confirmed`:
+    /// Foldex asked already, Windows does not ask again), or a new folder in `target` ("New folder", numbered by Windows
+    /// when the name is taken). Returns at once.</summary>
     public Operation Start(string kind, IReadOnlyList<string> ids, string? target, IntPtr owner, bool confirmed)
     {
         var op = new Operation { Id = ++lastId, Kind = kind, Items = ids.Count };
@@ -67,11 +68,13 @@ sealed class FileOps
             Marshal.Release(ptr);
             var flags = Native.FofNoConfirmMkDir | Native.FofAllowUndo;
             if (op.Kind == "delete") flags |= Native.FofxRecycleOnDelete | (confirmed ? Native.FofNoConfirmation : 0);
+            if (op.Kind == "newFolder") flags |= Native.FofRenameOnCollision;
             fo.SetOperationFlags(flags);
             if (owner != IntPtr.Zero) fo.SetOwnerWindow(owner);
             var sink = new Sink(this, op);
             fo.Advise(sink, out var cookie);
             var dest = target is null ? null : Native.Item(target);
+            if (op.Kind == "newFolder") fo.NewItem(dest!, Native.FileAttributeDirectory, "New folder", null, IntPtr.Zero);
             foreach (var id in ids)
             {
                 var item = Native.Item(id);

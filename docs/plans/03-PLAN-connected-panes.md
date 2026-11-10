@@ -156,14 +156,18 @@ None.
   Delete, Backspace, F5, "List as administrator" when access is denied), the Preview button adding a preview child
   (plan 04's Windows handlers). Heads in their branch colour, marks for other branches. A path typed in the location
   box, and Backspace in a child, go through the parent. The debounce is 150 ms (3.3).
+- Since (with plan 01's actions and ribbon): New pane (a root tree at the end of the window), New child pane (a list
+  at the right of the active pane, following it; a child of a file selection stays empty until a folder is focused),
+  Close pane (its children to its parent; with none left the status line says how to make one), Next / Previous pane,
+  Hidden items; drives in This PC sorted by letter, before the rest.
 - Host: listings per channel (a pane, a tree node: a new one stops only the old one of the same channel), folders only
   for the tree, links marked (junctions and symbolic links; the shell's link flag), `describe` for the tree's top,
   `execute` running the default command of Explorer's menu (as a double-click in Explorer).
 
 ### 5.2 Not built yet
 
-New pane and New child pane from the ribbon (3.4, needs plan 01's ribbon), closing a pane in the page, connector
-dragging, more branches in the page (the model has them), pinning in the page, docking (plan 01), keys and back and
+Connector dragging (3.4), a child below or floating (only at the right now), a branch colour of its own for a new
+child (more branches in the page: the model has them), pinning in the page, docking (plan 01), keys and back and
 forward per branch (3.6), saving the layout in the project (3.7, needs plan 01's projects), folder watching (3.8), the
 presets other than the default (3.5), the hidden files setting (hidden and system folders such as
 `System Volume Information` show for now).

@@ -5,14 +5,19 @@
   <title>Foldex</title>
   <link rel="stylesheet" href="app.css">
   <script src="panes.js" defer></script>
+  <script src="keys.js" defer></script>
+  <script src="actions.js" defer></script>
+  <script src="palette.js" defer></script>
+  <script src="ribbonmodel.js" defer></script>
+  <script src="ribbon.js" defer></script>
   <script src="app.js" defer></script>
 </head>
 <body>
   <header id="bar">
     <span id="brand">Foldex <span id="version"></span></span>
     <input id="location" spellcheck="false" title="The folder of the active pane; Enter goes there">
-    <button id="previewToggle" title="A preview pane following the list">Preview</button>
   </header>
+  <nav id="ribbon" hidden></nav>
   <!-- The panes of plan 03: the root (folders only, left) and its followers. -->
   <main id="panes"></main>
   <footer>

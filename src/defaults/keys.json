@@ -1,0 +1,25 @@
+// Foldex's keys. Do not change this file: your own keys.json in %LOCALAPPDATA%\Foldex overrides it key by key
+// ("F5": null takes a key away). F1 lists every action with its keys. A chord is two keys: "Ctrl+K, K".
+// Moving the cursor in a pane (arrows, Page Up / Down, Home, End, with Shift and Ctrl) is fixed, not in this file.
+{
+  "F1": "palette",
+  "Enter": "item.open",
+  "Alt+Enter": "item.properties",
+  "Del": "item.delete",
+  "Ctrl+C": "item.copy",
+  "Ctrl+X": "item.cut",
+  "Ctrl+V": "item.paste",
+  "Ctrl+Shift+C": "item.copyPath",
+  "Ctrl+A": "item.selectAll",
+  "Ctrl+Shift+N": "folder.new",
+  "Backspace": "folder.up",
+  "Alt+Up": "folder.up",
+  "F5": "refresh",
+  "Ctrl+H": "hidden.toggle",
+  "Alt+P": "preview.toggle",
+  "Ctrl+Alt+N": ["pane.newChild", "right"],
+  "Ctrl+Alt+Shift+N": "pane.new",
+  "Ctrl+W": "pane.close",
+  "F6": "pane.next",
+  "Shift+F6": "pane.previous",
+}

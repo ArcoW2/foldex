@@ -4,4 +4,7 @@
   // ---------- General ----------
   "followWindows": true,          // light or dark as Windows is (Settings > Personalization > Colors), at once
   "theme": "light",               // "light" or "dark": the mode when not following Windows
+
+  // ---------- Panes ----------
+  "showHidden": false,            // hidden and system files and folders shown (Ctrl+H, View > Hidden items)
 }

@@ -78,7 +78,10 @@ function scrollIntoView(body, index) {
 }
 
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
-const byName = (a, b) => (b.folder - a.folder) || collator.compare(a.name, b.name);
+// Folders first, then by name; drives (in This PC) by their letter and before the rest, as Explorer has them.
+const isDrive = x => /^[A-Za-z]:\\$/.test(x.id);
+const byName = (a, b) => (b.folder - a.folder) || (isDrive(b) - isDrive(a))
+  || (isDrive(a) && isDrive(b) ? collator.compare(a.id, b.id) : collator.compare(a.name, b.name));
 
 function formatSize(n) {
   if (n == null) return '';
@@ -112,6 +115,7 @@ function paneElement(id, kind, title) {
 function activate(id) {
   if (activePane === id) return;
   activePane = id;
+  queueMicrotask(ribbonRefresh);
   for (const changed of layout.activate(id)) views.get(changed)?.restore();
   for (const v of views.values()) v.el.classList.toggle('active', v.id === id);
   drawHeads();
@@ -262,6 +266,7 @@ class TreeView {
     this.flat = [];
     const walk = list => {
       for (const n of list) {
+        if (n.hidden && !settings.showHidden && n.depth > 0) continue;
         this.flat.push(n);
         if (n.expanded && n.children) walk(n.children);
       }
@@ -322,6 +327,7 @@ class TreeView {
     if (i >= 0) scrollIntoView(this.body, i);
     this.render();
     if (activePane === this.id) $('location').value = this.locationText();
+    ribbonRefresh();
   }
 
   key(e) {
@@ -334,7 +340,6 @@ class TreeView {
     else if (e.key === 'End') to(this.flat.length - 1);
     else if (e.key === 'ArrowRight' && n) { if (!n.expanded) this.expand(n); else if (n.children?.[0]) this.select(n.children[0].id); e.preventDefault(); }
     else if (e.key === 'ArrowLeft' && n) { if (n.expanded) this.expand(n, false); else if (n.parent) this.select(n.parent.id); e.preventDefault(); }
-    else if (e.key === 'Enter' && n) execute(this.id, { id: n.id, folder: true });
   }
 
   // Shows a folder in the tree: expanded down to it and selected. Paths on disk are found from This PC down; other
@@ -359,6 +364,19 @@ class TreeView {
   }
 
   restore() { this.render(); }
+
+  up() {
+    const n = this.node(layout.state(this.id).focus);
+    if (n?.parent) this.select(n.parent.id);
+  }
+
+  // The focused folder's subfolders read again.
+  refresh() {
+    const n = this.node(layout.state(this.id).focus);
+    if (!n) return;
+    n.children = null;
+    this.expand(n, n.expanded);
+  }
 
   locationText() { return layout.state(this.id).focus ?? ''; }
 }
@@ -429,7 +447,7 @@ class ListView {
 
   take(entries, reset) {
     if (reset) this.entries = [];
-    this.entries = this.entries.concat(entries).sort(byName);
+    this.entries = this.entries.concat(entries.filter(x => settings.showHidden || !x.hidden)).sort(byName);
     this.render();
     status(`${this.entries.length} items so far...`);
   }
@@ -448,6 +466,7 @@ class ListView {
     // The focus of this branch, as it was left, comes back when it is still there.
     const focus = layout.state(this.id).focus;
     if (focus && this.entries.some(x => same(x.id, focus))) this.select(this.entries.find(x => same(x.id, focus)), {}, true);
+    ribbonRefresh();
   }
 
   render() {
@@ -523,6 +542,7 @@ class ListView {
     scrollIntoView(this.body, index);
     this.render();
     if (!quiet) focusItem(this.id, { id: x.id, folder: x.folder });
+    ribbonRefresh();
   }
 
   key(e) {
@@ -536,14 +556,21 @@ class ListView {
     else if (e.key === 'PageUp') to(i - page);
     else if (e.key === 'Home') to(0);
     else if (e.key === 'End') to(this.entries.length - 1);
-    else if (e.key === 'Enter' && i >= 0) execute(this.id, this.entries[i]);
-    else if (e.key === 'Backspace' && this.location) goTo(this.id, parentOf(this.location));
-    else if (e.key === 'F5') this.load(this.location);
-    else if (e.key === 'Delete' && this.selected.size) {
-      const ids = this.ids();
-      if (confirm(`Move ${ids.length === 1 ? this.entries.find(x => x.id === ids[0]).name : `these ${ids.length} items`} to the Recycle Bin?`))
-        post({ op: 'fileOp', kind: 'delete', ids, confirmed: true });
-    }
+  }
+
+  selectAll() {
+    this.selected = new Set(this.entries.map(x => x.id));
+    layout.state(this.id).selection = [...this.selected];
+    this.render();
+  }
+
+  // Up through the parent (3.3).
+  up() {
+    if (this.location) goTo(this.id, parentOf(this.location));
+  }
+
+  refresh() {
+    if (this.location) this.load(this.location);
   }
 
   // Back on this pane's state for the branch now active (3.1).
@@ -601,6 +628,10 @@ class PreviewView {
 
   restore() { }
 
+  up() { }
+
+  refresh() { if (this.path) this.show(this.path); }
+
   locationText() { return this.path ?? ''; }
 
   close() { post({ op: 'previewClose' }); }
@@ -619,7 +650,7 @@ function dropTarget(body, targetOf) {
 
 // ---------- The default layout (3.5) ----------
 
-let root, follower, preview = null;
+let preview = null;
 
 function addView(view, after) {
   views.set(view.id, view);
@@ -643,35 +674,123 @@ function splitter(left) {
 }
 
 async function start(paths) {
-  const rootId = layout.add({ kind: 'tree', content: 'folders' });
-  root = addView(new TreeView(rootId));
-  splitter(root);
-  const listId = layout.add({ source: rootId });
-  follower = addView(new ListView(listId));   // after the splitter
-  activate(listId);
-  await root.init();
-  const first = paths[0];
-  if (first) await root.reveal(first);
-  else root.select(ThisPC);
-  follower.body.focus();
+  const tree = newRootPane(paths[0]);
+  const list = newChildPane(tree.id);
+  await tree.ready;
+  list.body.focus();
 }
 
-$('previewToggle').addEventListener('click', () => {
-  if (preview) {
-    preview.close();
-    layout.remove(preview.id);
-    views.delete(preview.id);
-    preview.el.remove();
-    preview = null;
-  } else {
-    const id = layout.add({ source: follower.id, kind: 'preview' });
-    preview = addView(new PreviewView(id), follower);
-    const focus = layout.state(follower.id).focus;
-    preview.show(focus);
-  }
-  $('previewToggle').classList.toggle('on', !!preview);
+// A new root: a tree of folders (3.4, New pane), at the end of the window, on `path` or else This PC.
+function newRootPane(path) {
+  const id = layout.add({ kind: 'tree', content: 'folders' });
+  const tree = addView(new TreeView(id));
+  splitter(tree);
+  activate(id);
+  tree.ready = tree.init().then(() => path ? tree.reveal(path) : tree.select(ThisPC));
+  return tree;
+}
+
+// A new child of a pane, after the panes already following it (3.4, New child pane); it shows what the parent focuses.
+function newChildPane(parentId) {
+  const id = layout.add({ source: parentId });
+  const siblings = [...views.values()].filter(v => layout.pane(v.id).source === parentId);
+  const after = siblings.at(-1)?.el ?? views.get(parentId).el;
+  const place = after.nextElementSibling?.classList.contains('splitter') ? after.nextElementSibling : after;
+  const view = new ListView(id);
+  views.set(id, view);
+  place.after(view.el);
+  // It shows the parent's focused item when that is a folder (3.3).
+  const focus = layout.state(parentId).focus;
+  const parent = views.get(parentId);
+  const folder = parent instanceof TreeView || !!parent.entries?.find(x => same(x.id, focus))?.folder;
+  if (focus && folder) apply(layout.follow(parentId, { id: focus, folder: true }));
+  activate(id);
   drawHeads();
-});
+  return view;
+}
+
+// Closes a pane (3.4): its children get its parent; with none left, New pane makes one.
+function closePane(id) {
+  const view = views.get(id);
+  if (!view) return;
+  if (view === preview) {
+    preview.close();
+    preview = null;
+  }
+  if (view.el.nextElementSibling?.classList.contains('splitter')) view.el.nextElementSibling.remove();
+  view.el.remove();
+  views.delete(id);
+  iconUsers.delete(view);
+  layout.remove(id);
+  activePane = null;
+  const next = [...views.values()][0];
+  if (next) {
+    activate(next.id);
+    next.body.focus();
+  } else status('No panes left: New pane (View > Panes, Ctrl+Alt+Shift+N) makes one.');
+  drawHeads();
+  ribbonRefresh();
+}
+
+// The preview pane (Preview on the ribbon, Alt+P): a child of the active list, or of the first list.
+function togglePreview() {
+  if (preview) return closePane(preview.id);
+  const list = activeView() instanceof ListView ? activeView() : [...views.values()].find(v => v instanceof ListView);
+  if (!list) return status('A preview follows a list: make one with New child pane.', true);
+  const id = layout.add({ source: list.id, kind: 'preview' });
+  preview = addView(new PreviewView(id), list);
+  preview.show(layout.state(list.id).focus);
+  drawHeads();
+}
+
+function cyclePane(step) {
+  const order = [...document.querySelectorAll('#panes .pane')].map(el => el.dataset.pane);
+  const next = order[(order.indexOf(activePane) + step + order.length) % order.length];
+  views.get(next)?.body.focus();
+}
+
+// ---------- What the actions act on (actions.js) ----------
+
+const activeView = () => views.get(activePane) ?? null;
+
+// The ids selected in the active pane: a list's selection, a tree's focused folder.
+function selectedIds() {
+  const v = activeView();
+  if (v instanceof ListView) return v.ids();
+  if (v instanceof TreeView) return layout.state(v.id).focus ? [layout.state(v.id).focus] : [];
+  return [];
+}
+
+function focusedItem() {
+  const v = activeView(), focus = v && layout.state(v.id).focus;
+  if (v instanceof ListView) return v.entries.find(x => same(x.id, focus)) ?? null;
+  if (v instanceof TreeView && focus) return { id: focus, folder: true };
+  return null;
+}
+
+// The folder new things go into: the list's folder, the tree's focused folder; only folders on disk.
+function currentFolder() {
+  const v = activeView();
+  const folder = v instanceof ListView ? v.location : v instanceof TreeView ? layout.state(v.id).focus : null;
+  return folder && /^[A-Za-z]:\\|^\\\\/.test(folder) ? folder : null;
+}
+
+function nameOf(id) {
+  for (const v of views.values()) {
+    const x = v.entries?.find(e => e.id === id) ?? v.node?.(id);
+    if (x) return x.name;
+  }
+  return id;
+}
+
+// A setting changed here: kept in your settings.json (the host writes it), shown at once.
+function setSetting(name, value) {
+  settings[name] = value;
+  post({ op: 'setSetting', name, value });
+  if (name === 'showHidden') {
+    for (const v of views.values()) if (v instanceof TreeView) v.flatten(); else v.refresh();
+  }
+}
 
 $('location').addEventListener('keydown', e => {
   if (e.key === 'Enter' && activePane) goTo(activePane, $('location').value.trim());
@@ -701,6 +820,8 @@ const events = {
   hello(m) {
     settings = m.settings.values;
     applyTheme();
+    setKeys(m.keys);
+    setRibbon(m.ribbon);
     $('version').textContent = m.version + (m.commit ? ` (${m.commit})` : '');
     for (const o of m.ops) ops.set(o.id, o);
     showOps();
@@ -708,7 +829,8 @@ const events = {
     start(m.paths);
   },
   open(m) {
-    if (m.paths[0]) root.reveal(m.paths[0]);
+    const tree = views.get(layout.root);
+    if (m.paths[0] && tree instanceof TreeView) tree.reveal(m.paths[0]);
   },
   listing(m) {
     const l = listeners.get(m.channel);
@@ -745,6 +867,8 @@ const events = {
   menuTexts(m) { window.__spike.events.push({ menuTexts: m.texts, error: m.error }); },
   verbDone(m) { window.__spike.events.push({ verbDone: m.ok, error: m.error }); setTimeout(reloadLists, 300); },
   executeFailed(m) { status(m.error, true); },
+  clipboardDone(m) { if (m.error) status(m.error, true); },
+  settingFailed(m) { status(`settings.json: ${m.error}`, true); },
   dragDone(m) {
     window.__spike.events.push({ dragDone: m.effect, error: m.error, source: m.source });
     if (m.error) status(m.error, true);

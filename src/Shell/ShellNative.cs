@@ -196,7 +196,7 @@ static class Native
         ShgfiPidl = 0x8;
     public const uint FileAttributeDirectory = 0x10, FileAttributeNormal = 0x80;
 
-    public const uint FofAllowUndo = 0x40, FofNoConfirmation = 0x10, FofNoConfirmMkDir = 0x200, FofxRecycleOnDelete = 0x00080000;
+    public const uint FofRenameOnCollision = 0x8, FofAllowUndo = 0x40, FofNoConfirmation = 0x10, FofNoConfirmMkDir = 0x200, FofxRecycleOnDelete = 0x00080000;
 
     public const uint CmfDefaultOnly = 0x1, CmfNormal = 0, CmfExtendedVerbs = 0x100, CmfExplore = 0x4, CmfCanRename = 0x10;
     public const uint CmicMaskUnicode = 0x4000, CmicMaskPtInvoke = 0x20000000, CmicMaskShiftDown = 0x10000000,

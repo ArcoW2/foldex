@@ -1,7 +1,8 @@
 # Plan 01: Foundation: solution layout and what comes from LexPen
 
-Status: draft 2026-11-10, revised 2026-11-10; partly executed 2026-11-10 (the host: 3.1, 3.2, 3.6), the parts of 3.3
-to 3.5 not started; see 5. As built. The number in the file name is the priority; rename to reorder.
+Status: draft 2026-11-10, revised 2026-11-10; partly executed 2026-11-10 (the host: 3.1, 3.2, 3.6; actions, keys, F1
+and the ribbon: 3.3, 3.4), the rest of 3.3 to 3.5 not started; see 5. As built. The number in the file name is the
+priority; rename to reorder.
 
 ## 1. What this is about
 
@@ -113,13 +114,28 @@ locations, the theme set; saved continuously, opened from the Projects menu and 
   light or dark by Windows or the `theme` setting.
 - `README.md`.
 
-### 5.2 Not built yet
+### 5.2 Built since (2026-11-10): actions, keys, F1, the ribbon
 
-The parts of 3.3 to 3.5 (ribbon, actions and keys, macros, themes and theme sets, projects, docking, the viewers):
-LexPen's page code for them is part of its editor page (`web/app.js` and the modules around it) and is to be taken
-out of it part by part, each on top of this host. The order is open question 1.
+- From LexPen as they were: `KeysFile.cs` (without LexPen's renamed actions and macro keys), `RibbonFile.cs` (without
+  saving: no change mode yet), `web/keys.js` (in a text box the keys that edit text stay the box's), `web/ribbonmodel.js`
+  (unchanged).
+- On LexPen's pattern, for Foldex: `web/actions.js` (name, title, group, run, enabled, checked, variants; items,
+  folders, panes, view), `web/palette.js` (F1: every action with its keys, searchable), `web/ribbon.js` (tabs, groups,
+  large and small buttons stacked by `ribbonColumns`, greyed out and lit as the actions say).
+- `defaults/keys.json` and `defaults/ribbon.json` with Foldex's actions: open, properties, delete, copy, cut, paste
+  (Explorer's clipboard formats, `Shell/ShellClipboard.cs`), copy path, select all, new folder (IFileOperation), up,
+  refresh, hidden items (setting `showHidden`, written to your settings.json), preview, new pane, new child pane, close
+  pane, next and previous pane.
+- The keys a pane handled itself before (Enter, Backspace, Delete, F5) are actions in `keys.json` now; moving the cursor
+  stays the pane's own.
 
-### 5.3 How it was tested
+### 5.3 Not built yet
+
+From LexPen: the ribbon's icons, split buttons and drop-down lists, key tips, change mode and collapsing; the menus;
+macros; themes and theme sets; the settings window; projects; docking; the viewers (plan 04). The order is open
+question 1.
+
+### 5.4 How it was tested
 
 - `dotnet build`: no warnings, no errors; version `1.0.8 4bf9c0d` at the time.
 - `dotnet test`: Failed 0, Passed 21 (ProgramTests, DataFolderTests, SettingsFileTests, WebFilesTests).
@@ -132,8 +148,14 @@ out of it part by part, each on top of this host. The order is open question 1.
   - after the fix of 5.4 (rebuilt): a second launch with `D:\prive`, then the renderer killed: the new page showed
     `D:\prive`, not the start's `C:\Windows`;
   - closing the window wrote `State\state.json` with its position and size.
+- Actions, keys and the ribbon (5.2): `dotnet test` Failed 0, Passed 66 (`KeysAndRibbonTests`: key spelling, user keys,
+  ribbon items, every shipped key and ribbon button naming an action of `actions.js`). In the test copy: the ribbon
+  showed Home and View; New folder made `New folder` on disk; New child pane added a pane following the list; Close pane
+  and Preview worked; Hidden items wrote `"showHidden": true` to the test copy's settings.json; F1 listed 19 actions;
+  Alt+P toggled the preview; Backspace in the location box stayed in the box. Copy, cut and paste were not tried (they
+  use your real clipboard): by hand.
 
-### 5.4 Resolved during execution
+### 5.5 Resolved during execution
 
 | Item | Decision |
 |---|---|

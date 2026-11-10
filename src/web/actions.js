@@ -1,0 +1,89 @@
+'use strict';
+// Actions (as LexPen's actions.js): what a key (keys.json), a ribbon button or F1 runs. Each has a name ("item.copy":
+// what it acts on, a dot, what it does), a title, a group for F1, run(params, ctx), and may have enabled(params) (greyed
+// out when false), checked(params) (lit on the ribbon), variants (the parameter lists F1 offers) with variantTitles.
+// The functions the actions call are in app.js, which loads after this file.
+
+const PASS = Symbol('pass');   // returned by an action that does not apply here: the key keeps its own meaning
+
+const ACTION_GROUPS = [['items', 'Items'], ['folders', 'Folders'], ['panes', 'Panes'], ['view', 'View'], ['app', 'Foldex']];
+
+const actions = new Map();
+const action = (name, def) => actions.set(name, { name, ...def });
+const isAction = name => actions.has(name);
+const actionDef = name => actions.get(name);
+
+function actionTitle(name, params = []) {
+  const def = actions.get(name);
+  return def?.variantTitles?.[params.join(' ')] ?? def?.title ?? name;
+}
+
+function actionEnabled(name, params = []) {
+  const def = actions.get(name);
+  return !!def && (!def.enabled || !!def.enabled(params));
+}
+
+function runAction(name, params = [], ctx = {}) {
+  const def = actions.get(name);
+  if (!def) {
+    status(`Foldex has no action ${name}.`, true);
+    return;
+  }
+  if (def.enabled && !def.enabled(params)) return ctx.from === 'key' ? PASS : undefined;
+  const result = def.run(params, ctx);
+  ribbonRefresh();
+  return result;
+}
+
+// ---------- Items: what is selected in the active pane ----------
+
+const anySelected = () => selectedIds().length > 0;
+const onDisk = () => selectedIds().length > 0 && selectedIds().every(id => /^[A-Za-z]:\\|^\\\\/.test(id));
+
+action('item.open', { title: 'Open', group: 'items', enabled: () => !!focusedItem(), run: () => {
+  const item = focusedItem();
+  if (item) execute(activePane, item);
+} });
+action('item.properties', { title: 'Properties', group: 'items', enabled: anySelected,
+  run: () => post({ op: 'invokeVerb', ids: selectedIds(), verb: 'properties' }) });
+action('item.delete', { title: 'Delete to the Recycle Bin', group: 'items', enabled: anySelected, run: () => {
+  const ids = selectedIds();
+  if (confirm(`Move ${ids.length === 1 ? nameOf(ids[0]) : `these ${ids.length} items`} to the Recycle Bin?`))
+    post({ op: 'fileOp', kind: 'delete', ids, confirmed: true });
+} });
+action('item.copy', { title: 'Copy', group: 'items', enabled: onDisk, run: () => post({ op: 'clipboard', kind: 'copy', ids: selectedIds() }) });
+action('item.cut', { title: 'Cut', group: 'items', enabled: onDisk, run: () => post({ op: 'clipboard', kind: 'cut', ids: selectedIds() }) });
+action('item.paste', { title: 'Paste', group: 'items', enabled: () => !!currentFolder(),
+  run: () => post({ op: 'paste', target: currentFolder() }) });
+action('item.copyPath', { title: 'Copy path', group: 'items', enabled: onDisk,
+  run: () => post({ op: 'copyText', text: selectedIds().join('\r\n') }) });
+action('item.selectAll', { title: 'Select all', group: 'items', enabled: () => activeView() instanceof ListView,
+  run: () => activeView().selectAll() });
+
+// ---------- Folders ----------
+
+action('folder.new', { title: 'New folder', group: 'folders', enabled: () => !!currentFolder(),
+  run: () => post({ op: 'fileOp', kind: 'newFolder', ids: [], target: currentFolder() }) });
+action('folder.up', { title: 'Up', hint: 'the folder above, through the parent pane', group: 'folders', enabled: () => !!activeView(),
+  run: () => activeView().up() });
+action('refresh', { title: 'Refresh', group: 'folders', enabled: () => !!activeView(), run: () => activeView().refresh() });
+
+// ---------- Panes (docs/plans/03-PLAN-connected-panes.md 3.4) ----------
+
+action('pane.new', { title: 'New pane', hint: 'a folder tree of its own, without a parent', group: 'panes', run: () => newRootPane() });
+action('pane.newChild', { title: 'New child pane', group: 'panes', enabled: () => !!activeView() && !(activeView() instanceof PreviewView),
+  variants: [['right']], variantTitles: { right: 'New child pane at the right' }, run: () => newChildPane(activePane) });
+action('pane.close', { title: 'Close pane', group: 'panes', enabled: () => !!activeView(), run: () => closePane(activePane) });
+action('pane.next', { title: 'Next pane', group: 'panes', enabled: () => views.size > 1, run: () => cyclePane(1) });
+action('pane.previous', { title: 'Previous pane', group: 'panes', enabled: () => views.size > 1, run: () => cyclePane(-1) });
+
+// ---------- View ----------
+
+action('preview.toggle', { title: 'Preview', hint: 'a preview pane following the list', group: 'view',
+  checked: () => !!preview, run: () => togglePreview() });
+action('hidden.toggle', { title: 'Hidden items', hint: 'show hidden and system files and folders', group: 'view',
+  checked: () => !!settings.showHidden, run: () => setSetting('showHidden', !settings.showHidden) });
+
+// ---------- Foldex ----------
+
+action('palette', { title: 'All actions and keys', group: 'app', run: () => openPalette() });
