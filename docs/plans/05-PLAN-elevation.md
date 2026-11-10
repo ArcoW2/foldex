@@ -28,7 +28,7 @@ window.
 | Symbolic links and junctions without developer mode | Elevated helper |
 | Listing a folder the user cannot read | Elevated helper; the host shows its listing in the page as any other |
 | Folders owned by SYSTEM or TrustedInstaller (`System Volume Information`, `WindowsApps`) | Elevated helper, after taking ownership; elevation alone is not enough |
-| Compatibility junctions that deny listing to everyone (`C:\Documents and Settings`) | No elevation: Foldex opens the junction's target instead |
+| Compatibility junctions that deny listing to everyone (`C:\Documents and Settings`) | No elevation: Foldex lists the junction's target instead (built 2026-11-10: `ShellListing.LinkTarget`; the pane's title shows "link -> target") |
 | Editing a protected file in place | Not Foldex's: LexPen's |
 
 ### 3.2 Why Foldex itself never runs elevated
