@@ -27,6 +27,7 @@ function applyTheme() {
 
 // Rows of another height: every tree and list drawn again, the same rows at the top, the focused one kept in view.
 function setRowHeight(height) {
+  setIconSize(height);
   if (height === RowHeight) return;
   const old = RowHeight;
   RowHeight = height;
@@ -68,19 +69,33 @@ const same = (a, b) => a != null && b != null && a.toLowerCase() === b.toLowerCa
 
 // ---------- Icons: the system's, asked once per index ----------
 
+// Icons grow with the rows (docs/plans/08-PLAN-fonts.md 3.4): drawn at a size that follows the row height, from the
+// system's 16, 32 or 48 px icon (the smallest not smaller than drawn, so the browser only scales down). Kept per
+// "size:index"; while a size is on its way, the icon of another size stands in.
+const IconSources = [16, 32, 48];
+let iconSize = 16, iconSource = 16;
 const icons = new Map();
 const iconsAsked = new Set();
 const iconUsers = new Set();   // views to draw again when icons arrive
 
+function setIconSize(rowHeight) {
+  const size = Math.round(rowHeight * 16 / 22);
+  iconSize = size < 20 ? 16 : Math.min(48, size);   // up to 20 px the system's 16 px icon as it is: sharp
+  iconSource = IconSources.find(s => s >= iconSize) ?? 48;
+  document.documentElement.style.setProperty('--icon-size', `${iconSize}px`);
+}
+
 function iconImage(entry, missing) {
   const img = document.createElement('img');
-  if (icons.has(entry.icon)) img.src = icons.get(entry.icon);
-  else if (entry.icon >= 0 && !iconsAsked.has(entry.icon)) { iconsAsked.add(entry.icon); missing.push(entry.icon); }
+  const key = `${iconSource}:${entry.icon}`;
+  const stand = icons.get(key) ?? IconSources.map(s => icons.get(`${s}:${entry.icon}`)).find(u => u);
+  if (stand) img.src = stand;
+  if (!icons.has(key) && entry.icon >= 0 && !iconsAsked.has(key)) { iconsAsked.add(key); missing.push(entry.icon); }
   return img;
 }
 
 function askIcons(missing, own) {
-  if (missing.length) post({ op: 'icons', indexes: missing });
+  if (missing.length) post({ op: 'icons', indexes: missing, size: iconSource });
   if (own.length) post({ op: 'ownIcons', ids: own });
 }
 
@@ -949,7 +964,7 @@ const events = {
     described.delete(m.req);
   },
   icons(m) {
-    for (const [i, url] of Object.entries(m.icons)) if (url) icons.set(Number(i), url);
+    for (const [i, url] of Object.entries(m.icons)) if (url) icons.set(`${m.size ?? 16}:${i}`, url);
     for (const v of iconUsers) v.render();
   },
   ownIcons(m) {

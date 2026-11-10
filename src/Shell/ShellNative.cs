@@ -247,6 +247,14 @@ static class Native
     [DllImport("comctl32.dll")]
     public static extern IntPtr ImageList_GetIcon(IntPtr himl, int i, uint flags);
 
+    // The system image list of a size (SHIL_SMALL 16, SHIL_LARGE 32, SHIL_EXTRALARGE 48): the same indexes in each. The
+    // IImageList it gives is a HIMAGELIST as well.
+    public const int ShilLarge = 0, ShilSmall = 1, ShilExtraLarge = 2;
+    public static readonly Guid IidIImageList = new("46EB5926-582E-4017-9FDF-E8998DAA0950");
+
+    [DllImport("shell32.dll")]
+    public static extern int SHGetImageList(int iImageList, ref Guid riid, out IntPtr ppv);
+
     [DllImport("user32.dll")]
     public static extern bool DestroyIcon(IntPtr hIcon);
 

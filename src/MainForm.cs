@@ -189,13 +189,14 @@ sealed class MainForm : Form
                 break;
             case "icons":
                 var wanted = msg["indexes"]!.AsArray().Select(n => n!.GetValue<int>()).ToList();
+                var size = msg["size"]?.GetValue<int>() is int s && ShellIcons.Sizes.Contains(s) ? s : 16;
                 var icons = await app.ShellWork.Run(() =>
                 {
                     var o = new JsonObject();
-                    foreach (var i in wanted) o[i.ToString()] = ShellIcons.Png(i);
+                    foreach (var i in wanted) o[i.ToString()] = ShellIcons.Png(i, size);
                     return o;
                 });
-                Post(new JsonObject { ["event"] = "icons", ["icons"] = icons });
+                Post(new JsonObject { ["event"] = "icons", ["icons"] = icons, ["size"] = size });
                 break;
             case "ownIcons":
             {

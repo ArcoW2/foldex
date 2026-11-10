@@ -73,13 +73,35 @@ static class ShellIcons
         if (list != IntPtr.Zero) smallList = list;
     }
 
-    /// <summary>The icon of an index as a PNG data URL; null when there is none.</summary>
-    public static string? Png(int index)
+    // The larger lists (docs/plans/08-PLAN-fonts.md 3.4): the same indexes as the small one, asked once.
+    static readonly Dictionary<int, IntPtr> Lists = [];
+
+    static IntPtr ListOf(int size)
     {
+        if (size <= 16) return smallList;
+        var shil = size <= 32 ? Native.ShilLarge : Native.ShilExtraLarge;
         lock (Gate)
-            if (Pngs.TryGetValue(index, out var known)) return known;
-        if (smallList == IntPtr.Zero || index < 0) return null;
-        var handle = Native.ImageList_GetIcon(smallList, index, 1);   // ILD_TRANSPARENT
+        {
+            if (Lists.TryGetValue(shil, out var known)) return known;
+            var iid = Native.IidIImageList;
+            var list = Native.SHGetImageList(shil, ref iid, out var ppv) == 0 ? ppv : IntPtr.Zero;
+            Lists[shil] = list;
+            return list;
+        }
+    }
+
+    /// <summary>The icons the page can ask for: 16, 32 and 48 px (the system's small, large and extra large).</summary>
+    public static readonly int[] Sizes = [16, 32, 48];
+
+    /// <summary>The icon of an index at a size of <see cref="Sizes"/> as a PNG data URL; null when there is none.</summary>
+    public static string? Png(int index, int size = 16)
+    {
+        var key = index * 100 + size;
+        lock (Gate)
+            if (Pngs.TryGetValue(key, out var known)) return known;
+        var list = ListOf(size);
+        if (list == IntPtr.Zero || index < 0) return null;
+        var handle = Native.ImageList_GetIcon(list, index, 1);   // ILD_TRANSPARENT
         if (handle == IntPtr.Zero) return null;
         try
         {
@@ -88,7 +110,7 @@ static class ShellIcons
             using var stream = new MemoryStream();
             bitmap.Save(stream, ImageFormat.Png);
             var url = "data:image/png;base64," + Convert.ToBase64String(stream.ToArray());
-            lock (Gate) Pngs[index] = url;
+            lock (Gate) Pngs[key] = url;
             return url;
         }
         finally { Native.DestroyIcon(handle); }

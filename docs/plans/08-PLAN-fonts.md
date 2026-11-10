@@ -1,6 +1,6 @@
 # Plan 08: Fonts for the window and the panes
 
-Status: draft 2026-11-10; executed 2026-11-10 with 16 px icons (open question 1 still open); see 5. As built.
+Status: draft 2026-11-10; executed 2026-11-10, revised and executed 2026-11-10 (icons that grow with the rows); see 5. As built.
 
 ## 1. What this is about
 
@@ -13,7 +13,7 @@ made smaller to see more of it, or larger to read it better.
 Two fonts in the settings, as LexPen's app and editor fonts: one for the window (ribbon, pane heads, location box,
 status line, settings window) and one for the inside of the panes (the rows of trees and lists), each a font and a
 size. Ctrl+mouse wheel over any pane changes the pane size, for all panes alike, and keeps it as the setting. Rows
-grow and shrink with the pane font.
+and their icons grow and shrink with the pane font.
 
 ## 3. Details
 
@@ -49,7 +49,11 @@ grow and shrink with the pane font.
 
 - The row height is measured from the pane font (its line height plus padding) instead of the fixed 22 px, in the CSS
   (a variable) and in the code that places rows in long lists (only rows in view are drawn).
-- Icons are 16 px (the system's small icons) at any size for now: open question 1.
+- Icons grow with the rows: drawn at a size that follows the row height (16 px up to 20, then the row height times
+  16 / 22, at most 48), from the system's 16, 32 or 48 px icon: the smallest not smaller than drawn, so the browser
+  only scales down and the edges stay sharp. The system's image lists of those sizes hold the same icons under the
+  same index, so a size is one more request per icon, made only for the rows in view; while it comes, the icon of
+  another size stands in. The 256 px list is left out: many types have only a small icon in the middle of it.
 - The scroll position keeps the focused row in view when the size changes.
 
 ### 3.5 Tests
@@ -62,8 +66,7 @@ grow and shrink with the pane font.
 
 ## 4. Open questions
 
-1. **Larger icons.** At a large pane size, 16 px icons look small. Use the system's 32 px icons above some row
-   height, or keep 16 px always for now?
+None.
 
 ## 5. As built
 
@@ -85,6 +88,8 @@ grow and shrink with the pane font.
 - `app.js`: `RowHeight` follows the setting; a change draws every tree and list again, the same rows at the top and
   the focused one in view; Ctrl+mouse wheel over a tree or list (not the preview) one point up or down, 4 to 36,
   written after 200 ms of rest.
+- Icons (3.4): `ShellIcons.Png(index, size)` from the small, large or extra large system image list
+  (`SHGetImageList`), the `icons` op with a size; the page keeps icons per size and index, `--icon-size` in the CSS.
 - Found on the way and fixed: the tree's focused folder ended up just below the bottom edge at the start (the status
   line came in after the tree had scrolled); a tree made shorter keeps its focused folder in view.
 
@@ -97,4 +102,7 @@ grow and shrink with the pane font.
   (16 px rows). In the settings window (groups General, Fonts, Panes): Consolas as pane font changed the rows only; 12
   pt as window size changed the ribbon, the location box and the settings window to 16 px. `PrintWindow` of both
   windows: the Fonts rows with Reset on the changed size; Consolas rows at a large size with the dates whole after the
-  `em` fix (before it they were cut off).
+  `em` fix (before it they were cut off). (This test ran before the least size became 4 pt, 5.1.)
+- Icons: in C:\Windows\System32 at 10 pt the first build drew 17 px icons from the 32 px source; changed then to keep
+  the 16 px icon as it is below 20 px (that case not measured again). Twelve Ctrl+wheel steps up made them 36 px from
+  the 48 px source, more steps 48 px; `PrintWindow` showed sharp folder, exe and dll icons at that size.
