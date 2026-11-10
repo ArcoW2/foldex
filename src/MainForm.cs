@@ -166,10 +166,23 @@ sealed class MainForm : Form
                 queue.Clear();
                 break;
             case "list":
-                await List(msg["location"]!.GetValue<string>(), msg["req"]?.GetValue<int>() ?? 0);
+                await List(msg["location"]!.GetValue<string>(), msg["req"]?.GetValue<int>() ?? 0,
+                    msg["channel"]?.GetValue<string>() ?? "", msg["foldersOnly"]?.GetValue<bool>() == true);
                 break;
             case "listElevated":
-                await ListElevated(msg["location"]!.GetValue<string>(), msg["req"]?.GetValue<int>() ?? 0);
+                await ListElevated(msg["location"]!.GetValue<string>(), msg["req"]?.GetValue<int>() ?? 0,
+                    msg["channel"]?.GetValue<string>() ?? "", msg["foldersOnly"]?.GetValue<bool>() == true);
+                break;
+            case "describe":
+            {
+                var described = await StaWorker.Once("describe", () => ShellListing.Describe(ids));
+                Post(new JsonObject { ["event"] = "described", ["req"] = msg["req"]?.DeepClone(), ["entries"] = described });
+                break;
+            }
+            case "execute":
+                // A file opened as a double-click in Explorer opens it (plan 03 3.3).
+                if (ShellMenu.ExecuteDefault(this, ids) is string failed)
+                    Post(new JsonObject { ["event"] = "executeFailed", ["error"] = failed });
                 break;
             case "icons":
                 var wanted = msg["indexes"]!.AsArray().Select(n => n!.GetValue<int>()).ToList();
@@ -261,22 +274,24 @@ sealed class MainForm : Form
         }
     }
 
-    CancellationTokenSource? listing;   // the listing running for this window; a new one stops it
+    // The listing running per channel (a pane, a tree node); a new one on the same channel stops it.
+    readonly Dictionary<string, CancellationTokenSource> listings = [];
 
     // On a thread of its own: a slow location never holds up the next one; what is read so far comes in batches.
-    async Task List(string location, int req)
+    async Task List(string location, int req, string channel, bool foldersOnly)
     {
-        listing?.Cancel();
-        var cancel = listing = new CancellationTokenSource();
+        if (listings.Remove(channel, out var before)) before.Cancel();
+        var cancel = listings[channel] = new CancellationTokenSource();
         var clock = System.Diagnostics.Stopwatch.StartNew();
         var r = await StaWorker.Once("listing", () => ShellListing.List(location,
-            part => BeginInvoke(() => Post(new JsonObject { ["event"] = "listing", ["req"] = req, ["entries"] = part })),
-            cancel.Token));
+            part => BeginInvoke(() => Post(new JsonObject { ["event"] = "listing", ["req"] = req, ["channel"] = channel, ["entries"] = part })),
+            cancel.Token, foldersOnly));
+        if (listings.GetValueOrDefault(channel) == cancel) listings.Remove(channel);
         if (r.Cancelled) return;
         var name = await StaWorker.Once("name", () => ShellListing.NameOf(location));
         var answer = new JsonObject
         {
-            ["event"] = "listed", ["req"] = req, ["location"] = location, ["name"] = name, ["kind"] = r.Kind,
+            ["event"] = "listed", ["req"] = req, ["channel"] = channel, ["location"] = location, ["name"] = name, ["kind"] = r.Kind,
             ["entries"] = r.Entries, ["error"] = r.Error, ["denied"] = r.Denied, ["enumMs"] = r.Milliseconds, ["iconMs"] = r.IconMs,
         };
         answer["hostMs"] = clock.ElapsedMilliseconds;
@@ -284,9 +299,11 @@ sealed class MainForm : Form
     }
 
     // A folder the user cannot read, listed by the elevated helper (UAC asks); its icons are this process's own.
-    async Task ListElevated(string location, int req)
+    async Task ListElevated(string location, int req, string channel, bool foldersOnly)
     {
         var r = await ElevatedHelper.List(location);
+        if (foldersOnly && r["entries"] is JsonArray all)
+            r["entries"] = new JsonArray(all.Where(e => e!["folder"]!.GetValue<bool>()).Select(e => e!.DeepClone()).ToArray());
         if (r["entries"] is JsonArray entries)
             await app.ShellWork.Run(() =>
             {
@@ -296,6 +313,7 @@ sealed class MainForm : Form
             });
         r["event"] = "listed";
         r["req"] = req;
+        r["channel"] = channel;
         r["location"] = location;
         r["name"] = Path.GetFileName(location);
         r["elevated"] = true;

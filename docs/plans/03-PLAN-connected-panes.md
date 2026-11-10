@@ -1,7 +1,7 @@
 # Plan 03: Connected panes and branches
 
 Status: draft 2026-11-10, revised 2026-11-10 (collection panes, plan 06; state per branch; default layout, executing);
-not started. The core idea of Foldex.
+partly executed 2026-11-10 (stage 1: the model, the default layout, executing); see 5. As built. The core idea of Foldex.
 
 ## 1. What this is about
 
@@ -147,3 +147,38 @@ Every folder shown is watched for changes; panes showing the same folder share o
    path, and the follower follows (suggestion); or the follower moves on its own until the source changes again?
 8. **Closing other panes without a source.** Only the root has no source by default; a pane disconnected later has none
    either. May that one be closed (suggestion: yes), or does "no source" always mean "cannot be closed"?
+
+## 5. As built
+
+### 5.1 Stage 1 (2026-11-10, branch `plan01-foundation`)
+
+- `web/panes.js`: the model of 3.1 without DOM: panes, the root, connections (a cycle refused), branch colours, a state
+  per colour, activation restoring the panes above, following (3.3), executing (a file opens; a folder in a pane with a
+  source is opened by that source; in a pane without a source it expands in place), pinning, removing a pane (its
+  followers follow its source: open question 3, suggestion), closing (only the root is refused: open question 8,
+  suggestion), JSON for the project.
+- `web/app.js`: the default layout of 3.5: the root as a tree of folders (your profile folder, This PC, Network, the
+  Recycle Bin; links marked "link"), a splitter, the follower list (files and folders, Explorer's menu, drag out, drop,
+  Delete, Backspace, F5, "List as administrator" when access is denied), the Preview button adding a preview follower
+  (plan 04's Windows handlers). Heads in their branch colour, marks for other branches. A path typed in the location
+  box, and Backspace in a follower, go through the source (open question 7, suggestion). The debounce is 150 ms (3.3).
+- Host: listings per channel (a pane, a tree node: a new one stops only the old one of the same channel), folders only
+  for the tree, links marked (junctions and symbolic links; the shell's link flag), `describe` for the tree's top,
+  `execute` running the default command of Explorer's menu (as a double-click in Explorer).
+
+### 5.2 Not built yet
+
+New connected pane and connector dragging (3.4), more branches in the page (the model has them), pinning in the page,
+docking (plan 01), keys between panes (3.6), saving the layout in the project (3.7, needs plan 01's projects), folder
+watching (3.8), presets other than the default (3.5), the hidden files setting (hidden and system folders such as
+`System Volume Information` show for now).
+
+### 5.3 How it was tested
+
+- `dotnet test`: Failed 0, Passed 52; `PanesTests` runs `panes.js` under Jint (the example of 3.2, executing,
+  removing, closing, JSON).
+- A test copy over CDP, started on a scratch folder: the tree came up expanded down to it from This PC, the follower
+  listed its files; a folder executed in the follower was focused in the tree and listed in the follower; Backspace went
+  back to the parent through the tree; Preview added a preview follower in the same branch (`p3`, source `p2`, blue) that
+  showed `one.txt` through its Windows handler. The window drawn by `PrintWindow` showed the three panes.
+- Executing a file (its program starting on the desktop) is left for the checks by hand.

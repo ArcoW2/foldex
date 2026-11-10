@@ -189,7 +189,8 @@ static class Native
     public static readonly Guid ClsidFileOperation = new("3ad05575-8857-4850-9277-11b85bdb8e09");
     public const string PreviewHandlerKey = "{8895b1c6-b41f-4c1c-a562-0d564250836f}";
 
-    public const uint SfgaoFolder = 0x20000000, SfgaoFileSystem = 0x40000000, SfgaoStream = 0x00400000, SfgaoHidden = 0x00080000;
+    public const uint SfgaoFolder = 0x20000000, SfgaoFileSystem = 0x40000000, SfgaoStream = 0x00400000, SfgaoHidden = 0x00080000,
+        SfgaoLink = 0x00010000;
 
     public const uint ShgfiIcon = 0x100, ShgfiSysIconIndex = 0x4000, ShgfiSmallIcon = 0x1, ShgfiUseFileAttributes = 0x10,
         ShgfiPidl = 0x8;
@@ -197,7 +198,7 @@ static class Native
 
     public const uint FofAllowUndo = 0x40, FofNoConfirmation = 0x10, FofNoConfirmMkDir = 0x200, FofxRecycleOnDelete = 0x00080000;
 
-    public const uint CmfNormal = 0, CmfExtendedVerbs = 0x100, CmfExplore = 0x4, CmfCanRename = 0x10;
+    public const uint CmfDefaultOnly = 0x1, CmfNormal = 0, CmfExtendedVerbs = 0x100, CmfExplore = 0x4, CmfCanRename = 0x10;
     public const uint CmicMaskUnicode = 0x4000, CmicMaskPtInvoke = 0x20000000, CmicMaskShiftDown = 0x10000000,
         CmicMaskControlDown = 0x40000000;
     public const uint TpmReturnCmd = 0x100, TpmRightButton = 0x2;

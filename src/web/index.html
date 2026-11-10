@@ -4,31 +4,17 @@
   <meta charset="utf-8">
   <title>Foldex</title>
   <link rel="stylesheet" href="app.css">
+  <script src="panes.js" defer></script>
   <script src="app.js" defer></script>
 </head>
 <body>
-  <!-- The plan 02 spike (docs/plans/02-PLAN-ui-technology.md 3.7): one list, a preview area, the file operations.
-       The panes of plan 03 replace it. -->
   <header id="bar">
     <span id="brand">Foldex <span id="version"></span></span>
-    <button data-go="::{20D04FE0-3AEA-1069-A2D8-08002B30309D}">This PC</button>
-    <button data-go="::{F02C1A0D-BE21-4350-88B0-7367FC96EF3C}">Network</button>
-    <button data-go="shell:RecycleBinFolder">Recycle Bin</button>
-    <button id="up">Up</button>
-    <input id="location" spellcheck="false">
-    <button id="elevated" hidden>List as administrator</button>
-    <button id="popup">Popup</button>
+    <input id="location" spellcheck="false" title="The folder of the active pane; Enter goes there">
+    <button id="previewToggle" title="A preview pane following the list">Preview</button>
   </header>
-  <main id="body">
-    <section id="list" tabindex="0">
-      <div id="rows"></div>
-    </section>
-    <section id="preview"><div id="previewText">Select a file to preview it.</div></section>
-    <div id="menu" hidden>
-      <div>A popup of the page over the preview area</div>
-      <div>(the native preview window is hidden behind a snapshot while this is open)</div>
-    </div>
-  </main>
+  <!-- The panes of plan 03: the root (folders only, left) and its followers. -->
+  <main id="panes"></main>
   <footer>
     <div id="status"></div>
     <ul id="ops"></ul>

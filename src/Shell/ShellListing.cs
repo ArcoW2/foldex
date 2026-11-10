@@ -8,7 +8,9 @@ namespace Foldex.Shell;
 /// What a location holds (docs/plans/02-PLAN-ui-technology.md 3.1). A location is a parsing name: a folder on disk
 /// (its path) or a shell folder ("::{20D04FE0-3AEA-1069-A2D8-08002B30309D}" for This PC, "shell:RecycleBinFolder").
 /// Folders on disk are read with .NET (fast, with size and dates); everything else as shell items. Each entry is
-/// { id: its parsing name, name, folder, size, modified (ms since 1970), icon, hidden, own }; the page never sees a PIDL.
+/// { id: its parsing name, name, folder, size, modified (ms since 1970), icon, hidden, own, link }; the page never sees a
+/// PIDL. `foldersOnly` (a folder pane, plan 03 3.5) leaves files out; a junction or symbolic link to a folder is a folder,
+/// marked as a link.
 /// A slow location (a large Recycle Bin: the shell's own enumerator is the slow part, plan 02 3.7) is handed over in
 /// batches while it is read, and stops when it is cancelled.
 /// </summary>
@@ -19,7 +21,8 @@ static class ShellListing
 
     /// <summary>Lists a location. `batch` gets the entries read so far every few hundred milliseconds (on this thread);
     /// the result holds the rest.</summary>
-    public static Result List(string location, Action<JsonArray>? batch = null, CancellationToken cancel = default)
+    public static Result List(string location, Action<JsonArray>? batch = null, CancellationToken cancel = default,
+        bool foldersOnly = false)
     {
         var clock = Stopwatch.StartNew();
         var batcher = new Batcher(batch);
@@ -28,10 +31,10 @@ static class ShellListing
             if (Path.IsPathFullyQualified(location) && Directory.Exists(location))
             {
                 var icons = new Stopwatch();
-                ListFolder(location, icons, batcher, cancel);
+                ListFolder(location, icons, batcher, cancel, foldersOnly);
                 return new Result(batcher.Rest, null, false, clock.ElapsedMilliseconds, "disk", icons.ElapsedMilliseconds, cancel.IsCancellationRequested);
             }
-            ListShell(location, batcher, cancel);
+            ListShell(location, batcher, cancel, foldersOnly);
             return new Result(batcher.Rest, null, false, clock.ElapsedMilliseconds, "shell", 0, cancel.IsCancellationRequested);
         }
         catch (UnauthorizedAccessException ex) { return new Result(batcher.Rest, ex.Message, true, clock.ElapsedMilliseconds, "disk"); }
@@ -65,9 +68,10 @@ static class ShellListing
         IgnoreInaccessible = false, AttributesToSkip = 0, RecurseSubdirectories = false, ReturnSpecialDirectories = false,
     };
 
-    static void ListFolder(string path, Stopwatch icons, Batcher batcher, CancellationToken cancel)
+    static void ListFolder(string path, Stopwatch icons, Batcher batcher, CancellationToken cancel, bool foldersOnly)
     {
-        foreach (var info in new DirectoryInfo(path).EnumerateFileSystemInfos("*", All))
+        var dir = new DirectoryInfo(path);
+        foreach (var info in foldersOnly ? dir.EnumerateDirectories("*", All) : dir.EnumerateFileSystemInfos("*", All))
         {
             if (cancel.IsCancellationRequested) return;
             var folder = (info.Attributes & FileAttributes.Directory) != 0;
@@ -84,11 +88,12 @@ static class ShellListing
                 ["icon"] = icon,
                 ["hidden"] = (info.Attributes & FileAttributes.Hidden) != 0,
                 ["own"] = !folder && ShellIcons.HasOwn(info.FullName),
+                ["link"] = (info.Attributes & FileAttributes.ReparsePoint) != 0,
             });
         }
     }
 
-    static void ListShell(string location, Batcher batcher, CancellationToken cancel)
+    static void ListShell(string location, Batcher batcher, CancellationToken cancel, bool foldersOnly)
     {
         var parent = Native.Item(location);
         var hr = parent.BindToHandler(IntPtr.Zero, Native.BhidEnumItems, Native.IidIEnumShellItems, out var ptr);
@@ -97,9 +102,14 @@ static class ShellListing
         Marshal.Release(ptr);
         while (!cancel.IsCancellationRequested && items.Next(1, out var item, out var fetched) == 0 && fetched == 1)
         {
-            item.GetAttributes(Native.SfgaoFolder | Native.SfgaoFileSystem | Native.SfgaoStream | Native.SfgaoHidden, out var attrs);
+            item.GetAttributes(Native.SfgaoFolder | Native.SfgaoFileSystem | Native.SfgaoStream | Native.SfgaoHidden | Native.SfgaoLink, out var attrs);
             // A zip file is a folder and a stream to the shell: Foldex shows it as a file.
             var folder = (attrs & Native.SfgaoFolder) != 0 && (attrs & Native.SfgaoStream) == 0;
+            if (foldersOnly && !folder)
+            {
+                Marshal.ReleaseComObject(item);
+                continue;
+            }
             long? size = null;
             long? modified = null;
             if ((attrs & Native.SfgaoFileSystem) != 0)
@@ -123,11 +133,35 @@ static class ShellListing
                 ["modified"] = modified,
                 ["icon"] = ShellIcons.Of(item),
                 ["hidden"] = (attrs & Native.SfgaoHidden) != 0,
+                ["link"] = (attrs & Native.SfgaoLink) != 0,
             });
             Marshal.ReleaseComObject(item);
         }
         Marshal.ReleaseComObject(items);
         Marshal.ReleaseComObject(parent);
+    }
+
+    /// <summary>Entries for single items (the top of a folder pane's tree: This PC, the user's folder, Network, the
+    /// Recycle Bin), as a listing gives them.</summary>
+    public static JsonArray Describe(IEnumerable<string> ids)
+    {
+        var entries = new JsonArray();
+        foreach (var id in ids)
+            try
+            {
+                var item = Native.Item(id);
+                item.GetAttributes(Native.SfgaoFolder | Native.SfgaoStream, out var attrs);
+                entries.Add(new JsonObject
+                {
+                    ["id"] = id,
+                    ["name"] = Native.DisplayName(item, Sigdn.NormalDisplay),
+                    ["folder"] = (attrs & Native.SfgaoFolder) != 0 && (attrs & Native.SfgaoStream) == 0,
+                    ["icon"] = ShellIcons.Of(item),
+                });
+                Marshal.ReleaseComObject(item);
+            }
+            catch (Exception ex) when (ex is COMException or ArgumentException) { }   // not on this PC
+        return entries;
     }
 
     /// <summary>The name a location is shown by ("This PC", "Recycle Bin", or the folder's own name).</summary>

@@ -30,7 +30,7 @@ sealed class ShellMenu : IDisposable
 
     /// <summary>The menu for items (parsing names), filled; null and why when the shell cannot make one (for example
     /// items from different folders, docs/plans/06 3.4).</summary>
-    public static (ShellMenu? Menu, string? Error) Create(IReadOnlyList<string> ids, bool extended)
+    public static (ShellMenu? Menu, string? Error) Create(IReadOnlyList<string> ids, bool extended, bool defaultOnly = false)
     {
         if (ids.Count == 0) return (null, "no items");
         IntPtr[] pidls;
@@ -49,7 +49,7 @@ sealed class ShellMenu : IDisposable
             Marshal.Release(ptr);
             var hmenu = Native.CreatePopupMenu();
             hr = cm.QueryContextMenu(hmenu, 0, FirstId, LastId,
-                Native.CmfNormal | Native.CmfCanRename | (extended ? Native.CmfExtendedVerbs : 0));
+                defaultOnly ? Native.CmfDefaultOnly : Native.CmfNormal | Native.CmfCanRename | (extended ? Native.CmfExtendedVerbs : 0));
             if (hr < 0)
             {
                 Native.DestroyMenu(hmenu);
@@ -97,6 +97,24 @@ sealed class ShellMenu : IDisposable
         try { return Invoke(owner, ansi, verb, Cursor.Position) >= 0; }
         finally { Marshal.FreeHGlobal(ansi); }
     }
+
+    /// <summary>Executes items as a double-click in Explorer does: the menu's default command (open, or what the type
+    /// says; plan 03 3.3). Null, or why nothing ran.</summary>
+    public static string? ExecuteDefault(IWin32Window owner, IReadOnlyList<string> ids)
+    {
+        var (menu, error) = Create(ids, false, defaultOnly: true);
+        if (menu is null) return error;
+        using (menu)
+        {
+            var id = GetMenuDefaultItem(menu.hmenu, 0, 0);
+            if (id < 0) return "these items have no default command";
+            var hr = menu.Invoke(owner, (IntPtr)(id - (int)FirstId), null, Cursor.Position);
+            return hr < 0 ? $"the command failed (0x{hr:X8})" : null;
+        }
+    }
+
+    [DllImport("user32.dll")]
+    static extern int GetMenuDefaultItem(IntPtr hMenu, uint fByPos, uint gmdiFlags);
 
     int Invoke(IWin32Window owner, IntPtr verbOrId, string? verbW, Point screen)
     {

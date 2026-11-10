@@ -1,15 +1,18 @@
 // The page of a Foldex window. It asks the host ({ op, ... }) and is told ({ event, ... }); see MainForm.cs.
-// For now the plan 02 spike (docs/plans/02-PLAN-ui-technology.md 3.7): one list with virtual scrolling, the shell's
-// icons and menu, dragging both ways, a preview area for Windows' preview handlers, the file operations.
+// The panes of plan 03 (docs/plans/03-PLAN-connected-panes.md): panes.js decides what each pane shows, this file draws
+// them. The default layout (3.5): the root, a tree of folders on the left; a list following it; a preview on request.
 'use strict';
 
 const host = window.chrome.webview;
 const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
 const ThisPC = '::{20D04FE0-3AEA-1069-A2D8-08002B30309D}';
+const Network = '::{F02C1A0D-BE21-4350-88B0-7367FC96EF3C}';
+const RecycleBin = 'shell:RecycleBinFolder';
+const TreeTop = ['shell:Profile', ThisPC, Network, RecycleBin];
 const $ = id => document.getElementById(id);
 let settings = {};
 
-// What the spike measured, for the test copy to read over the debugging port.
+// What the test copy reads over the debugging port.
 window.__spike = { lists: [], events: [] };
 
 function post(msg) {
@@ -27,35 +30,55 @@ function status(text, warn = false) {
   $('status').classList.toggle('warn', warn);
 }
 
-// ---------- The list ----------
+const same = (a, b) => a != null && b != null && a.toLowerCase() === b.toLowerCase();
 
-const list = $('list');
-const rows = $('rows');
-const rowHeight = 22;
-let here = '';
-let entries = [];
-let selected = new Set();
-let anchor = -1;
-let req = 0;
-const sent = new Map();   // req -> time asked
-const icons = new Map();  // icon index -> data URL
+// ---------- Icons: the system's, asked once per index ----------
+
+const icons = new Map();
 const iconsAsked = new Set();
+const iconUsers = new Set();   // views to draw again when icons arrive
 
-function go(where) {
-  here = where;
-  $('location').value = where;
-  $('elevated').hidden = true;
-  sent.set(++req, performance.now());
-  post({ op: 'list', location: where, req });
+function iconImage(entry, missing) {
+  const img = document.createElement('img');
+  if (icons.has(entry.icon)) img.src = icons.get(entry.icon);
+  else if (entry.icon >= 0 && !iconsAsked.has(entry.icon)) { iconsAsked.add(entry.icon); missing.push(entry.icon); }
+  return img;
 }
 
-// Folders first, then by name as Explorer sorts (numbers by value). A Collator: much faster than localeCompare on a large
-// folder.
+function askIcons(missing, own) {
+  if (missing.length) post({ op: 'icons', indexes: missing });
+  if (own.length) post({ op: 'ownIcons', ids: own });
+}
+
+// ---------- Listings: per channel (a pane, a tree node); a new one on a channel replaces the old ----------
+
+let lastReq = 0;
+const listeners = new Map();
+
+function list(channel, location, foldersOnly, onPart, onDone, elevated = false) {
+  const req = ++lastReq;
+  listeners.set(channel, { req, onPart, onDone, sent: performance.now() });
+  post({ op: elevated ? 'listElevated' : 'list', channel, location, foldersOnly, req });
+}
+
+// ---------- Rows in view only ----------
+
+const RowHeight = 22;
+
+function visibleRange(body, count) {
+  const first = Math.max(0, Math.floor(body.scrollTop / RowHeight) - 5);
+  const last = Math.min(count, Math.ceil((body.scrollTop + body.clientHeight) / RowHeight) + 5);
+  return [first, last];
+}
+
+function scrollIntoView(body, index) {
+  const top = index * RowHeight;
+  if (top < body.scrollTop) body.scrollTop = top;
+  else if (top + RowHeight > body.scrollTop + body.clientHeight) body.scrollTop = top + RowHeight - body.clientHeight;
+}
+
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
-
-function sortEntries(a, b) {
-  return (b.folder - a.folder) || collator.compare(a.name, b.name);
-}
+const byName = (a, b) => (b.folder - a.folder) || collator.compare(a.name, b.name);
 
 function formatSize(n) {
   if (n == null) return '';
@@ -68,177 +91,590 @@ function formatSize(n) {
 
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'short', timeStyle: 'short' });
 
-// Only the rows in view are in the document.
-function render() {
-  rows.style.height = `${entries.length * rowHeight}px`;
-  const first = Math.max(0, Math.floor(list.scrollTop / rowHeight) - 5);
-  const last = Math.min(entries.length, Math.ceil((list.scrollTop + list.clientHeight) / rowHeight) + 5);
-  const nodes = [];
-  const missing = [];
-  const own = [];
-  for (let i = first; i < last; i++) {
-    const e = entries[i];
-    if (e.own) { own.push(e.id); e.own = false; }   // its own icon asked once, when in view
-    const row = document.createElement('div');
-    row.className = 'row' + (selected.has(i) ? ' selected' : '') + (e.hidden ? ' hidden' : '');
-    row.style.top = `${i * rowHeight}px`;
-    row.dataset.index = i;
-    row.draggable = true;
-    const img = document.createElement('img');
-    if (icons.has(e.icon)) img.src = icons.get(e.icon);
-    else if (e.icon >= 0 && !iconsAsked.has(e.icon)) missing.push(e.icon);
-    const name = document.createElement('span');
-    name.className = 'name';
-    name.textContent = e.name;
-    const size = document.createElement('span');
-    size.className = 'size';
-    size.textContent = formatSize(e.size);
-    const date = document.createElement('span');
-    date.className = 'date';
-    date.textContent = e.modified ? dateFormat.format(e.modified) : '';
-    row.append(img, name, size, date);
-    nodes.push(row);
-  }
-  rows.replaceChildren(...nodes);
-  if (missing.length) {
-    const unique = [...new Set(missing)];
-    unique.forEach(i => iconsAsked.add(i));
-    post({ op: 'icons', indexes: unique });
-  }
-  if (own.length) post({ op: 'ownIcons', ids: own });
+// ---------- The panes ----------
+
+const layout = new Layout();
+const views = new Map();
+let activePane = null;
+
+function paneElement(id, kind, title) {
+  const el = document.createElement('section');
+  el.className = `pane ${kind}`;
+  el.dataset.pane = id;
+  el.innerHTML = '<div class="head"><span class="title"></span><span class="marks"></span></div><div class="body" tabindex="0"><div class="rows"></div></div>';
+  el.querySelector('.title').textContent = title;
+  el.addEventListener('mousedown', () => activate(id), true);
+  el.addEventListener('focusin', () => activate(id));
+  return el;
 }
 
-list.addEventListener('scroll', render);
-new ResizeObserver(() => { render(); placePreview(); }).observe(list);
-
-function indexOf(target) {
-  const row = target.closest('.row');
-  return row ? Number(row.dataset.index) : -1;
+// A pane activated: the panes above it show their state for its branch (3.1).
+function activate(id) {
+  if (activePane === id) return;
+  activePane = id;
+  for (const changed of layout.activate(id)) views.get(changed)?.restore();
+  for (const v of views.values()) v.el.classList.toggle('active', v.id === id);
+  drawHeads();
+  $('location').value = views.get(id)?.locationText() ?? '';
 }
 
-function select(i, e) {
-  if (e.shiftKey && anchor >= 0) {
-    const [a, b] = [Math.min(anchor, i), Math.max(anchor, i)];
-    if (!e.ctrlKey) selected.clear();
-    for (let k = a; k <= b; k++) selected.add(k);
-  } else if (e.ctrlKey) {
-    selected.has(i) ? selected.delete(i) : selected.add(i);
-    anchor = i;
+// Each head in the colour it shows; a source has marks for the other branches it feeds, a click switches to one.
+function drawHeads() {
+  for (const v of views.values()) {
+    const pane = layout.pane(v.id);
+    const key = pane.source === null ? layout.keyOf(v.id) : pane.colour;
+    v.el.style.setProperty('--branch', key ? `var(--branch-${key})` : '');
+    const marks = v.el.querySelector('.marks');
+    const colours = [...new Set(layout.followers(v.id).map(f => f.colour))].filter(c => c !== layout.keyOf(v.id));
+    marks.replaceChildren(...colours.map(c => {
+      const dot = document.createElement('span');
+      dot.style.background = `var(--branch-${c})`;
+      dot.title = `Switch to the ${c} branch`;
+      dot.addEventListener('mousedown', e => {
+        e.stopPropagation();
+        activate(layout.followers(v.id, c)[0].id);
+      });
+      return dot;
+    }));
+  }
+}
+
+// Followers take what a pane focused once the cursor rests (3.3, debounce).
+const focusTimers = new Map();
+
+function focusItem(paneId, item) {
+  layout.state(paneId).focus = item ? item.id : null;
+  clearTimeout(focusTimers.get(paneId));
+  focusTimers.set(paneId, setTimeout(() => apply(layout.focus(paneId, item)), 150));
+}
+
+function apply(updates) {
+  for (const u of updates) {
+    const v = views.get(u.pane);
+    if (!v) continue;
+    if ('location' in u) v.load(u.location);
+    if ('show' in u) v.show(u.show);
+  }
+}
+
+// Executing an item (3.3): a file opens as Windows opens it; a folder is opened by the pane's source, or expands in
+// place in a pane without one.
+function execute(paneId, item) {
+  const r = layout.execute(paneId, item);
+  if (r.open) post({ op: 'execute', ids: [r.open] });
+  if (r.expand) views.get(r.expand.pane)?.toggle?.(r.expand.item);
+  if (r.reveal) views.get(r.reveal.pane)?.reveal?.(r.reveal.item);
+  apply(r.updates);
+}
+
+// A path typed, or Backspace in a follower: its source goes there and the follower follows (open question 7,
+// suggestion); the root shows it in its tree.
+function goTo(paneId, path) {
+  const pane = layout.pane(paneId);
+  const opener = pane.source ?? paneId;
+  views.get(opener)?.reveal?.(path);
+  if (opener !== paneId) apply(layout.focus(opener, { id: path, folder: true }));
+}
+
+function parentOf(path) {
+  if (!/^[A-Za-z]:\\|^\\\\/.test(path) || /^[A-Za-z]:\\?$/.test(path)) return ThisPC;
+  const parent = path.replace(/\\[^\\]+\\?$/, '');
+  return /^[A-Za-z]:$/.test(parent) ? parent + '\\' : parent;
+}
+
+// ---------- The root: a tree of folders (3.5) ----------
+
+class TreeView {
+  constructor(id) {
+    this.id = id;
+    this.nodes = new Map();   // lower-case id -> node
+    this.top = [];
+    this.flat = [];
+    this.el = paneElement(id, 'tree', 'Folders');
+    this.body = this.el.querySelector('.body');
+    this.rows = this.el.querySelector('.rows');
+    this.body.addEventListener('scroll', () => this.render());
+    this.body.addEventListener('mousedown', e => this.click(e));
+    this.body.addEventListener('dblclick', e => {
+      const n = this.nodeAt(e.target);
+      if (n && !e.target.classList.contains('twisty')) execute(this.id, { id: n.id, folder: true });
+    });
+    this.body.addEventListener('keydown', e => this.key(e));
+    this.body.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      const n = this.nodeAt(e.target);
+      if (n) post({ op: 'menu', ids: [n.id], x: e.clientX * devicePixelRatio, y: e.clientY * devicePixelRatio, extended: e.shiftKey });
+    });
+    dropTarget(this.body, e => this.nodeAt(e.target)?.id ?? null);
+    iconUsers.add(this);
+  }
+
+  node(id) { return id == null ? undefined : this.nodes.get(id.toLowerCase()); }
+
+  add(entry, parent) {
+    const known = this.node(entry.id);
+    if (known) return known;
+    const n = { ...entry, parent, children: null, expanded: false, depth: parent ? parent.depth + 1 : 0 };
+    this.nodes.set(entry.id.toLowerCase(), n);
+    return n;
+  }
+
+  init() {
+    return new Promise(done => {
+      described.set(++lastReq, entries => {
+        this.top = entries.map(e => this.add(e, null));
+        this.flatten();
+        done();
+      });
+      post({ op: 'describe', ids: TreeTop, req: lastReq });
+    });
+  }
+
+  // Loads a node's subfolders (once); resolves when they are there.
+  load(n) {
+    if (n.children) return Promise.resolve();
+    if (n.loading) return n.loading;
+    n.loading = new Promise(done => {
+      const kids = [];
+      list(`tree:${this.id}:${n.id}`, n.id, true, part => kids.push(...part), m => {
+        n.children = kids.concat(m.entries).sort(byName).map(e => this.add(e, n));
+        n.error = m.error;
+        n.loading = null;
+        this.flatten();
+        done();
+      });
+    });
+    return n.loading;
+  }
+
+  async expand(n, open = true) {
+    if (open) await this.load(n);
+    n.expanded = open;
+    this.flatten();
+  }
+
+  toggle(id) {
+    const n = this.node(id);
+    if (n) this.expand(n, !n.expanded);
+  }
+
+  flatten() {
+    this.flat = [];
+    const walk = list => {
+      for (const n of list) {
+        this.flat.push(n);
+        if (n.expanded && n.children) walk(n.children);
+      }
+    };
+    walk(this.top);
+    this.render();
+  }
+
+  render() {
+    this.rows.style.height = `${this.flat.length * RowHeight}px`;
+    const [first, last] = visibleRange(this.body, this.flat.length);
+    const focus = layout.state(this.id).focus;
+    const missing = [], nodes = [];
+    for (let i = first; i < last; i++) {
+      const n = this.flat[i];
+      const row = document.createElement('div');
+      row.className = 'row' + (same(n.id, focus) ? ' selected focused' : '') + (n.hidden ? ' hidden' : '');
+      row.style.top = `${i * RowHeight}px`;
+      row.style.paddingLeft = `${8 + n.depth * 14}px`;
+      row.dataset.index = i;
+      const twisty = document.createElement('span');
+      twisty.className = 'twisty';
+      twisty.textContent = n.children && n.children.length === 0 ? '' : n.expanded ? '-' : '+';
+      const name = document.createElement('span');
+      name.className = 'name';
+      name.textContent = n.name;
+      row.append(twisty, iconImage(n, missing), name);
+      if (n.link) {
+        const link = document.createElement('span');
+        link.className = 'link';
+        link.textContent = 'link';
+        row.append(link);
+      }
+      nodes.push(row);
+    }
+    this.rows.replaceChildren(...nodes);
+    askIcons(missing, []);
+  }
+
+  nodeAt(target) {
+    const row = target.closest('.row');
+    return row ? this.flat[Number(row.dataset.index)] : null;
+  }
+
+  click(e) {
+    if (e.button !== 0) return;
+    const n = this.nodeAt(e.target);
+    if (!n) return;
+    if (e.target.classList.contains('twisty')) this.expand(n, !n.expanded);
+    this.select(n.id);
+  }
+
+  select(id) {
+    const n = this.node(id);
+    if (!n) return;
+    focusItem(this.id, { id: n.id, folder: true });
+    const i = this.flat.indexOf(n);
+    if (i >= 0) scrollIntoView(this.body, i);
+    this.render();
+    if (activePane === this.id) $('location').value = this.locationText();
+  }
+
+  key(e) {
+    const n = this.node(layout.state(this.id).focus);
+    const i = n ? this.flat.indexOf(n) : -1;
+    const to = k => { if (this.flat[k]) this.select(this.flat[k].id); e.preventDefault(); };
+    if (e.key === 'ArrowDown') to(i + 1);
+    else if (e.key === 'ArrowUp') to(Math.max(0, i - 1));
+    else if (e.key === 'Home') to(0);
+    else if (e.key === 'End') to(this.flat.length - 1);
+    else if (e.key === 'ArrowRight' && n) { if (!n.expanded) this.expand(n); else if (n.children?.[0]) this.select(n.children[0].id); e.preventDefault(); }
+    else if (e.key === 'ArrowLeft' && n) { if (n.expanded) this.expand(n, false); else if (n.parent) this.select(n.parent.id); e.preventDefault(); }
+    else if (e.key === 'Enter' && n) execute(this.id, { id: n.id, folder: true });
+  }
+
+  // Shows a folder in the tree: expanded down to it and selected. Paths on disk are found from This PC down; other
+  // places only when the tree has them already.
+  async reveal(path) {
+    if (!this.node(path) && /^[A-Za-z]:\\/.test(path)) {
+      const pc = this.node(ThisPC);
+      if (pc) {
+        await this.expand(pc);
+        const parts = path.replace(/\\+$/, '').split('\\');
+        let here = this.node(parts[0] + '\\');
+        for (let k = 1; here && k < parts.length; k++) {
+          await this.expand(here);
+          here = this.node(parts.slice(0, k + 1).join('\\')) ?? here.children?.find(c => same(c.id, parts.slice(0, k + 1).join('\\')));
+        }
+      }
+    } else if (this.node(path)?.parent) {
+      for (let p = this.node(path).parent; p; p = p.parent) p.expanded = true;
+      this.flatten();
+    }
+    this.select(path);
+  }
+
+  restore() { this.render(); }
+
+  locationText() { return layout.state(this.id).focus ?? ''; }
+}
+
+const described = new Map();
+
+// ---------- A list of files and folders (a follower) ----------
+
+class ListView {
+  constructor(id) {
+    this.id = id;
+    this.entries = [];
+    this.selected = new Set();
+    this.anchor = null;
+    this.location = null;
+    this.el = paneElement(id, 'list', '');
+    this.body = this.el.querySelector('.body');
+    this.rows = this.el.querySelector('.rows');
+    this.body.addEventListener('scroll', () => this.render());
+    this.body.addEventListener('mousedown', e => {
+      if (e.button !== 0) return;
+      const x = this.entryAt(e.target);
+      if (x && (!this.selected.has(x.id) || e.ctrlKey || e.shiftKey)) this.select(x, e);
+    });
+    this.body.addEventListener('dblclick', e => {
+      const x = this.entryAt(e.target);
+      if (x) execute(this.id, x);
+    });
+    this.body.addEventListener('keydown', e => this.key(e));
+    this.body.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      const x = this.entryAt(e.target);
+      if (!x) return;
+      if (!this.selected.has(x.id)) this.select(x, e);
+      post({ op: 'menu', ids: this.ids(), x: e.clientX * devicePixelRatio, y: e.clientY * devicePixelRatio, extended: e.shiftKey });
+    });
+    // Dragging out: the host starts the shell's own drag (plan 02 3.6).
+    this.body.addEventListener('dragstart', e => {
+      e.preventDefault();
+      const x = this.entryAt(e.target);
+      if (x && !this.selected.has(x.id)) this.select(x, e);
+      post({ op: 'dragOut', ids: this.ids() });
+    });
+    dropTarget(this.body, e => {
+      const x = this.entryAt(e.target);
+      return x?.folder ? x.id : this.location;
+    });
+    new ResizeObserver(() => this.render()).observe(this.body);
+    iconUsers.add(this);
+  }
+
+  ids() { return this.entries.filter(x => this.selected.has(x.id)).map(x => x.id); }
+
+  load(location, elevated = false) {
+    this.location = location;
+    this.entries = [];
+    this.selected = new Set();
+    this.anchor = null;
+    this.message = null;
+    this.body.scrollTop = 0;
+    this.el.querySelector('.title').textContent = location ?? '';
+    if (activePane === this.id) $('location').value = location ?? '';
+    this.render();
+    if (!location) return;
+    let first = true;
+    list(this.id, location, false, part => this.take(part, first && !(first = false)), m => this.done(m, first), elevated);
+  }
+
+  take(entries, reset) {
+    if (reset) this.entries = [];
+    this.entries = this.entries.concat(entries).sort(byName);
+    this.render();
+    status(`${this.entries.length} items so far...`);
+  }
+
+  done(m, first) {
+    this.take(m.entries, first);
+    this.el.querySelector('.title').textContent = m.name;
+    this.name = m.name;
+    if (m.denied && !m.elevated) this.message = 'denied';
+    else if (m.error) this.message = m.error;
+    this.render();
+    window.__spike.lists.push({ location: m.location, count: this.entries.length, enumMs: m.enumMs });
+    if (m.error) status(`${m.name}: ${m.error}`, true);
+    else status(`${m.name}${m.elevated ? ' (as administrator)' : ''}: ${this.entries.length} items`);
+    // The focus of this branch, as it was left, comes back when it is still there.
+    const focus = layout.state(this.id).focus;
+    if (focus && this.entries.some(x => same(x.id, focus))) this.select(this.entries.find(x => same(x.id, focus)), {}, true);
+  }
+
+  render() {
+    if (this.message && !this.entries.length) {
+      const msg = document.createElement('div');
+      msg.className = 'message';
+      msg.textContent = this.message === 'denied' ? 'You have no access to this folder.' : this.message;
+      if (this.message === 'denied') {
+        const button = document.createElement('button');
+        button.textContent = 'List as administrator';
+        button.addEventListener('click', () => this.load(this.location, true));
+        msg.append(button);
+      }
+      this.rows.style.height = '';
+      this.rows.replaceChildren(msg);
+      return;
+    }
+    this.rows.style.height = `${this.entries.length * RowHeight}px`;
+    const [first, last] = visibleRange(this.body, this.entries.length);
+    const focus = layout.state(this.id).focus;
+    const missing = [], own = [], nodes = [];
+    for (let i = first; i < last; i++) {
+      const x = this.entries[i];
+      if (x.own) { own.push(x.id); x.own = false; }   // its own icon asked once, when in view
+      const row = document.createElement('div');
+      row.className = 'row' + (this.selected.has(x.id) ? ' selected' : '') + (same(x.id, focus) ? ' focused' : '') + (x.hidden ? ' hidden' : '');
+      row.style.top = `${i * RowHeight}px`;
+      row.dataset.index = i;
+      row.draggable = true;
+      const name = document.createElement('span');
+      name.className = 'name';
+      name.textContent = x.name;
+      const size = document.createElement('span');
+      size.className = 'size';
+      size.textContent = formatSize(x.size);
+      const date = document.createElement('span');
+      date.className = 'date';
+      date.textContent = x.modified ? dateFormat.format(x.modified) : '';
+      row.append(iconImage(x, missing), name);
+      if (x.link) {
+        const link = document.createElement('span');
+        link.className = 'link';
+        link.textContent = 'link';
+        row.append(link);
+      }
+      row.append(size, date);
+      nodes.push(row);
+    }
+    this.rows.replaceChildren(...nodes);
+    askIcons(missing, own);
+  }
+
+  entryAt(target) {
+    const row = target.closest('.row');
+    return row ? this.entries[Number(row.dataset.index)] : null;
+  }
+
+  select(x, e, quiet = false) {
+    const index = this.entries.indexOf(x);
+    if (e.shiftKey && this.anchor) {
+      const a = this.entries.findIndex(y => y.id === this.anchor);
+      const [lo, hi] = [Math.min(a, index), Math.max(a, index)];
+      if (!e.ctrlKey) this.selected.clear();
+      for (let k = lo; k <= hi; k++) this.selected.add(this.entries[k].id);
+    } else if (e.ctrlKey) {
+      this.selected.has(x.id) ? this.selected.delete(x.id) : this.selected.add(x.id);
+      this.anchor = x.id;
+    } else {
+      this.selected = new Set([x.id]);
+      this.anchor = x.id;
+    }
+    layout.state(this.id).selection = [...this.selected];
+    scrollIntoView(this.body, index);
+    this.render();
+    if (!quiet) focusItem(this.id, { id: x.id, folder: x.folder });
+  }
+
+  key(e) {
+    const focus = layout.state(this.id).focus;
+    const i = this.entries.findIndex(x => same(x.id, focus));
+    const to = k => { const x = this.entries[Math.max(0, Math.min(this.entries.length - 1, k))]; if (x) this.select(x, e); e.preventDefault(); };
+    const page = Math.max(1, Math.floor(this.body.clientHeight / RowHeight) - 1);
+    if (e.key === 'ArrowDown') to(i + 1);
+    else if (e.key === 'ArrowUp') to(i - 1);
+    else if (e.key === 'PageDown') to(i + page);
+    else if (e.key === 'PageUp') to(i - page);
+    else if (e.key === 'Home') to(0);
+    else if (e.key === 'End') to(this.entries.length - 1);
+    else if (e.key === 'Enter' && i >= 0) execute(this.id, this.entries[i]);
+    else if (e.key === 'Backspace' && this.location) goTo(this.id, parentOf(this.location));
+    else if (e.key === 'F5') this.load(this.location);
+    else if (e.key === 'Delete' && this.selected.size) {
+      const ids = this.ids();
+      if (confirm(`Move ${ids.length === 1 ? this.entries.find(x => x.id === ids[0]).name : `these ${ids.length} items`} to the Recycle Bin?`))
+        post({ op: 'fileOp', kind: 'delete', ids, confirmed: true });
+    }
+  }
+
+  // Back on this pane's state for the branch now active (3.1).
+  restore() {
+    const s = layout.state(this.id);
+    if (!same(s.location, this.location)) this.load(s.location);
+    else {
+      this.selected = new Set(s.selection);
+      this.render();
+    }
+  }
+
+  locationText() { return this.location ?? ''; }
+}
+
+// ---------- A preview (plan 04): Windows' preview handler in the host, over this pane's area ----------
+
+class PreviewView {
+  constructor(id) {
+    this.id = id;
+    this.path = null;
+    this.el = paneElement(id, 'preview', 'Preview');
+    this.body = this.el.querySelector('.body');
+    this.rows = this.el.querySelector('.rows');
+    new ResizeObserver(() => { if (this.path) post({ op: 'previewMove', rect: this.rect() }); }).observe(this.body);
+    this.message('Select a file to preview it.');
+  }
+
+  rect() {
+    const r = this.body.getBoundingClientRect();
+    const d = devicePixelRatio;
+    return { x: r.left * d, y: r.top * d, width: r.width * d, height: r.height * d };
+  }
+
+  message(text) {
+    const msg = document.createElement('div');
+    msg.className = 'message';
+    msg.textContent = text;
+    this.rows.replaceChildren(msg);
+  }
+
+  show(path) {
+    const x = path && views.get(layout.pane(this.id).source)?.entries?.find(e => same(e.id, path));
+    if (!path || x?.folder) {
+      this.path = null;
+      post({ op: 'previewClose' });
+      this.message(path ? 'A folder.' : 'Select a file to preview it.');
+      return;
+    }
+    this.path = path;
+    this.el.querySelector('.title').textContent = x?.name ?? path;
+    this.message('');
+    post({ op: 'preview', path, rect: this.rect() });
+  }
+
+  restore() { }
+
+  locationText() { return this.path ?? ''; }
+
+  close() { post({ op: 'previewClose' }); }
+}
+
+// ---------- Dropping files from Explorer onto a pane ----------
+
+function dropTarget(body, targetOf) {
+  body.addEventListener('dragover', e => e.preventDefault());
+  body.addEventListener('drop', e => {
+    e.preventDefault();
+    const target = targetOf(e);
+    if (target) host.postMessageWithAdditionalObjects({ op: 'drop', target, types: [...e.dataTransfer.types] }, e.dataTransfer.files);
+  });
+}
+
+// ---------- The default layout (3.5) ----------
+
+let root, follower, preview = null;
+
+function addView(view, after) {
+  views.set(view.id, view);
+  const panes = $('panes');
+  if (after) after.el.after(view.el); else panes.append(view.el);
+  return view;
+}
+
+function splitter(left) {
+  const bar = document.createElement('div');
+  bar.className = 'splitter';
+  bar.addEventListener('mousedown', e => {
+    const start = e.clientX, width = left.el.getBoundingClientRect().width;
+    const move = m => { left.el.style.width = `${Math.max(120, width + m.clientX - start)}px`; };
+    const up = () => { removeEventListener('mousemove', move); removeEventListener('mouseup', up); };
+    addEventListener('mousemove', move);
+    addEventListener('mouseup', up);
+    e.preventDefault();
+  });
+  left.el.after(bar);
+}
+
+async function start(paths) {
+  const rootId = layout.add({ kind: 'tree', content: 'folders' });
+  root = addView(new TreeView(rootId));
+  splitter(root);
+  const listId = layout.add({ source: rootId });
+  follower = addView(new ListView(listId));   // after the splitter
+  activate(listId);
+  await root.init();
+  const first = paths[0];
+  if (first) await root.reveal(first);
+  else root.select(ThisPC);
+  follower.body.focus();
+}
+
+$('previewToggle').addEventListener('click', () => {
+  if (preview) {
+    preview.close();
+    layout.remove(preview.id);
+    views.delete(preview.id);
+    preview.el.remove();
+    preview = null;
   } else {
-    selected = new Set([i]);
-    anchor = i;
+    const id = layout.add({ source: follower.id, kind: 'preview' });
+    preview = addView(new PreviewView(id), follower);
+    const focus = layout.state(follower.id).focus;
+    preview.show(focus);
   }
-  render();
-  focused(i);
-}
-
-function selectedIds() {
-  return [...selected].sort((a, b) => a - b).map(i => entries[i].id);
-}
-
-list.addEventListener('mousedown', e => {
-  if (e.button !== 0) return;
-  const i = indexOf(e.target);
-  if (i < 0) return;
-  if (!selected.has(i) || e.ctrlKey || e.shiftKey) select(i, e);
+  $('previewToggle').classList.toggle('on', !!preview);
+  drawHeads();
 });
 
-list.addEventListener('dblclick', e => {
-  const i = indexOf(e.target);
-  if (i >= 0 && entries[i].folder) go(entries[i].id);
+$('location').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && activePane) goTo(activePane, $('location').value.trim());
 });
-
-// Explorer's own menu (Shift: its extended verbs).
-list.addEventListener('contextmenu', e => {
-  e.preventDefault();
-  const i = indexOf(e.target);
-  if (i < 0) return;
-  if (!selected.has(i)) select(i, e);
-  post({ op: 'menu', ids: selectedIds(), x: e.clientX * devicePixelRatio, y: e.clientY * devicePixelRatio, extended: e.shiftKey });
-});
-
-list.addEventListener('keydown', e => {
-  if (e.key === 'Delete' && selected.size) {
-    const ids = selectedIds();
-    if (confirm(`Move ${ids.length === 1 ? entries[[...selected][0]].name : `these ${ids.length} items`} to the Recycle Bin?`))
-      post({ op: 'fileOp', kind: 'delete', ids, confirmed: true });
-  } else if (e.key === 'Backspace') {
-    up();
-  } else if (e.key === 'F5') {
-    go(here);
-  }
-});
-
-// Dragging out: the host starts the shell's own drag (plan 02 3.6).
-list.addEventListener('dragstart', e => {
-  e.preventDefault();
-  const i = indexOf(e.target);
-  if (i >= 0 && !selected.has(i)) select(i, e);
-  window.__spike.events.push({ dragStart: selectedIds().length });
-  post({ op: 'dragOut', ids: selectedIds() });
-});
-
-// Dropping in: the files go to the host with their paths; what else came along is reported (Outlook mails).
-list.addEventListener('dragover', e => e.preventDefault());
-list.addEventListener('drop', e => {
-  e.preventDefault();
-  const i = indexOf(e.target);
-  const target = i >= 0 && entries[i].folder ? entries[i].id : here;
-  host.postMessageWithAdditionalObjects({ op: 'drop', target, types: [...e.dataTransfer.types] }, e.dataTransfer.files);
-});
-
-function up() {
-  if (/^[A-Za-z]:\\?$/.test(here) || !/^[A-Za-z]:\\|^\\\\/.test(here)) return go(ThisPC);
-  const parent = here.replace(/\\[^\\]+\\?$/, '');
-  go(/^[A-Za-z]:$/.test(parent) ? parent + '\\' : parent);
-}
-
-$('up').addEventListener('click', up);
-$('location').addEventListener('keydown', e => { if (e.key === 'Enter') go($('location').value.trim()); });
-document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => go(b.dataset.go)));
-$('elevated').addEventListener('click', () => {
-  sent.set(++req, performance.now());
-  status('Asking for administrator rights...');
-  post({ op: 'listElevated', location: here, req });
-});
-
-// ---------- Preview ----------
-
-const previewArea = $('preview');
-let previewPath = null;
-
-function areaRect() {
-  const r = previewArea.getBoundingClientRect();
-  const d = devicePixelRatio;
-  return { x: r.left * d, y: r.top * d, width: r.width * d, height: r.height * d };
-}
-
-function focused(i) {
-  const e = entries[i];
-  if (!e || e.folder || selected.size !== 1) return;
-  previewPath = e.id;
-  clearTimeout(focused.timer);
-  focused.timer = setTimeout(() => post({ op: 'preview', path: e.id, rect: areaRect() }), 150);
-}
-
-function placePreview() {
-  if (previewPath) post({ op: 'previewMove', rect: areaRect() });
-}
-
-// A popup over the preview area: a snapshot of the native window stands in for it while the popup is open.
-$('popup').addEventListener('click', () => {
-  if (!$('menu').hidden) return closePopup();
-  if (previewPath) post({ op: 'previewSnapshot' });
-  else $('menu').hidden = false;
-});
-
-function closePopup() {
-  $('menu').hidden = true;
-  previewArea.style.backgroundImage = '';
-  if (previewPath) post({ op: 'previewRestore' });
-}
-
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('menu').hidden) closePopup(); });
 
 // ---------- File operations ----------
 
@@ -254,22 +690,11 @@ function showOps() {
   }));
 }
 
-// ---------- Events ----------
-
-// The entries of a listing's part: the first part of a request replaces what was shown.
-let taken = 0;
-
-function take(m) {
-  if (taken !== m.req) {
-    taken = m.req;
-    entries = [];
-    selected = new Set();
-    anchor = -1;
-    list.scrollTop = 0;
-  }
-  entries = entries.concat(m.entries).sort(sortEntries);
-  render();
+function reloadLists() {
+  for (const v of views.values()) if (v instanceof ListView && v.location) v.load(v.location);
 }
+
+// ---------- Events ----------
 
 const events = {
   hello(m) {
@@ -279,55 +704,50 @@ const events = {
     for (const o of m.ops) ops.set(o.id, o);
     showOps();
     if (m.settings.problems.length) status(m.settings.problems.join(' '), true);
-    go(m.paths[0] ?? ThisPC);
+    start(m.paths);
   },
   open(m) {
-    go(m.paths[0]);
+    if (m.paths[0]) root.reveal(m.paths[0]);
   },
-  // A part of a slow location, while it is read.
   listing(m) {
-    if (m.req !== req) return;
-    take(m);
-    status(`${entries.length} items so far...`);
+    const l = listeners.get(m.channel);
+    if (l && l.req === m.req) l.onPart(m.entries);
   },
   listed(m) {
-    if (m.req !== req) return;   // an answer for a location left already
-    const received = performance.now();
-    take(m);
-    $('elevated').hidden = !m.denied || m.elevated;
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      const shown = performance.now();
-      const t = {
-        location: m.location, kind: m.kind, count: entries.length, enumMs: m.enumMs, iconMs: m.iconMs, hostMs: m.hostMs,
-        roundTripMs: Math.round(received - sent.get(m.req)), renderMs: Math.round(shown - received),
-        totalMs: Math.round(shown - sent.get(m.req)),
-      };
-      window.__spike.lists.push(t);
-      if (m.error) status(`${m.name}: ${m.error}`, true);
-      else status(`${m.name}${m.elevated ? ' (as administrator)' : ''}: ${t.count} items, listed in ${t.enumMs} ms, shown in ${t.totalMs} ms`);
-    }));
+    const l = listeners.get(m.channel);
+    if (!l || l.req !== m.req) return;   // an answer for a location left already
+    listeners.delete(m.channel);
+    l.onDone(m);
+  },
+  described(m) {
+    described.get(m.req)?.(m.entries);
+    described.delete(m.req);
   },
   icons(m) {
     for (const [i, url] of Object.entries(m.icons)) if (url) icons.set(Number(i), url);
-    render();
+    for (const v of iconUsers) v.render();
   },
   ownIcons(m) {
-    const byId = new Map(entries.map(e => [e.id, e]));
-    for (const [id, icon] of Object.entries(m.icons)) if (byId.has(id) && icon >= 0) byId.get(id).icon = icon;
-    render();
+    for (const v of views.values()) {
+      if (!(v instanceof ListView)) continue;
+      const byId = new Map(v.entries.map(x => [x.id, x]));
+      for (const [id, icon] of Object.entries(m.icons)) if (byId.has(id) && icon >= 0) byId.get(id).icon = icon;
+      v.render();
+    }
   },
   menuDone(m) {
     window.__spike.events.push({ menuDone: m.verb ?? null, error: m.error ?? null });
     if (m.error) status(m.error, true);
-    else if (m.verb === 'rename') status('Rename: comes with plan 03.');
-    else if (m.verb) setTimeout(() => go(here), 300);
+    else if (m.verb === 'rename') status('Rename: not built yet.');
+    else if (m.verb) setTimeout(reloadLists, 300);
   },
   menuTexts(m) { window.__spike.events.push({ menuTexts: m.texts, error: m.error }); },
-  verbDone(m) { window.__spike.events.push({ verbDone: m.ok, error: m.error }); setTimeout(() => go(here), 300); },
+  verbDone(m) { window.__spike.events.push({ verbDone: m.ok, error: m.error }); setTimeout(reloadLists, 300); },
+  executeFailed(m) { status(m.error, true); },
   dragDone(m) {
     window.__spike.events.push({ dragDone: m.effect, error: m.error, source: m.source });
     if (m.error) status(m.error, true);
-    else if (m.effect === 2) go(here);
+    else if (m.effect === 2) reloadLists();
   },
   dropped(m) {
     window.__spike.events.push({ dropped: m.count, types: m.types });
@@ -336,17 +756,12 @@ const events = {
   fileOp(m) {
     ops.set(m.op.id, m.op);
     showOps();
-    if (m.op.finished) go(here);
+    if (m.op.finished) reloadLists();
   },
   previewShown(m) {
     window.__spike.events.push({ previewShown: m.path, handler: m.handler, error: m.error });
-    $('previewText').textContent = m.error ? `No Windows preview: ${m.error}` : '';
+    if (m.error && preview) preview.message(`No Windows preview: ${m.error}`);
   },
-  previewSnapshot(m) {
-    if (m.url) previewArea.style.backgroundImage = `url(${m.url})`;
-    $('menu').hidden = false;
-  },
-  nativeListed(m) { window.__spike.events.push({ nativeListed: m }); },
 };
 
 host.addEventListener('message', e => events[e.data.event]?.(e.data));
