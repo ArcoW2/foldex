@@ -1,0 +1,19 @@
+// Light: the day colours, complete: the root of the light themes (the others build on it).
+// Every colour name is set here, and the six branch colours; a theme on this base lists only what it changes.
+{
+  "name": "Light",
+  "description": "neutral white",
+  "colors": {
+    "bg": "#ffffff",
+    "bgSide": "#f6f7f9",
+    "bgBar": "#eef0f3",
+    "fg": "#1f2328",
+    "fgDim": "#656d76",
+    "border": "#d8dce2",
+    "accent": "#0969da",
+    "hover": "rgba(0, 0, 0, .06)",
+    "select": "#b6d7ff",
+    "warning": "#9a6700"
+  },
+  "branches": ["#0969da", "#cf222e", "#1a7f37", "#bc4c00", "#8250df", "#0f7b7b"]
+}

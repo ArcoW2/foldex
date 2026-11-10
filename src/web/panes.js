@@ -2,12 +2,13 @@
 // run it under Jint. app.js draws what this decides.
 //
 // A pane (a child) follows at most one other (its parent; `source` here); a pane without one is a root, as the window's
-// first pane. Any pane can be closed. Each connection has a branch colour. A pane keeps a state (location, focus, selection) per colour of the connections
-// leaving it ('' for a pane without followers) and shows the state of its active colour: the colour of the path down
-// to the pane activated last.
+// first pane. Any pane can be closed. Each connection has a branch colour: a number, the place in the theme's list of
+// branch colours (docs/plans/07-PLAN-themes.md 3.2). A pane keeps a state (location, focus, selection) per colour of the
+// connections leaving it ('' for a pane without followers) and shows the state of its active colour: the colour of the
+// path down to the pane activated last.
 'use strict';
 
-const Branches = ['blue', 'red', 'green', 'orange', 'purple', 'teal'];
+const Branches = [0, 1, 2, 3, 4, 5];   // as many as a theme's list (ThemeFile.BranchCount)
 
 class Layout {
   constructor() {
@@ -52,7 +53,7 @@ class Layout {
 
   // A colour no connection has yet; with all taken, the one used least.
   newColour() {
-    const used = [...this.panes.values()].map(p => p.colour).filter(c => c);
+    const used = [...this.panes.values()].map(p => p.colour).filter(c => c !== null);
     const count = c => used.filter(u => u === c).length;
     return Branches.reduce((best, c) => count(c) < count(best) ? c : best);
   }

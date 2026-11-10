@@ -1,0 +1,17 @@
+// Dark forest: from LexPen's theme of the same name, its app colours only.
+// A theme lists only what differs from its base; the base may be any theme. The names are in the README (Themes).
+{
+  "name": "Dark forest",
+  "description": "green tint",
+  "base": "dark",
+  "colors": {
+    "bg": "#15201a",
+    "bgSide": "#1a2820",
+    "bgBar": "#1f2e25",
+    "fg": "#d6e8d9",
+    "fgDim": "#90a898",
+    "border": "#2f4436",
+    "accent": "#5fd38d",
+    "select": "#2b5a3d"
+  }
+}

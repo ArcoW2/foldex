@@ -36,6 +36,32 @@ The version is `1.0.<commits>` (`git rev-list --count HEAD`, the `GitVersion` ta
 `State\` for what Foldex keeps by itself (window position, the browser's data folder). `FOLDEX_DATA` points a test
 copy elsewhere.
 
+View > Settings (the settings window) shows every setting; a change applies at once in every window. Your
+settings.json and your themes are watched: an edit by hand applies at once too.
+
+## Themes
+
+`themeLight` and `themeDark` pick the theme per mode (a file name in `themes\` without `.json`). The shipped themes
+are in `defaults\themes\` next to the exe (LexPen's, with their app colours only); yours go in `themes\` in the data
+folder, and one with the same file name replaces a shipped one. A theme:
+
+```json
+{
+  "name": "My theme",
+  "description": "shown with the name in the settings",
+  "base": "dark-ocean",
+  "colors": { "bg": "#161c27" },
+  "branches": ["#6aa8ff", "#ff7b72", "#56d364", "#e3b341", "#bc8cff", "#39c5bb"]
+}
+```
+
+`base` is any other theme; a theme lists only what differs from it. The colour names: `bg` (the lists), `bgSide`
+(the folder tree), `bgBar` (pane heads, the ribbon), `fg` (text), `fgDim` (quieter text), `border`, `accent` (the
+focus, links), `hover`, `select` (selected rows), `warning` (problems in the status line). A colour is `#rgb`,
+`#rrggbb` (with alpha: `#rgba`, `#rrggbbaa`), `rgb(...)`, `rgba(...)`, `hsl(...)` or `hsla(...)`. `branches` are the six
+branch colours of connected panes, in order; a theme without them takes its base's. Problems show in the status line
+and the settings window.
+
 ## Testing the app
 
 Start the debug build with `FOLDEX_DATA=<scratch folder>` and

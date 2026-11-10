@@ -159,6 +159,7 @@ sealed class MainForm : Form
                     ["version"] = version,
                     ["commit"] = commit,
                     ["settings"] = SettingsFile.Load(AppHost.DataDir),
+                    ["themes"] = ThemeFile.Load(AppHost.DataDir),
                     ["keys"] = KeysFile.Load(AppHost.DataDir),
                     ["ribbon"] = RibbonFile.Load(AppHost.DataDir, Path.Combine(AppHost.DefaultsDir, RibbonFile.Name)),
                     ["paths"] = PathsArray(paths),
@@ -259,11 +260,14 @@ sealed class MainForm : Form
                 break;
             }
             case "setSetting":
-                try { SettingsFile.Write(AppHost.DataDir, msg["name"]!.GetValue<string>(), msg["value"]?.DeepClone()); }
+                try { app.SetSetting(msg["name"]!.GetValue<string>(), msg["value"]?.DeepClone()); }
                 catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException)
                 {
                     Post(new JsonObject { ["event"] = "settingFailed", ["error"] = ex.Message });
                 }
+                break;
+            case "openSettings":
+                app.OpenSettings(this);
                 break;
             case "copyText":
                 Clipboard.SetText(msg["text"]!.GetValue<string>());

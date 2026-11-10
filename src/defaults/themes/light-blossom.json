@@ -1,0 +1,18 @@
+// Light blossom: from LexPen's theme of the same name, its app colours only.
+// A theme lists only what differs from its base; the base may be any theme. The names are in the README (Themes).
+{
+  "name": "Light blossom",
+  "description": "soft rose",
+  "base": "light",
+  "colors": {
+    "bg": "#fbf1f1",
+    "bgSide": "#f5e6e7",
+    "bgBar": "#efdcde",
+    "fg": "#2b1a1c",
+    "fgDim": "#6e5558",
+    "border": "#e2c4c8",
+    "accent": "#b3263a",
+    "hover": "rgba(0, 0, 0, .06)",
+    "select": "#f4c3ca"
+  }
+}

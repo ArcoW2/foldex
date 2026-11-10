@@ -1,0 +1,18 @@
+// Light lichen: from LexPen's theme of the same name, its app colours only.
+// A theme lists only what differs from its base; the base may be any theme. The names are in the README (Themes).
+{
+  "name": "Light lichen",
+  "description": "grey with a hint of blue and yellow",
+  "base": "light",
+  "colors": {
+    "bg": "#f3f4ee",
+    "bgSide": "#eaece4",
+    "bgBar": "#e1e4da",
+    "fg": "#20231e",
+    "fgDim": "#5d6359",
+    "border": "#cfd3c6",
+    "accent": "#4d6b5e",
+    "hover": "rgba(0, 0, 0, .06)",
+    "select": "#cfdccb"
+  }
+}

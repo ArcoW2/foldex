@@ -1,0 +1,17 @@
+// Dark parchment: from LexPen's theme of the same name, its app colours only.
+// A theme lists only what differs from its base; the base may be any theme. The names are in the README (Themes).
+{
+  "name": "Dark parchment",
+  "description": "warm yellow, old paper at night",
+  "base": "dark",
+  "colors": {
+    "bg": "#221e14",
+    "bgSide": "#29241a",
+    "bgBar": "#2f291d",
+    "fg": "#ece3cc",
+    "fgDim": "#a99f86",
+    "border": "#463d2a",
+    "accent": "#e0b84a",
+    "select": "#5c4a1f"
+  }
+}

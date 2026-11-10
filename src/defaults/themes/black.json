@@ -1,0 +1,17 @@
+// Black (OLED): from LexPen's theme of the same name, its app colours only.
+// A theme lists only what differs from its base; the base may be any theme. The names are in the README (Themes).
+{
+  "name": "Black (OLED)",
+  "description": "pure black, brighter text",
+  "base": "dark",
+  "colors": {
+    "bg": "#000000",
+    "bgSide": "#0a0a0b",
+    "bgBar": "#111113",
+    "fg": "#e8e8ea",
+    "fgDim": "#9da1a8",
+    "border": "#26272b",
+    "hover": "rgba(255, 255, 255, .08)",
+    "select": "#24476e"
+  }
+}

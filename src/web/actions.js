@@ -89,3 +89,5 @@ action('hidden.toggle', { title: 'Hidden items', hint: 'show hidden and system f
 // ---------- Foldex ----------
 
 action('palette', { title: 'All actions and keys', group: 'app', run: () => openPalette() });
+action('settings.open', { title: 'Settings', hint: 'every setting, the theme included, in a window of its own', group: 'app',
+  run: () => post({ op: 'openSettings' }) });

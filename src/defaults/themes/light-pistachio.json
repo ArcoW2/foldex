@@ -1,0 +1,18 @@
+// Light pistachio: from LexPen's theme of the same name, its app colours only.
+// A theme lists only what differs from its base; the base may be any theme. The names are in the README (Themes).
+{
+  "name": "Light pistachio",
+  "description": "pale yellow-green",
+  "base": "light",
+  "colors": {
+    "bg": "#f5f8ea",
+    "bgSide": "#ecf1dc",
+    "bgBar": "#e3ead0",
+    "fg": "#222817",
+    "fgDim": "#5e6650",
+    "border": "#d2dbb9",
+    "accent": "#5b7a1e",
+    "hover": "rgba(0, 0, 0, .06)",
+    "select": "#dbe8b4"
+  }
+}

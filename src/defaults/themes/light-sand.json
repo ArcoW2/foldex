@@ -1,0 +1,18 @@
+// Light sand: from LexPen's theme of the same name, its app colours only.
+// A theme lists only what differs from its base; the base may be any theme. The names are in the README (Themes).
+{
+  "name": "Light sand",
+  "description": "browner than parchment",
+  "base": "light",
+  "colors": {
+    "bg": "#f8f1e7",
+    "bgSide": "#f0e7da",
+    "bgBar": "#e9dece",
+    "fg": "#2b2219",
+    "fgDim": "#6c5d4c",
+    "border": "#d9c9b2",
+    "accent": "#8a5a2b",
+    "hover": "rgba(0, 0, 0, .06)",
+    "select": "#ead2b0"
+  }
+}

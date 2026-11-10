@@ -1,0 +1,17 @@
+// Dark Ink and aged paper (blue/yellow): from LexPen's theme of the same name, its app colours only.
+// A theme lists only what differs from its base; the base may be any theme. The names are in the README (Themes).
+{
+  "name": "Dark Ink and aged paper (blue/yellow)",
+  "description": "blue ink, yellow lines and highlights",
+  "base": "dark",
+  "colors": {
+    "bg": "#161c27",
+    "bgSide": "#1b2230",
+    "bgBar": "#202839",
+    "fg": "#d8e0ee",
+    "fgDim": "#909cb0",
+    "border": "#463d2a",
+    "accent": "#e0b84a",
+    "select": "#2a4a7a"
+  }
+}

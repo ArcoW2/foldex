@@ -1,0 +1,17 @@
+// Dark pistachio: from LexPen's theme of the same name, its app colours only.
+// A theme lists only what differs from its base; the base may be any theme. The names are in the README (Themes).
+{
+  "name": "Dark pistachio",
+  "description": "yellow-green",
+  "base": "dark",
+  "colors": {
+    "bg": "#1d2116",
+    "bgSide": "#23281b",
+    "bgBar": "#292f20",
+    "fg": "#e2e8d2",
+    "fgDim": "#9ea58c",
+    "border": "#3c4430",
+    "accent": "#b5cf6b",
+    "select": "#4a5a2a"
+  }
+}

@@ -1,0 +1,17 @@
+// Dark wine: from LexPen's theme of the same name, its app colours only.
+// A theme lists only what differs from its base; the base may be any theme. The names are in the README (Themes).
+{
+  "name": "Dark wine",
+  "description": "red tint",
+  "base": "dark",
+  "colors": {
+    "bg": "#241618",
+    "bgSide": "#2c1b1e",
+    "bgBar": "#332024",
+    "fg": "#eedadb",
+    "fgDim": "#b0979a",
+    "border": "#4a2e33",
+    "accent": "#ff7b86",
+    "select": "#6a2d36"
+  }
+}

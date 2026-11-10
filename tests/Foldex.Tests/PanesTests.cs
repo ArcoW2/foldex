@@ -94,10 +94,23 @@ public class PanesTests
             const l = new Layout(); const A = l.add({ kind: 'tree' });
             const B = l.add({ source: A }); l.focus(A, { id: 'C:\\X', folder: true });
             const C = l.add({ source: A }); l.activate(C); l.focus(A, { id: 'C:\\Y', folder: true });
-            const blue = l.pane(B).colour, red = l.pane(C).colour;
+            const first = l.pane(B).colour, second = l.pane(C).colour;
             l.activate(B);
-            """, "[blue, red, l.state(A).focus, l.state(B).location, l.state(C).location]");
-        Assert.Equal("""["blue","red","C:\\X","C:\\X","C:\\Y"]""", r.GetRawText());
+            """, "[first, second, l.state(A).focus, l.state(B).location, l.state(C).location]");
+        Assert.Equal("""[0,1,"C:\\X","C:\\X","C:\\Y"]""", r.GetRawText());
+    }
+
+    [Fact]
+    public void WithEveryBranchTakenANewChildGetsTheOneUsedLeast()
+    {
+        // Six children of A take branches 0 to 5; a child of p2 continues its branch 0 (used twice now); the next
+        // child of A gets branch 1, the first of those used least.
+        var r = Run("""
+            const l = new Layout(); const A = l.add({ kind: 'tree' });
+            for (let i = 0; i < 6; i++) l.add({ source: A });
+            l.add({ source: 'p2' }); l.add({ source: A });
+            """, "[...l.panes.values()].map(p => p.colour)");
+        Assert.Equal("[null,0,1,2,3,4,5,0,1]", r.GetRawText());
     }
 
     [Fact]

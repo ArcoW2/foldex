@@ -1,0 +1,18 @@
+// Light sky: from LexPen's theme of the same name, its app colours only.
+// A theme lists only what differs from its base; the base may be any theme. The names are in the README (Themes).
+{
+  "name": "Light sky",
+  "description": "cool blue",
+  "base": "light",
+  "colors": {
+    "bg": "#f2f6fc",
+    "bgSide": "#e8eff9",
+    "bgBar": "#dfe8f5",
+    "fg": "#17212e",
+    "fgDim": "#546277",
+    "border": "#c8d5e8",
+    "accent": "#1f5fbf",
+    "hover": "rgba(0, 0, 0, .06)",
+    "select": "#bcd4f6"
+  }
+}

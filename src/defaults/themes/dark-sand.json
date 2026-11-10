@@ -1,0 +1,17 @@
+// Dark sand: from LexPen's theme of the same name, its app colours only.
+// A theme lists only what differs from its base; the base may be any theme. The names are in the README (Themes).
+{
+  "name": "Dark sand",
+  "description": "browner than parchment",
+  "base": "dark",
+  "colors": {
+    "bg": "#221d18",
+    "bgSide": "#29231d",
+    "bgBar": "#2f2822",
+    "fg": "#eae0d4",
+    "fgDim": "#a69888",
+    "border": "#463b31",
+    "accent": "#d09a5c",
+    "select": "#5a4430"
+  }
+}

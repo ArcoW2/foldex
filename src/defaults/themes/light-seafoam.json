@@ -1,0 +1,18 @@
+// Light seafoam: from LexPen's theme of the same name, its app colours only.
+// A theme lists only what differs from its base; the base may be any theme. The names are in the README (Themes).
+{
+  "name": "Light seafoam",
+  "description": "pale cool green",
+  "base": "light",
+  "colors": {
+    "bg": "#f1f8f3",
+    "bgSide": "#e6f2ea",
+    "bgBar": "#dcecdf",
+    "fg": "#172a1d",
+    "fgDim": "#52685a",
+    "border": "#c3dccb",
+    "accent": "#1e7a43",
+    "hover": "rgba(0, 0, 0, .06)",
+    "select": "#bfe6cb"
+  }
+}

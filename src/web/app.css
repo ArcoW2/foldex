@@ -1,38 +1,43 @@
+/* ---------- Themes ----------
+   The colours of defaults\themes\light.json and dark.json, before the page has the theme (ThemeFile.cs reads the
+   names of the first block: a variable added there is a theme colour). A theme sets these on the root element. */
 :root {
   --bg: #ffffff;
+  --bg-side: #f6f7f9;
+  --bg-bar: #eef0f3;
   --fg: #1f2328;
-  --muted: #656d76;
-  --line: #d0d7de;
-  --head: #f6f8fa;
-  --hover: #f3f4f6;
-  --selected: #cfe3ff;
-  --focus: #0969da;
-  --warn: #9a6700;
-  --branch-blue: #0969da;
-  --branch-red: #cf222e;
-  --branch-green: #1a7f37;
-  --branch-orange: #bc4c00;
-  --branch-purple: #8250df;
-  --branch-teal: #0f7b7b;
+  --fg-dim: #656d76;
+  --border: #d8dce2;
+  --accent: #0969da;
+  --hover: rgba(0, 0, 0, .06);
+  --select: #b6d7ff;
+  --warning: #9a6700;
+  --branch-0: #0969da;
+  --branch-1: #cf222e;
+  --branch-2: #1a7f37;
+  --branch-3: #bc4c00;
+  --branch-4: #8250df;
+  --branch-5: #0f7b7b;
   color-scheme: light;
 }
 
 :root[data-theme="dark"] {
-  --bg: #1e1e1e;
-  --fg: #d4d4d4;
-  --muted: #9da5b4;
-  --line: #3c3c3c;
-  --head: #252526;
-  --hover: #2a2d2e;
-  --selected: #094771;
-  --focus: #4fa3ff;
-  --warn: #d29922;
-  --branch-blue: #4fa3ff;
-  --branch-red: #ff6b6b;
-  --branch-green: #4cc76a;
-  --branch-orange: #f0883e;
-  --branch-purple: #b392f0;
-  --branch-teal: #39c5bb;
+  --bg: #1e1f22;
+  --bg-side: #25262a;
+  --bg-bar: #2b2d31;
+  --fg: #d7dae0;
+  --fg-dim: #8b929c;
+  --border: #3a3d44;
+  --accent: #58a6ff;
+  --hover: rgba(255, 255, 255, .07);
+  --select: #264f78;
+  --warning: #d29922;
+  --branch-0: #4fa3ff;
+  --branch-1: #ff6b6b;
+  --branch-2: #4cc76a;
+  --branch-3: #f0883e;
+  --branch-4: #b392f0;
+  --branch-5: #39c5bb;
   color-scheme: dark;
 }
 
@@ -54,7 +59,7 @@ body {
   gap: 6px;
   align-items: center;
   padding: 6px 8px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border);
 }
 
 #brand {
@@ -63,7 +68,7 @@ body {
 }
 
 #version {
-  color: var(--muted);
+  color: var(--fg-dim);
   font-weight: normal;
 }
 
@@ -74,8 +79,8 @@ body {
 
 /* The ribbon (ribbon.js) */
 #ribbon {
-  border-bottom: 1px solid var(--line);
-  background: var(--head);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-bar);
 }
 
 .rb-tabs {
@@ -98,7 +103,7 @@ body {
 }
 
 .rb-tabs button.on {
-  border-color: var(--line);
+  border-color: var(--border);
   border-bottom-color: var(--bg);
   background: var(--bg);
 }
@@ -106,14 +111,14 @@ body {
 .rb-groups {
   display: flex;
   background: var(--bg);
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--border);
   height: 84px;
 }
 
 .rb-group {
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--line);
+  border-right: 1px solid var(--border);
   padding: 3px 4px 0;
 }
 
@@ -131,7 +136,7 @@ body {
 
 .rb-col.divider {
   width: 1px;
-  background: var(--line);
+  background: var(--border);
   margin: 2px 3px;
 }
 
@@ -151,11 +156,11 @@ body {
 
 .rb-button:hover:not(:disabled) {
   background: var(--hover);
-  border-color: var(--line);
+  border-color: var(--border);
 }
 
 .rb-button.on {
-  background: var(--selected);
+  background: var(--select);
 }
 
 .rb-button:disabled {
@@ -164,7 +169,7 @@ body {
 
 .rb-name {
   text-align: center;
-  color: var(--muted);
+  color: var(--fg-dim);
   font-size: 11px;
   padding: 1px 0 2px;
 }
@@ -176,7 +181,7 @@ body {
   padding: 8px;
   background: var(--bg);
   color: var(--fg);
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
 }
 
 #palette .filter {
@@ -195,12 +200,12 @@ body {
 }
 
 #palette td:first-child, #palette td:last-child {
-  color: var(--muted);
+  color: var(--fg-dim);
   white-space: nowrap;
 }
 
 #palette tr.selected {
-  background: var(--selected);
+  background: var(--select);
 }
 
 #palette tr.disabled {
@@ -217,12 +222,13 @@ body {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  border-right: 1px solid var(--line);
+  border-right: 1px solid var(--border);
 }
 
 .pane.tree {
   width: 280px;
   flex: none;
+  background: var(--bg-side);
 }
 
 .pane.list {
@@ -239,9 +245,9 @@ body {
   align-items: center;
   gap: 6px;
   padding: 3px 8px;
-  background: var(--head);
-  border-top: 3px solid var(--branch, var(--line));
-  border-bottom: 1px solid var(--line);
+  background: var(--bg-bar);
+  border-top: 3px solid var(--branch, var(--border));
+  border-bottom: 1px solid var(--border);
   white-space: nowrap;
   overflow: hidden;
 }
@@ -307,11 +313,11 @@ body {
 }
 
 .row.selected {
-  background: var(--selected);
+  background: var(--select);
 }
 
 .body:focus .row.focused {
-  outline: 1px dotted var(--focus);
+  outline: 1px dotted var(--accent);
   outline-offset: -1px;
 }
 
@@ -324,7 +330,7 @@ body {
 .row .twisty {
   width: 12px;
   flex: none;
-  color: var(--muted);
+  color: var(--fg-dim);
   text-align: center;
 }
 
@@ -335,12 +341,12 @@ body {
 }
 
 .row .link {
-  color: var(--muted);
+  color: var(--fg-dim);
   font-size: 11px;
 }
 
 .row .size, .row .date {
-  color: var(--muted);
+  color: var(--fg-dim);
   width: 130px;
   text-align: right;
   flex: none;
@@ -352,7 +358,7 @@ body {
 
 .message {
   padding: 12px;
-  color: var(--muted);
+  color: var(--fg-dim);
 }
 
 .message button {
@@ -360,18 +366,18 @@ body {
 }
 
 footer {
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--border);
   padding: 4px 8px;
   max-height: 120px;
   overflow-y: auto;
 }
 
 #status {
-  color: var(--muted);
+  color: var(--fg-dim);
 }
 
 #status.warn {
-  color: var(--warn);
+  color: var(--warning);
 }
 
 #ops {

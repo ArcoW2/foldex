@@ -4,13 +4,13 @@
 'use strict';
 
 const host = window.chrome.webview;
-const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
 const ThisPC = '::{20D04FE0-3AEA-1069-A2D8-08002B30309D}';
 const Network = '::{F02C1A0D-BE21-4350-88B0-7367FC96EF3C}';
 const RecycleBin = 'shell:RecycleBinFolder';
 const TreeTop = ['shell:Profile', ThisPC, Network, RecycleBin];
 const $ = id => document.getElementById(id);
 let settings = {};
+let themes = {};   // every theme, complete (ThemeFile.cs; look.js)
 
 // What the test copy reads over the debugging port.
 window.__spike = { lists: [], events: [] };
@@ -19,10 +19,9 @@ function post(msg) {
   host.postMessage(msg);
 }
 
-// Light or dark: as Windows is (followWindows), else the theme setting.
+// Light or dark and the theme of that mode (look.js).
 function applyTheme() {
-  const dark = settings.followWindows ? darkQuery.matches : settings.theme === 'dark';
-  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  applyLook(settings, themes);
 }
 
 function status(text, warn = false) {
@@ -127,13 +126,13 @@ function drawHeads() {
   for (const v of views.values()) {
     const pane = layout.pane(v.id);
     const key = pane.source === null ? layout.keyOf(v.id) : pane.colour;
-    v.el.style.setProperty('--branch', key ? `var(--branch-${key})` : '');
+    v.el.style.setProperty('--branch', key !== '' && key !== null ? `var(--branch-${key})` : '');
     const marks = v.el.querySelector('.marks');
     const colours = [...new Set(layout.followers(v.id).map(f => f.colour))].filter(c => c !== layout.keyOf(v.id));
     marks.replaceChildren(...colours.map(c => {
       const dot = document.createElement('span');
       dot.style.background = `var(--branch-${c})`;
-      dot.title = `Switch to the ${c} branch`;
+      dot.title = `Switch to branch ${c + 1}`;
       dot.addEventListener('mousedown', e => {
         e.stopPropagation();
         activate(layout.followers(v.id, c)[0].id);
@@ -815,13 +814,27 @@ function nameOf(id) {
   return id;
 }
 
-// A setting changed here: kept in your settings.json (the host writes it), shown at once.
+// A setting changed here: kept in your settings.json (the host writes it and tells every window), shown at once.
 function setSetting(name, value) {
+  const before = { ...settings };
   settings[name] = value;
   post({ op: 'setSetting', name, value });
-  if (name === 'showHidden') {
+  settingsChanged(before);
+}
+
+// What follows a change of settings, here, in the settings window or in settings.json by hand.
+function settingsChanged(before) {
+  applyTheme();
+  if (before.showHidden !== settings.showHidden) {
     for (const v of views.values()) if (v instanceof TreeView) v.flatten(); else v.refresh();
   }
+  ribbonRefresh();
+}
+
+// The settings' and the themes' problems in the status line.
+function settingsProblems(m) {
+  const problems = [...m.settings.problems, ...m.themes.problems];
+  if (problems.length) status(problems.join(' '), true);
 }
 
 $('location').addEventListener('keydown', e => {
@@ -851,14 +864,23 @@ function reloadLists() {
 const events = {
   hello(m) {
     settings = m.settings.values;
+    themes = m.themes.themes;
     applyTheme();
     setKeys(m.keys);
     setRibbon(m.ribbon);
     $('version').textContent = m.version + (m.commit ? ` (${m.commit})` : '');
     for (const o of m.ops) ops.set(o.id, o);
     showOps();
-    if (m.settings.problems.length) status(m.settings.problems.join(' '), true);
+    settingsProblems(m);
     start(m.paths);
+  },
+  // Settings or themes changed (the settings window, a file edited by hand): every window is told.
+  settings(m) {
+    const before = settings;
+    settings = m.settings.values;
+    themes = m.themes.themes;
+    settingsChanged(before);
+    settingsProblems(m);
   },
   open(m) {
     const tree = views.get(layout.root);

@@ -131,9 +131,78 @@ sealed class AppHost : ApplicationContext
         target.Show(paths);
     }
 
+    /// <summary>What the pages need to look and behave as set: { settings, themes } (SettingsFile, ThemeFile).</summary>
+    public static JsonObject Look() => new() { ["settings"] = SettingsFile.Load(DataDir), ["themes"] = ThemeFile.Load(DataDir) };
+
+    /// <summary>One setting into your settings.json; every window, the settings window too, gets the new settings.
+    /// Throws (ArgumentException, IOException, ...) when it cannot be written.</summary>
+    public void SetSetting(string name, JsonNode? value)
+    {
+        SettingsFile.Write(DataDir, name, value);
+        Broadcast();
+    }
+
+    /// <summary>Tells every page the settings and themes as they are now.</summary>
+    public void Broadcast()
+    {
+        var message = Look();
+        message["event"] = "settings";
+        foreach (var w in windows) w.Post((JsonObject)message.DeepClone());
+        settingsForm?.Post((JsonObject)message.DeepClone());
+    }
+
+    // Your settings.json or a theme of yours edited by hand (or copied in): every page follows, once the writing rests.
+    readonly List<FileSystemWatcher> watchers = [];
+    System.Windows.Forms.Timer? settle;
+
+    void Watch()
+    {
+        if (settle is not null) return;
+        settle = new System.Windows.Forms.Timer { Interval = 300 };
+        settle.Tick += (_, _) =>
+        {
+            settle.Stop();
+            Broadcast();
+        };
+        var ui = SynchronizationContext.Current!;
+        var themes = Path.Combine(DataDir, ThemeFile.FolderName);
+        try { Directory.CreateDirectory(themes); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return; }
+        foreach (var (folder, filter) in new[] { (DataDir, SettingsFile.Name), (themes, "*.json") })
+        {
+            var w = new FileSystemWatcher(folder, filter) { NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite };
+            FileSystemEventHandler changed = (_, _) => ui.Post(_ => { settle.Stop(); settle.Start(); }, null);
+            w.Changed += changed;
+            w.Created += changed;
+            w.Deleted += changed;
+            w.Renamed += (s, e) => changed(s, e);
+            w.EnableRaisingEvents = true;
+            watchers.Add(w);
+        }
+    }
+
+    // The settings window (docs/plans/07-PLAN-themes.md 3.5): one for Foldex.
+    SettingsForm? settingsForm;
+
+    public void OpenSettings(MainForm from)
+    {
+        if (settingsForm is null || settingsForm.IsDisposed)
+        {
+            settingsForm = new SettingsForm(this, from);
+            settingsForm.FormClosed += (_, _) => settingsForm = null;
+            settingsForm.Show();
+        }
+        else
+        {
+            if (settingsForm.WindowState == FormWindowState.Minimized) settingsForm.WindowState = FormWindowState.Normal;
+            settingsForm.Activate();
+        }
+    }
+
     void Open(IReadOnlyList<string> paths)
     {
         var w = new MainForm(this, paths);
+        Watch();
         windows.Add(w);
         recent.Insert(0, w);
         w.Activated += (_, _) =>

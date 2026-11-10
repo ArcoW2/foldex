@@ -1,0 +1,17 @@
+// Dark moonlight: from LexPen's theme of the same name, its app colours only.
+// A theme lists only what differs from its base; the base may be any theme. The names are in the README (Themes).
+{
+  "name": "Dark moonlight",
+  "description": "grey-blue, quieter than ocean",
+  "base": "dark",
+  "colors": {
+    "bg": "#1c1f24",
+    "bgSide": "#22262c",
+    "bgBar": "#282c33",
+    "fg": "#d9dee6",
+    "fgDim": "#929aa6",
+    "border": "#363c46",
+    "accent": "#8fb0d8",
+    "select": "#33465e"
+  }
+}

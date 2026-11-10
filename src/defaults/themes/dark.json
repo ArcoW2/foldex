@@ -1,0 +1,19 @@
+// Dark: the night colours, complete: the root of the dark themes (the others build on it).
+// Every colour name is set here, and the six branch colours; a theme on this base lists only what it changes.
+{
+  "name": "Dark",
+  "description": "neutral grey",
+  "colors": {
+    "bg": "#1e1f22",
+    "bgSide": "#25262a",
+    "bgBar": "#2b2d31",
+    "fg": "#d7dae0",
+    "fgDim": "#8b929c",
+    "border": "#3a3d44",
+    "accent": "#58a6ff",
+    "hover": "rgba(255, 255, 255, .07)",
+    "select": "#264f78",
+    "warning": "#d29922"
+  },
+  "branches": ["#4fa3ff", "#ff6b6b", "#4cc76a", "#f0883e", "#b392f0", "#39c5bb"]
+}

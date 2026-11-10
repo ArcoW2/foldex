@@ -132,7 +132,7 @@ locations, the theme set; saved continuously, opened from the Projects menu and 
 ### 5.3 Not built yet
 
 From LexPen: the ribbon's icons, split buttons and drop-down lists, key tips, change mode and collapsing; the menus;
-macros; themes and theme sets (plan 07); the settings window; projects; docking; the viewers (plan 04). The order is open
+macros; projects; docking; the viewers (plan 04). Themes and the settings window: plan 07, built. The order is open
 question 1.
 
 ### 5.4 How it was tested

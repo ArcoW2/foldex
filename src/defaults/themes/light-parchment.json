@@ -1,0 +1,18 @@
+// Light parchment: from LexPen's theme of the same name, its app colours only.
+// A theme lists only what differs from its base; the base may be any theme. The names are in the README (Themes).
+{
+  "name": "Light parchment",
+  "description": "warm, like old paper",
+  "base": "light",
+  "colors": {
+    "bg": "#fbf6e6",
+    "bgSide": "#f4edd6",
+    "bgBar": "#efe6c9",
+    "fg": "#2b2618",
+    "fgDim": "#6a614a",
+    "border": "#ddd1ad",
+    "accent": "#8a5c00",
+    "hover": "rgba(0, 0, 0, .06)",
+    "select": "#f0dc9a"
+  }
+}

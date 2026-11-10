@@ -26,6 +26,8 @@
         { "action": "pane.next", "label": "Next pane", "stack": true } ] },
       { "name": "Show", "items": [
         { "action": "preview.toggle", "size": "large", "label": "Preview" },
-        { "action": "hidden.toggle", "label": "Hidden items" } ] } ] }
+        { "action": "hidden.toggle", "label": "Hidden items" } ] },
+      { "name": "Foldex", "items": [
+        { "action": "settings.open", "size": "large", "label": "Settings" } ] } ] }
   ]
 }
