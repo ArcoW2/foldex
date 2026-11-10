@@ -153,8 +153,9 @@ function paneElement(id, kind, title) {
   const el = document.createElement('section');
   el.className = `pane ${kind}`;
   el.dataset.pane = id;
+  // A child's own round (the pin) left of the name; at the right only the marks of the branches it feeds.
   el.innerHTML = '<div class="head"><span class="connector" title="Drag onto another pane to follow it"></span>' +
-    '<span class="title"></span><button class="pin" title="Pin: stop following the parent"></button><span class="marks"></span></div>' +
+    '<button class="pin" title="Pin: stop following the parent"></button><span class="title"></span><span class="marks"></span></div>' +
     '<div class="body" tabindex="0"><div class="rows"></div></div>';
   el.querySelector('.title').textContent = title;
   el.querySelector('.connector').addEventListener('mousedown', e => { activate(id); dragConnector(id, e); });
