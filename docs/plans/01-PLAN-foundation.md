@@ -71,7 +71,7 @@ Everything the user can do is an action: an id, a title, an optional key, usable
 the command palette (F1) and macros, as in LexPen. The first set, to grow per plan: open, open with, open in LexPen,
 back, forward, up, refresh, new folder, new file, rename, copy, cut, paste, delete (recycle bin), delete permanently,
 properties, copy path, select by pattern, filter, sort, view mode, show hidden, new connected pane, disconnect pane,
-next branch, run as administrator (plan 05).
+next branch, take ownership (plan 05).
 
 ### 3.5 Projects
 

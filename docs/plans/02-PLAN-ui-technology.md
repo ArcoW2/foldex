@@ -1,6 +1,6 @@
 # Plan 02: UI technology: WebView2, native, or both
 
-Status: draft 2026-11-10, revised 2026-11-10; not started. An investigation: its outcome is a decision and a spike, not a feature.
+Status: draft 2026-11-10, revised 2026-11-10 (option A chosen); spike not started.
 
 ## 1. What this is about
 
@@ -12,12 +12,12 @@ everything, for the preview only, or not at all.
 
 ## 2. The solution, in brief
 
-Suggestion: the LexPen shape, with a thicker native host. The page draws everything (ribbon, panes, lists, preview), so
-LexPen's ribbon, actions, themes and docking carry over; the host does all shell work: icons, Explorer's context menu,
-starting drags, file operations, watching folders, and Windows' own preview handlers. WebView2 runs in processes of
-Foldex's own, and the host recreates the page when it fails without stopping work in progress. This is decided only after a
-spike proves the risky parts: dragging files out of the page, very large folders, and a native preview window next to
-the page's menus. If the spike fails, the fallback is native lists (option B or D below) with WebView2 for the preview.
+Option A, the LexPen shape, with a thicker native host. The page draws everything (ribbon, panes, lists, preview), in
+LexPen's themed look with the system's icons, so LexPen's ribbon, actions, themes and docking carry over; the host
+does all shell work: icons, Explorer's context menu, starting drags, file operations, watching folders, and Windows'
+own preview handlers, all asynchronous to the page. WebView2 runs in processes of Foldex's own and is never elevated;
+elevated work is the host's or the helper's (plan 05). The host recreates the page when it fails without stopping work
+in progress. A spike checks the risky parts first and records how each is solved.
 
 ## 3. Details
 
@@ -36,7 +36,11 @@ the page's menus. If the spike fails, the fallback is native lists (option B or 
 - **The shell namespace**: items without a file path (This PC, Network, Recycle Bin, phones, a zip as a folder) are
   PIDLs, not paths. Whether that is in scope is open question 1; it weighs on the choice.
 
-### 3.2 The options
+### 3.2 The options, and why A
+
+A is chosen: it gives the most control (look, the connected panes and branches of plan 03), it is fast enough when
+every exchange between page and host is asynchronous, and LexPen's code carries over. B to D stay here as the record
+of what was weighed.
 
 **A. WebView2 for everything (LexPen's way).**
 - For: reuse of LexPen's page code (ribbon, actions, themes, docking, viewers); full control of the look; the
@@ -73,9 +77,12 @@ handlers in option A. Ways out: keep native windows in a region the page's popup
 
 ### 3.4 Elevated
 
-WebView2 in an elevated process, and an elevated and a normal instance side by side (user data folder, browser
-process) [not yet checked]; see plan 05. Dragging from a normal Explorer into an elevated window is blocked by Windows
-(UIPI) whatever the UI technology, so elevation does not favour any option.
+WebView2 never runs elevated. The host is never elevated: work that needs administrator rights goes through
+`IFileOperation`'s own prompt or the elevated helper (plan 05), whose results come back to the host and go to the page
+as any other. An elevated host would start its WebView2 elevated as well (the browser process is the host's child and
+gets its token), with the page and every library in it running as administrator; keeping all work in the host and the
+helper avoids that, and with it any question of an elevated and a normal WebView2 side by side. Since no Foldex window
+is elevated, Windows' block on dragging from normal programs into elevated windows (UIPI) does not apply.
 
 Protected folders are not a WebView2 matter: the host lists folders and sends the result to the page, so what can be
 read is decided by the host process's rights. A preview that lets WebView2 load files itself (virtual host mapping,
@@ -115,8 +122,6 @@ The page only draws drags; every drag that leaves or enters Foldex, and every fi
 | From Explorer into Foldex | WebView2 takes the native drop and gives the page `File` objects; the page hands them to the host with `postMessageWithAdditionalObjects`, as LexPen does; the host does the work |
 | Outlook mails and attachments into Foldex | Virtual files (`FileGroupDescriptor` / `FileContents`), not on disk: whether WebView2 passes them to the page at all [not yet checked]; if not, the host needs a drop target of its own, with WebView2's own drop switched off (`AllowExternalDrop`) [not yet checked] |
 
-Dragging into an elevated Foldex from a normal program is blocked by Windows (3.4).
-
 ### 3.7 The spike
 
 A throwaway branch with a minimal host and page, each check pass or fail, timings only from what was measured:
@@ -127,27 +132,24 @@ A throwaway branch with a minimal host and page, each check pass or fail, timing
 3. Explorer's context menu on a right-click in the page, with extension submenus (for example Synology Drive, 7-Zip).
 4. A Windows preview handler (a .docx or .xlsx) beside the page, with a ribbon drop-down opening over it.
 5. `IExplorerBrowser` hosted next to the page, filtered to folders only, for comparison.
-6. The same host run elevated once (plan 05).
+6. The elevated helper (plan 05) listing a folder only administrators can read, the host showing it in the page.
 7. Explorer's context menu, dragging out and copying for items from different folders (plan 06, 3.4).
 8. Recovery (3.5): the renderer killed and the browser process killed during a long copy run by the host; the page
    comes back with its panes and the copy's progress, the copy itself not interrupted.
 9. Outlook mails and attachments dragged into the page (3.6); if WebView2 does not pass them, the host's own drop
    target with `AllowExternalDrop` off.
 
-The outcome goes into this plan (the brief solution changes to the decision) and the spike branch is deleted.
+The outcome goes into this plan (how each risk is solved, with the measured figures) and the spike branch is deleted.
 
 ### 3.8 Tests
 
-The spike is its own test. After the decision: whatever unit tests the chosen host gets; the CDP-driven test copy as in
-LexPen if the page stays.
+The spike is its own test. After it: unit tests for the host, and the CDP-driven test copy as in LexPen.
 
 ## 4. Open questions
 
 1. **The shell namespace.** Only the file system (drives, UNC paths), or also This PC, Network, Recycle Bin, phones,
    zip files as folders? The second weighs toward D or toward PIDL handling in the host.
-2. **The look.** Should the panes look like Explorer (system list, system icons) or like LexPen (themed, own colours)?
-   The first favours D or B, the second A.
-3. **Spike first?** Suggestion: yes, before plans 03 to 05 go into detail on screen behaviour.
-4. **Evergreen or Fixed Version runtime?** Evergreen (updated by Windows, shared with other apps' WebView2 files, as
+2. **Spike first?** Suggestion: yes, before plans 03 to 05 go into detail on screen behaviour.
+3. **Evergreen or Fixed Version runtime?** Evergreen (updated by Windows, shared with other apps' WebView2 files, as
    LexPen) or a Fixed Version shipped with Foldex (independent of other apps, updated by us)? Suggestion: Evergreen,
    unless the spike or daily use shows a runtime update breaking Foldex.
