@@ -288,14 +288,29 @@ body[data-focus-away] .pane.active > .head {
   text-overflow: ellipsis;
 }
 
+/* A parent's branches (app.js drawHeads): the first rightmost, each keeping its place; the active one full and larger. */
+.pane > .head .marks {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Every mark the same box, the others drawn smaller in it, so none moves when the active one changes. */
 .pane > .head .marks span {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
+  width: 13px;
+  height: 13px;
   border-radius: 50%;
   box-shadow: 0 0 0 1px var(--bg);   /* seen on a head of any colour */
-  margin-left: 3px;
+  opacity: 0.45;
+  transform: scale(0.7);
   cursor: pointer;
+}
+
+.pane > .head .marks span.on {
+  opacity: 1;
+  transform: none;
+  cursor: default;
 }
 
 .pane > .head button {

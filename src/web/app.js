@@ -121,18 +121,20 @@ function activate(id) {
   $('location').value = views.get(id)?.locationText() ?? '';
 }
 
-// Each head in the colour it shows; a source has marks for the other branches it feeds, a click switches to one.
+// Each head in the colour it shows; a parent has a mark per branch it feeds, in the order the branches were made (the
+// first rightmost, app.css), so a mark keeps its place; the active one full and larger. A click switches to one.
 function drawHeads() {
   for (const v of views.values()) {
     const pane = layout.pane(v.id);
     const key = pane.source === null ? layout.keyOf(v.id) : pane.colour;
     v.el.style.setProperty('--branch', key !== '' && key !== null ? `var(--branch-${key})` : '');
     const marks = v.el.querySelector('.marks');
-    const colours = [...new Set(layout.followers(v.id).map(f => f.colour))].filter(c => c !== layout.keyOf(v.id));
+    const colours = [...new Set(layout.followers(v.id).map(f => f.colour))];
     marks.replaceChildren(...colours.map(c => {
       const dot = document.createElement('span');
       dot.style.background = `var(--branch-${c})`;
-      dot.title = `Switch to branch ${c + 1}`;
+      dot.classList.toggle('on', c === layout.keyOf(v.id));
+      dot.title = c === layout.keyOf(v.id) ? `Branch ${c + 1}: shown now` : `Switch to branch ${c + 1}`;
       dot.addEventListener('mousedown', e => {
         e.stopPropagation();
         activate(layout.followers(v.id, c)[0].id);
