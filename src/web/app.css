@@ -598,3 +598,17 @@ footer {
   margin: 0;
   padding-left: 18px;
 }
+
+/* Where a pane being dragged lands (app.js dragToDock). */
+.dock-mark {
+  position: fixed;
+  z-index: 50;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--accent) 25%, transparent);
+  border: 2px solid var(--accent);
+  box-sizing: border-box;
+}
+
+body.docking, body.docking * {
+  cursor: move !important;
+}

@@ -159,6 +159,10 @@ function paneElement(id, kind, title) {
   el.querySelector('.title').textContent = title;
   el.querySelector('.connector').addEventListener('mousedown', e => { activate(id); dragConnector(id, e); });
   el.querySelector('.pin').addEventListener('click', () => togglePin(id));
+  // The head dragged: the pane moves to another dock place (not from the connector, the pin or the branch marks).
+  el.querySelector('.head').addEventListener('mousedown', e => {
+    if (!e.target.closest('.connector, .pin, .marks span')) dragToDock(id, e);
+  });
   el.addEventListener('mousedown', () => activate(id), true);
   el.addEventListener('focusin', () => activate(id));
   return el;
@@ -857,10 +861,75 @@ function drawTabs() {
         if (e.button !== 0) return;
         e.preventDefault();
         showPane(id);
+        dragToDock(id, e);
       });
       return tab;
     }));
   }
+}
+
+// Moving a pane by dragging its head or its tab (plan 12 3.1): near an edge of the window, that side's area; over a
+// group, its outer quarter at a side puts the pane beside it there, its middle makes it a tab in it; over an empty
+// center, the center. A block shows where it lands. It starts once the mouse has moved a few pixels, so a click stays
+// a click.
+function dragToDock(id, e) {
+  if (e.button !== 0) return;
+  const x0 = e.clientX, y0 = e.clientY;
+  let mark = null, place = null;
+  const placeAt = (x, y) => {
+    const panes = $('panes').getBoundingClientRect();
+    const edge = 28;
+    if (x < panes.left || x > panes.right || y < panes.top || y > panes.bottom) return null;
+    if (x - panes.left < edge) return { place: { area: 'left' }, rect: [panes.left, panes.top, 120, panes.height] };
+    if (panes.right - x < edge) return { place: { area: 'right' }, rect: [panes.right - 120, panes.top, 120, panes.height] };
+    if (y - panes.top < edge) return { place: { area: 'top' }, rect: [panes.left, panes.top, panes.width, 100] };
+    if (panes.bottom - y < edge) return { place: { area: 'bottom' }, rect: [panes.left, panes.bottom - 100, panes.width, 100] };
+    const el = document.elementFromPoint(x, y);
+    if (el?.closest('.dock-empty')) {
+      const r = el.closest('.dock-empty').getBoundingClientRect();
+      return { place: { area: 'center' }, rect: [r.left, r.top, r.width, r.height] };
+    }
+    const groupEl = el?.closest('.dock-group');
+    const target = groupEl && [...groupEl.querySelectorAll(':scope > .pane')].map(p => p.dataset.pane).find(p => views.get(p));
+    if (!target) return null;
+    const own = docks.find(id)?.group;
+    if (own && own.panes.includes(target) && own.panes.length === 1) return null;   // onto itself, alone: nothing to do
+    const r = groupEl.getBoundingClientRect();
+    const fx = (x - r.left) / r.width, fy = (y - r.top) / r.height;
+    const shown = docks.find(target).group.shown ?? target;
+    if (fx < 0.25) return { place: { pane: shown, side: 'left' }, rect: [r.left, r.top, r.width / 2, r.height] };
+    if (fx > 0.75) return { place: { pane: shown, side: 'right' }, rect: [r.left + r.width / 2, r.top, r.width / 2, r.height] };
+    if (fy < 0.25) return { place: { pane: shown, side: 'top' }, rect: [r.left, r.top, r.width, r.height / 2] };
+    if (fy > 0.75) return { place: { pane: shown, side: 'bottom' }, rect: [r.left, r.top + r.height / 2, r.width, r.height / 2] };
+    if (own?.panes.includes(target)) return null;   // a tab into its own group: it is there already
+    return { place: { pane: shown, side: 'tab' }, rect: [r.left, r.top, r.width, r.height] };
+  };
+  const move = m => {
+    if (!mark) {
+      if (Math.abs(m.clientX - x0) + Math.abs(m.clientY - y0) < 6) return;
+      mark = document.createElement('div');
+      mark.className = 'dock-mark';
+      document.body.append(mark);
+      document.body.classList.add('docking');
+    }
+    const at = placeAt(m.clientX, m.clientY);
+    place = at?.place ?? null;
+    mark.hidden = !at;
+    if (at) Object.assign(mark.style, { left: `${at.rect[0]}px`, top: `${at.rect[1]}px`, width: `${at.rect[2]}px`, height: `${at.rect[3]}px` });
+  };
+  const up = () => {
+    removeEventListener('mousemove', move);
+    removeEventListener('mouseup', up);
+    if (!mark) return;
+    mark.remove();
+    document.body.classList.remove('docking');
+    if (!place) return;
+    docks.add(id, place);
+    renderDock();
+    showPane(id);
+  };
+  addEventListener('mousemove', move);
+  addEventListener('mouseup', up);
 }
 
 // A pane brought on screen (its tab shown), made active and given the keyboard.
