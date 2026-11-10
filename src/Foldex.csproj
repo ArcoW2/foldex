@@ -1,0 +1,68 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <!-- Major.minor; the last number is the git commit count (see GitVersion). -->
+    <VersionBase>1.0</VersionBase>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <!-- Publish only what runs: no symbols, no IntelliSense xml, and no second WebView2Loader.dll
+         under runtimes\ (the package's native asset already puts one next to the exe). -->
+    <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
+    <PublishReferencesDocumentationFiles>false</PublishReferencesDocumentationFiles>
+    <WebView2NeverCopyLoaderDllToOutputDirectory>true</WebView2NeverCopyLoaderDllToOutputDirectory>
+    <!-- One exe: Foldex.dll, its .NET json files and the libraries inside; WebView2Loader.dll (native) stays next to
+         it, so nothing is unpacked to a temp folder. -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <DefaultItemExcludes>$(DefaultItemExcludes);node_modules\**;publish\**</DefaultItemExcludes>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- What you may read and copy (settings): next to the exe. -->
+    <Content Include="defaults\**" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The page's files: inside the exe (WebFiles). -->
+    <EmbeddedResource Include="web\**" LogicalName="web\%(RecursiveDir)%(Filename)%(Extension)" />
+    <InternalsVisibleTo Include="Foldex.Tests" />
+    <AssemblyMetadata Include="BuildTime" Value="$([System.DateTime]::UtcNow.ToString('o'))" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4258.31" />
+  </ItemGroup>
+
+  <!-- The build number is the git commit count, so each commit gets its own version: 1.0.1, 1.0.2, ...
+       The short commit hash goes into the assembly metadata. Without git (or before the first commit) it is 1.0.0.
+       Skipped for the IDE's background design-time builds. -->
+  <Target Name="GitVersion" BeforeTargets="BeforeBuild" Condition="'$(DesignTimeBuild)' != 'true'">
+    <Exec Command="git rev-list --count HEAD" WorkingDirectory="$(MSBuildProjectDirectory)" ConsoleToMSBuild="true" EchoOff="true" StandardOutputImportance="low" StandardErrorImportance="low" IgnoreExitCode="true" ContinueOnError="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="BuildNumber" />
+      <Output TaskParameter="ExitCode" PropertyName="GitExitCode" />
+    </Exec>
+    <Exec Command="git rev-parse --short HEAD" WorkingDirectory="$(MSBuildProjectDirectory)" ConsoleToMSBuild="true" EchoOff="true" StandardOutputImportance="low" StandardErrorImportance="low" IgnoreExitCode="true" ContinueOnError="true" Condition="'$(GitExitCode)' == '0'">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitCommit" />
+    </Exec>
+    <PropertyGroup>
+      <BuildNumber Condition="'$(GitExitCode)' != '0'">0</BuildNumber>
+      <Version>$(VersionBase).$(BuildNumber)</Version>
+    </PropertyGroup>
+    <ItemGroup Condition="'$(GitCommit)' != ''">
+      <AssemblyMetadata Include="Commit" Value="$(GitCommit)" />
+    </ItemGroup>
+    <Message Importance="high" Text="Foldex version $(Version) $(GitCommit)" />
+  </Target>
+
+  <!-- The WebView2 package always references its WPF control too; this app only uses WinForms. -->
+  <Target Name="DropWebView2Wpf" BeforeTargets="ResolveAssemblyReferences">
+    <ItemGroup>
+      <Reference Remove="@(Reference)" Condition="'%(Reference.Filename)' == 'Microsoft.Web.WebView2.Wpf'" />
+    </ItemGroup>
+  </Target>
+
+</Project>

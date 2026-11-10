@@ -1,7 +1,7 @@
 # Plan 01: Foundation: solution layout and what comes from LexPen
 
-Status: draft 2026-11-10, revised 2026-11-10; not started. The number in the file name is the priority; rename to
-reorder.
+Status: draft 2026-11-10, revised 2026-11-10; partly executed 2026-11-10 (the host: 3.1, 3.2, 3.6), the parts of 3.3
+to 3.5 not started; see 5. As built. The number in the file name is the priority; rename to reorder.
 
 ## 1. What this is about
 
@@ -86,4 +86,57 @@ locations, the theme set; saved continuously, opened from the Projects menu and 
 
 ## 4. Open questions
 
-None.
+1. **The order of the rest (5.2).** Each part taken out of LexPen's editor page on its own, on top of the host.
+   Suggestion: first the plan 02 spike (it needs only this host); then actions and keys (F1), the ribbon, themes, the
+   settings window, projects, macros, docking; the viewers with plan 04.
+
+## 5. As built
+
+### 5.1 Built (branch `plan01-foundation`)
+
+- `Foldex.sln` with `src/Foldex.csproj` and `tests/Foldex.Tests` in solution folders `src` and `tests`, as LexPen.
+- `Foldex.csproj`: the LexPen settings (net10.0-windows, WinForms, PerMonitorV2, win-x64, framework-dependent, single
+  file, ReadyToRun), the `GitVersion` target, `defaults\` next to the exe, `web\` inside it. No icon yet; the window uses
+  the exe's.
+- `Program.cs`: one instance per user and exe (mutex and pipe, as LexPen); `-n` / `--new-window` or Shift for a new
+  window; the rest are paths, handed to the running instance.
+- `AppHost.cs`: the windows, the pipe listener, the shared browser environment (its data folder in `State\`,
+  `ExclusiveUserDataFolderAccess` on, plan 02 3.5), `State\state.json` with the last window's position and size, the
+  version.
+- `MainForm.cs`: one WebView2 with the page; the JSON messages (`ready` / `hello`, `open`); `ProcessFailed` handled from
+  the start (plan 02 3.5): a failed or hung renderer reloads the page, an exited browser process gets a new environment
+  and a new browser; the last paths given come back on the new page.
+- `DataFolder.cs`, `SettingsFile.cs` (LexPen's merge of defaults and yours, without LexPen's renamed, retired and layout
+  settings), `WebFiles.cs` (LexPen's, without the panes' second site), `defaults/settings.json` (`followWindows`,
+  `theme`).
+- The page (`web/index.html`, `app.js`, `app.css`): name, version and commit, the paths given, settings problems;
+  light or dark by Windows or the `theme` setting.
+- `README.md`.
+
+### 5.2 Not built yet
+
+The parts of 3.3 to 3.5 (ribbon, actions and keys, macros, themes and theme sets, projects, docking, the viewers):
+LexPen's page code for them is part of its editor page (`web/app.js` and the modules around it) and is to be taken
+out of it part by part, each on top of this host. The order is open question 1.
+
+### 5.3 How it was tested
+
+- `dotnet build`: no warnings, no errors; version `1.0.8 4bf9c0d` at the time.
+- `dotnet test`: Failed 0, Passed 21 (ProgramTests, DataFolderTests, SettingsFileTests, WebFilesTests).
+- A test copy (`FOLDEX_DATA` in the session scratchpad, debugging port 9333) driven over CDP:
+  - the page showed `Version 1.0.8 (4bf9c0d)`, the path given (`C:\Windows`), no settings problems, the theme as
+    Windows (dark);
+  - a second launch with `D:\prive` exited and the first window showed `D:\prive`; one Foldex process stayed;
+  - the renderer process killed: the page came back (a marker set before was gone, so it was a new page);
+  - the browser process killed: a new browser process under Foldex, the page back, Foldex still running;
+  - after the fix of 5.4 (rebuilt): a second launch with `D:\prive`, then the renderer killed: the new page showed
+    `D:\prive`, not the start's `C:\Windows`;
+  - closing the window wrote `State\state.json` with its position and size.
+
+### 5.4 Resolved during execution
+
+| Item | Decision |
+|---|---|
+| A new page after a failure showed the start's paths | The window keeps the last paths given and sends those |
+| Second window placement | 32 px right and down of the saved place, so it is not exactly over the first |
+| A saved place on a screen that is gone | The default place on the main screen (three quarters of its working area) |

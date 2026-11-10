@@ -1,0 +1,7 @@
+// Foldex's settings with their defaults. Do not change this file: your own settings.json in
+// %LOCALAPPDATA%\Foldex holds only what you changed (you may edit it by hand, and copy it to another PC).
+{
+  // ---------- General ----------
+  "followWindows": true,          // light or dark as Windows is (Settings > Personalization > Colors), at once
+  "theme": "light",               // "light" or "dark": the mode when not following Windows
+}
