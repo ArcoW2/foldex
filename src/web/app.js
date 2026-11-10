@@ -214,7 +214,10 @@ function apply(updates) {
   for (const u of updates) {
     const v = views.get(u.pane);
     if (!v) continue;
-    if ('location' in u) v.load(u.location);
+    if ('location' in u) {
+      v.load(u.location);
+      recordStep();
+    }
     if ('show' in u) v.show(u.show);
   }
 }
@@ -392,6 +395,7 @@ class TreeView {
     const n = this.node(id);
     if (!n) return;
     focusItem(this.id, { id: n.id, folder: true });
+    recordStep();
     const i = this.flat.indexOf(n);
     if (i >= 0) scrollIntoView(this.body, i);
     this.render();
@@ -610,7 +614,10 @@ class ListView {
     layout.state(this.id).selection = [...this.selected];
     scrollIntoView(this.body, index);
     this.render();
-    if (!quiet) focusItem(this.id, { id: x.id, folder: x.folder });
+    if (!quiet) {
+      focusItem(this.id, { id: x.id, folder: x.folder });
+      recordStep();   // kept with the current step (3.6)
+    }
     ribbonRefresh();
   }
 
@@ -640,6 +647,7 @@ class ListView {
     s.focus = null;
     s.selection = [];
     this.load(path);
+    recordStep();
   }
 
   // Up through the parent (3.3).
@@ -827,6 +835,91 @@ function cyclePane(step) {
   const order = [...document.querySelectorAll('#panes .pane')].map(el => el.dataset.pane);
   const next = order[(order.indexOf(activePane) + step + order.length) % order.length];
   views.get(next)?.body.focus();
+}
+
+// ---------- Between panes, and back and forward per branch (3.6) ----------
+
+// The pane chain of the active branch: the root above the active pane, then down the active branch from there (each
+// pane's first child of the colour it shows), previews left out. Its key: the root's child it goes through (each tab,
+// each branch of the root, has its own history), or the root itself.
+function branchChain(id) {
+  let top = id;
+  while (layout.pane(top)?.source != null) top = layout.pane(top).source;
+  const chain = [top];
+  for (let p = top; ;) {
+    const next = layout.followers(p, layout.keyOf(p)).find(f => f.kind !== 'preview');
+    if (!next) break;
+    chain.push(next.id);
+    p = next.id;
+  }
+  return { key: chain[1] ?? chain[0], chain };
+}
+
+const histories = new Map();   // branch key -> { steps: [snapshot], at }
+let recordTimer = 0, restoring = false;
+
+const snapshot = chain => chain.map(id => {
+  const s = layout.state(id);
+  return { id, location: s.location, focus: s.focus, selection: [...s.selection] };
+});
+// The folders of a step: where each pane is (for a tree: the folder it focuses, which its children show).
+const placesOf = step => step.map(x => `${x.id}=${(views.get(x.id) instanceof TreeView ? x.focus : x.location) ?? ''}`.toLowerCase()).join('|');
+
+// Something moved in the active branch: once things rest, the branch as it is now is its current step when the folders
+// are the same (a selection made there is kept with it), else a new step (a step forward from where back left it drops
+// the steps after it, as a browser does).
+function recordStep() {
+  if (restoring || activePane === null) return;
+  clearTimeout(recordTimer);
+  recordTimer = setTimeout(() => {
+    const { key, chain } = branchChain(activePane);
+    const h = histories.get(key) ?? { steps: [], at: -1 };
+    histories.set(key, h);
+    const now = snapshot(chain);
+    if (h.at >= 0 && placesOf(h.steps[h.at]) === placesOf(now)) {
+      h.steps[h.at] = now;
+      return;
+    }
+    h.steps.splice(h.at + 1, Infinity, now);
+    if (h.steps.length > 100) h.steps.shift();
+    h.at = h.steps.length - 1;
+    ribbonRefresh();
+  }, 400);
+}
+
+const historyOf = () => activePane === null ? null : histories.get(branchChain(activePane).key);
+const canGo = step => { const h = historyOf(); return !!h && h.at + step >= 0 && h.at + step < h.steps.length; };
+
+// One step back or forward: every pane of the branch as it was then.
+function goHistory(step) {
+  const h = historyOf();
+  if (!h || !canGo(step)) return;
+  h.at += step;
+  restoring = true;
+  for (const s of h.steps[h.at]) {
+    if (!layout.pane(s.id)) continue;
+    Object.assign(layout.state(s.id), { location: s.location, focus: s.focus, selection: [...s.selection] });
+    const v = views.get(s.id);
+    if (v instanceof TreeView && s.focus) v.reveal(s.focus);
+    else v?.restore();
+  }
+  setTimeout(() => { restoring = false; }, 600);   // the follows the restore sets off are not new steps
+  ribbonRefresh();
+}
+
+// To the parent, to the child in the active branch, to the next branch of the parent (the keys of 3.6).
+function focusPane(id) {
+  if (id && views.get(id)) views.get(id).body.focus();
+}
+
+function nextBranch() {
+  const pane = layout.pane(activePane);
+  if (!pane) return;
+  const parent = pane.source ?? activePane;
+  const colours = [...new Set(layout.followers(parent).map(f => f.colour))];
+  if (colours.length < 2) return;
+  const next = colours[(colours.indexOf(layout.keyOf(parent)) + 1) % colours.length];
+  focusPane(layout.followers(parent, next)[0].id);
 }
 
 // ---------- Detach, attach, branch colour, pin (plan 12 3.2; plan 03 3.4) ----------

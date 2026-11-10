@@ -17,7 +17,8 @@
         { "action": "item.open", "size": "large", "label": "Open" },
         { "action": "item.properties", "label": "Properties" }, { "action": "item.selectAll", "label": "Select all", "stack": true } ] },
       { "name": "Go", "items": [
-        { "action": "folder.up", "label": "Up" }, { "action": "refresh", "label": "Refresh", "stack": true } ] } ] },
+        { "action": "history.back", "label": "Back" }, { "action": "history.forward", "label": "Forward", "stack": true },
+        { "action": "folder.up", "label": "Up", "stack": true }, { "action": "refresh", "label": "Refresh" } ] } ] },
 
     { "name": "View", "groups": [
       { "name": "Panes", "items": [
