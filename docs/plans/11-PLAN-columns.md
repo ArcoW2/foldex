@@ -1,7 +1,10 @@
 # Plan 11: Columns, column sets and rows
 
-Status: draft 2026-11-10, revised 2026-11-10 (generic columns and sets per folder, Manage sets, fitting the name
-column, row lines and stripes, row height); not started.
+Status: not started.
+
+- 2026-11-10: draft.
+- 2026-11-10: revised: generic columns and sets per folder, Manage sets, fitting the name column, row lines and stripes,
+  row height.
 
 ## 1. What this is about
 
@@ -20,6 +23,25 @@ for its subfolders. Sets are made from a pane's columns, applied from the header
 `columnsets.json`; a Manage sets window renames, edits and deletes them. You change columns in the header: drag to
 move, drag an edge to resize, Ctrl+R (or automatically) fits them to their content. Rows can have stripes or lines, in
 an intensity you set, and a height relative to the pane font.
+
+## Status
+
+### Built
+
+### Not yet built
+
+| Part | What | Waits for | Reference |
+|---|---|---|---|
+| Own columns | the catalogue's own columns | -- | 3.1 |
+| Git status column | | -- | 3.1 |
+| Shell property columns | read for the rows in view; sorting by them | -- | 3.1 |
+| Generic columns | per pane, remembered | -- | 3.2 |
+| Set per folder | with or without its subfolders; `foldercolumns.json` | column sets | 3.2 |
+| Column sets | shipped and yours, `columnsets.json`; Manage sets | -- | 3.3 |
+| Header | sorting, moving, resizing, its menu | -- | 3.4 |
+| Fit columns | Ctrl+R, and Fit by themselves | -- | 3.4 |
+| Rows | `rowLines`, `rowLinesIntensity`, `rowHeight` | -- | 3.5 |
+| Host | the `columns` op, `GitStatus.cs`, `ColumnSetsFile.cs` | -- | 3.6 |
 
 ## 3. Details
 
@@ -119,22 +141,3 @@ Settings (the settings window, group Panes; the same for every list):
 ## 4. Open questions
 
 None.
-
-## 5. Status
-
-### Built
-
-Nothing yet.
-
-### Not yet built
-
-- The own columns of the catalogue (3.1).
-- The Git status column (3.1).
-- Shell property columns, read for the rows in view; sorting by them (3.1).
-- Generic columns per pane, remembered (3.2).
-- A set for a folder, with or without its subfolders; `foldercolumns.json` (3.2).
-- Column sets: shipped and yours, `columnsets.json`; Manage sets (3.3).
-- The header: sorting, moving, resizing, its menu (3.4).
-- Fit columns (Ctrl+R) and Fit by themselves (3.4).
-- Rows: `rowLines`, `rowLinesIntensity`, `rowHeight` (3.5).
-- The host: the `columns` op, `GitStatus.cs`, `ColumnSetsFile.cs` (3.6).

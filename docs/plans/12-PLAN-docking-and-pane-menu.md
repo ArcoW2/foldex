@@ -1,8 +1,13 @@
 # Plan 12: Docking panes, tabs, and the pane header's menu
 
-Status: draft 2026-11-10, revised 2026-11-10 (a new child at the right of or below its parent; a tab is New tab);
-executed 2026-11-10 except floating panes (open question 1); see 5. Status and 6. As built. Takes the docking row of plan 01 3.3
-into a plan of its own, for Foldex's panes; changes plan 03 (a pane can now be detached and attached).
+Status: partly executed; see Status and 6. As built.
+
+- 2026-11-10: draft.
+- 2026-11-10: revised: a new child at the right of or below its parent; a tab is New tab.
+- 2026-11-10: executed, except floating panes (open question 1) and the layout in the project.
+
+Takes the docking row of plan 01 3.3 into a plan of its own, for Foldex's panes; changes plan 03 (a pane can now be
+detached and attached).
 
 ## 1. What this is about
 
@@ -19,6 +24,30 @@ dock marks. The pane header's right-click menu makes a new child, detaches a chi
 to another one, and makes a new tab: a copy of the pane as a tab in the same group, as a new branch of the same
 parent, so each tab keeps its own folder and switching tabs switches branches. Tabs for files come with that, with
 no tab mechanism of their own.
+
+## Status
+
+### Built
+
+| Part | What | Reference |
+|---|---|---|
+| Detach | a child becomes a root on the folder it shows and keeps its children | 3.2 |
+| Attach | dragging the connector in the header onto another pane, or the menu's Attach to; a cycle refused | 3.2 |
+| Branch colour | as an action and in the menu | 3.2 |
+| List without a parent | opens a double-clicked folder in itself | 3.3 |
+| Docking | the five areas, groups as tabs, splits with splitters, the side areas' sizes | 3.1 |
+| Moving panes | dragging a head or tab onto a window edge, beside a group, into a group as a tab, or into an empty center | 3.1 |
+| Tabs | in their branch colour; a click shows the tab and switches to its branch | 3.1, 3.2 |
+| Pane head menu | also on tabs: New child pane (right, below), New tab, Detach, Attach to, Branch colour, Pin, Move to, Close pane | 3.2 |
+| New tab | Ctrl+T: same parent, a branch of its own, same folder; a root's tab is a new root | 3.2 |
+| Last layout | of the last closed window, in `State\state.json`, brought back at the next start | 3.4 |
+
+### Not yet built
+
+| Part | What | Waits for | Reference |
+|---|---|---|---|
+| Floating panes | | open question 1 | 3.1 |
+| Layout in the project | | plan 01's projects | 3.4 |
 
 ## 3. Details
 
@@ -84,30 +113,6 @@ A right-click on a pane's header (or its tab):
 
 1. **Floating panes.** LexPen's panes can also float as a window of their own (for another monitor). Wanted for
    Foldex's panes too, later, or not?
-
-## 5. Status
-
-### Built
-
-- Detach: a child becomes a root on the folder it shows and keeps its children (3.2).
-- Attach by dragging the connector in the header onto another pane, and from the menu's Attach to; a cycle refused
-  (3.2).
-- Branch colour, as an action and in the menu (3.2).
-- A list without a parent opens a double-clicked folder in itself (3.3).
-- Docking: the five areas, groups shown as tabs, splits with splitters, the side areas' sizes (3.1).
-- Moving a pane by dragging its head or its tab onto a window edge, beside a group, into a group as a tab, or into an
-  empty center (3.1).
-- Tabs in their branch colour; a click on a tab shows it and switches to its branch (3.1, 3.2).
-- The pane head's menu, also on tabs: New child pane (right, below), New tab, Detach, Attach to, Branch colour, Pin,
-  Move to, Close pane (3.2).
-- New tab (Ctrl+T): the same parent, a branch of its own, starting on the same folder; a root's tab is a new root
-  (3.2).
-- The layout of the last closed window kept in `State\state.json` and brought back at the next start (3.4).
-
-### Not yet built
-
-- Floating panes: open question 1.
-- The layout in the project (3.4), once plan 01's projects are built.
 
 ## 6. As built
 

@@ -1,7 +1,9 @@
 # Plan 10: Bars
 
-Status: draft 2026-11-10, revised 2026-11-10 (bars dock at any side; overflow a choice per bar; the bar that fills);
-not started.
+Status: not started.
+
+- 2026-11-10: draft.
+- 2026-11-10: revised: bars dock at any side; overflow a choice per bar; the bar that fills.
 
 ## 1. What this is about
 
@@ -18,6 +20,23 @@ line leave, or growing with its content (as the drives bar does when a USB stick
 maximum. Content that does not fit shows behind a `>>` button or scrolls, as you choose per bar. The layout is a file
 of its own, `bars.json`, as `ribbon.json`; you change it in the window by dragging and through a bar's right-click
 menu, and Foldex writes your copy.
+
+## Status
+
+### Built
+
+### Not yet built
+
+| Part | What | Waits for | Reference |
+|---|---|---|---|
+| Dock sides | bars at any dock side, in lines | -- | 3.1 |
+| Size modes | `fixed`, `fill` and `content`, with min and max | -- | 3.1 |
+| Overflow | per bar: `more` or `scroll` | -- | 3.1 |
+| Path bar | | -- | 3.2 |
+| Drives bar | with drives that come and go | -- | 3.2 |
+| Name and version | in the window title and F1's About; the default first row | -- | 3.2 |
+| `bars.json` and changing bars | dragging, the bar's menu | -- | 3.3 |
+| Code | `BarsFile.cs` and `web/bars.js` | -- | 3.4 |
 
 ## 3. Details
 
@@ -97,20 +116,3 @@ menu, and Foldex writes your copy.
      screen half a row is a lot of drive buttons;
    - both, the smaller one winning ("at most 400 px and at most half").
    Px, a share, or both?
-
-## 5. Status
-
-### Built
-
-Nothing yet.
-
-### Not yet built
-
-- Bars at any dock side, in lines (3.1).
-- The size modes `fixed`, `fill` and `content` with min and max (3.1).
-- Overflow per bar: `more` or `scroll` (3.1).
-- The path bar (3.2).
-- The drives bar, with drives that come and go (3.2).
-- The name and version in the window title and F1's About; the default first row (3.2).
-- `bars.json`, and changing the bars in the window: dragging, the bar's menu (3.3).
-- `BarsFile.cs` and `web/bars.js` (3.4).

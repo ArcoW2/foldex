@@ -1,8 +1,12 @@
 # Plan 13: Pane themes per branch
 
-Status: draft 2026-11-11, revised 2026-11-11 (a pane theme is a branch of the window theme, set colours or calculated
-ones; three settings with sliders defaulting in the middle; a root pane without children in the first pane theme); not
-started. Builds on plan 07 (themes, branch colours) and plan 03 (branches, the colour a parent takes from the path it
+Status: not started.
+
+- 2026-11-11: draft.
+- 2026-11-11: revised: a pane theme is a branch of the window theme, set colours or calculated ones; three settings with
+  sliders defaulting in the middle; a root pane without children in the first pane theme.
+
+Builds on plan 07 (themes, branch colours) and plan 03 (branches, the colour a parent takes from the path it
 serves).
 
 ## 1. What this is about
@@ -24,6 +28,21 @@ window colours in the calculated colours, and how intense the base colour (head,
 have their default in the middle. A pane draws itself in the pane theme of the path it serves (plan 03), a root pane
 without children in the first one, by setting those colours on its own element, so everything inside it follows. The
 background sliders keep working on top.
+
+## Status
+
+### Built
+
+### Not yet built
+
+| Part | What | Waits for | Reference |
+|---|---|---|---|
+| `branches` entries | a colour, or an object with its own colours | -- | 3.1 |
+| Calculated colours | from the base colour and the window theme | -- | 3.2 |
+| Settings | `paneThemeFollowsBranch`, `paneThemeMix`, `paneThemeIntensity` | -- | 3.3 |
+| Pane colours | per pane from its path's pane theme; a root pane without children in the first one; tabs and marks in the base colour | -- | 3.4 |
+| Background sliders | on the pane theme's background | -- | 3.5 |
+| Shipped themes reviewed | their pane themes, the first fitting the theme | -- | 3.6 |
 
 ## 3. Details
 
@@ -122,19 +141,3 @@ background.
 ## 4. Open questions
 
 None.
-
-## 5. Status
-
-### Built
-
-Nothing yet.
-
-### Not yet built
-
-- `branches` entries as a colour or an object with its own colours (3.1).
-- The calculated colours from the base colour and the window theme (3.2).
-- Settings `paneThemeFollowsBranch`, `paneThemeMix`, `paneThemeIntensity` (3.3).
-- Pane colours set per pane from its path's pane theme; a root pane without children in the first one; tabs and marks
-  in the base colour (3.4).
-- The background sliders on the pane theme's background (3.5).
-- The shipped themes' pane themes reviewed, the first fitting the theme (3.6).

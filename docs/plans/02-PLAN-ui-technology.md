@@ -1,7 +1,10 @@
 # Plan 02: UI technology: WebView2, native, or both
 
-Status: draft 2026-11-10, revised 2026-11-10 (option A, shell namespace, Evergreen); spike executed 2026-11-10 except
-the checks by hand (6.3); see 5. Status and 6. As built.
+Status: partly executed; see Status and 6. As built.
+
+- 2026-11-10: draft.
+- 2026-11-10: revised: option A, shell namespace, Evergreen.
+- 2026-11-10: spike executed, except the checks by hand (6.3).
 
 ## 1. What this is about
 
@@ -21,6 +24,35 @@ Bin as well as folders on disk), which the host walks as shell items. WebView2 (
 processes of Foldex's own and is never elevated; elevated work is the host's or the helper's (plan 05). The host
 recreates the page when it fails without stopping work in progress. A spike checks the risky parts before plans 03 to
 05 go into detail on screen behaviour, and records how each is solved.
+
+## Status
+
+### Built
+
+| Part | What | Reference |
+|---|---|---|
+| Option A | the page draws everything, the host does the shell work, asynchronously | 3.2; 6.1 |
+| Listing | folders and the shell namespace (This PC, Network, Recycle Bin) as shell items, in batches, cancellable; Recycle Bin items by `pidl:n` ids | 3.1; 6.1, 6.2 items 1 and 5 |
+| Icons | system icons by type, own icons per row in view | 3.1; 6.1 |
+| Explorer's context menu | for one folder's items | 3.1; 6.2 item 3 |
+| Drag and drop | out through the host's native drag with a drop source of Foldex's own; in from Explorer | 3.6; 6.2 item 2 |
+| File operations | through `IFileOperation`, kept by the host | 3.1, 3.5; 6.1 |
+| Preview handlers | in a native panel, with the snapshot swap for page popups | 3.3; 6.2 item 4 |
+| Elevated helper | listing only | 3.4; 6.1, plan 05 |
+| Own processes | the page recreated after a failure, a copy going on meanwhile | 3.5; 6.2 item 8 |
+| Outlook mails | dropped into the page, reporting what came along | 3.6; 6.2 item 9 |
+
+### Not yet built
+
+| Part | What | Waits for | Reference |
+|---|---|---|---|
+| Checks by hand | drag out and in, Explorer's menu with the mouse and its submenus, Outlook, listing through UAC | -- | 6.3 |
+| Outlook virtual files | a drop target of the host's own, only if WebView2 does not pass them | the check by hand of Outlook | 3.6 |
+| Closing during a file operation | what happens to a running copy when the last window closes | open question 1 | 6.2 item 8 |
+| Rename from Explorer's menu | | -- | 6.4 |
+| Freeing `pidl:n` tokens | | -- | 6.4 |
+
+Moved out: Explorer's menu for items from different folders (the shell makes none) to Foldex's own menu, plan 06 3.4.
 
 ## 3. Details
 
@@ -157,33 +189,6 @@ CDP-driven test copy as in LexPen.
 1. **Closing Foldex while a file operation runs.** Closing the last window ends the process, and with it the copy
    (6.2, item 8). Foldex keeps running without a window until the operations are done (Windows' own progress dialog
    stays), or asks first, or both? Suggestion: ask, with "Keep running until done" as the default answer.
-
-## 5. Status
-
-### Built
-
-- Option A: the page draws everything, the host does the shell work, asynchronously (3.2; 6.1).
-- Listing folders and the shell namespace (This PC, Network, Recycle Bin) as shell items, in batches, cancellable; the
-  Recycle Bin's items by `pidl:n` ids (3.1; 6.1, 6.2 items 1 and 5).
-- System icons by type, own icons per row in view (3.1; 6.1).
-- Explorer's context menu for one folder's items (3.1; 6.2 item 3).
-- Dragging out through the host's native drag, with a drop source of Foldex's own; dropping in from Explorer (3.6;
-  6.2 item 2).
-- File operations through `IFileOperation`, kept by the host (3.1, 3.5; 6.1).
-- Windows preview handlers in a native panel, with the snapshot swap for page popups (3.3; 6.2 item 4).
-- The elevated helper, listing only (3.4; 6.1, plan 05).
-- Processes of Foldex's own, the page recreated after a failure, a copy going on meanwhile (3.5; 6.2 item 8).
-- Dropping Outlook mails into the page, reporting what came along (3.6; 6.2 item 9).
-
-### Not yet built
-
-- The checks by hand of 6.3: drag out and in, Explorer's menu with the mouse and its submenus, Outlook, listing
-  through UAC.
-- Explorer's menu for items from different folders: the shell makes none; Foldex's own menu is plan 06 3.4.
-- A drop target of the host's own for Outlook's virtual files, if WebView2 does not pass them (3.6; after the check
-  by hand).
-- Closing Foldex while a file operation runs: open question 1.
-- Rename from Explorer's menu; freeing the `pidl:n` tokens (6.4).
 
 ## 6. As built (spike, 2026-11-10)
 

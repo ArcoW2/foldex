@@ -1,6 +1,10 @@
 # Plan 08: Fonts for the window and the panes
 
-Status: draft 2026-11-10; executed 2026-11-10, revised and executed 2026-11-10 (icons that grow with the rows); see 6. As built.
+Status: executed; see 6. As built.
+
+- 2026-11-10: draft.
+- 2026-11-10: executed.
+- 2026-11-10: revised and executed: icons that grow with the rows.
 
 ## 1. What this is about
 
@@ -14,6 +18,19 @@ Two fonts in the settings, as LexPen's app and editor fonts: one for the window 
 status line, settings window) and one for the inside of the panes (the rows of trees and lists), each a font and a
 size. Ctrl+mouse wheel over any pane changes the pane size, for all panes alike, and keeps it as the setting. Rows
 and their icons grow and shrink with the pane font.
+
+## Status
+
+### Built
+
+| Part | What | Reference |
+|---|---|---|
+| Font settings | `appFont`, `appSize`, `paneFont`, `paneSize` | 3.1 |
+| Settings window rows | `font` and `size`, in a group Fonts | 3.2 |
+| Ctrl+mouse wheel | over a pane, written once the wheel rests | 3.3 |
+| Rows and icons | rows follow the pane font; icons grow with the rows from the 16, 32 or 48 px source | 3.4 |
+
+### Not yet built
 
 ## 3. Details
 
@@ -67,19 +84,6 @@ and their icons grow and shrink with the pane font.
 ## 4. Open questions
 
 None.
-
-## 5. Status
-
-### Built
-
-- The settings `appFont`, `appSize`, `paneFont`, `paneSize` (3.1).
-- The settings window's rows `font` and `size`, in a group Fonts (3.2).
-- Ctrl+mouse wheel over a pane, written once the wheel rests (3.3).
-- Rows that follow the pane font; icons that grow with the rows from the 16, 32 or 48 px source (3.4).
-
-### Not yet built
-
-Nothing.
 
 ## 6. As built
 

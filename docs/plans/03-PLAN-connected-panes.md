@@ -1,9 +1,14 @@
 # Plan 03: Connected panes and branches
 
-Status: draft 2026-11-10, revised 2026-11-10 (collection panes, plan 06; state per branch; default layout, executing;
-parent and child, the open questions answered; detach, attach and tabs: plan 12); partly executed 2026-11-10 (stage 1:
-the model, the default layout, executing; then detach, attach, branch colour, pinning, keys, back and forward,
-watching folders); see 5. Status and 6. As built. The core idea of Foldex.
+Status: partly executed; see Status and 6. As built.
+
+- 2026-11-10: draft.
+- 2026-11-10: revised: collection panes (plan 06); state per branch; default layout, executing; parent and child, the
+  open questions answered; detach, attach and tabs (plan 12).
+- 2026-11-10: partly executed, stage 1: the model, the default layout, executing.
+- 2026-11-10: partly executed: detach, attach, branch colour, pinning, keys, back and forward, watching folders.
+
+The core idea of Foldex.
 
 ## 1. What this is about
 
@@ -24,6 +29,41 @@ A window opens with two panes: on the left the root, a pane without a parent tha
 rest its child, showing files and folders of the folder focused in the root. Double-clicking an item executes it: a
 file opens as Windows opens it; a folder is opened by the pane's parent, so the child then shows it; in a pane without
 a parent the folder expands in place, as in a tree.
+
+## Status
+
+### Built
+
+| Part | What | Reference |
+|---|---|---|
+| Model | panes, roots, parent and child, a cycle refused, branch colours, a state per branch, activation restoring the panes above, JSON for the project | 3.1; 6.1 |
+| Following | with the debounce | 3.3 |
+| Executing | a file opens; a folder in a child is opened by its parent; without a parent a tree expands in place and a list opens it in itself | 3.3 |
+| Open as a switch | Up and a typed path in a child go through the parent | 3.3 |
+| Pinning | a pin button in the head; unpinned, the child catches up | 3.3 |
+| Default layout | the root tree at the left, folders only, links marked; its child list | 3.5; 6.1 |
+| Pane actions | New pane, New child pane (at the right), Close pane, Next and Previous pane | 3.4; 6.1 |
+| New branch | a new child starts a branch in an unused colour, copying kind and content of the current child | 3.1 |
+| Detach | a child becomes a root on what it shows and keeps its children | 3.1; plan 12 3.2 |
+| Attach | the connector in a pane's head dragged onto another pane; a cycle refused | 3.4 |
+| Branch colour | `branch.colour` 1 to 6: a free colour makes a branch of its own, a sibling's colour joins that branch | 3.1, 3.4 |
+| Heads | in the branch colour; the branch marks in a parent's head | 3.4 |
+| Focus | ring and head in the branch colour; a parent drawn in the colour of the path it serves | 3.4 |
+| Keys between panes | to the parent, the child, the next branch | 3.6 |
+| Back and forward | per branch, a selection kept with its step | 3.6 |
+| Watching folders | | 3.8 |
+
+### Not yet built
+
+| Part | What | Waits for | Reference |
+|---|---|---|---|
+| View settings per pane | content, view, sort, filter changeable per pane; a list ignores content | -- | 3.1 |
+| Hidden files per pane | now one `showHidden` for every pane | -- | 3.1; plan 01 6.2 |
+| Debounce delay setting | fixed at 150 ms now | -- | 3.3; 6.1 |
+| Layout in the project | | plan 01's projects | 3.7 |
+| Other presets | presets other than the default | -- | 3.5 |
+
+Moved out: a child below, as a tab or floating, New tab, Attach to, the pane header's menu, to plan 12.
 
 ## 3. Details
 
@@ -164,42 +204,6 @@ position kept), a tree the folder's subfolders.
 ## 4. Open questions
 
 None.
-
-## 5. Status
-
-### Built
-
-- The model of 3.1 without DOM: panes, roots, parent and child, a cycle refused, branch colours, a state per branch,
-  activation restoring the panes above, JSON for the project (6.1).
-- Following, with the debounce (3.3).
-- Executing: a file opens; a folder in a child is opened by its parent; in a tree without a parent it expands in
-  place; in a list without a parent it opens in that list (3.3).
-- Open as a switch; Up and a typed path in a child go through the parent (3.3).
-- Pinning a child: a pin button in the head; unpinned, it catches up (3.3).
-- The default layout: the root tree at the left, folders only, links marked; its child list (3.5; 6.1).
-- New pane, New child pane (at the right), Close pane, Next and Previous pane (3.4; 6.1).
-- A new child starts a new branch in an unused colour and copies the settings (kind, content) of the current child
-  (3.1).
-- Detach: a child becomes a root on what it shows and keeps its children (3.1; plan 12 3.2).
-- Attach: the connector in a pane's head dragged onto another pane; a cycle refused (3.4).
-- Branch colour, as the action `branch.colour` 1 to 6: a free colour makes a branch of its own, a sibling's colour
-  joins that branch (3.1, 3.4).
-- Heads in the branch colour; the branch marks in a parent's head (3.4).
-- Focus as LexPen's: the ring and the head in the branch colour (3.4). A parent is drawn in the colour of the path it
-  serves: the colour of the last pane down the branches shown, so with a grandchild in a new branch focused, every
-  parent up to the root takes that colour (dull, the focused pane bright).
-- Keys between panes: to the parent, the child, the next branch (3.6).
-- Back and forward per branch, a selection kept with its step (3.6).
-- Watching folders (3.8).
-
-### Not yet built
-
-- A child below, as a tab or floating; New tab; Attach to as a submenu; the pane header's menu: moved to plan 12.
-- View settings per pane that can be changed: content, view, sort, filter (3.1); a list ignores content.
-- Hidden files as a view setting per pane (3.1); for now one setting for every pane, `showHidden` (plan 01 6.2).
-- The debounce delay as a setting (3.3); it is fixed at 150 ms (6.1).
-- Saving the layout in the project (3.7, needs plan 01's projects).
-- The presets other than the default (3.5).
 
 ## 6. As built
 

@@ -1,7 +1,12 @@
 # Plan 07: Themes, branch colours and the settings window
 
-Status: draft 2026-11-10, revised 2026-11-10 (no theme sets, every LexPen theme, six branch colours, the settings
-window); executed 2026-11-10; see 6. As built. Takes the themes row and the settings window of plan 01 3.3 out into a plan of their own.
+Status: executed; see 6. As built.
+
+- 2026-11-10: draft.
+- 2026-11-10: revised: no theme sets, every LexPen theme, six branch colours, the settings window.
+- 2026-11-10: executed.
+
+Takes the themes row and the settings window of plan 01 3.3 out into a plan of their own.
 
 ## 1. What this is about
 
@@ -18,6 +23,20 @@ over, with its app colours only. Settings `themeLight` and `themeDark` pick the 
 whole window. A branch is a place in the theme's list (the first, second, ... colour), not a colour name, so changing
 theme recolours every branch at once. A settings window as LexPen's shows every setting as a row; a change applies at
 once in every Foldex window.
+
+## Status
+
+### Built
+
+| Part | What | Reference |
+|---|---|---|
+| Theme files | name, base, the colours that differ, six branch colours; yours replacing shipped ones | 3.1 |
+| Branches | places 0 to 5 in the theme's list | 3.2 |
+| Applying | `themeLight` and `themeDark`, the host resolving every chain, a change applied at once in every window, problems in the status line | 3.3 |
+| Shipped themes | every LexPen theme, `light` and `dark` as the roots | 3.4 |
+| Settings window | | 3.5 |
+
+### Not yet built
 
 ## 3. Details
 
@@ -108,21 +127,6 @@ As LexPen's (`SettingsForm.cs`, `web/settings.html`, `settings.js`), cut down:
 ## 4. Open questions
 
 None.
-
-## 5. Status
-
-### Built
-
-- Theme files: name, base, the colours that differ, six branch colours; yours replacing shipped ones (3.1).
-- Branches as places 0 to 5 in the theme's list (3.2).
-- Applying: `themeLight` and `themeDark`, the host resolving every chain, a change applied at once in every window,
-  problems in the status line (3.3).
-- Every LexPen theme shipped, `light` and `dark` as the roots (3.4).
-- The settings window (3.5).
-
-### Not yet built
-
-Nothing.
 
 ## 6. As built
 

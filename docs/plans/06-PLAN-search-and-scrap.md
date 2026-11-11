@@ -1,6 +1,10 @@
 # Plan 06: Search and scrap: panes of items from anywhere
 
-Status: draft 2026-11-10; not started. Builds on plan 03 (connected panes).
+Status: not started.
+
+- 2026-11-10: draft.
+
+Builds on plan 03 (connected panes).
 
 ## 1. What this is about
 
@@ -16,6 +20,20 @@ what a search found, a scrap pane what was put in it. Both are panes like any ot
 source for followers, so a folder focused in a result drives the next pane and a file drives the preview. Every file
 action works on a collection as on a folder, so copying copies items from several locations at once. Delete only takes
 an item out of the collection; Alt+Delete deletes it from disk and from the pane.
+
+## Status
+
+### Built
+
+### Not yet built
+
+| Part | What | Waits for | Reference |
+|---|---|---|---|
+| Collections | entries by parsing name, the folder column, grouping, watched entries, branches | -- | 3.1 |
+| Search pane | criteria, scope, streaming results, engines, saved criteria | collections | 3.2 |
+| Scrap pane | filled by drag, action and paste, saved in the project, more than one | collections; saving: plan 01's projects | 3.3 |
+| File actions on a collection | Delete, Alt+Delete, Alt+Shift+Delete | collections | 3.4 |
+| Own menu for mixed folders | Foldex's own menu for items from different folders | collections | 3.4 |
 
 ## 3. Details
 
@@ -91,17 +109,3 @@ an item out of the collection; Alt+Delete deletes it from disk and from the pane
 5. **Search engines.** Foldex's own walk only, or also the Windows Search index and Everything when present?
 6. **Collections in collections.** A scrap holding a search pane's current results as a snapshot (Add all to scrap):
    wanted?
-
-## 5. Status
-
-### Built
-
-Nothing yet.
-
-### Not yet built
-
-- Collections: entries by parsing name, the folder column, grouping, watched entries, branches (3.1).
-- The search pane: criteria, scope, streaming results, engines, saved criteria (3.2).
-- The scrap pane: filled by drag, action and paste, saved in the project, more than one (3.3).
-- File actions on a collection, Delete, Alt+Delete and Alt+Shift+Delete (3.4).
-- Foldex's own menu for items from different folders (3.4).

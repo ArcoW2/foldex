@@ -1,8 +1,12 @@
 # Plan 01: Foundation: solution layout and what comes from LexPen
 
-Status: draft 2026-11-10, revised 2026-11-10; partly executed 2026-11-10 (the host: 3.1, 3.2, 3.6; actions, keys, F1
-and the ribbon: 3.3, 3.4), the rest of 3.3 to 3.5 not started; see 5. Status and 6. As built. The number in the
-file name is the priority; rename to reorder.
+Status: partly executed; see Status and 6. As built.
+
+- 2026-11-10: draft.
+- 2026-11-10: revised.
+- 2026-11-10: partly executed: the host (3.1, 3.2, 3.6); actions, keys, F1 and the ribbon (3.3, 3.4).
+
+The number in the file name is the priority; rename to reorder.
 
 ## 1. What this is about
 
@@ -17,6 +21,38 @@ The same layout and host shape as LexPen: `Foldex.sln` at the top, the app in `s
 data folder in `%LOCALAPPDATA%\Foldex` and read-only defaults next to the exe. This plan creates `src` and `tests`.
 LexPen's generic parts (ribbon, actions and keys, macros, themes, settings, projects, docking) are copied and adapted:
 Foldex and LexPen are separate projects and share no code. How the UI is drawn follows plan 02.
+
+## Status
+
+### Built
+
+| Part | What | Reference |
+|---|---|---|
+| Folder layout | `Foldex.sln`, `src`, `tests`, `docs/plans` | 3.1 |
+| Host shape | .NET 10 WinForms, single file, version by commit count, defaults next to the exe | 3.2; 6.1 |
+| Single instance | one instance, its windows, the pipe; from LexPen | 3.3; 6.1 |
+| Data folder and settings | the data folder, `FOLDEX_DATA`, the settings; from LexPen | 3.2, 3.3; 6.1 |
+| Page recovery | the page recreated after a renderer or browser failure | plan 02 3.5; 6.1 |
+| Actions and keys | actions, key bindings, F1 with every action | 3.3, 3.4; 6.2 |
+| Ribbon, basic | tabs, groups, large and small buttons, greyed out and lit as the actions say | 3.3; 6.2 |
+| First actions | open, properties, delete, copy, cut, paste, copy path, select all, new folder, up, refresh, hidden items, preview, new pane, new child pane, close pane, next and previous pane | 3.4; 6.2 |
+| Pane actions | detach, attach, branch colour, back, forward, next branch | plan 03 |
+| Themes and settings window | | plan 07 |
+| Tests project | | 3.6; 6.3 |
+
+### Not yet built
+
+| Part | What | Waits for | Reference |
+|---|---|---|---|
+| Ribbon, the rest | icons, split buttons, drop-down lists, key tips, change mode, collapsing | -- | 3.3 |
+| Menus | | -- | 3.3 |
+| Macros | | -- | 3.3 |
+| Projects and window sessions | | -- | 3.3, 3.5 |
+| From LexPen | rename, folder compare, git status | the Git status column: plan 11 | 3.3 |
+| The rest of the actions | open with, open in LexPen, new file, rename, delete permanently, select by pattern, filter, sort, view mode, take ownership | take ownership: plan 05 | 3.4 |
+| Own icon | an icon of Foldex's own | -- | 6.1 |
+
+Moved out: docking to plan 12, the viewers to plan 04. The order of the rest: open question 1.
 
 ## 3. Details
 
@@ -87,40 +123,9 @@ locations, the theme set; saved continuously, opened from the Projects menu and 
 
 ## 4. Open questions
 
-1. **The order of the rest (5. Status, Not yet built).** Each part taken out of LexPen's editor page on its own, on
+1. **The order of the rest (Status, Not yet built).** Each part taken out of LexPen's editor page on its own, on
    top of the host. Suggestion: first the plan 02 spike (it needs only this host); then actions and keys (F1), the
    ribbon, themes, the settings window, projects, macros, docking; the viewers with plan 04.
-
-## 5. Status
-
-### Built
-
-- The folder layout: `Foldex.sln`, `src`, `tests`, `docs/plans` (3.1).
-- The host shape: .NET 10 WinForms, single file, version by commit count, one instance with a pipe, the data folder
-  and `FOLDEX_DATA`, defaults next to the exe (3.2; 6.1).
-- From LexPen: single instance, windows and pipe; the data folder and settings (3.3; 6.1).
-- The page recreated after a renderer or browser failure (plan 02 3.5; 6.1).
-- Actions and keys, F1 with every action (3.3, 3.4; 6.2).
-- The ribbon: tabs, groups, large and small buttons, greyed out and lit as the actions say (3.3; 6.2).
-- The first actions: open, properties, delete, copy, cut, paste, copy path, select all, new folder, up, refresh, hidden
-  items, preview, new pane, new child pane, close pane, next and previous pane (3.4; 6.2); detach, attach and branch
-  colour (plan 03).
-- Themes and the settings window: plan 07, built.
-- The tests project (3.6; 6.3).
-
-### Not yet built
-
-- The ribbon's icons, split buttons and drop-down lists, key tips, change mode and collapsing (3.3).
-- The menus (3.3).
-- Macros (3.3).
-- Projects and window sessions (3.3, 3.5).
-- Docking: moved to plan 12.
-- The viewers: plan 04.
-- Rename, folder compare, git status from LexPen (3.3; the Git status column: plan 11).
-- The rest of the actions of 3.4: open with, open in LexPen, back, forward, new file, rename, delete permanently,
-  select by pattern, filter, sort, view mode, next branch, take ownership (plan 05).
-- An icon of Foldex's own (6.1).
-- The order of all this: open question 1.
 
 ## 6. As built
 

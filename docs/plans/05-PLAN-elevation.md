@@ -1,7 +1,12 @@
 # Plan 05: Elevated rights
 
-Status: draft 2026-11-10, revised 2026-11-10; partly built 2026-11-10 through plan 02's spike (the elevated helper,
-listing only; file operations through `IFileOperation`) and the compatibility junctions; see 5. Status.
+Status: partly executed; see Status.
+
+- 2026-11-10: draft.
+- 2026-11-10: revised.
+- 2026-11-10: partly executed through plan 02's spike: the elevated helper, listing only; file operations through
+  `IFileOperation`.
+- 2026-11-10: partly executed: the compatibility junctions.
 
 ## 1. What this is about
 
@@ -17,6 +22,26 @@ per operation exactly as Explorer does, so copying into a protected folder needs
 helper: the same exe, started on demand through UAC, doing only a fixed set of operations asked over a private pipe,
 its results going back to the host. Foldex itself, and with it WebView2, never runs elevated: there is no elevated
 window.
+
+## Status
+
+### Built
+
+| Part | What | Reference |
+|---|---|---|
+| File operations | through `IFileOperation`; copying into a protected location not tried yet | 3.4; plan 02 6.1 |
+| Elevated helper | started with `runas`, pipe for the user only, accepting only its parent; one operation: listing; "List as administrator" when access is denied | 3.3; plan 02 6.1, plan 03 6.1 |
+| Compatibility junctions | a junction that denies listing: its target listed instead | 3.1 |
+
+### Not yet built
+
+| Part | What | Waits for | Reference |
+|---|---|---|---|
+| Permissions and ownership | take ownership through the helper | -- | 3.1 |
+| Links without developer mode | symbolic links and junctions | -- | 3.1 |
+| SYSTEM and TrustedInstaller folders | | take ownership | 3.1 |
+| Helper lifetime | stays a while after its last operation, the time as a setting, the shield in the ribbon | -- | 3.3 |
+| Checks by hand | including copying into a protected location and listing through UAC | -- | 3.4; plan 02 6.3 |
 
 ## 3. Details
 
@@ -64,22 +89,3 @@ window.
 ## 4. Open questions
 
 None.
-
-## 5. Status
-
-### Built
-
-- File operations through `IFileOperation` (plan 02 6.1); copying into a protected location with Windows' prompt not
-  tried yet (3.4).
-- The elevated helper: started with `runas`, the pipe for the user only, the helper accepting only its parent, one
-  operation: listing a folder (3.3; plan 02 6.1); "List as administrator" when access is denied (plan 03 6.1).
-  Listing through UAC: by hand (plan 02 6.3).
-- Compatibility junctions that deny listing: the junction's target listed instead (3.1).
-
-### Not yet built
-
-- Permissions and ownership (take ownership) through the helper (3.1).
-- Symbolic links and junctions without developer mode (3.1).
-- Folders owned by SYSTEM or TrustedInstaller, after taking ownership (3.1).
-- The helper staying a while after its last operation, the time as a setting, the shield in the ribbon (3.3).
-- The checks by hand of 3.4.
