@@ -1,6 +1,6 @@
 # Plan 10: Bars
 
-Status: not started.
+Status: executed; see 6. As built.
 
 - 2026-11-10: draft.
 - 2026-11-10: revised: bars dock at any side; overflow a choice per bar; the bar that fills.
@@ -8,6 +8,7 @@ Status: not started.
   bars that fill share the rest by their normal sizes; the Size window with coloured marks.
 - 2026-11-11: revised: no checkboxes in the Size window; a bar of buttons sized in buttons.
 - 2026-11-11: revised: no minimum share of the window.
+- 2026-11-11: executed.
 
 ## 1. What this is about
 
@@ -31,20 +32,20 @@ shows the limits as coloured marks on the bar, and Foldex writes your copy.
 
 ### Built
 
-### Not yet built
+| Part | What | Reference |
+|---|---|---|
+| Dock sides | bars at any dock side, in lines | 3.1; 6.1 |
+| Sizes | minimum, normal, maximum, maximum share of the window; growing with the content | 3.1; 6.1 |
+| Fill | bars that fill share the rest by their normal sizes, down to their minimum | 3.1; 6.1 |
+| Size window | the fields with colour swatches; the limits as coloured marks on the bar while it is open | 3.3; 6.1 |
+| Overflow | per bar: `more` or `scroll` | 3.1; 6.1 |
+| Path bar | | 3.2; 6.1 |
+| Drives bar | with drives that come and go | 3.2; 6.1 |
+| Name and version | in the window title and F1's About; the default first row | 3.2; 6.1 |
+| `bars.json` and changing bars | dragging, the bar's menu | 3.3; 6.1 |
+| Code | `BarsFile.cs` and `web/bars.js` | 3.4; 6.1 |
 
-| Part | What | Waits for | Reference |
-|---|---|---|---|
-| Dock sides | bars at any dock side, in lines | -- | 3.1 |
-| Sizes | minimum, normal, maximum, maximum share of the window; growing with the content | -- | 3.1 |
-| Fill | bars that fill share the rest by their normal sizes, down to their minimum | -- | 3.1 |
-| Size window | the fields with colour swatches; the limits as coloured marks on the bar while it is open | -- | 3.3 |
-| Overflow | per bar: `more` or `scroll` | -- | 3.1 |
-| Path bar | | -- | 3.2 |
-| Drives bar | with drives that come and go | -- | 3.2 |
-| Name and version | in the window title and F1's About; the default first row | -- | 3.2 |
-| `bars.json` and changing bars | dragging, the bar's menu | -- | 3.3 |
-| Code | `BarsFile.cs` and `web/bars.js` | -- | 3.4 |
+### Not yet built
 
 ## 3. Details
 
@@ -89,8 +90,8 @@ shows the limits as coloured marks on the bar, and Foldex writes your copy.
 - **Drives**: a button per drive in This PC, by letter (as the tree sorts them): letter, label in the tooltip, an
   optional thin free-space mark. A click: the active pane's parent goes to that drive, as a typed path. Drives that
   come or go (a USB stick, a mapped drive) are added or taken away at once (the host listens to Windows' device
-  messages). Default: top, growing with its content, sizes `[not yet chosen]`. Docked left or right it is a column of
-  drives that grows down as drives come in, up to its maximum.
+  messages). Default: top, growing with its content: min 2, normal 4, max 6 drives, at most 30% of the window. Docked
+  left or right it is a column of drives that grows down as drives come in, up to its maximum.
 - Later kinds, each with its own plan when chosen (`docs/xplorer2-features.md`): bookmarks, a quick filter, user
   commands, the status line.
 - The name and version move to the window title and F1's About; the strip they are in now becomes the default first
@@ -137,3 +138,51 @@ shows the limits as coloured marks on the bar, and Foldex writes your copy.
 ## 4. Open questions
 
 None.
+
+## 6. As built
+
+### 6.1 Built (2026-11-11, branch `plan01-foundation`)
+
+- `BarsFile.cs`: reads `defaults\bars.json` or yours (yours replaces it whole), keeps per side the lines and per line
+  the bars, and reports a wrong kind, side, size, share or overflow (left out); `Save` writes yours through a `.tmp`
+  file; `SaveBars(null)` removes yours (Reset the bars).
+- `Shell\Drives.cs`: the drives with the shell's name (`Local Disk (C:)`), size and free space when ready, on an STA
+  thread. `MainForm` tells the page the drives when asked, on Windows' device messages (arrival, removal), and when
+  the letters change, looked at every 4 s (a drive made with `subst` or mapped sends no device message).
+- `web/bars.js`: the size rules as pure functions (`barPx`, `lineLengths`, `fitItems`), run by the tests under Jint;
+  drawing the lines at each side (`#bars-top`, `#bars-bottom`, `#bars-left`, `#bars-right` around the panes); the drives
+  bar (a button per drive, the current one framed, a thin mark of the space used, the name and free space in the
+  tooltip, a click takes the active pane's parent there); the path bar (the location box in a row, the folders as
+  buttons in a column); `>>` with the rest in a menu, or scrolling by the wheel; the bar's menu (Size..., Fill the rest,
+  Overflow, Free space, Side, Add a bar, Remove this bar); dragging by the grip (the place it lands marked: before or
+  after a bar, or a new line at a side) and by its end (the normal size); the Size window (not modal, so the window can
+  be resized while the marks follow).
+- The strip with the name, version and location box is gone: the version is in the window title
+  (`Foldex 1.0.n - project`) and at the top of F1's list; the location box is the path bar. View > Bars on the ribbon:
+  Add path bar, Add drives bar, Reset bars (also in F1), so a window without bars can get them back.
+- Decided while building:
+  - A size in buttons includes the bar's grip and padding, and the `>>` when there are more buttons than that: the
+    drives example shows 6 drives and `>>` at its maximum. In a column the `>>` is a button high, so one more drive
+    shows in its place when that is all that is left.
+  - The shipped drives bar: min 2, normal 4, max 6, at most 30%, as the example of 3.1; the path bar fills, normal 300,
+    min 120 px.
+  - Bars are the same in every window; a change in one is written and every window draws it again.
+  - Dragging uses marks of its own, not plan 01's dock marks: a bar lands in a line or a new line, not in an area.
+
+### 6.2 How it was tested
+
+- `dotnet test`: Failed 0, Passed 131 (`BarsTests`: the shipped bars; yours replaces them; wrong entries reported and
+  left out; writing keeps the file readable; the drives example (2 drives: normal, 10: max and `>>`, a window of 500
+  px: 30%, of 100 px: min); a bar without a max above its normal does not grow; bars that fill share by their normals;
+  one stops at its minimum while the other shrinks on; a line too short takes from the filling bars, then the others,
+  then hides; what goes behind `>>`).
+- Test copy over CDP: the default row (drives C: and D:, room for 4; the path filling the rest); drives made with
+  `subst` came in by themselves (5 drives: the bar grew from 112 to 137 px, the path shrank), with 7 drives 6 and
+  `>>`, its menu the seventh by name; a drive button took the tree to C:\ and framed C:; Side > Left: a column of
+  drives (and `bars.json` written); a path bar at the right: the folders under each other; the Size window: its four
+  marks in their colours on the drives bar, the 30% mark further along; Scroll: no `>>`, the wheel scrolls; the end
+  dragged: the normal size written; the grip dragged onto the path bar's right half: the drives after the path; onto
+  the bottom: a new line there; the `subst` drives removed: gone from the bar; Reset bars: your file removed, the
+  shipped bars back.
+- Not tried: a USB stick (the device message), a window narrowed by hand until the 30% cuts in (the rule is in the
+  tests), dragging with a real mouse.

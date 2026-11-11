@@ -11,6 +11,7 @@ const TreeTop = ['shell:Profile', ThisPC, Network, RecycleBin];
 const $ = id => document.getElementById(id);
 let settings = {};
 let themes = {};   // every theme, complete (ThemeFile.cs; look.js)
+let version = '';  // Foldex's, for F1 (palette.js)
 
 // What the test copy reads over the debugging port.
 window.__spike = { lists: [], events: [] };
@@ -182,7 +183,7 @@ function activate(id) {
   for (const changed of layout.activate(id)) views.get(changed)?.restore();
   for (const v of views.values()) v.el.classList.toggle('active', v.id === id);
   drawHeads();   // and the tabs (drawTabs): the active pane's tab is the bright one
-  $('location').value = views.get(id)?.locationText() ?? '';
+  showLocation(views.get(id)?.locationText() ?? '');
 }
 
 // Each head in the colour of the path it serves (Layout.pathColour); a parent has a mark per branch it feeds, in the order the branches were made (the
@@ -459,7 +460,7 @@ class TreeView {
     const i = this.flat.indexOf(n);
     if (i >= 0) scrollIntoView(this.body, i);
     this.render();
-    if (activePane === this.id) $('location').value = this.locationText();
+    if (activePane === this.id) showLocation(this.locationText());
     ribbonRefresh();
   }
 
@@ -573,7 +574,7 @@ class ListView {
     this.message = null;
     this.body.scrollTop = 0;
     this.el.querySelector('.title').textContent = location ?? '';
-    if (activePane === this.id) $('location').value = location ?? '';
+    if (activePane === this.id) showLocation(location ?? '');
     this.render();
     tellWatched();
     if (!location) return;
@@ -1521,9 +1522,6 @@ function settingsProblems(m) {
   if (problems.length) status(problems.join(' '), true);
 }
 
-$('location').addEventListener('keydown', e => {
-  if (e.key === 'Enter' && activePane) goTo(activePane, $('location').value.trim());
-});
 
 // The mouse's back and forward buttons (plan 17 3.3): Back and Forward on the pane with the focus, not the browser's
 // own (the page has no history to go to).
@@ -1562,13 +1560,19 @@ const events = {
     applyTheme();
     setKeys(m.keys);
     setRibbon(m.ribbon);
-    $('version').textContent = m.version + (m.commit ? ` (${m.commit})` : '');
+    version = m.version + (m.commit ? ` (${m.commit})` : '');
+    setBars(m.bars);
+    post({ op: 'drives' });
     for (const o of m.ops) ops.set(o.id, o);
     showOps();
     settingsProblems(m);
     showProject(m.project);
     start(m.paths, m.layout);
   },
+  // Bars changed in a window (plan 10 3.3), and the drives there are now (3.2).
+  bars(m) { setBars(m.bars); },
+  barsFailed(m) { status(`The bars could not be written: ${m.error}`, true); },
+  drives(m) { setDrives(m.drives); },
   // The window's project renamed, or the window moved to another (plan 15 3.6).
   project(m) { showProject(m.project); },
   // A pane chosen in the Projects menu (plan 15 3.6): the focus to it, its tab shown.

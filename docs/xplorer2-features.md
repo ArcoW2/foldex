@@ -26,11 +26,11 @@ updated whenever a plan is written, built or closed that touches a feature here.
 | Folder tree, follows active folder | P+ | built | 5 | -- |
 | Two trees (one per pane) | P+ | built (any number of roots) | 5 | -- |
 | Ribbon or menu bar, quick access toolbar | All | part: ribbon built; menus, QAT -- | 5 | -- |
-| Drive bar with free space | P+ | plan 10 (drives bar) | 5 | bars (plan 10) |
+| Drive bar with free space | P+ | built (plan 10, drives bar) | 5 | bars (plan 10) |
 | Detachable, floating, docked panes | P+ | built (plan 12); floating: plan 14 | 4 | -- |
 | Miller columns | P+ | plan 03 (preset "columns") | 4 | presets (plan 03) |
 | Named window layouts (workspaces) | P+ | built (plan 15): projects, a default layout | 4 | -- |
-| Address bar: breadcrumbs, typed path, autocomplete | P+ | part: typed path built; as a bar: plan 10 | 4 | bars (plan 10) |
+| Address bar: breadcrumbs, typed path, autocomplete | P+ | part: the path bar (plan 10), typed; breadcrumbs in a column; autocomplete -- | 4 | bars (plan 10) |
 | Back / forward / up | P+ | built (per pane, plan 17; the mouse's buttons too) | 4 | -- |
 | Frequent folders, jump list | P+ | -- | 4 | Back / forward / up (the history) |
 | Bookmarks (keys, icons, dual bookmarks) | P+ | -- | 4 | bars (plan 10), for a bookmark bar |
@@ -129,7 +129,7 @@ updated whenever a plan is written, built or closed that touches a feature here.
 | Feature | Edition | Foldex | Prio | Depends on |
 |---|---|---|---|---|
 | Keyboard remapping, command finder | P+ | built (keys.json, F1) | 5 | -- |
-| Custom toolbars, skins | P+ | part: ribbon.json; bars plan 10; icons -- | 5 | bars (plan 10); ribbon icons (plan 01) |
+| Custom toolbars, skins | P+ | part: ribbon.json; bars (plan 10) built; icons -- | 5 | bars (plan 10); ribbon icons (plan 01) |
 | Dark mode, themes | P+ | built (plan 07); a pane theme per branch: built (plan 13) | 5 | -- |
 | Fonts | P+ | built (plan 08) | 5 | -- |
 | Options window with search | P+ | built (plan 07) | 5 | -- |

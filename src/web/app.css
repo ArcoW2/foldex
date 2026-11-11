@@ -82,27 +82,220 @@ body {
   flex-direction: column;
 }
 
-#bar {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  padding: 6px 8px;
-  border-bottom: 1px solid var(--border);
-}
-
-#brand {
-  font-weight: 600;
-  margin-right: 8px;
-}
-
-#version {
-  color: var(--fg-dim);
-  font-weight: normal;
-}
-
-#location {
+/* The bars (docs/plans/executed/10-PLAN-bars.md; bars.js): at the top and bottom rows of bars under each other, at the left
+   and right columns next to each other; a bar's length is set by bars.js (flex-basis), the other size follows its
+   content. */
+#middle {
   flex: 1;
-  min-width: 100px;
+  display: flex;
+  min-height: 0;
+}
+
+#middle > #panes {
+  min-width: 0;
+}
+
+.bars {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-bar);
+}
+
+#bars-left, #bars-right {
+  flex-direction: row;
+}
+
+#bars-top:not(:empty) { border-bottom: 1px solid var(--border); }
+#bars-bottom:not(:empty) { border-top: 1px solid var(--border); }
+#bars-left:not(:empty) { border-right: 1px solid var(--border); }
+#bars-right:not(:empty) { border-left: 1px solid var(--border); }
+
+.bar-line {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+}
+
+#bars-top .bar-line + .bar-line, #bars-bottom .bar-line + .bar-line { border-top: 1px solid var(--border); }
+#bars-left .bar-line + .bar-line, #bars-right .bar-line + .bar-line { border-left: 1px solid var(--border); }
+
+#bars-left .bar-line, #bars-right .bar-line {
+  flex-direction: column;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+  padding: 3px 4px 3px 0;
+  box-sizing: border-box;
+}
+
+#bars-left .bar, #bars-right .bar {
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0 3px 4px;
+}
+
+.bar + .bar { border-left: 1px solid var(--border); }
+#bars-left .bar + .bar, #bars-right .bar + .bar { border-left: none; border-top: 1px solid var(--border); }
+
+/* The grip: dragging it moves the bar. */
+.bar-grip {
+  flex: none;
+  align-self: stretch;
+  width: 8px;
+  cursor: grab;
+  background: radial-gradient(circle, var(--fg-dim) 1px, transparent 1.5px) center / 4px 4px repeat-y;
+  opacity: .5;
+}
+
+#bars-left .bar-grip, #bars-right .bar-grip {
+  width: auto;
+  height: 8px;
+  background-repeat: repeat-x;
+}
+
+.bar-body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+#bars-left .bar-body, #bars-right .bar-body {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.bar-body.scrolls {
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+/* Its end: dragging it sets the normal size. */
+.bar-end {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: ew-resize;
+}
+
+#bars-left .bar-end, #bars-right .bar-end {
+  left: 0;
+  right: 0;
+  top: auto;
+  width: auto;
+  height: 4px;
+  cursor: ns-resize;
+}
+
+.bar-path {
+  flex: 1;
+  min-width: 40px;
+}
+
+.bar-item, .bar-more, .line-more {
+  flex: none;
+  position: relative;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  color: var(--fg);
+  font: inherit;
+  padding: 1px 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bar-item:hover, .bar-more:hover, .line-more:hover {
+  background: var(--hover);
+}
+
+.bar-item.current {
+  border-color: var(--accent);
+}
+
+.segment {
+  text-align: left;
+}
+
+/* A drive's space used: a thin mark along its foot. */
+.drive .used {
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  bottom: 1px;
+  height: 2px;
+  background: linear-gradient(to right, var(--accent) var(--used), var(--border) var(--used));
+}
+
+.bar-more, .line-more {
+  color: var(--fg-dim);
+  padding: 1px 0;
+  width: 24px;   /* bars.js MoreLength */
+  box-sizing: border-box;
+  text-overflow: clip;
+}
+
+.line-more {
+  margin-left: auto;
+}
+
+#bars-left .bar-more, #bars-right .bar-more, #bars-left .line-more, #bars-right .line-more {
+  width: auto;
+}
+
+/* While a bar is dragged: every side shows where a bar can go, and the place it would land is marked. */
+body.bar-dragging .bars {
+  min-height: 10px;
+  min-width: 10px;
+  outline: 1px dashed var(--border);
+  outline-offset: -1px;
+}
+
+.bar-drop, .size-mark {
+  position: fixed;
+  z-index: 70;
+  pointer-events: none;
+}
+
+.bar-drop {
+  background: var(--accent);
+}
+
+.size-window .fields {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.size-window label {
+  display: grid;
+  grid-template-columns: 12px 1fr 80px 40px;
+  align-items: center;
+  gap: 8px;
+}
+
+.size-window .swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+#palette .about {
+  color: var(--fg-dim);
+  margin-bottom: 6px;
 }
 
 /* The ribbon (ribbon.js) */

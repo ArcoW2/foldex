@@ -35,6 +35,10 @@
         { "action": "project.rename", "label": "Rename", "stack": true },
         { "action": "layout.saveDefault", "label": "Save layout as default" },
         { "action": "layout.resetDefault", "label": "Reset layout", "stack": true } ] },
+      { "name": "Bars", "items": [
+        { "action": "bars.add", "params": ["path"], "label": "Add path bar" },
+        { "action": "bars.add", "params": ["drives"], "label": "Add drives bar", "stack": true },
+        { "action": "bars.reset", "label": "Reset bars", "stack": true } ] },
       { "name": "Foldex", "items": [
         { "action": "settings.open", "size": "large", "label": "Settings" } ] } ] }
   ]

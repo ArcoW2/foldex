@@ -187,6 +187,16 @@ sealed class AppHost : ApplicationContext
         Broadcast();
     }
 
+    /// <summary>Your bars.json written from a window's bars (docs/plans/executed/10-PLAN-bars.md 3.3), or removed (null: the
+    /// shipped bars again); every window draws them again.</summary>
+    public void SaveBars(JsonNode? bars)
+    {
+        if (bars is null) File.Delete(Path.Combine(DataDir, BarsFile.Name));
+        else BarsFile.Save(DataDir, bars);
+        var message = new JsonObject { ["event"] = "bars", ["bars"] = BarsFile.Load(DataDir, Path.Combine(DefaultsDir, BarsFile.Name)) };
+        foreach (var w in windows) w.Post((JsonObject)message.DeepClone());
+    }
+
     /// <summary>Tells every page the settings and themes as they are now.</summary>
     public void Broadcast()
     {

@@ -18,7 +18,7 @@ function openPalette() {
   if (!dialog) {
     dialog = document.createElement('dialog');
     dialog.id = 'palette';
-    dialog.innerHTML = '<input class="filter" spellcheck="false" placeholder="Type to find an action or a key">' +
+    dialog.innerHTML = '<div class="about"></div><input class="filter" spellcheck="false" placeholder="Type to find an action or a key">' +
       '<table><tbody></tbody></table>';
     document.body.append(dialog);
     dialog.querySelector('.filter').addEventListener('input', () => fill());
@@ -42,6 +42,7 @@ function openPalette() {
     const call = JSON.parse(row.dataset.call);
     runAction(call[0], call.slice(1), { from: 'palette' });
   };
+  dialog.querySelector('.about').textContent = `Foldex ${version}`;   // the name and version (plan 10 3.2)
   const fill = () => {
     const words = dialog.querySelector('.filter').value.toLowerCase().split(/\s+/).filter(Boolean);
     const rows = paletteRows().filter(r => words.every(w => `${r.title} ${r.hint} ${r.keys} ${r.group} ${r.call[0]}`.toLowerCase().includes(w)));

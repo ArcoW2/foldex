@@ -133,5 +133,11 @@ action('layout.saveDefault', { title: 'Save layout as default', group: 'projects
   hint: 'the panes and docks of this window become the layout a new project starts with', run: () => saveLayoutAsDefault() });
 action('layout.resetDefault', { title: 'Reset layout to default', group: 'projects',
   hint: 'this window back to the default layout, at the folder it shows', run: () => post({ op: 'layoutReset', path: currentFolder() }) });
+// Bars (docs/plans/executed/10-PLAN-bars.md 3.3; bars.js): added from here too, so a window without bars can get one back.
+action('bars.add', { title: 'Add a bar', hint: 'a bar at the top: the path or the drives', group: 'view',
+  variants: [['path'], ['drives']], variantTitles: { path: 'Add a path bar', drives: 'Add a drives bar' },
+  run: params => addBar(params[0] ?? 'path') });
+action('bars.reset', { title: 'Reset the bars', hint: 'the bars as Foldex ships them (your bars.json removed)', group: 'view',
+  run: () => askYes('Put the bars back as Foldex ships them?').then(yes => yes && post({ op: 'barsReset' })) });
 action('settings.open', { title: 'Settings', hint: 'every setting, the theme included, in a window of its own', group: 'app',
   run: () => post({ op: 'openSettings' }) });

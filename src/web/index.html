@@ -14,16 +14,20 @@
   <script src="palette.js" defer></script>
   <script src="ribbonmodel.js" defer></script>
   <script src="ribbon.js" defer></script>
+  <script src="bars.js" defer></script>
   <script src="app.js" defer></script>
 </head>
 <body>
-  <header id="bar">
-    <span id="brand">Foldex <span id="version"></span></span>
-    <input id="location" spellcheck="false" title="The folder of the active pane; Enter goes there">
-  </header>
   <nav id="ribbon" hidden></nav>
-  <!-- The panes of plan 03: the root (folders only, left) and its followers. -->
-  <main id="panes"></main>
+  <!-- The bars of plan 10 at each side of the panes; the panes of plan 03: the root (folders only, left) and its
+       followers. -->
+  <div id="bars-top" class="bars"></div>
+  <div id="middle">
+    <div id="bars-left" class="bars"></div>
+    <main id="panes"></main>
+    <div id="bars-right" class="bars"></div>
+  </div>
+  <div id="bars-bottom" class="bars"></div>
   <footer>
     <div id="statusline">
       <button id="project" tabindex="-1"></button>

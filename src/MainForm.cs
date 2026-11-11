@@ -30,6 +30,33 @@ sealed class MainForm : Form
         StartPosition = FormStartPosition.Manual;   // AppHost.Place
         AddBrowser();
         preview = new PreviewHost(this);
+        // Drives that come or go (plan 10 3.2): Windows' device messages (WndProc) for sticks and cards; a drive mapped
+        // or made with subst sends none, so the letters are also looked at every few seconds.
+        drivesSoon.Tick += (_, _) =>
+        {
+            drivesSoon.Stop();
+            _ = TellDrives();
+        };
+        drivesPoll.Tick += (_, _) =>
+        {
+            if (Drives.Letters() != driveLetters) _ = TellDrives();
+        };
+        drivesPoll.Start();
+        FormClosed += (_, _) =>
+        {
+            drivesPoll.Dispose();
+            drivesSoon.Dispose();
+        };
+    }
+
+    readonly System.Windows.Forms.Timer drivesSoon = new() { Interval = 500 }, drivesPoll = new() { Interval = 4000 };
+    string driveLetters = "";
+
+    async Task TellDrives()
+    {
+        driveLetters = Drives.Letters();
+        var list = await StaWorker.Once("drives", Drives.List);
+        Post(new JsonObject { ["event"] = "drives", ["drives"] = list });
     }
 
     readonly PreviewHost preview;
@@ -47,8 +74,13 @@ sealed class MainForm : Form
     /// <summary>Becomes another window of the projects (a closed one opened again in its place).</summary>
     public void Rekey(int key) => Key = key;
 
-    /// <summary>The title: Foldex and the window's project.</summary>
-    public void ShowProject(string display) => Text = display.Length > 0 ? $"Foldex - {display}" : "Foldex";
+    /// <summary>The title: Foldex, its version (docs/plans/executed/10-PLAN-bars.md 3.2: no longer in a strip of the page) and
+    /// the window's project.</summary>
+    public void ShowProject(string display)
+    {
+        var name = $"Foldex {AppHost.Version().Version}";
+        Text = display.Length > 0 ? $"{name} - {display}" : name;
+    }
 
     void AddBrowser()
     {
@@ -170,6 +202,7 @@ sealed class MainForm : Form
                     ["themes"] = ThemeFile.Load(AppHost.DataDir),
                     ["keys"] = KeysFile.Load(AppHost.DataDir),
                     ["ribbon"] = RibbonFile.Load(AppHost.DataDir, Path.Combine(AppHost.DefaultsDir, RibbonFile.Name)),
+                    ["bars"] = BarsFile.Load(AppHost.DataDir, Path.Combine(AppHost.DefaultsDir, BarsFile.Name)),
                     ["paths"] = PathsArray(paths),
                     ["layout"] = freshLayout ? null : pageLayout?.DeepClone() ?? app.LayoutFor(this),
                     ["project"] = app.ProjectInfo(this),
@@ -289,6 +322,24 @@ sealed class MainForm : Form
                 paths = msg["path"]?.GetValue<string>() is { } at ? [at] : [];
                 pageReady = false;
                 web.CoreWebView2?.Reload();
+                break;
+            case "drives":
+                await TellDrives();
+                break;
+            case "barsSave":
+                // A bar changed in the window (plan 10 3.3): your bars.json, and every window draws the bars again.
+                try { app.SaveBars(msg["bars"]!); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    Post(new JsonObject { ["event"] = "barsFailed", ["error"] = ex.Message });
+                }
+                break;
+            case "barsReset":
+                try { app.SaveBars(null); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    Post(new JsonObject { ["event"] = "barsFailed", ["error"] = ex.Message });
+                }
                 break;
             case "projects":
                 Post(new JsonObject { ["event"] = "projectList", ["list"] = app.ProjectList(this) });
@@ -435,6 +486,12 @@ sealed class MainForm : Form
     protected override void WndProc(ref Message m)
     {
         if (ShellMenu.HandleMessage(ref m)) return;
+        const int WmDeviceChange = 0x0219, DbtDeviceArrival = 0x8000, DbtDeviceRemoveComplete = 0x8004;
+        if (m.Msg == WmDeviceChange && (int)m.WParam is DbtDeviceArrival or DbtDeviceRemoveComplete)
+        {
+            drivesSoon.Stop();
+            drivesSoon.Start();
+        }
         base.WndProc(ref m);
     }
 

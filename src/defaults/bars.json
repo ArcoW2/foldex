@@ -1,0 +1,18 @@
+// The bars of Foldex (docs/plans/executed/10-PLAN-bars.md): per side (top, bottom, left, right) a list of lines, a line a list
+// of bars. A bars.json in your data folder replaces this one whole; Foldex writes it when you change a bar.
+//
+// A bar: "kind" ("path" or "drives"); "normal", "min", "max" (in buttons for the drives, in px for the path);
+// "maxShare" (at most this % of the window's width, its height for a bar at the left or right); "fill": true (takes
+// what the other bars of its line leave, shared by their normal sizes); "overflow": "more" (a >> button) or "scroll";
+// "freeSpace" (the drives: a thin mark of the space used).
+{
+  "top": [
+    [
+      { "kind": "drives", "min": 2, "normal": 4, "max": 6, "maxShare": 30, "overflow": "more", "freeSpace": true },
+      { "kind": "path", "fill": true, "normal": 300, "min": 120 }
+    ]
+  ],
+  "bottom": [],
+  "left": [],
+  "right": []
+}
