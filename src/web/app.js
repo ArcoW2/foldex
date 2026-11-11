@@ -1028,16 +1028,13 @@ function paneMenu(id) {
       { label: 'Below', run: () => newChildPane(id, 'below') } ] },
     { label: 'New tab', enabled: !(views.get(id) instanceof PreviewView), run: () => newTab(id) },
     '-',
-    { label: 'Detach from parent', enabled: child, run: () => detachPane(id) },
-    { label: 'Attach to', enabled: parents.length > 0, items: parents.map(p => ({ label: title(p), swatch: colourOf(p), run: () => attachPane(id, p) })) },
-    { label: 'Branch colour', enabled: child, items: Branches.map(b => ({
-      label: `Branch ${b + 1}${free.includes(b) ? '' : ' (with a sibling)'}`, swatch: `var(--branch-${b})`, checked: pane.colour === b,
-      run: () => setBranchColour(id, b) })) },
+    { label: 'Branch', items: [
+      { label: 'Detach from parent', enabled: child, run: () => detachPane(id) },
+      { label: 'Attach to', enabled: parents.length > 0, items: parents.map(p => ({ label: title(p), swatch: colourOf(p), run: () => attachPane(id, p) })) },
+      { label: 'Branch colour', enabled: child, items: Branches.map(b => ({
+        label: `Branch ${b + 1}${free.includes(b) ? '' : ' (with a sibling)'}`, swatch: `var(--branch-${b})`, checked: pane.colour === b,
+        run: () => setBranchColour(id, b) })) } ] },
     { label: 'Pin', enabled: child, checked: pane.pinned, run: () => togglePin(id) },
-    '-',
-    { label: 'Move to', items: ['left', 'right', 'top', 'bottom', 'center'].map(area => ({
-      label: area[0].toUpperCase() + area.slice(1), checked: docks.areaOf(id) === area,
-      run: () => { docks.add(id, { area }); renderDock(); showPane(id); } })) },
     '-',
     { label: 'Close pane', run: () => closePane(id) },
   ];

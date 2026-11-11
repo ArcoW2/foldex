@@ -6,6 +6,8 @@ Status: executed; see 6. As built.
 - 2026-11-10: revised: a new child at the right of or below its parent; a tab is New tab.
 - 2026-11-10: executed, except floating panes (open question 1) and the layout in the project.
 - 2026-11-11: floating panes moved to plan 14, the layout in the project to plan 15; executed.
+- 2026-11-11: the head menu: Move to removed (dragging docks a pane); Detach, Attach to and Branch colour in a
+  submenu Branch.
 
 Takes the docking row of plan 01 3.3 into a plan of its own, for Foldex's panes; changes plan 03 (a pane can now be
 detached and attached).
@@ -39,7 +41,7 @@ no tab mechanism of their own.
 | Docking | the five areas, groups as tabs, splits with splitters, the side areas' sizes | 3.1 |
 | Moving panes | dragging a head or tab onto a window edge, beside a group, into a group as a tab, or into an empty center | 3.1 |
 | Tabs | in their branch colour; a click shows the tab and switches to its branch | 3.1, 3.2 |
-| Pane head menu | also on tabs: New child pane (right, below), New tab, Detach, Attach to, Branch colour, Pin, Move to, Close pane | 3.2 |
+| Pane head menu | also on tabs: New child pane (right, below), New tab, Branch (Detach, Attach to, Branch colour), Pin, Close pane | 3.2 |
 | New tab | Ctrl+T: same parent, a branch of its own, same folder; a root's tab is a new root | 3.2 |
 | Last layout | of the last closed window, in `State\state.json`, brought back at the next start | 3.4 |
 

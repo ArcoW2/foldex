@@ -38,7 +38,7 @@ has something to show under the pane's Show setting: subfolders, or, with files 
 
 ### 3.1 The header's menu
 
-- Two submenus in the pane header's menu (plan 12 3.2), above Move to, each a choice with a check mark:
+- Two submenus in the pane header's menu (plan 12 3.2), below Branch and Pin, each a choice with a check mark:
   - **Show**: Folders, Files, Folders and files;
   - **Shape**: Tree, One folder.
 - A change applies at once, to that pane only, and is saved with the layout. Not for a preview pane.
