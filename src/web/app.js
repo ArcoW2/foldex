@@ -280,7 +280,10 @@ class TreeView {
     this.body.addEventListener('mousedown', e => this.click(e));
     this.body.addEventListener('dblclick', e => {
       const n = this.nodeAt(e.target);
-      if (n && !e.target.classList.contains('twisty')) execute(this.id, { id: n.id, folder: true });
+      if (!n || e.target.classList.contains('twisty')) return;
+      // Opened in the tree itself as well as in its children.
+      if (!n.expanded) this.expand(n);
+      execute(this.id, { id: n.id, folder: true });
     });
     this.body.addEventListener('keydown', e => this.key(e));
     this.body.addEventListener('contextmenu', e => {
