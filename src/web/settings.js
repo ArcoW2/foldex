@@ -1,6 +1,6 @@
 'use strict';
 // The settings window (View > Foldex > Settings; SettingsForm.cs hosts it), as LexPen's cut down
-// (docs/plans/07-PLAN-themes.md 3.5): a row per setting of SETTING_ROWS (settingrows.js), in groups, filtered by the
+// (docs/plans/executed/07-PLAN-themes.md 3.5): a row per setting of SETTING_ROWS (settingrows.js), in groups, filtered by the
 // search box. A change goes to the host at once (setSetting); the host writes your settings.json and tells every
 // window, this one included (settings). Esc empties the search; a second Esc closes the window.
 
@@ -25,7 +25,7 @@ function control(def) {
     input.addEventListener('change', () => set(def.name, input.checked));
     return { el: input, show: v => input.checked = !!v };
   }
-  // A size in points (docs/plans/08-PLAN-fonts.md 3.2), 4 to 36; written when the box is left or Enter.
+  // A size in points (docs/plans/executed/08-PLAN-fonts.md 3.2), 4 to 36; written when the box is left or Enter.
   if (def.kind === 'size') {
     const input = document.createElement('input');
     Object.assign(input, { type: 'number', min: 4, max: 36, step: 0.5 });

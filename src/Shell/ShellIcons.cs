@@ -73,7 +73,7 @@ static class ShellIcons
         if (list != IntPtr.Zero) smallList = list;
     }
 
-    // The larger lists (docs/plans/08-PLAN-fonts.md 3.4): the same indexes as the small one, asked once.
+    // The larger lists (docs/plans/executed/08-PLAN-fonts.md 3.4): the same indexes as the small one, asked once.
     static readonly Dictionary<int, IntPtr> Lists = [];
 
     static IntPtr ListOf(int size)

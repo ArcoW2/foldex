@@ -3,7 +3,7 @@ using System.Drawing.Text;
 namespace Foldex;
 
 /// <summary>
-/// The installed font families for the font settings (docs/plans/08-PLAN-fonts.md 3.1, as LexPen's Fonts without the
+/// The installed font families for the font settings (docs/plans/executed/08-PLAN-fonts.md 3.1, as LexPen's Fonts without the
 /// monospaced mark). Built once per run.
 /// </summary>
 static class Fonts

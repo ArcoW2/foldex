@@ -1,5 +1,5 @@
 'use strict';
-// The look of a page (docs/plans/07-PLAN-themes.md 3.3): light or dark as Windows is (followWindows), else the theme
+// The look of a page (docs/plans/executed/07-PLAN-themes.md 3.3): light or dark as Windows is (followWindows), else the theme
 // setting; then the theme of that mode (themeLight, themeDark) as CSS variables on the root element. A colour the theme
 // does not set comes from the mode's block in app.css. Used by the main page and the settings window.
 
@@ -82,7 +82,7 @@ function applyHeadText(count) {
   probe.remove();
 }
 
-// The fonts (docs/plans/08-PLAN-fonts.md): the window's (appFont, appSize) and the panes' rows (paneFont, paneSize), in
+// The fonts (docs/plans/executed/08-PLAN-fonts.md): the window's (appFont, appSize) and the panes' rows (paneFont, paneSize), in
 // points (4 to 36). The row height follows the pane font (paneRowHeight).
 const DefaultSize = 10;   // pt, as defaults\settings.json; for a value that is not a size (0 in an old settings.json)
 const fontStack = name => name ? `"${name.replace(/["\\]/g, '')}", "Segoe UI", system-ui, sans-serif` : '"Segoe UI", system-ui, sans-serif';

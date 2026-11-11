@@ -227,7 +227,7 @@ sealed class AppHost : ApplicationContext
         }
     }
 
-    // The settings window (docs/plans/07-PLAN-themes.md 3.5): one for Foldex.
+    // The settings window (docs/plans/executed/07-PLAN-themes.md 3.5): one for Foldex.
     SettingsForm? settingsForm;
 
     public void OpenSettings(MainForm from)

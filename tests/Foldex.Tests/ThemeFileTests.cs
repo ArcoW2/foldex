@@ -2,7 +2,7 @@ using System.Text.Json.Nodes;
 
 namespace Foldex.Tests;
 
-// Themes (docs/plans/07-PLAN-themes.md): ThemeFile, the shipped themes, the settings window's rows.
+// Themes (docs/plans/executed/07-PLAN-themes.md): ThemeFile, the shipped themes, the settings window's rows.
 public class ThemeFileTests
 {
     static readonly string Web = AppHost.FindProjectFolder(AppContext.BaseDirectory, "web")!;
@@ -143,7 +143,7 @@ public class ThemeFileTests
     }
 }
 
-// The installed fonts for the font settings (docs/plans/08-PLAN-fonts.md 3.1).
+// The installed fonts for the font settings (docs/plans/executed/08-PLAN-fonts.md 3.1).
 public class FontsTests
 {
     [Fact]

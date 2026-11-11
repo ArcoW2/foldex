@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 namespace Foldex;
 
 /// <summary>
-/// Themes (docs/plans/07-PLAN-themes.md, as LexPen's ThemeFile): defaults\themes\*.json ships with Foldex, your own go
+/// Themes (docs/plans/executed/07-PLAN-themes.md, as LexPen's ThemeFile): defaults\themes\*.json ships with Foldex, your own go
 /// in themes\ in the data folder (a file with the same name replaces a shipped one). A theme has a name, a description,
 /// optionally a base (any other theme: its colours, through its own base and so on), only the colours that differ
 /// from its base, and optionally the six branch colours (else its base's). Light and Dark set everything: the roots.

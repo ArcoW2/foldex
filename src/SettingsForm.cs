@@ -6,7 +6,7 @@ using Microsoft.Web.WebView2.WinForms;
 namespace Foldex;
 
 /// <summary>
-/// The settings window (docs/plans/07-PLAN-themes.md 3.5, as LexPen's cut down): one for Foldex, not modal. Its page
+/// The settings window (docs/plans/executed/07-PLAN-themes.md 3.5, as LexPen's cut down): one for Foldex, not modal. Its page
 /// (web\settings.html) shows every setting as a row; a change goes to AppHost.SetSetting at once, and every window
 /// follows. Opened over the window it was asked from.
 /// </summary>

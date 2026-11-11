@@ -1,5 +1,5 @@
 'use strict';
-// The rows of the settings window (docs/plans/07-PLAN-themes.md 3.5), described once: settings.js draws them, the tests
+// The rows of the settings window (docs/plans/executed/07-PLAN-themes.md 3.5), described once: settings.js draws them, the tests
 // check that each names a setting of defaults\settings.json. A row: { group, name, title, hint, kind } with kind
 // "toggle" (true / false), "choice" (options: [value, label]), "theme" (every theme, from the host), "font" (the
 // installed fonts, from the host; "" the default), "size" (points, 4 to 36) or "range" (a slider: range [min, max,

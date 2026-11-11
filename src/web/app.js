@@ -69,7 +69,7 @@ const same = (a, b) => a != null && b != null && a.toLowerCase() === b.toLowerCa
 
 // ---------- Icons: the system's, asked once per index ----------
 
-// Icons grow with the rows (docs/plans/08-PLAN-fonts.md 3.4): drawn at a size that follows the row height, from the
+// Icons grow with the rows (docs/plans/executed/08-PLAN-fonts.md 3.4): drawn at a size that follows the row height, from the
 // system's 16, 32 or 48 px icon (the smallest not smaller than drawn, so the browser only scales down). Kept per
 // "size:index"; while a size is on its way, the icon of another size stands in.
 const IconSources = [16, 32, 48];
@@ -112,7 +112,7 @@ function list(channel, location, foldersOnly, onPart, onDone, elevated = false) 
 
 // ---------- Rows in view only ----------
 
-let RowHeight = 22;   // follows the pane font (look.js paneRowHeight; docs/plans/08-PLAN-fonts.md 3.4)
+let RowHeight = 22;   // follows the pane font (look.js paneRowHeight; docs/plans/executed/08-PLAN-fonts.md 3.4)
 
 function visibleRange(body, count) {
   const first = Math.max(0, Math.floor(body.scrollTop / RowHeight) - 5);
