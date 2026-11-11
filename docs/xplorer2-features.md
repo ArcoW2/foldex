@@ -130,7 +130,7 @@ updated whenever a plan is written, built or closed that touches a feature here.
 |---|---|---|---|---|
 | Keyboard remapping, command finder | P+ | built (keys.json, F1) | 5 | -- |
 | Custom toolbars, skins | P+ | part: ribbon.json; bars plan 10; icons -- | 5 | bars (plan 10); ribbon icons (plan 01) |
-| Dark mode, themes | P+ | built (plan 07) | 5 | -- |
+| Dark mode, themes | P+ | built (plan 07); a pane theme per branch: plan 13 | 5 | -- |
 | Fonts | P+ | built (plan 08) | 5 | -- |
 | Options window with search | P+ | built (plan 07) | 5 | -- |
 | Settings export / import | P+ | built (settings.json is a file) | 3 | -- |
