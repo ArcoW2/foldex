@@ -6,6 +6,7 @@ Status: not started.
 - 2026-11-10: revised: bars dock at any side; overflow a choice per bar; the bar that fills.
 - 2026-11-11: revised: a bar's length from a minimum, a normal size, a maximum and a maximum share of the window;
   bars that fill share the rest by their normal sizes; the Size window with coloured marks.
+- 2026-11-11: revised: no checkboxes in the Size window; a bar of buttons sized in buttons.
 
 ## 1. What this is about
 
@@ -34,9 +35,9 @@ shows the limits as coloured marks on the bar, and Foldex writes your copy.
 | Part | What | Waits for | Reference |
 |---|---|---|---|
 | Dock sides | bars at any dock side, in lines | -- | 3.1 |
-| Sizes | minimum, normal, maximum, maximum share of the window; growing with the content | open questions 1-3 | 3.1 |
+| Sizes | minimum, normal, maximum, maximum share of the window; growing with the content | open question 1 | 3.1 |
 | Fill | bars that fill share the rest by their normal sizes, down to their minimum | -- | 3.1 |
-| Size window | the fields with colour swatches; the limits as coloured marks on the bar while it is open | open questions 1-3 | 3.3 |
+| Size window | the fields with colour swatches; the limits as coloured marks on the bar while it is open | open question 1 | 3.3 |
 | Overflow | per bar: `more` or `scroll` | -- | 3.1 |
 | Path bar | | -- | 3.2 |
 | Drives bar | with drives that come and go | -- | 3.2 |
@@ -73,7 +74,8 @@ shows the limits as coloured marks on the bar, and Foldex writes your copy.
   likewise.
 - **A line too short** for all its bars: the bars that fill give way first, down to their minimum; then the others,
   down to their minimum; then the line overflows (`>>` for the line, as for a bar's content).
-- Lengths are in px at 100% scaling, or in buttons for a bar of buttons (open question 2).
+- Lengths are in buttons for a bar of buttons (the drives), so "6 drives" does not depend on the button width; in px
+  at 100% scaling for other bars (the path).
 - **Overflow**, per bar: `more` (a `>>` button at the end; the rest in its menu, as toolbars) or `scroll` (the bar's
   content scrolls: the mouse wheel, or arrows at its ends). Default `more`.
 
@@ -105,7 +107,8 @@ shows the limits as coloured marks on the bar, and Foldex writes your copy.
 - **The Size window** (a small window of the page, by Size...): Minimum, Normal, Maximum and Maximum % of the window,
   each with a colour swatch. While it is open the bar's line shows each limit as a mark in its colour; the % limit at
   its place for the window's current size, so resizing the window shows where it cuts in. No marks while the window is
-  closed. Changes show at once; OK keeps them, Cancel puts them back.
+  closed. Changes show at once; OK keeps them, Cancel puts them back. No checkboxes such as "resize by content":
+  the fields say it (3.1). The fields are in buttons or px, as the bar's kind is (3.1).
 - A wrong entry in a hand-edited file is reported in the status line and left out, as with keys and the ribbon.
 
 ### 3.4 Where it lives
@@ -131,10 +134,7 @@ shows the limits as coloured marks on the bar, and Foldex writes your copy.
 
 ## 4. Open questions
 
-1. **Checkboxes "resize by content" and "resize by window size" in the Size window.** Proposed: none; the fields say
-   it (a maximum above normal grows with the content, a share follows the window), and checkboxes would allow
-   combinations that contradict the fields. Leave them out?
-2. **Units.** Proposed: a bar of buttons (drives) in buttons, other bars (path) in px at 100% scaling, so "6 drives"
-   does not depend on the button width. Agreed?
-3. **A minimum share of the window.** Named for the Size window, but the drives example does not use it. Proposed:
-   left out until there is a bar that must grow with the window. Leave it out?
+1. **A minimum share of the window.** Besides the minimum in buttons or px, a minimum in % of the window: the bar is
+   never shorter than that share, so on a wide window it gets longer even when its content needs less (a path bar at
+   least 40% of the width). The drives example does not use it. Proposed: left out until a bar needs it. Leave it
+   out?
