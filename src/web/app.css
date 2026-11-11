@@ -805,6 +805,21 @@ body.docking, body.docking * {
   color: var(--fg-dim);
 }
 
+.menu.leftward .menu-item {
+  padding: 3px 12px 3px 18px;
+}
+
+.menu.leftward .menu-item.sub::after {
+  content: "<";
+  right: auto;
+  left: 6px;
+}
+
+/* The tree lines move with the label (menu.js puts them at a fixed x). */
+.menu.leftward .guide {
+  margin-left: 10px;
+}
+
 .menu-check {
   width: 10px;
   height: 10px;

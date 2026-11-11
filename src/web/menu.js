@@ -1,7 +1,9 @@
 'use strict';
 // A menu of the page's own (the pane head's menu, docs/plans/executed/12-PLAN-docking-and-pane-menu.md 3.2): items with a check
 // mark or a colour swatch, greyed out when not possible, submenus that open beside them. Closed by a click outside,
-// Esc, or choosing. Keys: Up / Down, Right opens a submenu, Left closes it, Enter chooses.
+// Esc, or choosing. A submenu opens to the right, or to the left when there is no room; a menu whose submenus open to
+// the left has its arrows at the left. Keys: Up / Down, Right opens a submenu,
+// Left closes it (the other way round where it opens to the left), Enter chooses.
 //
 // An item: '-' (a line) or { label, run, enabled (default true), checked, swatch (a CSS colour), items (a submenu),
 // indent (steps in, for a tree), guides (its tree lines, panes.js treeGuides) }.
@@ -12,7 +14,7 @@ function closeMenus(from = 0) {
   for (const m of openMenus.splice(from)) m.el.remove();
 }
 
-function openMenu(x, y, items, level = 0) {
+function openMenu(x, y, items, level = 0, back = null) {
   closeMenus(level);
   const el = document.createElement('div');
   el.className = 'menu';
@@ -51,11 +53,16 @@ function openMenu(x, y, items, level = 0) {
     row.item = item;
   }
   document.body.append(el);
-  // Kept inside the window.
+  // Kept inside the window; a submenu that does not fit at the right goes to the left of its menu (back: that left).
   const r = el.getBoundingClientRect();
-  el.style.left = `${Math.max(0, Math.min(x, innerWidth - r.width - 2))}px`;
+  const left = back !== null && (openMenus[level - 1].leftward || x + r.width > innerWidth - 2) ? back - r.width
+    : Math.min(x, innerWidth - r.width - 2);
+  el.style.left = `${Math.max(0, left)}px`;
   el.style.top = `${Math.max(0, Math.min(y, innerHeight - r.height - 2))}px`;
-  const menu = { el, rows, at: -1 };
+  // Its submenus open to the left when one as wide as this menu would not fit at its right.
+  const leftward = Math.max(0, left) + 2 * r.width > innerWidth - 2;
+  el.classList.toggle('leftward', leftward);
+  const menu = { el, rows, at: -1, leftward };
   openMenus.push(menu);
 
   // An item lit; its submenu opened when `open` (the mouse; with the keys only Right and Enter open one).
@@ -65,7 +72,7 @@ function openMenu(x, y, items, level = 0) {
     const item = rows[k]?.item;
     if (open && item?.items && item.enabled !== false) {
       const rr = rows[k].getBoundingClientRect();
-      openMenu(rr.right - 2, rr.top - 4, item.items, level + 1);
+      openMenu(rr.right - 2, rr.top - 4, item.items, level + 1, rr.left + 2);
     } else closeMenus(level + 1);
   }
 
@@ -82,10 +89,10 @@ function openMenu(x, y, items, level = 0) {
     const pos = live.indexOf(menu.at);
     if (e.key === 'ArrowDown') hover(live[(pos + 1) % live.length], false);
     else if (e.key === 'ArrowUp') hover(live[(pos - 1 + live.length) % live.length], false);
-    else if (e.key === 'ArrowRight' && rows[menu.at]?.item.items) {
+    else if (e.key === (leftward ? 'ArrowLeft' : 'ArrowRight') && rows[menu.at]?.item.items) {
       hover(menu.at);
       if (openMenus.length > level + 1) openMenus.at(-1).key({ key: 'ArrowDown' });
-    } else if (e.key === 'ArrowLeft' && level > 0) closeMenus(level);
+    } else if (e.key === (openMenus[level - 1]?.leftward ? 'ArrowRight' : 'ArrowLeft') && level > 0) closeMenus(level);
     else if (e.key === 'Enter') choose(menu.at);
     else if (e.key === 'Escape') closeMenus(level > 0 ? level : 0);
     else return false;

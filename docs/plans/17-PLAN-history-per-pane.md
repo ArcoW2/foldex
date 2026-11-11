@@ -7,6 +7,7 @@ Status: not started; see Status.
   with the window's session in its project.
 - 2026-11-11: revised: Back in a child is Back in its parent; only a pane without a parent goes back in its own
   history.
+- 2026-11-11: revised: a pinned child goes back in its own history, which includes what it showed before the pin.
 
 Changes plan 03 3.6 (back and forward per branch). Builds on plan 03 (following, a child that goes through its
 parent) and plan 15 (the window's session in its project). The number in the file name is the priority; rename to
@@ -64,6 +65,9 @@ The histories are saved with the window's session, so a project opens with them.
 - A child that follows its parent: Back and Forward are its parent's. The parent goes back or forward in its own
   history and the child follows it. When the parent is itself a child, the same holds one level up, so the step is
   taken by the first pane up the chain without a parent.
+- Pinning switches it: a pinned child has no parent while pinned, so Back and Forward go through its own history;
+  unpinned, they are its parent's again. Its own history holds every folder it showed, also while it was following
+  (3.1: following is a change like any other), so after pinning Back goes on into what it showed before the pin.
 - That fits plan 03 3.3: a following child changes folder only through its parent (Up, a typed path, opening a
   folder), so every folder it showed is a step in its parent's history.
 - Its children follow it, as on any change of folder.
@@ -88,8 +92,8 @@ The histories are saved with the window's session, so a project opens with them.
   forward; a new folder after going back drops the steps ahead; at most 100; a history per branch; to JSON and back.
 - Test copy over CDP: a tree and its list: into three folders in the list, Back twice in the list: the list and the
   tree's focus back two folders (the tree's history went back); Back in the tree: the tree goes back, the list
-  follows; a child of a child: Back goes back in the root; a pinned list: Back moves only the list, in its own
-  history; the mouse's back button (a synthetic `mouseup` with `button` 3) on the focused pane; a project closed and
+  follows; a child of a child: Back goes back in the root; a list that followed into folders, then pinned: Back moves
+  only the list, back into the folders it showed before the pin; unpinned again: Back is the tree's; the mouse's back button (a synthetic `mouseup` with `button` 3) on the focused pane; a project closed and
   opened again: Back goes on where it was.
 
 ## 4. Open questions
