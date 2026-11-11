@@ -4,6 +4,7 @@ Status: not started; see Status.
 
 - 2026-11-11: draft; the part "View settings per pane" of plan 03 (content and tree or list) moved here.
 - 2026-11-11: revised: Files is greyed out in a tree.
+- 2026-11-11: revised: a tree child has no row for its folder; its lines start at the header.
 
 Builds on plan 03 (panes of one kind, following) and plan 12 (the pane header's menu). The number in the file name is
 the priority; rename to reorder.
@@ -30,8 +31,8 @@ has something to show under the pane's Show setting: subfolders, or, with files 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
 | Show | folders, files, both: in the header's menu; a list and a tree honour it; Files greyed out in a tree | -- | 3.1; 3.2 |
-| Shape | tree or one folder, in the header's menu; the pane's view switches, its state kept | open question 1 | 3.1; 3.3 |
-| A tree with files | files as rows without an arrow; a click focuses, a double-click opens | open question 2 | 3.2 |
+| Shape | tree or one folder, in the header's menu; the pane's view switches, its state kept | -- | 3.1; 3.3 |
+| A tree with files | files as rows without an arrow; a click focuses, a double-click opens | open question 1 | 3.2 |
 | Arrows with files shown | the listing also tells whether a folder has files | -- | 3.4 |
 | Saved | `kind` and `content` per pane, as now; a new child copies them, as now | -- | 3.5 |
 
@@ -59,7 +60,11 @@ has something to show under the pane's Show setting: subfolders, or, with files 
 
 - **Tree**: folders open and close in the pane (the arrow, Right and Left, a double-click). The top rows: for a pane
   without a parent, the tree's tops as now (your profile folder, This PC, Network, the Recycle Bin); for a child, the
-  folder its parent focuses (open question 1).
+  items of the folder its parent focuses.
+- **A tree child has no row for its folder**: the header already names it. The parent on `Win32App`: the child's
+  header says `Win32App` and its first row is `_Scribbles`. The tree's lines start at the top of the pane, against the
+  header, as if they came from its name, and every row moves one level to the right to make room: the top rows are
+  joined to that line as children of the header. One folder (no tree) has no line and no extra step.
 - **One folder**: the folder's own items; a double-click on a folder opens it through the parent, or in the pane
   itself without one (plan 03 3.3), as a list does now.
 - Switching keeps the pane's place: from tree to one folder it shows its focused folder; from one folder to tree it
@@ -90,12 +95,11 @@ has something to show under the pane's Show setting: subfolders, or, with files 
 - Test copy over CDP: the header's menu shows both submenus with the current choice checked, Files greyed out in a
   tree; a list showing Files switched to Tree: Folders and files; the root to Folders and
   files: files under the folders, a folder with only files has an arrow; a file in the tree focused: the preview
-  shows it; the list to Folders: no files; the list to Tree: its folder opened in place, its child still follows; the
+  shows it; the list to Folders: no files; the list to Tree: its folder opened in place, no row for its folder, the line starting at the header and the rows one
+  level in, its child still follows; the
   project closed and opened: the panes as they were set.
 
 ## 4. Open questions
 
-1. **The top of a tree child.** Proposed: the folder its parent focuses is not a row of its own; its items are the top
-   rows, as in a list. Or: that folder as the single top row, opened?
-2. **Columns in a tree with files.** Proposed: names only, as the tree now; size and date columns come with plan 11
+1. **Columns in a tree with files.** Proposed: names only, as the tree now; size and date columns come with plan 11
    (columns). Agreed?
