@@ -7,6 +7,7 @@ Status: partly executed; see Status and 6. As built.
   open questions answered; detach, attach and tabs (plan 12).
 - 2026-11-10: partly executed, stage 1: the model, the default layout, executing.
 - 2026-11-10: partly executed: detach, attach, branch colour, pinning, keys, back and forward, watching folders.
+- 2026-11-11: content and tree or list per pane moved to plan 18.
 
 The core idea of Foldex.
 
@@ -57,13 +58,13 @@ a parent the folder expands in place, as in a tree.
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| View settings per pane | content, view, sort, filter changeable per pane; a list ignores content | -- | 3.1 |
+| View settings per pane | view (details, icons), sort, filter changeable per pane | -- | 3.1 |
 | Hidden files per pane | now one `showHidden` for every pane | -- | 3.1; plan 01 6.2 |
 | Debounce delay setting | fixed at 150 ms now | -- | 3.3; 6.1 |
 | Other presets | presets other than the default | -- | 3.5 |
 
 Moved out: a child below, as a tab or floating, New tab, Attach to, the pane header's menu, to plan 12; the layout in
-the project to plan 15.
+the project to plan 15; content (folders, files, both) and tree or list per pane, to plan 18.
 
 ## 3. Details
 
