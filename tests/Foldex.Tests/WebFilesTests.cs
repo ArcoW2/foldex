@@ -27,6 +27,18 @@ public class WebFilesTests
         Assert.Equal(type, WebFiles.ContentType(path));
     }
 
+    // Parsed, not run: a script that does not parse leaves its page empty (a quote in a text once did).
+    [Fact]
+    public void EveryPageScriptParses()
+    {
+        var web = AppHost.FindProjectFolder(AppContext.BaseDirectory, "web")!;
+        foreach (var file in Directory.GetFiles(web, "*.js"))
+        {
+            var problem = Record.Exception(() => new Acornima.Parser().ParseScript(File.ReadAllText(file)));
+            Assert.True(problem is null, $"{Path.GetFileName(file)}: {problem?.Message}");
+        }
+    }
+
     [Fact]
     public void ProjectFoldersAreFoundFromTheTests()
     {

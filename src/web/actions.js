@@ -6,7 +6,8 @@
 
 const PASS = Symbol('pass');   // returned by an action that does not apply here: the key keeps its own meaning
 
-const ACTION_GROUPS = [['items', 'Items'], ['folders', 'Folders'], ['panes', 'Panes'], ['view', 'View'], ['app', 'Foldex']];
+const ACTION_GROUPS = [['items', 'Items'], ['folders', 'Folders'], ['panes', 'Panes'], ['view', 'View'], ['projects', 'Projects'],
+  ['app', 'Foldex']];
 
 const actions = new Map();
 const action = (name, def) => actions.set(name, { name, ...def });
@@ -118,5 +119,21 @@ action('hidden.toggle', { title: 'Hidden items', hint: 'show hidden and system f
 // ---------- Foldex ----------
 
 action('palette', { title: 'All actions and keys', group: 'app', run: () => openPalette() });
+// Projects (docs/plans/15-PLAN-projects.md 3.6; projectmenu.js).
+action('projects.menu', { title: 'Projects', hint: 'every project and its windows, as at the project in the bottom bar', group: 'projects',
+  run: () => projectsMenu() });
+action('projects.manage', { title: 'Manage projects', hint: 'every project in one list: open, close, merge, rename, delete',
+  group: 'projects', run: () => post({ op: 'openProjects' }) });
+action('project.new', { title: 'New project', hint: 'a new window in a new project', group: 'projects', run: async () => {
+  const name = await askText('Name of the new project', '', 'Empty: a number');
+  if (name !== null) projectCommand('new', { name });
+} });
+action('project.rename', { title: 'Rename project', hint: 'the name of the project of this window', group: 'projects', run: () => renameProject() });
+action('project.moveWindow', { title: 'Move window to project', hint: 'this window into another project, or a new one', group: 'projects',
+  run: () => moveWindowMenu() });
+action('layout.saveDefault', { title: 'Save layout as default', group: 'projects',
+  hint: 'the panes and docks of this window become the layout a new project starts with', run: () => saveLayoutAsDefault() });
+action('layout.resetDefault', { title: 'Reset layout to default', group: 'projects',
+  hint: 'this window back to the default layout, at the folder it shows', run: () => post({ op: 'layoutReset', path: currentFolder() }) });
 action('settings.open', { title: 'Settings', hint: 'every setting, the theme included, in a window of its own', group: 'app',
   run: () => post({ op: 'openSettings' }) });

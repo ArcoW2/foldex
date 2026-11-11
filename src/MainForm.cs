@@ -9,7 +9,8 @@ namespace Foldex;
 /// <summary>
 /// A Foldex window: one WebView2 showing the page (web\index.html). The page and the host talk through JSON messages:
 /// the page asks ({ op, ... }), the host tells ({ event, ... }). When the page's process fails, the window makes a new
-/// page and nothing else stops (docs/plans/02-PLAN-ui-technology.md 3.5).
+/// page and nothing else stops (docs/plans/02-PLAN-ui-technology.md 3.5). It is a window of a project (Key, ProjectStore):
+/// its layout is that window's session (docs/plans/15-PLAN-projects.md).
 /// </summary>
 sealed class MainForm : Form
 {
@@ -19,29 +20,35 @@ sealed class MainForm : Form
     bool pageReady;
     readonly List<string> queue = [];   // told before the page was ready
 
-    public MainForm(AppHost app, IReadOnlyList<string> paths)
+    public MainForm(AppHost app, int key, IReadOnlyList<string> paths)
     {
         this.app = app;
         this.paths = paths;
+        Key = key;
         Text = "Foldex";
         Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
-        StartPosition = FormStartPosition.Manual;
-        var bounds = app.State is { Width: > 0, Height: > 0 } s ? new Rectangle(s.X, s.Y, s.Width, s.Height) : DefaultBounds();
-        // A window placed on a screen that is no longer there comes back on the main one.
-        Bounds = Screen.AllScreens.Any(sc => sc.WorkingArea.IntersectsWith(bounds)) ? bounds : DefaultBounds();
-        if (app.Windows.Count > 0) Location += new Size(32, 32);   // a second window not exactly over the first
-        if (app.State?.Maximized == true) WindowState = FormWindowState.Maximized;
+        StartPosition = FormStartPosition.Manual;   // AppHost.Place
         AddBrowser();
         preview = new PreviewHost(this);
     }
 
     readonly PreviewHost preview;
 
-    static Rectangle DefaultBounds()
-    {
-        var area = Screen.PrimaryScreen!.WorkingArea;
-        return new Rectangle(area.X + area.Width / 8, area.Y + area.Height / 8, area.Width * 3 / 4, area.Height * 3 / 4);
-    }
+    /// <summary>Its window in the projects (ProjectStore.Window.Key).</summary>
+    public int Key { get; private set; }
+
+    /// <summary>Opened at start: goes to the virtual desktop it was on. ReopenHere: a new window that becomes the
+    /// project closed last on its desktop (AppHost.WindowShown). WithProject: closed with its project (Manage projects).</summary>
+    public bool ToDesktop, ReopenHere, WithProject;
+
+    /// <summary>Done once it is on its desktop and in its project (AppHost.WindowShown).</summary>
+    public TaskCompletionSource Settled { get; } = new();
+
+    /// <summary>Becomes another window of the projects (a closed one opened again in its place).</summary>
+    public void Rekey(int key) => Key = key;
+
+    /// <summary>The title: Foldex and the window's project.</summary>
+    public void ShowProject(string display) => Text = display.Length > 0 ? $"Foldex - {display}" : "Foldex";
 
     void AddBrowser()
     {
@@ -89,9 +96,11 @@ sealed class MainForm : Form
         }
     }
 
-    protected override async void OnLoad(EventArgs e)
+    // The page only once the window is on its desktop and in its project: which layout it gets depends on that.
+    protected override async void OnShown(EventArgs e)
     {
-        base.OnLoad(e);
+        base.OnShown(e);
+        await app.WindowShown(this);
         if (!await StartPage()) Close();
     }
 
@@ -107,7 +116,6 @@ sealed class MainForm : Form
         core.Settings.IsZoomControlEnabled = false;
         WebFiles.Serve(core);
         core.ContextMenuRequested += (_, m) => WebFiles.BrowserMenu(m);
-        core.DocumentTitleChanged += (_, _) => Text = core.DocumentTitle is { Length: > 0 } t ? t : "Foldex";
         // Not inside a WebView2 event handler: dialogs and long work must not run there.
         // Files dropped from Explorer come along as objects that carry their path (docs/plans/02 3.6).
         core.WebMessageReceived += (_, m) =>
@@ -163,11 +171,13 @@ sealed class MainForm : Form
                     ["keys"] = KeysFile.Load(AppHost.DataDir),
                     ["ribbon"] = RibbonFile.Load(AppHost.DataDir, Path.Combine(AppHost.DefaultsDir, RibbonFile.Name)),
                     ["paths"] = PathsArray(paths),
-                    ["layout"] = pageLayout?.DeepClone() ?? app.TakeSavedLayout(),
+                    ["layout"] = freshLayout ? null : pageLayout?.DeepClone() ?? app.LayoutFor(this),
+                    ["project"] = app.ProjectInfo(this),
                     ["ops"] = new JsonArray(app.FileOps.All.Select(o => (JsonNode)o.ToJson()).ToArray()),
                 });
                 foreach (var queued in queue) web.CoreWebView2.PostWebMessageAsJson(queued);
                 queue.Clear();
+                freshLayout = false;
                 break;
             case "list":
                 await List(msg["location"]!.GetValue<string>(), msg["req"]?.GetValue<int>() ?? 0,
@@ -270,6 +280,24 @@ sealed class MainForm : Form
                 break;
             case "layout":
                 pageLayout = msg["layout"]?.DeepClone() as JsonObject;
+                if (pageLayout is not null) app.SaveSession(this, pageLayout);
+                break;
+            case "layoutReset":
+                // View > Projects > Reset layout (plan 15 3.6): the page again, on the default layout, at the folder it showed.
+                pageLayout = app.DefaultLayoutOrNull();
+                freshLayout = pageLayout is null;
+                paths = msg["path"]?.GetValue<string>() is { } at ? [at] : [];
+                pageReady = false;
+                web.CoreWebView2?.Reload();
+                break;
+            case "projects":
+                Post(new JsonObject { ["event"] = "projectList", ["list"] = app.ProjectList(this) });
+                break;
+            case "projectCommand":
+                app.ProjectCommand(this, msg["kind"]!.GetValue<string>(), msg);
+                break;
+            case "openProjects":
+                app.OpenProjects(this);
                 break;
             case "watch":
                 app.Folders?.Set(this, msg["folders"]?.AsArray().Select(n => n!.GetValue<string>()) ?? []);
@@ -418,19 +446,8 @@ sealed class MainForm : Form
         else queue.Add(json);
     }
 
-    // The page's layout as it told it last (plan 12 3.4): kept with the window's place when it closes, and given back to a
-    // new page after a failure.
+    // The page's layout as it told it last: its window's session (AppHost.SaveSession), given back to a new page after a
+    // failure. freshLayout: the next page starts on the page's own default layout (a reset without defaultLayout).
     JsonObject? pageLayout;
-
-    protected override void OnFormClosing(FormClosingEventArgs e)
-    {
-        base.OnFormClosing(e);
-        var b = WindowState == FormWindowState.Normal ? Bounds : RestoreBounds;
-        app.SaveState(new AppHost.AppState
-        {
-            X = b.X, Y = b.Y, Width = b.Width, Height = b.Height,
-            Maximized = WindowState == FormWindowState.Maximized,
-            Layout = pageLayout ?? app.State?.Layout,
-        });
-    }
+    bool freshLayout;
 }

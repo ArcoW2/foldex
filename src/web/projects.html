@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Manage projects - Foldex</title>
+  <link rel="stylesheet" href="app.css">
+  <link rel="stylesheet" href="projects.css">
+  <script src="look.js" defer></script>
+  <script src="menu.js" defer></script>
+  <script src="projects.js" defer></script>
+</head>
+<body class="pv-body">
+  <nav class="pv-menubar"></nav>
+  <header class="pv-top">
+    <input class="pv-search" placeholder="Filter on name or folder (Ctrl+F)" spellcheck="false">
+  </header>
+  <div class="pv-head pv-grid">
+    <span></span>
+    <input type="checkbox" class="pv-all" title="All / none of the projects shown">
+    <button class="pv-sort" data-sort="name">Name</button>
+    <span>State</span>
+    <span>Folders</span>
+    <span class="pv-num">Windows</span>
+    <button class="pv-sort" data-sort="created">Created</button>
+    <button class="pv-sort" data-sort="used">Last used</button>
+  </div>
+  <div class="pv-list" tabindex="0"></div>
+  <footer class="pv-bottom">
+    <span class="pv-count"></span>
+    <button class="pv-open">Open selected</button>
+    <button class="pv-close">Close selected</button>
+  </footer>
+  <dialog class="ask pv-dialog">
+    <form method="dialog">
+      <label class="pv-dialog-label"></label>
+      <input class="pv-dialog-input" spellcheck="false" placeholder="Empty: a number">
+      <div class="ask-buttons"><button value="ok">OK</button><button value="cancel" formnovalidate>Cancel</button></div>
+    </form>
+  </dialog>
+</body>
+</html>

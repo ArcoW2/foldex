@@ -619,8 +619,69 @@ footer {
   overflow-y: auto;
 }
 
+/* The window's project at the left (projectmenu.js; a click: the Projects menu), then the status text. */
+#statusline {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+#project {
+  flex: none;
+  font: inherit;
+  color: var(--fg);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 0 6px;
+  cursor: pointer;
+}
+
+#project:hover {
+  background: var(--hover);
+  border-color: var(--border);
+}
+
 #status {
   color: var(--fg-dim);
+}
+
+/* A small dialog of the page (projectmenu.js ask): a question, maybe a text box, OK and Cancel. */
+dialog.ask {
+  color: var(--fg);
+  background: var(--bg-bar);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 14px;
+  min-width: 320px;
+}
+
+dialog.ask::backdrop {
+  background: rgba(0, 0, 0, .25);
+}
+
+dialog.ask form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ask-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.ask-buttons button {
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 14px;
+}
+
+.ask-buttons button:focus {
+  border-color: var(--accent);
 }
 
 #status.warn {

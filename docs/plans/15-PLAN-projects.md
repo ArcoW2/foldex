@@ -1,11 +1,13 @@
 # Plan 15: Projects and window sessions
 
-Status: not started; see Status.
+Status: partly executed; see Status and 6. As built.
 
 - 2026-11-11: draft, taken out of plan 12 (3.4): the layout in the project.
 - 2026-11-11: revised: widened to projects as LexPen's (plan 01 3.5), taking plan 01's projects and window sessions
   and plan 03's layout in the project; unnamed projects: the last closed per desktop kept; the commands in View >
   Projects and at the project in the bottom bar.
+- 2026-11-11: revised: a layout saved as the default for new projects, and a window reset to it, as LexPen's.
+- 2026-11-11: partly executed: everything but the checks by hand.
 
 Builds on plan 12 (docking panes) and plan 03 (connected panes). As LexPen's projects
 (LexPen `docs/plans/executed/PLAN-window-sessions.md` and `PLAN-manage-projects.md`). The number in the file name is
@@ -24,28 +26,34 @@ keeps its session (its panes with their connections and state per branch, its do
 desktop), saved continuously in `State\projects.json`. At start every window that was open comes back, each on its
 own desktop. The project of a window is shown at the left of the bottom bar; a click there opens the Projects menu:
 every project with its windows, a new project, rename, move this window to another project, Manage projects. The same
-commands are in the ribbon, View > Projects. Manage projects is a window of its own with every project in one list,
-to open, close, merge, rename and delete several at once. A named project stays until deleted; of the unnamed ones
-only the last closed per desktop is kept.
+commands are in the ribbon, View > Projects. A window's layout can be saved as the default a new project starts with,
+and a window reset to it. Manage projects is a window of its own with every project in one list, to open, close,
+merge, rename and delete several at once. A named project stays until deleted; of the unnamed ones only the last
+closed per desktop is kept.
 
 ## Status
 
 ### Built
 
+| Part | What | Reference |
+|---|---|---|
+| Project store | `ProjectStore.cs`: projects, windows, sessions, `State\projects.json` written atomically | 3.1; 6.1 |
+| Window sessions | each window's layout, place and desktop, saved a second after a change | 3.2, 3.3; 6.1 |
+| Closing and start | the rules of 3.4: what is kept, what comes back | 3.4; 6.1 |
+| Virtual desktops | `VirtualDesktop.cs` from LexPen; launches to the window on the current desktop | 3.5; 6.1 |
+| Bottom bar and Projects menu | the project at the left of the bottom bar; the menu of 3.6 (`projectmenu.js`) | 3.6; 6.1 |
+| Ribbon and actions | View > Projects; the actions of 3.6 | 3.6 |
+| Name prompt | a small dialog of the page for a project name, and for yes / no | 3.6 |
+| Default layout | Save layout as default (`defaultLayout`), Reset layout | 3.2, 3.6; 6.1 |
+| Manage projects | the window of 3.7 | 3.7; 6.1 |
+| Settings | `newWindowProject`, `projectsSort`, `defaultLayout` | 3.2, 3.7 |
+| `state.json` | keeps only places; its layout became project 1 | 3.8; 6.1 |
+
 ### Not yet built
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| Project store | `ProjectStore.cs`: projects, windows, sessions, `State\projects.json` written atomically | -- | 3.1 |
-| Window sessions | each window's layout, place and desktop, saved a second after a change | -- | 3.2, 3.3 |
-| Closing and start | the rules of 3.4: what is kept, what comes back | -- | 3.4 |
-| Virtual desktops | `VirtualDesktop.cs` from LexPen; launches to the window on the current desktop | -- | 3.5 |
-| Bottom bar and Projects menu | the project at the left of the bottom bar; the menu of 3.6 | -- | 3.6 |
-| Ribbon and actions | View > Projects; the actions of 3.6 | -- | 3.6 |
-| Name prompt | a small in-page dialog for a project name | -- | 3.6 |
-| Manage projects | the window of 3.7 | -- | 3.7 |
-| Setting | `newWindowProject` | -- | 3.2 |
-| `state.json` | keeps only the place for a window without its own; its layout becomes project 1 | -- | 3.8 |
+| Checks by hand | windows on several virtual desktops (start, launch, closed last per desktop); Merge and Delete with their questions; the name dialog; a Shift launch; the ribbon's Projects group | -- | 3.10; 6.2 |
 
 ## 3. Details
 
@@ -69,8 +77,8 @@ only the last closed per desktop is kept.
 - A new window comes from a Shift launch, or a launch on a desktop without a Foldex window (3.5), or New window in a
   project's submenu (3.6). Setting `newWindowProject` (settings window, group General): `same` (default) joins the
   project of the last window used on this desktop, a new project when there is none; `new` always a new project.
-- A new window in a project opens with the layout of that project's most recently used window, else the default
-  layout (plan 03 3.5).
+- A new window in a project opens with the layout of that project's most recently used window. A new project opens
+  with the default layout: `defaultLayout` in the settings when one was saved (3.6), else Foldex's own (plan 03 3.5).
 
 ### 3.3 Saving: continuously
 
@@ -100,8 +108,8 @@ only the last closed per desktop is kept.
   none on this desktop, the project closed last on this desktop is opened again, else a new window (3.2). The path
   goes to the first tree, as now. Shift: a new window.
 - A closed window or project opened from the menu: on the current desktop, at its size and place.
-- A saved place on a monitor that is no longer there: the window opens on the primary monitor (`Monitors.cs` from
-  LexPen).
+- A saved place on a monitor that is no longer there: the window opens a step from the window used last, or on the
+  primary monitor.
 
 ### 3.6 The bottom bar, the Projects menu, the ribbon
 
@@ -129,10 +137,14 @@ Projects
   project...: the name of this window's project (empty: unnamed again). Move this window to: another project or a
   new one; its old project, left without windows, by 3.4.
 - The name is asked in a small dialog of the page (a text box, OK and Cancel; Enter and Esc).
+- **Save layout as default**: this window's panes and docks become `defaultLayout` in your settings.json, the layout
+  a new project starts with (with its folders). **Reset layout**: this window back on the default layout, at the
+  folder it shows; with no default saved, Foldex's own.
 - Actions (F1, keys, ribbon): `projects.menu` (the menu at the bottom bar), `projects.manage`, `project.new`,
-  `project.rename`, `project.moveWindow` (the menu's Move this window to part). Ribbon, View > Projects: Projects
-  (large; the menu), Manage, New, Rename, Move window. Drop-down buttons in the ribbon are not built (plan 01 3.3), so
-  the lists are in the menu.
+  `project.rename`, `project.moveWindow` (the menu's Move this window to part), `layout.saveDefault`,
+  `layout.resetDefault`. Ribbon, View > Projects: Projects (large; the menu), Manage, New, Rename, Move window, Save
+  layout as default, Reset layout. Drop-down buttons in the ribbon are not built (plan 01 3.3), so the lists are in
+  the menu.
 
 ### 3.7 Manage projects
 
@@ -181,7 +193,8 @@ place kept. From top to bottom: a menu bar, a search box, the list, two buttons.
   closed one of the same desktop, not one of another desktop; a named one stays; merge; move a window (the old
   unnamed project dropped when empty); delete refuses a project with open windows; start windows; last closed on a
   desktop; the layout of a new window from the project's last used one; `state.json` becoming project 1.
-- Every new settings row names a setting; every ribbon button names an action (existing tests).
+- Every new settings row names a setting; every ribbon button names an action (existing tests); every page script
+  parses.
 - Test copy over CDP: the project at the bottom bar; the menu; New project opens a window in it; rename shows in the
   title and the bar; two windows, one closed by hand, the other closed: the project comes back with the right one at
   start; a crash (process killed) brings every window back; Manage: open, close, merge, rename, delete.
@@ -189,3 +202,48 @@ place kept. From top to bottom: a menu bar, a search box, the list, two buttons.
 ## 4. Open questions
 
 None.
+
+## 6. As built
+
+### 6.1 Built (2026-11-11, branch `plan01-foundation`)
+
+- `ProjectStore.cs`: LexPen's, without drafts, documents and theme sets. `DropIfUnwanted`: a named project stays; an
+  unnamed one without windows goes; a closed unnamed one removes the other closed unnamed ones whose window closed
+  last was on the same desktop (an unknown desktop counts as one). `StartWindows`: every window still open.
+- `AppHost`: `Launch` opens the windows still open first, each on its desktop, then routes the paths once they are
+  settled; `Route` to the window used last on this desktop, else a new window that may become the project closed last
+  there (`WindowShown`, as LexPen's: `Forget` the new entry, `Rekey` the window). `Place` (own place, else the last
+  closed window's for the first, else a step from the window used last). `Closed`: by hand `CloseByHand`, Manage's
+  Close `CloseWithProject`, Windows closing Foldex nothing (they come back); the place goes to `state.json`.
+  `SaveSession` from the page's layout, `WindowPlaceChanged` on move, resize, activation and a 5 s desktop check;
+  `projects.json` written a second after the last change. `ProjectList`, `ProjectCommand`, `MergeProjects`,
+  `CloseProjects`, `DeleteProjects` (asking with a MessageBox). A window's folder: its active pane's location or
+  focus; a shell place without a path by its name.
+- `MainForm`: a `Key`; the page starts in `OnShown`, after `WindowShown`, so the layout it gets is its project's; the
+  title `Foldex - <project>`; ops `projects`, `projectCommand`, `openProjects`, `layoutReset` (the page reloaded on the
+  default layout, or on its own default with `freshLayout`).
+- Page: `projectmenu.js` (the project in the bottom bar, the menu on `menu.js`, the dialog `ask`); `actions.js` group
+  Projects; `app.js` `saveLayoutAsDefault` and `windowLayout`; View > Projects in `ribbon.json`.
+- Manage: `ProjectsForm.cs` (as `SettingsForm`, with LexPen's request and answer), `projects.html`, `projects.css`,
+  `projects.js` (LexPen's page without tabs and drafts, its menus on `menu.js`); Empty projects in the Select menu
+  left out (a Foldex window always has panes).
+- Not taken from LexPen: `Monitors.cs` (the screen check in `Place` does it), `keepUnnamedProjects` (3.9).
+- Found on the way: two hints with an apostrophe written by a script lost their escape and broke `actions.js` and
+  `app.js`; a new test parses every page script.
+
+### 6.2 How it was tested
+
+- `dotnet test`: Failed 0, Passed 111 (`ProjectStoreTests`: numbers and round trip, `state.json` as project 1,
+  closing by hand, the unnamed rule per desktop, close with the project, moving, merge and delete, the layout of a new
+  window, start windows and forget; `EveryPageScriptParses`).
+- A test copy over CDP, one virtual desktop: the first start made project 1 from `state.json`, its three panes back,
+  "Project 1" in the bottom bar and the title; the Projects menu opened upward at the bottom bar with the project's
+  submenu (screenshot); Rename to Klanten; New project Archief opened a second window; both closed by hand
+  (`WM_SYSCOMMAND` `SC_CLOSE`: a plain `WM_CLOSE` from another process counts as Task Manager, and then both stayed
+  open, as 3.4 says): both kept closed; the next start brought Klanten back (closed last on this desktop), Archief
+  stayed closed; Foldex killed: Klanten back at the next start; Manage (screenshot): both projects, a row unfolded,
+  This PC by its name; Open and Close from Manage on Archief; Save layout as default, then New project Nieuw opened
+  with the three panes of Klanten; `defaultLayout` emptied and Reset layout: Klanten on Foldex's own two panes, at its
+  folder.
+- Not tried: more than one virtual desktop, Merge and Delete (their questions are MessageBoxes), the name dialog by
+  hand, a Shift launch, the ribbon's Projects group on screen.

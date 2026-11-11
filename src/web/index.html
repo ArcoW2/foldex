@@ -8,6 +8,7 @@
   <script src="panes.js" defer></script>
   <script src="docks.js" defer></script>
   <script src="menu.js" defer></script>
+  <script src="projectmenu.js" defer></script>
   <script src="keys.js" defer></script>
   <script src="actions.js" defer></script>
   <script src="palette.js" defer></script>
@@ -24,7 +25,10 @@
   <!-- The panes of plan 03: the root (folders only, left) and its followers. -->
   <main id="panes"></main>
   <footer>
-    <div id="status"></div>
+    <div id="statusline">
+      <button id="project" tabindex="-1"></button>
+      <div id="status"></div>
+    </div>
     <ul id="ops"></ul>
   </footer>
 </body>

@@ -1,0 +1,45 @@
+/* The Manage projects window (projects.html, projects.js; plan 15 3.7): app.css's theme colours and menus, its own
+   layout. As LexPen's. */
+.pv-body { margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+.pv-menubar { display: flex; padding: 2px 4px; background: var(--bg-bar); border-bottom: 1px solid var(--border); }
+.pv-menubar button { font: inherit; color: var(--fg); background: none; border: 0; border-radius: 4px; padding: 3px 8px; }
+.pv-menubar button:hover, .pv-menubar button.on { background: var(--hover); }
+.pv-top { padding: 8px 10px; border-bottom: 1px solid var(--border); background: var(--bg-bar); }
+.pv-search { box-sizing: border-box; width: 100%; }
+
+/* One grid for the header and the rows: fold, check, name, state, folders, windows, created, last used. */
+.pv-grid { display: grid; grid-template-columns: 18px 22px minmax(140px, 1.2fr) 5em minmax(120px, 2fr) 4.5em 7.5em 10.5em;
+  align-items: center; gap: 0 8px; padding: 4px 10px; }
+.pv-head { color: var(--fg-dim); border-bottom: 1px solid var(--border); font-size: .92em; }
+.pv-head .pv-sort { font: inherit; color: inherit; background: none; border: 0; padding: 0; text-align: left; cursor: pointer; }
+.pv-head .pv-sort:hover { color: var(--fg); }
+.pv-head .pv-sort.pv-on { color: var(--accent); }
+.pv-head .pv-sort.pv-on::after { content: " \25B2"; font-size: .8em; }
+.pv-head .pv-sort.pv-on.pv-desc::after { content: " \25BC"; }
+.pv-num { text-align: right; font-variant-numeric: tabular-nums; }
+.pv-list { flex: 1; overflow: auto; outline: none; }
+.pv-row { border-left: 3px solid transparent; cursor: default; }
+.pv-row:hover { background: var(--hover); }
+.pv-row.pv-checked { background: var(--select); }
+.pv-list:focus .pv-row.pv-focus { border-left-color: var(--accent); }
+.pv-fold { font: inherit; color: var(--fg-dim); background: none; border: 0; padding: 0; width: 18px; cursor: pointer; }
+.pv-fold::before { content: "\25B8"; }
+.pv-row.pv-unfolded .pv-fold::before { content: "\25BE"; }
+.pv-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.pv-name.pv-unnamed { font-weight: normal; color: var(--fg-dim); }
+.pv-name input { box-sizing: border-box; width: 100%; padding: 1px 4px; }
+.pv-state { color: var(--fg-dim); }
+.pv-state.pv-open-now { color: var(--accent); }
+.pv-folders, .pv-date { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg-dim); }
+.pv-details { padding: 2px 10px 8px 58px; color: var(--fg-dim); }
+.pv-window { display: block; width: 100%; text-align: left; font: inherit; color: inherit; background: none; border: 0; border-radius: 3px; padding: 2px 4px; cursor: pointer; }
+.pv-window:hover { background: var(--hover); color: var(--fg); }
+.pv-window b { color: var(--fg); font-weight: 600; }
+.pv-paths { display: block; padding-left: 1.5em; white-space: normal; overflow-wrap: anywhere; }
+.pv-mark { background: color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 2px; }
+.pv-empty { padding: 14px 10px; color: var(--fg-dim); }
+.pv-bottom { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-top: 1px solid var(--border); background: var(--bg-bar); }
+.pv-count { flex: 1; color: var(--fg-dim); }
+.pv-bottom button { color: var(--fg); background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 4px 12px; cursor: pointer; }
+.pv-bottom button:hover:not(:disabled) { border-color: var(--accent); }
+.pv-bottom button:disabled { opacity: .45; cursor: default; }

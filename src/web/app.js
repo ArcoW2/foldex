@@ -1096,12 +1096,20 @@ async function start(paths, saved) {
   list.body.focus();
 }
 
-// ---------- The layout kept (plan 12 3.4): told to the host, which keeps the last closed window's ----------
+// ---------- The layout kept (plan 12 3.4): told to the host, the window's session in its project (plan 15) ----------
 
 let layoutTimer = 0;
+const windowLayout = () => JSON.parse(JSON.stringify({ panes: layout.toJSON(), docks: docks.toJSON(), active: activePane }));
 function tellLayout() {
   clearTimeout(layoutTimer);
-  layoutTimer = setTimeout(() => post({ op: 'layout', layout: { panes: layout.toJSON(), docks: docks.toJSON(), active: activePane } }), 800);
+  layoutTimer = setTimeout(() => post({ op: 'layout', layout: windowLayout() }), 800);
+}
+
+// View > Projects > Save layout as default (plan 15 3.6): this window's panes and docks become defaultLayout in your
+// settings.json, the layout a new project starts with.
+function saveLayoutAsDefault() {
+  setSetting('defaultLayout', windowLayout());
+  status('The layout of this window is now the default for new projects (Reset layout puts a window back on it).');
 }
 
 // The panes, their connections and branch states, and the docks, as they were: a view per pane, each back on what it
@@ -1535,8 +1543,12 @@ const events = {
     for (const o of m.ops) ops.set(o.id, o);
     showOps();
     settingsProblems(m);
+    showProject(m.project);
     start(m.paths, m.layout);
   },
+  // The window's project renamed, or the window moved to another (plan 15 3.6).
+  project(m) { showProject(m.project); },
+  projectList(m) { projectListCame(m.list); },
   // Settings or themes changed (the settings window, a file edited by hand): every window is told.
   settings(m) {
     const before = settings;

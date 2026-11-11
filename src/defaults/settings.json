@@ -7,6 +7,12 @@
   "theme": "light",               // "light" or "dark": the mode when not following Windows
   "themeLight": "light",          // the theme in light mode (a file name in themes\ without .json)
   "themeDark": "dark",            // the theme in dark mode
+  "newWindowProject": "same",     // a new window: "same" project as the last window used on this desktop, or "new"
+
+  // ---------- Projects ----------
+  "projectsSort": "used-desc",    // Manage projects: "name", "created" or "used", then "-asc" or "-desc"
+  "defaultLayout": {},            // the layout new projects start with (View > Projects > Save layout as default);
+                                  // {} is Foldex's own: the tree at the left, its list beside it
 
   // ---------- Fonts ----------
   "appFont": "",                  // the window: ribbon, pane heads, location, status line; "" is Segoe UI

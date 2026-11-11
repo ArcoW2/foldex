@@ -29,7 +29,7 @@ updated whenever a plan is written, built or closed that touches a feature here.
 | Drive bar with free space | P+ | plan 10 (drives bar) | 5 | bars (plan 10) |
 | Detachable, floating, docked panes | P+ | built (plan 12); floating: plan 14 | 4 | -- |
 | Miller columns | P+ | plan 03 (preset "columns") | 4 | presets (plan 03) |
-| Named window layouts (workspaces) | P+ | plan 15 (projects) | 4 | projects (plan 01) |
+| Named window layouts (workspaces) | P+ | built (plan 15): projects, a default layout | 4 | -- |
 | Address bar: breadcrumbs, typed path, autocomplete | P+ | part: typed path built; as a bar: plan 10 | 4 | bars (plan 10) |
 | Back / forward / up | P+ | built (plan 03 3.6: per branch) | 4 | -- |
 | Frequent folders, jump list | P+ | -- | 4 | Back / forward / up (the history) |
@@ -40,7 +40,7 @@ updated whenever a plan is written, built or closed that touches a feature here.
 | Mirror browsing / scrolling | P+ | -- | 3 | -- |
 | Spring-loaded tabs and tree during drag | P+ | -- | 3 | -- |
 | Dual pane, vertical or horizontal | All | part: connected panes side by side (plan 03); one below the other: built (plan 12) | 2 | Detachable, floating, docked panes (a child below) |
-| Folder groups (saved sets of tabs) | P+ | -- (projects, plan 01 3.5) | 2 | Named window layouts (projects) |
+| Folder groups (saved sets of tabs) | P+ | -- (projects, plan 15) | 2 | Named window layouts (projects) |
 | Hide a folder from the tree | P+ | -- | 2 | -- |
 
 ## Lists, filtering, selection

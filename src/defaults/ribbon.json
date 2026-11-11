@@ -29,6 +29,13 @@
       { "name": "Show", "items": [
         { "action": "preview.toggle", "size": "large", "label": "Preview" },
         { "action": "hidden.toggle", "label": "Hidden items" } ] },
+      { "name": "Projects", "items": [
+        { "action": "projects.menu", "size": "large", "label": "Projects" },
+        { "action": "projects.manage", "label": "Manage" }, { "action": "project.new", "label": "New", "stack": true },
+        { "action": "project.rename", "label": "Rename", "stack": true },
+        { "action": "project.moveWindow", "label": "Move window" },
+        { "action": "layout.saveDefault", "label": "Save layout as default", "stack": true },
+        { "action": "layout.resetDefault", "label": "Reset layout", "stack": true } ] },
       { "name": "Foldex", "items": [
         { "action": "settings.open", "size": "large", "label": "Settings" } ] } ] }
   ]
