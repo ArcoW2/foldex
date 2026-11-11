@@ -60,10 +60,10 @@ a parent the folder expands in place, as in a tree.
 | View settings per pane | content, view, sort, filter changeable per pane; a list ignores content | -- | 3.1 |
 | Hidden files per pane | now one `showHidden` for every pane | -- | 3.1; plan 01 6.2 |
 | Debounce delay setting | fixed at 150 ms now | -- | 3.3; 6.1 |
-| Layout in the project | | plan 01's projects | 3.7 |
 | Other presets | presets other than the default | -- | 3.5 |
 
-Moved out: a child below, as a tab or floating, New tab, Attach to, the pane header's menu, to plan 12.
+Moved out: a child below, as a tab or floating, New tab, Attach to, the pane header's menu, to plan 12; the layout in
+the project to plan 15.
 
 ## 3. Details
 

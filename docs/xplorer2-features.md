@@ -29,7 +29,7 @@ updated whenever a plan is written, built or closed that touches a feature here.
 | Drive bar with free space | P+ | plan 10 (drives bar) | 5 | bars (plan 10) |
 | Detachable, floating, docked panes | P+ | built (plan 12); floating: plan 14 | 4 | -- |
 | Miller columns | P+ | plan 03 (preset "columns") | 4 | presets (plan 03) |
-| Named window layouts (workspaces) | P+ | plan 01 (projects); the layout in it: plan 15 | 4 | projects (plan 01) |
+| Named window layouts (workspaces) | P+ | plan 15 (projects) | 4 | projects (plan 01) |
 | Address bar: breadcrumbs, typed path, autocomplete | P+ | part: typed path built; as a bar: plan 10 | 4 | bars (plan 10) |
 | Back / forward / up | P+ | built (plan 03 3.6: per branch) | 4 | -- |
 | Frequent folders, jump list | P+ | -- | 4 | Back / forward / up (the history) |
