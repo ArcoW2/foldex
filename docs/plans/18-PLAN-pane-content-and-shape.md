@@ -5,6 +5,7 @@ Status: not started; see Status.
 - 2026-11-11: draft; the part "View settings per pane" of plan 03 (content and tree or list) moved here.
 - 2026-11-11: revised: Files is greyed out in a tree.
 - 2026-11-11: revised: a tree child has no row for its folder; its lines start at the header.
+- 2026-11-11: revised: a tree has the columns of a list, also with folders only.
 
 Builds on plan 03 (panes of one kind, following) and plan 12 (the pane header's menu). The number in the file name is
 the priority; rename to reorder.
@@ -20,7 +21,8 @@ pane a list of folders and files, for good. A list ignores `content`, and a tree
 The pane header's menu gets two settings. Show: folders, files, or both. Shape: a tree, where a folder can be opened in
 the pane itself, or one folder, which shows only that folder's own items and opens nothing in place. Any pane can have
 any combination but a tree of files only, root or child, and keeps it with its layout in the project. A folder in a tree gets an arrow when it
-has something to show under the pane's Show setting: subfolders, or, with files shown, files too.
+has something to show under the pane's Show setting: subfolders, or, with files shown, files too. A tree has the same
+columns as a list, whatever it shows.
 
 ## Status
 
@@ -32,7 +34,8 @@ has something to show under the pane's Show setting: subfolders, or, with files 
 |---|---|---|---|
 | Show | folders, files, both: in the header's menu; a list and a tree honour it; Files greyed out in a tree | -- | 3.1; 3.2 |
 | Shape | tree or one folder, in the header's menu; the pane's view switches, its state kept | -- | 3.1; 3.3 |
-| A tree with files | files as rows without an arrow; a click focuses, a double-click opens | open question 1 | 3.2 |
+| A tree with files | files as rows without an arrow; a click focuses, a double-click opens | -- | 3.2 |
+| Columns in a tree | the list's columns (name, size, modified now; plan 11's later); the tree in the name column | -- | 3.3 |
 | Arrows with files shown | the listing also tells whether a folder has files | -- | 3.4 |
 | Saved | `kind` and `content` per pane, as now; a new child copies them, as now | -- | 3.5 |
 
@@ -69,6 +72,10 @@ has something to show under the pane's Show setting: subfolders, or, with files 
   itself without one (plan 03 3.3), as a list does now.
 - Switching keeps the pane's place: from tree to one folder it shows its focused folder; from one folder to tree it
   opens the tree down to the folder it showed, focused.
+- **Columns**: a tree has the same columns as a list, with files and folders and with folders only: a folder has a
+  date modified, can have an extension, a Git status, a comment, and later a size (plan 11). The arrows, lines and
+  indent are in the name column. Now: name, size and date modified, as a list; with plan 11 the same choice of columns,
+  sets and fitting as a list.
 - What follows the pane is the item focused in it, in either shape, so a child follows a tree child as it follows a
   list.
 - Switching makes a new view for the pane (`TreeView` or `ListView`) with the same id, connections and states per
@@ -94,12 +101,11 @@ has something to show under the pane's Show setting: subfolders, or, with files 
 - Unit (Jint, `panes.js`): a new child copies kind and content; switching shape keeps the states per branch.
 - Test copy over CDP: the header's menu shows both submenus with the current choice checked, Files greyed out in a
   tree; a list showing Files switched to Tree: Folders and files; the root to Folders and
-  files: files under the folders, a folder with only files has an arrow; a file in the tree focused: the preview
+  files: files under the folders, a folder with only files has an arrow, the columns as in a list; a file in the tree focused: the preview
   shows it; the list to Folders: no files; the list to Tree: its folder opened in place, no row for its folder, the line starting at the header and the rows one
   level in, its child still follows; the
   project closed and opened: the panes as they were set.
 
 ## 4. Open questions
 
-1. **Columns in a tree with files.** Proposed: names only, as the tree now; size and date columns come with plan 11
-   (columns). Agreed?
+None.

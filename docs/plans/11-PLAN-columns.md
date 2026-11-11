@@ -5,6 +5,7 @@ Status: not started.
 - 2026-11-10: draft.
 - 2026-11-10: revised: generic columns and sets per folder, Manage sets, fitting the name column, row lines and stripes,
   row height.
+- 2026-11-11: revised: a tree pane has columns as a list (plan 18).
 
 ## 1. What this is about
 
@@ -63,7 +64,7 @@ an intensity you set, and a height relative to the pane font.
 
 ### 3.2 Generic columns and sets per folder
 
-- **Generic**: every list pane shows its generic columns wherever it goes, unless the folder has a set (below).
+- **Generic**: every pane, a list or a tree (plan 18), shows its generic columns wherever it goes, unless the folder has a set (below).
   Changes in the header (add, remove, move, resize, sort) are remembered by themselves, per pane; a new child copies
   them with the other settings of the current child (plan 03).
 - **A set for a folder**: in the header's menu, "Use a set for this folder": a set from the list, for this folder
@@ -102,7 +103,8 @@ an intensity you set, and a height relative to the pane font.
 - **Fit by themselves**: a switch per pane (and kept in a set): the columns are fitted after every listing and when
   the pane is resized, as Fit columns does.
 - Widths are in em of the pane font, so columns keep their proportions when Ctrl+wheel changes the size (plan 08).
-- The tree has no columns.
+- A tree has the same columns as a list (plan 18), also with folders only; its arrows, lines and indent are in the
+  name column.
 
 ### 3.5 Rows
 
