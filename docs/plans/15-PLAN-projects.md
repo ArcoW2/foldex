@@ -13,6 +13,8 @@ Status: partly executed; see Status and 6. As built.
 - 2026-11-11: revised and executed: the panes in that tree by their names, as their heads show them.
 - 2026-11-11: revised and executed: a click on a pane opens (or shows) its project with the focus on that pane; the
   tree drawn with lines (plan 16).
+- 2026-11-12: checked in the test copy: Delete, the name dialog, a Shift launch, the ribbon group; several virtual
+  desktops left for a check by hand.
 
 Builds on plan 12 (docking panes) and plan 03 (connected panes). As LexPen's projects
 (LexPen `docs/plans/executed/PLAN-window-sessions.md` and `PLAN-manage-projects.md`), with one window per project.
@@ -52,12 +54,13 @@ once. A named project stays until deleted; of the unnamed ones only the last clo
 | Manage projects | the window of 3.7 | 3.7; 6.1, 6.3 |
 | Settings | `projectsSort`, `defaultLayout` | 3.6, 3.7 |
 | `state.json` | keeps only places; its layout became project 1 | 3.8; 6.1 |
+| Checks in the test copy | Delete with its question; the name dialog; a Shift launch; the ribbon's Projects group | 3.10; 6.4 |
 
 ### Not yet built
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| Checks by hand | windows on several virtual desktops (start, launch, closed last per desktop); Delete with its question; the name dialog; a Shift launch; the ribbon's Projects group | -- | 3.10; 6.2 |
+| Checks by hand | windows on several virtual desktops (start, launch, closed last per desktop) | you: making desktops changes your own Windows session | 3.10; 6.2; 6.4 |
 
 ## 3. Details
 
@@ -266,3 +269,14 @@ None.
   the window to the front (opening it when closed) and tells its page `focusPane`. A name from before the page kept
   names, a shell place's path, is shown by the shell's name (This PC). Test copy: from Klanten's menu a pane of the
   closed Archief: Archief opened with the focus on that pane (`activePane` p2).
+
+### 6.4 Checks in the test copy (2026-11-12)
+
+- The ribbon's View tab: the Projects group (Projects, Manage, New, Rename, Save layout as default, Reset layout), next
+  to Presets, Columns and Bars (screenshot).
+- The name dialog: New project showed "Name of the new project" with its box, OK and Cancel (screenshot); OK with
+  "Probeer": a new window, titled "Foldex 1.0.88 - Probeer".
+- A Shift launch (Shift held through `keybd_event` while the exe started): a new window, a new project.
+- Delete from Manage on the open project Probeer: Windows' question "Delete 'Probeer'?" came (found by its title,
+  answered OK through `WM_COMMAND`); the window closed and the project left the list.
+- Left: several virtual desktops (making one changes the Windows session of whoever runs the test); a check by hand.
