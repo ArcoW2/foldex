@@ -120,6 +120,17 @@ class Layout {
     return [...this.panes.values()].filter(p => p.source === id && (key === undefined || p.colour === key));
   }
 
+  // The colour a pane is drawn in: that of the end of the path it serves, down the branch each pane shows (not into a
+  // preview), so a parent takes its active descendant's colour; a pane without followers its own (a root: null).
+  pathColour(id) {
+    let p = this.pane(id);
+    for (;;) {
+      const next = this.followers(p.id, this.keyOf(p.id)).find(f => f.kind !== 'preview');
+      if (!next) return p.colour;
+      p = next;
+    }
+  }
+
   // The colour whose state a pane shows: the one made active last, else that of its first follower, else ''.
   keyOf(id) {
     const pane = this.pane(id);

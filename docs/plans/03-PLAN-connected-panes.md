@@ -185,7 +185,9 @@ None.
 - Branch colour, as the action `branch.colour` 1 to 6: a free colour makes a branch of its own, a sibling's colour
   joins that branch (3.1, 3.4).
 - Heads in the branch colour; the branch marks in a parent's head (3.4).
-- Focus as LexPen's: the ring and the head in the branch colour (3.4).
+- Focus as LexPen's: the ring and the head in the branch colour (3.4). A parent is drawn in the colour of the path it
+  serves: the colour of the last pane down the branches shown, so with a grandchild in a new branch focused, every
+  parent up to the root takes that colour (dull, the focused pane bright).
 - Keys between panes: to the parent, the child, the next branch (3.6).
 - Back and forward per branch, a selection kept with its step (3.6).
 - Watching folders (3.8).

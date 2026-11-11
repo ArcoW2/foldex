@@ -101,6 +101,19 @@ public class PanesTests
     }
 
     [Fact]
+    public void AParentTakesTheColourOfThePathItServes()
+    {
+        // T -> B (0) -> C (0) and D (new); with D's branch shown, T and B are in D's colour; back to C, in 0 again.
+        var r = Run("""
+            const l = new Layout(); const T = l.add({ kind: 'tree' });
+            const B = l.add({ source: T }); const C = l.add({ source: B }); const D = l.add({ source: B });
+            l.activate(D); const onD = [T, B, C, D].map(id => l.pathColour(id));
+            l.activate(C); const onC = [T, B, C, D].map(id => l.pathColour(id));
+            """, "[onD, onC]");
+        Assert.Equal("[[1,1,0,1],[0,0,0,1]]", r.GetRawText());
+    }
+
+    [Fact]
     public void TheChildrenOfTwoRootsTakeDifferentColours()
     {
         // A's children take branches 0 and 1; the first child of a second root E takes 2, not 0 again.

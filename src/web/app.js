@@ -185,7 +185,7 @@ function activate(id) {
   $('location').value = views.get(id)?.locationText() ?? '';
 }
 
-// Each head in the colour it shows; a parent has a mark per branch it feeds, in the order the branches were made (the
+// Each head in the colour of the path it serves (Layout.pathColour); a parent has a mark per branch it feeds, in the order the branches were made (the
 // first rightmost, app.css), so a mark keeps its place; the active one full and larger. A click switches to one.
 function drawHeads() {
   tellLayout();
@@ -194,8 +194,8 @@ function drawHeads() {
   for (const v of views.values()) {
     const pane = layout.pane(v.id);
     v.el.classList.toggle('in-branch', v.id !== activePane && branch.includes(v.id));
-    const key = pane.source === null ? layout.keyOf(v.id) : pane.colour;
-    v.el.style.setProperty('--branch', key !== '' && key !== null ? `var(--branch-${key})` : '');
+    const key = layout.pathColour(v.id);
+    v.el.style.setProperty('--branch', key !== null ? `var(--branch-${key})` : '');
     v.el.classList.toggle('child', pane.source !== null);
     v.el.classList.toggle('pinned', pane.pinned);
     v.el.querySelector('.pin').title = pane.pinned ? 'Pinned: click to follow the parent again' : 'Pin: stop following the parent';
@@ -884,8 +884,8 @@ function drawTabs() {
       tab.className = 'dock-tab' + (id === shown ? ' on' : '') + (id === activePane ? ' active' : '');
       tab.textContent = views.get(id).tabTitle();
       const pane = layout.pane(id);
-      const key = pane.source === null ? layout.keyOf(id) : pane.colour;
-      tab.style.setProperty('--branch', key !== '' && key !== null ? `var(--branch-${key})` : '');
+      const key = layout.pathColour(id);
+      tab.style.setProperty('--branch', key !== null ? `var(--branch-${key})` : '');
       tab.addEventListener('mousedown', e => {
         if (e.button !== 0) return;
         e.preventDefault();
