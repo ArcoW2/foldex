@@ -6,6 +6,7 @@ Status: not started; see Status.
 - 2026-11-11: revised: Files is greyed out in a tree.
 - 2026-11-11: revised: a tree child has no row for its folder; its lines start at the header.
 - 2026-11-11: revised: a tree has the columns of a list, also with folders only.
+- 2026-11-11: revised: built with columns first; after trying, a default without columns for folders only decided.
 
 Builds on plan 03 (panes of one kind, following) and plan 12 (the pane header's menu). The number in the file name is
 the priority; rename to reorder.
@@ -75,7 +76,7 @@ columns as a list, whatever it shows.
 - **Columns**: a tree has the same columns as a list, with files and folders and with folders only: a folder has a
   date modified, can have an extension, a Git status, a comment, and later a size (plan 11). The arrows, lines and
   indent are in the name column. Now: name, size and date modified, as a list; with plan 11 the same choice of columns,
-  sets and fitting as a list.
+  sets and fitting as a list. Built so first; after trying it, open question 1.
 - What follows the pane is the item focused in it, in either shape, so a child follows a tree child as it follows a
   list.
 - Switching makes a new view for the pane (`TreeView` or `ListView`) with the same id, connections and states per
@@ -108,4 +109,5 @@ columns as a list, whatever it shows.
 
 ## 4. Open questions
 
-None.
+1. **A tree of folders only without columns by default** (to decide after trying a tree with columns): by default no
+   columns but the name for a pane that shows folders only, still changeable per pane; or columns as a list, as built.
