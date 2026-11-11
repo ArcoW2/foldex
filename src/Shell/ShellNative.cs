@@ -190,7 +190,7 @@ static class Native
     public const string PreviewHandlerKey = "{8895b1c6-b41f-4c1c-a562-0d564250836f}";
 
     public const uint SfgaoFolder = 0x20000000, SfgaoFileSystem = 0x40000000, SfgaoStream = 0x00400000, SfgaoHidden = 0x00080000,
-        SfgaoLink = 0x00010000;
+        SfgaoLink = 0x00010000, SfgaoHasSubfolder = 0x80000000;
 
     public const uint ShgfiIcon = 0x100, ShgfiSysIconIndex = 0x4000, ShgfiSmallIcon = 0x1, ShgfiUseFileAttributes = 0x10,
         ShgfiPidl = 0x8;

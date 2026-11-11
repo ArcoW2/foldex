@@ -307,7 +307,10 @@ class TreeView {
 
   add(entry, parent) {
     const known = this.node(entry.id);
-    if (known) return known;
+    if (known) {
+      if (!known.children) known.subs = entry.subs;   // read again: it may have got (or lost) subfolders
+      return known;
+    }
     const n = { ...entry, parent, children: null, expanded: false, depth: parent ? parent.depth + 1 : 0 };
     this.nodes.set(entry.id.toLowerCase(), n);
     return n;
@@ -403,7 +406,10 @@ class TreeView {
       row.style.paddingLeft = `${8 + n.depth * 14}px`;
       row.dataset.index = i;
       const twisty = document.createElement('span');
-      const leaf = n.children && n.children.length === 0;
+      // No expander for a folder without subfolders to show: its children once read, else what the listing said
+      // (subs: true, 'hidden' or false; absent, as for the top items: unknown, so it gets one).
+      const leaf = n.children ? !n.children.some(c => settings.showHidden || !c.hidden)
+        : n.subs === false || (n.subs === 'hidden' && !settings.showHidden);
       // The expanders as the setting treeExpanders says (plan 16 3.1): + and -, or a chevron drawn by app.css.
       if (settings.treeExpanders === 'chevron') twisty.className = 'twisty' + (leaf ? '' : n.expanded ? ' chev open' : ' chev');
       else {

@@ -31,6 +31,19 @@ public class ShellTests : IDisposable
     }
 
     [Fact]
+    public async Task ATreeListingSaysWhichFoldersHaveSubfolders()
+    {
+        Directory.CreateDirectory(Path.Combine(dir, "deep", "inner"));
+        var secret = Directory.CreateDirectory(Path.Combine(dir, "veiled", "secret"));
+        secret.Attributes |= FileAttributes.Hidden;
+        var r = await StaWorker.Once("t", () => ShellListing.List(dir, null, default, true));
+        var byName = r.Entries.ToDictionary(e => e!["name"]!.GetValue<string>(), e => e!);
+        Assert.False(byName["sub"]["subs"]!.GetValue<bool>());
+        Assert.True(byName["deep"]["subs"]!.GetValue<bool>());
+        Assert.Equal("hidden", byName["veiled"]["subs"]!.GetValue<string>());
+    }
+
+    [Fact]
     public async Task BatchesAndRestHoldEveryEntry()
     {
         var parts = new List<JsonArray>();

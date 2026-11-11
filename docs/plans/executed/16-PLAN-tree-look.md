@@ -4,6 +4,7 @@ Status: executed; see 6. As built.
 
 - 2026-11-11: draft.
 - 2026-11-11: executed.
+- 2026-11-11: fixed: no expander for a folder without subfolders; the chevron the default.
 
 Builds on plan 03 (the tree panes) and plan 15 (the Projects menu's pane tree). The number in the file name is the
 priority; rename to reorder.
@@ -85,11 +86,16 @@ None.
   `treeExpanders` changes; `look.js` puts `treeLines` on the root element and `app.css` draws the lines dotted,
   solid or not at all, in the dim text colour at 55%.
 - `menu.js`: an item takes `guides`; `projectmenu.js` gives each pane of the tree its guides.
-- Defaults: `plus` and `dotted`.
+- Defaults: `chevron` (first `plus`) and `dotted`.
+- An expander only for a folder with subfolders to show: a tree's listing (folders only) gives each folder `subs`:
+  true, `hidden` (only hidden subfolders) or false (`ShellListing.Subs` on disk; `SFGAO_HASSUBFOLDER` for shell
+  folders); a folder without access counts as true. Before that, every folder not yet opened had one.
 
 ### 6.2 How it was tested
 
 - `dotnet test`: Failed 0, Passed 110 (`PanesTests.TreeLinesPassJoinAndEnd`).
+- The subfolder fix: `ShellTests.ATreeListingSaysWhichFoldersHaveSubfolders`; test copy: under C:\ the folders
+  without subfolders (Cache, PerfLogs, tmp) without a chevron, the others with one.
 - Test copy over CDP, dark theme: the Folders tree with dotted lines (screenshot); chevrons with solid lines
   (screenshot); the Projects menu's tree of Klanten with its joints (screenshot).
 - Not looked at: `none`, the light theme.

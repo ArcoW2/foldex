@@ -112,8 +112,26 @@ static class ShellListing
                 ["hidden"] = (info.Attributes & FileAttributes.Hidden) != 0,
                 ["own"] = !folder && ShellIcons.HasOwn(info.FullName),
                 ["link"] = (info.Attributes & FileAttributes.ReparsePoint) != 0,
+                ["subs"] = foldersOnly ? Subs(info.FullName) : null,
             });
         }
+    }
+
+    /// <summary>For a tree's expander: whether a folder has subfolders: true, "hidden" (only hidden ones) or false.
+    /// Unknown (no access) counts as true, so the folder can still be opened and show why not.</summary>
+    static JsonNode Subs(string path)
+    {
+        try
+        {
+            var hidden = false;
+            foreach (var sub in new DirectoryInfo(path).EnumerateDirectories("*", All))
+            {
+                if ((sub.Attributes & FileAttributes.Hidden) == 0) return true;
+                hidden = true;
+            }
+            return hidden ? "hidden" : false;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException) { return true; }
     }
 
     static void ListShell(string location, Batcher batcher, CancellationToken cancel, bool foldersOnly)
@@ -125,7 +143,8 @@ static class ShellListing
         Marshal.Release(ptr);
         while (!cancel.IsCancellationRequested && items.Next(1, out var item, out var fetched) == 0 && fetched == 1)
         {
-            item.GetAttributes(Native.SfgaoFolder | Native.SfgaoFileSystem | Native.SfgaoStream | Native.SfgaoHidden | Native.SfgaoLink, out var attrs);
+            item.GetAttributes(Native.SfgaoFolder | Native.SfgaoFileSystem | Native.SfgaoStream | Native.SfgaoHidden | Native.SfgaoLink
+                | (foldersOnly ? Native.SfgaoHasSubfolder : 0), out var attrs);
             // A zip file is a folder and a stream to the shell: Foldex shows it as a file.
             var folder = (attrs & Native.SfgaoFolder) != 0 && (attrs & Native.SfgaoStream) == 0;
             if (foldersOnly && !folder)
@@ -157,6 +176,7 @@ static class ShellListing
                 ["icon"] = ShellIcons.Of(item),
                 ["hidden"] = (attrs & Native.SfgaoHidden) != 0,
                 ["link"] = (attrs & Native.SfgaoLink) != 0,
+                ["subs"] = foldersOnly ? (attrs & Native.SfgaoHasSubfolder) != 0 : null,
             });
             Marshal.ReleaseComObject(item);
         }
