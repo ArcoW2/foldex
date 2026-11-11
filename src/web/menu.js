@@ -36,10 +36,9 @@ function openMenu(x, y, items, level = 0) {
     label.className = 'menu-label';
     label.textContent = item.label;
     if (item.indent) label.style.paddingLeft = `${item.indent * 14}px`;
-    if (item.guides) {
-      label.classList.add('treed');
-      label.append(...guideElements(item.guides, k => 4 + 14 * k, 8));
-    }
+    // Its tree lines over the whole row (it is positioned), so they join the rows above and below; the label starts
+    // 26 px in (padding 8, the check mark 10, the gap 8).
+    if (item.guides) row.append(...guideElements(item.guides, k => 30 + 14 * k, 8));
     row.append(check, label);
     row.addEventListener('mouseenter', () => hover(rows.indexOf(row)));
     row.addEventListener('mousedown', e => {

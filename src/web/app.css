@@ -825,11 +825,6 @@ body.docking, body.docking * {
   box-shadow: 0 0 0 2px var(--fg);
 }
 
-/* A menu item in a tree (projectmenu.js): its lines are placed in it (panes.js guideElements). */
-.menu-label.treed {
-  position: relative;
-}
-
 .menu-line {
   height: 1px;
   margin: 3px 0;

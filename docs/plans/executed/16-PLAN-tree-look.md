@@ -93,3 +93,6 @@ None.
 - Test copy over CDP, dark theme: the Folders tree with dotted lines (screenshot); chevrons with solid lines
   (screenshot); the Projects menu's tree of Klanten with its joints (screenshot).
 - Not looked at: `none`, the light theme.
+- After use: in the Projects menu the lines sat in the label, shorter than the row, so they broke between rows; now
+  they are placed over the whole row (label 26 px in) and join up. Test copy: Klanten's tree as one line from under
+  Folders past its lists (screenshot); the rows as high as the main menu's (23 px, measured).
