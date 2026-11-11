@@ -7,6 +7,7 @@ Status: not started.
 - 2026-11-11: revised: a bar's length from a minimum, a normal size, a maximum and a maximum share of the window;
   bars that fill share the rest by their normal sizes; the Size window with coloured marks.
 - 2026-11-11: revised: no checkboxes in the Size window; a bar of buttons sized in buttons.
+- 2026-11-11: revised: no minimum share of the window.
 
 ## 1. What this is about
 
@@ -35,9 +36,9 @@ shows the limits as coloured marks on the bar, and Foldex writes your copy.
 | Part | What | Waits for | Reference |
 |---|---|---|---|
 | Dock sides | bars at any dock side, in lines | -- | 3.1 |
-| Sizes | minimum, normal, maximum, maximum share of the window; growing with the content | open question 1 | 3.1 |
+| Sizes | minimum, normal, maximum, maximum share of the window; growing with the content | -- | 3.1 |
 | Fill | bars that fill share the rest by their normal sizes, down to their minimum | -- | 3.1 |
-| Size window | the fields with colour swatches; the limits as coloured marks on the bar while it is open | open question 1 | 3.3 |
+| Size window | the fields with colour swatches; the limits as coloured marks on the bar while it is open | -- | 3.3 |
 | Overflow | per bar: `more` or `scroll` | -- | 3.1 |
 | Path bar | | -- | 3.2 |
 | Drives bar | with drives that come and go | -- | 3.2 |
@@ -60,7 +61,8 @@ shows the limits as coloured marks on the bar, and Foldex writes your copy.
   - `normal`: the length it has when nothing pushes it;
   - `max`: the most it grows to with its content;
   - `maxShare`: the most it takes of the window's width (height for a column), in %;
-  - `min`: the least it shrinks to when the window gets small. It wins over the other limits.
+  - `min`: the least it shrinks to when the window gets small. It wins over the other limits. A fixed length, not a
+    share of the window: a bar does not grow with the window beyond what its content needs.
 - **Its length**: the larger of `normal` and what its content needs, at most `max` and `maxShare`, at least `min`.
   Example, a drives bar with min 2, normal 4, max 6 drives and a share of 30%: with 2 drives it is 4 drives long (room
   kept); with 10 drives it is 6 and the rest overflows; as the window narrows, it keeps 6 until 30% of the width is
@@ -134,7 +136,4 @@ shows the limits as coloured marks on the bar, and Foldex writes your copy.
 
 ## 4. Open questions
 
-1. **A minimum share of the window.** Besides the minimum in buttons or px, a minimum in % of the window: the bar is
-   never shorter than that share, so on a wide window it gets longer even when its content needs less (a path bar at
-   least 40% of the width). The drives example does not use it. Proposed: left out until a bar needs it. Leave it
-   out?
+None.
