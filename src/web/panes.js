@@ -9,6 +9,10 @@
 'use strict';
 
 const Branches = [0, 1, 2, 3, 4, 5];   // as many as a theme's list (ThemeFile.BranchCount)
+const HistoryMax = 100;                 // steps per history
+
+// The folder a step shows: a tree's focused folder, a list's location.
+const placeOf = (kind, s) => ((kind === 'tree' ? s.focus : s.location) ?? '').toLowerCase();
 
 class Layout {
   constructor() {
@@ -179,6 +183,9 @@ class Layout {
 
   follow(id, item) {
     const updates = [];
+    // After Back or Forward (go): a follower gets back what it had selected in that folder, and passes that on.
+    const recall = this.pane(id).recall;
+    delete this.pane(id).recall;
     for (const f of this.followers(id, this.keyOf(id))) {
       if (f.pinned) continue;
       if (f.kind === 'preview') {
@@ -189,7 +196,13 @@ class Layout {
         s.location = item.id;
         s.focus = null;
         s.selection = [];
-        updates.push({ pane: f.id, location: item.id });
+        const was = recall ? this.lastStepIn(f.id, item.id) : null;
+        if (was) {
+          s.focus = was.focus;
+          s.selection = [...was.selection];
+          f.recall = true;
+        }
+        updates.push(was ? { pane: f.id, location: item.id, recalled: true } : { pane: f.id, location: item.id });
         // Nothing is focused in the follower now: its own followers stay as they are, a preview empties.
         for (const g of this.followers(f.id, this.keyOf(f.id)))
           if (g.kind === 'preview' && !g.pinned) updates.push({ pane: g.id, show: null });
@@ -210,6 +223,68 @@ class Layout {
       return { reveal: { pane: id, item: item.id }, updates: [] };
     }
     return { reveal: { pane: pane.source, item: item.id }, updates: this.focus(pane.source, item) };
+  }
+
+  // ---------- History per pane (docs/plans/executed/17-PLAN-history-per-pane.md) ----------
+
+  // A pane's history for the branch it shows now: { steps: [{ location, focus, selection }], at }. Kept on the pane, so
+  // it goes with the layout into the project.
+  history(id) {
+    const pane = this.pane(id);
+    pane.histories ??= {};
+    return pane.histories[this.keyOf(id)] ??= { steps: [], at: -1 };
+  }
+
+  // The pane's state now into its history: a new step when the folder it shows changed (whatever changed it: a click,
+  // a typed path, its parent), else the current step updated (a selection made there is kept with it). A new step
+  // after going back drops the steps ahead. True when a step was added.
+  record(id) {
+    const pane = this.pane(id);
+    if (!pane || pane.kind === 'preview') return false;
+    const s = this.state(id), h = this.history(id);
+    const step = { location: s.location, focus: s.focus, selection: [...s.selection] };
+    const place = placeOf(pane.kind, step);
+    if (!place) return false;
+    if (h.at >= 0 && placeOf(pane.kind, h.steps[h.at]) === place) {
+      h.steps[h.at] = step;
+      return false;
+    }
+    h.steps.splice(h.at + 1, Infinity, step);
+    if (h.steps.length > HistoryMax) h.steps.shift();
+    h.at = h.steps.length - 1;
+    return true;
+  }
+
+  // Whose history Back and Forward use from a pane: its own without a parent or while pinned; in a child that
+  // follows, its parent's, up to the first pane without one.
+  historyPane(id) {
+    let p = id;
+    while (this.pane(p).source !== null && !this.pane(p).pinned) p = this.pane(p).source;
+    return p;
+  }
+
+  canGo(id, step) {
+    const h = this.history(this.historyPane(id));
+    return h.at + step >= 0 && h.at + step < h.steps.length;
+  }
+
+  // One step back (-1) or forward (1) from a pane: the history pane's state set to that step, which is no new step.
+  // The pane whose state changed, or null.
+  go(id, step) {
+    if (!this.canGo(id, step)) return null;
+    const p = this.historyPane(id), h = this.history(p);
+    h.at += step;
+    const to = h.steps[h.at];
+    Object.assign(this.state(p), { location: to.location, focus: to.focus, selection: [...to.selection] });
+    this.pane(p).recall = true;
+    return p;
+  }
+
+  // The last step of a pane's history in a folder, or null.
+  lastStepIn(id, folder) {
+    const steps = this.history(id).steps, kind = this.pane(id).kind;
+    for (let i = steps.length - 1; i >= 0; i--) if (placeOf(kind, steps[i]) === folder.toLowerCase()) return steps[i];
+    return null;
   }
 
   // What is kept with the project (3.7).

@@ -165,7 +165,7 @@ function paneElement(id, kind, title) {
     if (!e.target.closest('.connector, .pin, .marks span')) dragToDock(id, e);
   });
   el.querySelector('.head').addEventListener('contextmenu', e => openPaneMenu(id, e));
-  el.addEventListener('mousedown', () => activate(id), true);
+  el.addEventListener('mousedown', e => { if (e.button < 3) activate(id); }, true);   // not the mouse's back and forward
   el.addEventListener('focusin', () => activate(id));
   return el;
 }
@@ -233,6 +233,7 @@ function apply(updates) {
     const v = views.get(u.pane);
     if (!v) continue;
     if ('location' in u) {
+      if (u.recalled) v.back = { selection: [...layout.state(u.pane).selection] };   // after Back: its selection too
       v.load(u.location);
       recordStep();
     }
@@ -616,6 +617,7 @@ class ListView {
     // The focus of this branch, as it was left, comes back when it is still there.
     const focus = layout.state(this.id).focus;
     if (focus && this.entries.some(x => same(x.id, focus))) this.select(this.entries.find(x => same(x.id, focus)), {}, true);
+    this.backDone();
     ribbonRefresh();
   }
 
@@ -737,14 +739,29 @@ class ListView {
     if (this.location) this.load(this.location);
   }
 
-  // Back on this pane's state for the branch now active (3.1).
-  restore() {
+  // Back on this pane's state for the branch now active (3.1). From history (`back`, plan 17): its selection comes back
+  // too, and its children follow its focused item.
+  restore(back = false) {
     const s = layout.state(this.id);
+    if (back) this.back = { selection: [...s.selection] };
     if (!same(s.location, this.location)) this.load(s.location);
     else {
       this.selected = new Set(s.selection);
       this.render();
+      if (back) this.backDone();
     }
+  }
+
+  // After a step from history is loaded: its selection, and its children on its focused item.
+  backDone() {
+    const back = this.back, s = layout.state(this.id);
+    this.back = null;
+    if (!back) return;
+    this.selected = new Set(back.selection.filter(id => this.entries.some(x => same(x.id, id))));
+    s.selection = [...this.selected];
+    this.render();
+    const x = s.focus && this.entries.find(e => same(e.id, s.focus));
+    if (x) focusItem(this.id, { id: x.id, folder: x.folder });
   }
 
   locationText() { return this.location ?? ''; }
@@ -1125,7 +1142,9 @@ function tellLayout() {
 // View > Projects > Save layout as default (plan 15 3.6): this window's panes and docks become defaultLayout in your
 // settings.json, the layout a new project starts with.
 function saveLayoutAsDefault() {
-  setSetting('defaultLayout', windowLayout());
+  const kept = windowLayout();
+  for (const p of kept.panes.panes) delete p.histories;   // a new project starts without this window's history
+  setSetting('defaultLayout', kept);
   status('The layout of this window is now the default for new projects (Reset layout puts a window back on it).');
 }
 
@@ -1274,7 +1293,7 @@ function folderChanged(folder) {
   }
 }
 
-// ---------- Between panes, and back and forward per branch (3.6) ----------
+// ---------- Between panes (3.6), and back and forward per pane (plan 17) ----------
 
 // The pane chain of the active branch: the root above the active pane, then down the active branch from there (each
 // pane's first child of the colour it shows), previews left out. Its key: the root's child it goes through (each tab,
@@ -1292,56 +1311,31 @@ function branchChain(id) {
   return { key: chain[1] ?? chain[0], chain };
 }
 
-const histories = new Map();   // branch key -> { steps: [snapshot], at }
-let recordTimer = 0, restoring = false;
+// Back and forward per pane (docs/plans/executed/17-PLAN-history-per-pane.md): once things rest, every pane's state goes into
+// its own history (Layout.record): what it showed, whatever made it change, also following its parent.
+let recordTimer = 0;
 
-const snapshot = chain => chain.map(id => {
-  const s = layout.state(id);
-  return { id, location: s.location, focus: s.focus, selection: [...s.selection] };
-});
-// The folders of a step: where each pane is (for a tree: the folder it focuses, which its children show).
-const placesOf = step => step.map(x => `${x.id}=${(views.get(x.id) instanceof TreeView ? x.focus : x.location) ?? ''}`.toLowerCase()).join('|');
-
-// Something moved in the active branch: once things rest, the branch as it is now is its current step when the folders
-// are the same (a selection made there is kept with it), else a new step (a step forward from where back left it drops
-// the steps after it, as a browser does).
 function recordStep() {
   tellLayout();
-  if (restoring || activePane === null) return;
   clearTimeout(recordTimer);
   recordTimer = setTimeout(() => {
-    const { key, chain } = branchChain(activePane);
-    const h = histories.get(key) ?? { steps: [], at: -1 };
-    histories.set(key, h);
-    const now = snapshot(chain);
-    if (h.at >= 0 && placesOf(h.steps[h.at]) === placesOf(now)) {
-      h.steps[h.at] = now;
-      return;
-    }
-    h.steps.splice(h.at + 1, Infinity, now);
-    if (h.steps.length > 100) h.steps.shift();
-    h.at = h.steps.length - 1;
+    for (const id of layout.panes.keys()) if (views.get(id)) layout.record(id);
+    tellLayout();
     ribbonRefresh();
   }, 400);
 }
 
-const historyOf = () => activePane === null ? null : histories.get(branchChain(activePane).key);
-const canGo = step => { const h = historyOf(); return !!h && h.at + step >= 0 && h.at + step < h.steps.length; };
+const canGo = step => activePane !== null && !!layout.pane(activePane) && layout.canGo(activePane, step);
 
-// One step back or forward: every pane of the branch as it was then.
+// One step back or forward from the active pane: the pane whose history it is (itself, or the parent it follows, up)
+// goes there; its children follow it as on any change.
 function goHistory(step) {
-  const h = historyOf();
-  if (!h || !canGo(step)) return;
-  h.at += step;
-  restoring = true;
-  for (const s of h.steps[h.at]) {
-    if (!layout.pane(s.id)) continue;
-    Object.assign(layout.state(s.id), { location: s.location, focus: s.focus, selection: [...s.selection] });
-    const v = views.get(s.id);
-    if (v instanceof TreeView && s.focus) v.reveal(s.focus);
-    else v?.restore();
-  }
-  setTimeout(() => { restoring = false; }, 600);   // the follows the restore sets off are not new steps
+  if (!canGo(step)) return;
+  const id = layout.go(activePane, step);
+  const s = layout.state(id), v = views.get(id);
+  if (v instanceof TreeView) { if (s.focus) v.reveal(s.focus); }
+  else v?.restore(true);
+  recordStep();
   ribbonRefresh();
 }
 
@@ -1530,6 +1524,16 @@ function settingsProblems(m) {
 $('location').addEventListener('keydown', e => {
   if (e.key === 'Enter' && activePane) goTo(activePane, $('location').value.trim());
 });
+
+// The mouse's back and forward buttons (plan 17 3.3): Back and Forward on the pane with the focus, not the browser's
+// own (the page has no history to go to).
+for (const type of ['mousedown', 'mouseup', 'auxclick'])
+  document.addEventListener(type, e => {
+    if (e.button !== 3 && e.button !== 4) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (type === 'mouseup') runAction(e.button === 3 ? 'history.back' : 'history.forward');
+  }, true);
 
 // ---------- File operations ----------
 

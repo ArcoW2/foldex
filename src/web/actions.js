@@ -91,9 +91,9 @@ action('branch.colour', { title: 'Branch colour', hint: 'a free colour: a branch
   variants: Branches.map(b => [String(b + 1)]),
   variantTitles: Object.fromEntries(Branches.map(b => [String(b + 1), `Branch colour ${b + 1}`])),
   run: params => params[0] && setBranchColour(activePane, Number(params[0]) - 1) });
-action('history.back', { title: 'Back', hint: 'every pane of the branch as it was a step before', group: 'panes',
+action('history.back', { title: 'Back', hint: 'the pane with the focus a folder back; in a child its parent, which the child follows', group: 'panes',
   enabled: () => canGo(-1), run: () => goHistory(-1) });
-action('history.forward', { title: 'Forward', hint: 'a step forward again, after Back', group: 'panes',
+action('history.forward', { title: 'Forward', hint: 'a folder forward again, after Back', group: 'panes',
   enabled: () => canGo(1), run: () => goHistory(1) });
 action('pane.toParent', { title: 'To the parent pane', group: 'panes', enabled: isChild,
   run: () => focusPane(layout.pane(activePane).source) });

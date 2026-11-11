@@ -1,6 +1,6 @@
 # Plan 17: History per pane
 
-Status: not started; see Status.
+Status: executed; see 6. As built.
 
 - 2026-11-11: draft.
 - 2026-11-11: revised: a parent that follows a child's Back keeps a step of its own; the histories are saved
@@ -8,6 +8,7 @@ Status: not started; see Status.
 - 2026-11-11: revised: Back in a child is Back in its parent; only a pane without a parent goes back in its own
   history.
 - 2026-11-11: revised: a pinned child goes back in its own history, which includes what it showed before the pin.
+- 2026-11-11: executed.
 
 Changes plan 03 3.6 (back and forward per branch). Builds on plan 03 (following, a child that goes through its
 parent) and plan 15 (the window's session in its project). The number in the file name is the priority; rename to
@@ -33,15 +34,15 @@ The histories are saved with the window's session, so a project opens with them.
 
 ### Built
 
-### Not yet built
+| Part | What | Reference |
+|---|---|---|
+| History per pane | steps per pane and per branch it shows: folder and selection | 3.1; 6.1 |
+| Back and forward on the focused pane | a pane without a parent (or pinned) goes back; in a child, its parent does; children follow | 3.2; 6.1 |
+| Mouse buttons | the mouse's back and forward buttons run the same actions | 3.3; 6.1 |
+| Saved in the project | the histories in the window's session (plan 15) | 3.1; 6.1 |
+| The per-branch history removed | `histories`, the chain snapshot and its restore gone; `branchChain` stays for the backgrounds | 3.4; 6.1 |
 
-| Part | What | Waits for | Reference |
-|---|---|---|---|
-| History per pane | steps per pane (and per branch it shows): folder and selection | -- | 3.1 |
-| Back and forward on the focused pane | a pane without a parent goes back; in a child, its parent does; children follow | -- | 3.2 |
-| Mouse buttons | the mouse's back and forward buttons run the same actions | -- | 3.3 |
-| Saved in the project | the histories in the window's session (plan 15) | -- | 3.1 |
-| The per-branch history removed | `branchChain` stays for the backgrounds; `histories`, `recordStep`'s chain snapshot go | -- | 3.4 |
+### Not yet built
 
 ## 3. Details
 
@@ -99,3 +100,38 @@ The histories are saved with the window's session, so a project opens with them.
 ## 4. Open questions
 
 None.
+
+## 6. As built
+
+### 6.1 Built (2026-11-11, branch `plan01-foundation`)
+
+- `panes.js` (`Layout`): `history(id)` (the pane's history for the branch it shows, on the pane as `histories`, so it
+  goes with the layout into the window's session), `record(id)` (a new step when the folder changed, else the current
+  step updated), `historyPane(id)` (itself without a parent or pinned, else up the parents), `canGo`, `go` (the history
+  pane's state set to the step) and `lastStepIn`.
+- `app.js`: `recordStep` records every pane once things rest (400 ms), whatever changed them; `goHistory` goes with the
+  history pane: a tree reveals its folder, a list loads its own with its selection (`restore(true)`, `backDone`), and
+  the children follow as on any change. The per-branch histories, `snapshot`, `placesOf` and the restoring flag are
+  gone. The mouse's buttons 3 and 4: Back and Forward on the pane with the focus; the browser's own is stopped, and a
+  press does not activate the pane under the mouse.
+- Decided while building:
+  - A child that follows records what it showed, also when its parent went back (that is what it showed): so a pinned
+    child's own history holds everything before the pin. Only the pane that goes back takes no new step.
+  - After Back or Forward, a child that follows gets back its focus and selection of its last step in that folder
+    (`recall`), and its own children follow that: the selection made in the list comes back with the tree's step.
+  - Save layout as default leaves the histories out, so a new project starts without them.
+- The ribbon's hints: "the pane with the focus a folder back; in a child its parent, which the child follows".
+
+### 6.2 How it was tested
+
+- `dotnet test`: Failed 0, Passed 121 (`PanesTests`: a step on a folder change not on a selection; Back in a child is
+  its parent's; a new folder after Back drops the steps ahead; at most 100; a pinned child goes back in its own
+  history with what it showed before the pin; a child of a child goes back in the root; a history per branch; the
+  selection recalled after Back; the histories back from JSON).
+- Test copy over CDP, a tree and its list on `h\one\two\three`: Back twice from the list: the tree and the list on
+  `one`; the mouse's back button (button 3) on the list: `h`, Back greyed out there; its forward button: `one`;
+  Forward: `two` with `b.txt` selected again, as it was left; the list pinned, Back: only the list went back (`one`),
+  unpinned: it follows the tree again (`two`). The window closed by hand and Foldex started: the tree's history as it
+  was, at the same step, and Forward went on.
+- Seen: right after a start, Back can wait until the tree has read its way down to its folder (in the test copy
+  `D:\temp`, a folder of tens of thousands of entries).

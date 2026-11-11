@@ -294,4 +294,110 @@ public class PanesTests
             """, "[again.root, again.panes.size, again.state(A).focus, again.pane(D).source]");
         Assert.Equal("""["p1",4,"C:\\Temp","p2"]""", r.GetRawText());
     }
+
+    // History per pane (docs/plans/executed/17-PLAN-history-per-pane.md): a tree A and its list B; `to` focuses a folder in A
+    // (B follows) and records both, as the page does once things rest.
+    const string Histories = """
+        const l = new Layout();
+        const A = l.add({ kind: 'tree', content: 'folders' });
+        const B = l.add({ source: A });
+        const to = f => { l.focus(A, { id: f, folder: true }); l.record(A); l.record(B); };
+        const places = id => l.history(id).steps.map(s => s.focus ?? s.location).join(',') + '@' + l.history(id).at;
+        """;
+
+    [Fact]
+    public void AStepOnAFolderChangeNotOnASelection()
+    {
+        var r = Run(Histories + """
+            to('a'); to('b');
+            l.state(B).selection = ['b/x']; l.record(B);
+            """, "[places(A), places(B), l.history(B).steps[1].selection]");
+        Assert.Equal("""["a,b@1","a,b@1",["b/x"]]""", r.GetRawText());
+    }
+
+    [Fact]
+    public void BackInAChildIsBackInItsParent()
+    {
+        var r = Run(Histories + """
+            to('a'); to('b'); to('c');
+            const went = l.go(B, -1);
+            """, "[went, l.historyPane(B), l.state(A).focus, places(A), l.canGo(B, 1), l.canGo(B, -1)]");
+        Assert.Equal("""["p1","p1","b","a,b,c@1",true,true]""", r.GetRawText());
+    }
+
+    [Fact]
+    public void ANewFolderAfterBackDropsTheStepsAhead()
+    {
+        var r = Run(Histories + """
+            to('a'); to('b'); to('c');
+            l.go(A, -1); l.go(A, -1); l.record(A);
+            to('d');
+            """, "[places(A), l.canGo(A, 1)]");
+        Assert.Equal("""["a,d@1",false]""", r.GetRawText());
+    }
+
+    [Fact]
+    public void AHistoryKeepsAtMostAHundredSteps()
+    {
+        var r = Run(Histories + "for (let i = 0; i < 120; i++) to('f' + i);",
+            "[l.history(A).steps.length, l.history(A).steps[0].focus, l.history(A).at]");
+        Assert.Equal("""[100,"f20",99]""", r.GetRawText());
+    }
+
+    [Fact]
+    public void APinnedChildGoesBackInItsOwnHistoryWithWhatItShowedBeforeThePin()
+    {
+        var r = Run(Histories + """
+            to('a'); to('b');
+            l.pane(B).pinned = true;
+            const pinned = l.historyPane(B), went = l.go(B, -1), shows = l.state(B).location, tree = l.state(A).focus;
+            l.pane(B).pinned = false;
+            """, "[pinned, went, shows, tree, l.historyPane(B)]");
+        Assert.Equal("""["p2","p2","a","b","p1"]""", r.GetRawText());
+    }
+
+    [Fact]
+    public void AfterBackAChildGetsBackWhatItHadSelectedThere()
+    {
+        var r = Run(Histories + """
+            to('a'); l.state(B).selection = ['a/x']; l.state(B).focus = 'a/x'; l.record(B);
+            to('b');
+            l.go(A, -1);
+            const u = l.focus(A, { id: 'a', folder: true });
+            const recalled = [u[0].recalled, l.state(B).selection, l.state(B).focus];
+            const later = l.focus(A, { id: "b", folder: true });
+            """, "[recalled, later[0].recalled ?? null, l.state(B).selection]");
+        Assert.Equal("""[[true,["a/x"],"a/x"],null,[]]""", r.GetRawText());
+    }
+
+    [Fact]
+    public void AChildOfAChildGoesBackInTheRoot()
+    {
+        var r = Run(Histories + "const C = l.add({ source: B });", "l.historyPane(C)");
+        Assert.Equal("\"p1\"", r.GetRawText());
+    }
+
+    [Fact]
+    public void AParentKeepsAHistoryPerBranch()
+    {
+        var r = Run(Histories + """
+            const C = l.add({ source: A, colour: 3 });
+            l.activate(B); to('red');
+            l.activate(C); l.focus(A, { id: 'blue', folder: true }); l.record(A);
+            const blue = places(A);
+            l.activate(B);
+            """, "[blue, places(A)]");
+        Assert.Equal("""["blue@0","red@0"]""", r.GetRawText());
+    }
+
+    [Fact]
+    public void HistoriesComeBackWithTheLayout()
+    {
+        var r = Run(Histories + """
+            to('a'); to('b'); l.go(A, -1);
+            const again = Layout.fromJSON(JSON.parse(JSON.stringify(l)));
+            const went = again.go(A, 1);
+            """, "[went, again.state(A).focus, again.history(A).at]");
+        Assert.Equal("""["p1","b",1]""", r.GetRawText());
+    }
 }

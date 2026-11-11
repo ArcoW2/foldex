@@ -8,6 +8,7 @@ Status: partly executed; see Status and 6. As built.
 - 2026-11-10: partly executed, stage 1: the model, the default layout, executing.
 - 2026-11-10: partly executed: detach, attach, branch colour, pinning, keys, back and forward, watching folders.
 - 2026-11-11: content and tree or list per pane moved to plan 18.
+- 2026-11-11: back and forward per pane (plan 17) replace back and forward per branch.
 
 The core idea of Foldex.
 
@@ -51,7 +52,7 @@ a parent the folder expands in place, as in a tree.
 | Heads | in the branch colour; the branch marks in a parent's head | 3.4 |
 | Focus | ring and head in the branch colour; a parent drawn in the colour of the path it serves | 3.4 |
 | Keys between panes | to the parent, the child, the next branch | 3.6 |
-| Back and forward | per branch, a selection kept with its step | 3.6 |
+| Back and forward | per pane since plan 17 (was per branch), a selection kept with its step | 3.6; plan 17 |
 | Watching folders | | 3.8 |
 
 ### Not yet built
@@ -171,11 +172,8 @@ all keys; Ctrl+arrows stay the panes' own, Ctrl+Shift+arrows select words in the
 the screen on some graphics drivers). Back and forward: Alt+Left and Alt+Right, as Explorer, and on the ribbon (Home >
 Go).
 
-Back and forward are per branch: one step back restores every pane of the active branch as it was, because a click in
-a parent changes several panes at once. A branch here is the chain below one child of the root (each branch of the
-root, each tab of plan 12, has its own history): the root, that child, and down from it each pane's child in the
-branch it shows. A new step is kept when a folder in the chain changes; a selection made while the folders stay the
-same is kept with the current step, so going back brings the selected item back too.
+Back and forward are per pane: plan 17 (`docs/plans/executed/17-PLAN-history-per-pane.md`) replaces the history per
+branch that was built here.
 
 ### 3.7 Saved in the project
 
