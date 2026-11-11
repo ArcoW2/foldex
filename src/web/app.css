@@ -581,6 +581,66 @@ body[data-focus-away] .row.selected {
   text-align: center;
 }
 
+/* The chevron expander (treeExpanders "chevron", plan 16): > closed, v open. */
+.twisty.chev::before {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translate(-1px, -2px) rotate(-45deg);
+}
+
+.twisty.chev.open::before {
+  transform: translate(0, -3px) rotate(45deg);
+}
+
+/* Tree lines (plan 16 3.2; panes.js treeGuides): the pieces of each row, in the expander column of each level; solid,
+   dotted or none as the setting treeLines says (look.js puts it on the root element). */
+.guide {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  pointer-events: none;
+  --line: 1px var(--tree-line-style, dotted) color-mix(in srgb, var(--fg-dim) 55%, transparent);
+}
+
+:root[data-tree-lines="solid"] { --tree-line-style: solid; }
+:root[data-tree-lines="dotted"] { --tree-line-style: dotted; }
+:root[data-tree-lines="none"] .guide { display: none; }
+
+.guide.pass, .guide.mid {
+  border-left: var(--line);
+}
+
+.guide.end {
+  bottom: 50%;
+  border-left: var(--line);
+}
+
+.guide.mid::after, .guide.end::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: var(--line);
+}
+
+.guide.mid::after {
+  top: 50%;
+}
+
+.guide.end::after {
+  top: 100%;
+}
+
+/* An open node's line starts under its expander. */
+.guide.down {
+  top: calc(50% + 6px);
+  border-left: var(--line);
+}
+
 .row .name {
   flex: 1;
   overflow: hidden;
@@ -763,6 +823,11 @@ body.docking, body.docking * {
 
 .menu-check.swatch.on {
   box-shadow: 0 0 0 2px var(--fg);
+}
+
+/* A menu item in a tree (projectmenu.js): its lines are placed in it (panes.js guideElements). */
+.menu-label.treed {
+  position: relative;
 }
 
 .menu-line {

@@ -30,8 +30,12 @@ function projectMenuItems(list) {
     return {
       label: p.display + (p.mine ? '  (this window)' : ''), checked: p.open,
       items: [
-        // Its window's panes: a root, then its children a step in, as they follow each other.
-        ...p.panes.map(pane => ({ label: pane.name, indent: pane.depth, run: open })),
+        // Its window's panes: a root, then its children a step in, with tree lines; a click opens (or shows) the
+        // project with the focus on that pane.
+        ...p.panes.map((pane, i, all) => ({
+          label: pane.name, indent: pane.depth, guides: treeGuides(all.map(x => x.depth))[i],
+          run: () => projectCommand('open', { project: p.id, pane: pane.id }),
+        })),
         ...(p.panes.length ? ['-'] : []),
         { label: p.open ? 'Show project' : 'Open project', run: open, enabled: !p.mine },
         { label: 'Delete project...', enabled: !p.open, run: async () => {

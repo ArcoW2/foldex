@@ -384,6 +384,8 @@ class TreeView {
       }
     };
     walk(this.top);
+    const guides = treeGuides(this.flat.map(n => n.depth));
+    this.flat.forEach((n, i) => { n.guides = guides[i]; });
     this.render();
     tellWatched();
   }
@@ -401,12 +403,19 @@ class TreeView {
       row.style.paddingLeft = `${8 + n.depth * 14}px`;
       row.dataset.index = i;
       const twisty = document.createElement('span');
-      twisty.className = 'twisty';
-      twisty.textContent = n.children && n.children.length === 0 ? '' : n.expanded ? '-' : '+';
+      const leaf = n.children && n.children.length === 0;
+      // The expanders as the setting treeExpanders says (plan 16 3.1): + and -, or a chevron drawn by app.css.
+      if (settings.treeExpanders === 'chevron') twisty.className = 'twisty' + (leaf ? '' : n.expanded ? ' chev open' : ' chev');
+      else {
+        twisty.className = 'twisty';
+        twisty.textContent = leaf ? '' : n.expanded ? '-' : '+';
+      }
       const name = document.createElement('span');
       name.className = 'name';
       name.textContent = n.name;
       row.append(twisty, iconImage(n, missing), name);
+      // Its tree lines: the expander of level k is centred at 14 + 14k px (padding 8 + 14 per level, 12 wide).
+      if (n.guides) row.append(...guideElements(n.guides, k => 14 + 14 * k, 8));
       if (n.link) {
         const link = document.createElement('span');
         link.className = 'link';
@@ -1500,6 +1509,8 @@ function settingsChanged(before) {
   applyTheme();
   if (before.showHidden !== settings.showHidden) {
     for (const v of views.values()) if (v instanceof TreeView) v.flatten(); else v.refresh();
+  } else if (before.treeExpanders !== settings.treeExpanders) {
+    for (const v of views.values()) if (v instanceof TreeView) v.render();
   }
   ribbonRefresh();
 }
@@ -1550,6 +1561,8 @@ const events = {
   },
   // The window's project renamed, or the window moved to another (plan 15 3.6).
   project(m) { showProject(m.project); },
+  // A pane chosen in the Projects menu (plan 15 3.6): the focus to it, its tab shown.
+  focusPane(m) { if (views.has(m.pane)) focusPane(m.pane); },
   projectList(m) { projectListCame(m.list); },
   // Settings or themes changed (the settings window, a file edited by hand): every window is told.
   settings(m) {

@@ -21,6 +21,8 @@ function applyLook(settings, themes) {
   lookVars = Object.keys(vars);
   for (const name of lookVars) root.style.setProperty(name, vars[name]);
   applyHeadText(6);
+  // The tree lines (docs/plans/16-PLAN-tree-look.md 3.1): app.css draws them solid or dotted, or not at all.
+  root.dataset.treeLines = ['solid', 'dotted', 'none'].includes(settings.treeLines) ? settings.treeLines : 'dotted';
   applyFonts(settings);
 }
 

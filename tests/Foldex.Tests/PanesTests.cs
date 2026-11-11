@@ -114,6 +114,14 @@ public class PanesTests
     }
 
     [Fact]
+    public void TreeLinesPassJoinAndEnd()
+    {
+        // Plan 16 3.2: A { B { C }, D { E } }, F. A's line goes past B and C to D; C ends B's; D is A's last child; F a root.
+        var r = Run("", "treeGuides([0, 1, 2, 1, 2, 0]).map(g => g.levels.join('/') + (g.down ? ' down' : ''))");
+        Assert.Equal("[\" down\",\"mid down\",\"pass/end\",\"end down\",\"/end\",\"\"]", r.GetRawText());
+    }
+
+    [Fact]
     public void ARootWithoutChildrenHasTheFirstBranchsColour()
     {
         // Plan 13 3.4: the start of the first branch; a root with children takes the path it serves.

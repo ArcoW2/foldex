@@ -484,7 +484,7 @@ sealed class AppHost : ApplicationContext
         return new JsonArray(projects.Projects.OrderByDescending(p => p == mine).ThenByDescending(p => p.Used).Select(p =>
         {
             var panes = ProjectStore.PaneTree(p.Windows.FirstOrDefault()?.Session)
-                .Select(t => (t.Depth, t.Name, Folder: Shown(t.Folder))).ToList();
+                .Select(t => (t.Depth, t.Id, Name: Shown(t.Name)!, Folder: Shown(t.Folder))).ToList();   // a name from a path: This PC
             var o = new JsonObject
             {
                 ["id"] = p.Id, ["name"] = p.Name, ["display"] = ProjectStore.Display(p), ["mine"] = p == mine,
@@ -493,7 +493,7 @@ sealed class AppHost : ApplicationContext
                 ["created"] = p.Created?.ToString("o"),
                 ["panes"] = new JsonArray(panes.Select(t => (JsonNode?)new JsonObject
                 {
-                    ["depth"] = t.Depth, ["name"] = t.Name,
+                    ["depth"] = t.Depth, ["id"] = t.Id, ["name"] = t.Name,
                 }).ToArray()),
             };
             if (details)
@@ -511,11 +511,13 @@ sealed class AppHost : ApplicationContext
         string Name() => msg?["name"]?.GetValue<string>() ?? "";
         switch (kind)
         {
-            case "open":   // its window: opened when closed, else to the front
+            case "open":   // its window: opened when closed, else to the front; with a pane, the focus on it
                 if (projects.Get(Id()) is not { } p) return;
-                BringToFront(p.Windows.FirstOrDefault() is { } entry
+                var shown = p.Windows.FirstOrDefault() is { } entry
                     ? windows.FirstOrDefault(w => w.Key == entry.Key) ?? Open([], entry.Key)
-                    : Open([], project: p));   // a named project without a window
+                    : Open([], project: p);   // a named project without a window
+                BringToFront(shown);
+                if (msg?["pane"]?.GetValue<string>() is { } pane) shown.Post(new JsonObject { ["event"] = "focusPane", ["pane"] = pane });
                 break;
             case "new":
                 BringToFront(Open([], project: projects.NewProject(Name())));

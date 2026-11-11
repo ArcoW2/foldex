@@ -11,6 +11,8 @@ Status: partly executed; see Status and 6. As built.
 - 2026-11-11: revised and executed: one window per project; the Projects menu shows a project's panes as a tree, not
   a folder per window.
 - 2026-11-11: revised and executed: the panes in that tree by their names, as their heads show them.
+- 2026-11-11: revised and executed: a click on a pane opens (or shows) its project with the focus on that pane; the
+  tree drawn with lines (plan 16).
 
 Builds on plan 12 (docking panes) and plan 03 (connected panes). As LexPen's projects
 (LexPen `docs/plans/executed/PLAN-window-sessions.md` and `PLAN-manage-projects.md`), with one window per project.
@@ -133,7 +135,8 @@ Projects
 - The projects: open ones checked, this window's project first and marked, then the most recently used first.
 - A project's submenu: its window's panes as a tree: each root pane, then the panes that follow it a step in, down
   to the end, each by its name as its head and tab show it (a tree "Folders", a list its folder's name, "Preview").
-  The page keeps those names with its layout. A click on a pane, or Open project, opens a closed project; Show
+  The page keeps those names with its layout; the tree has lines as the trees do (plan 16). A click on a pane opens
+  the project (or brings it to the front) and puts the focus on that pane. Open project opens a closed project; Show
   project brings an open one to the front. Delete project... (a closed project only; asks first).
 - New project...: asks a name (empty: "Project 8"); opens a new window with the default layout in it. Rename this
   project...: the name of this window's project (empty: unnamed again).
@@ -259,3 +262,7 @@ None.
   Preview, a list's folder's last part, else Files); the menu and Manage's details show only the name. Test copy: a
   child list sent to C:\Windows was "Windows" on the page and in `projects.json`; the menu showed Folders with its
   lists a step in. `dotnet test`: Failed 0, Passed 109.
+- Then: a click on a pane. `PaneTree` gives each pane's id; the menu's item sends it with `open`; the host brings
+  the window to the front (opening it when closed) and tells its page `focusPane`. A name from before the page kept
+  names, a shell place's path, is shown by the shell's name (This PC). Test copy: from Klanten's menu a pane of the
+  closed Archief: Archief opened with the focus on that pane (`activePane` p2).

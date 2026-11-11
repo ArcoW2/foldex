@@ -74,8 +74,8 @@ public class ProjectStoreTests : IDisposable
               { "id": "C", "kind": "preview", "source": "B", "states": {} },
               { "id": "D", "kind": "list", "source": "A", "lastKey": "", "states": { "": { "location": "D:\\" } } } ] } }
             """);
-        var tree = ProjectStore.PaneTree(session).Select(t => $"{t.Depth} {t.Name} {t.Folder}");
-        Assert.Equal(["0 Folders C:\\", "1 Users (C:) C:\\Users", "2 Preview ", "1 D: D:\\", "0 Files "], tree);
+        var tree = ProjectStore.PaneTree(session).Select(t => $"{t.Depth} {t.Id} {t.Name} {t.Folder}");
+        Assert.Equal(["0 A Folders C:\\", "1 B Users (C:) C:\\Users", "2 C Preview ", "1 D D: D:\\", "0 E Files "], tree);
     }
 
     [Fact]

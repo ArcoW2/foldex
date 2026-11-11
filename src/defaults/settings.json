@@ -24,6 +24,8 @@
   "paneBgFocused": 100,           // the background of the pane with the keyboard, in %: 100 the theme's, 0 black, 200 white
   "paneBgBranch": 100,            // the background of the other panes in its branch (its parents, its children), the same way
   "paneBgOther": 100,             // the background of the other panes, the same way
+  "treeExpanders": "plus",        // a tree's expanders: "plus" (+ and -) or "chevron" (> and v)
+  "treeLines": "dotted",          // a tree's lines: "dotted", "solid" or "none"
   "paneThemeIntensity": 100,      // the branch colours, in %: 100 the theme's, 0 faint, 200 strong
   "paneHeadMix": 100,             // 0 to 100: pane heads and tabs, 0 the window's colour, 100 the branch colour
   "paneThemeMix": 8,              // 0 to 100: the inside of a pane, 0 the window's colours, 100 the branch colour

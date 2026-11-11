@@ -150,11 +150,11 @@ sealed class ProjectStore
     /// deeper), down to the end; per pane its name as its head shows it (the page keeps them in "names"; from before
     /// that, as the page makes them: Folders, Preview, a list's folder) and its folder (a list's location, a tree's
     /// focus; null for none).</summary>
-    public static List<(int Depth, string Name, string? Folder)> PaneTree(JsonNode? session)
+    public static List<(int Depth, string Id, string Name, string? Folder)> PaneTree(JsonNode? session)
     {
         var panes = session?["panes"]?["panes"]?.AsArray().OfType<JsonObject>().ToList() ?? [];
         var names = session?["names"] as JsonObject;
-        var tree = new List<(int, string, string?)>();
+        var tree = new List<(int, string, string, string?)>();
         var seen = new HashSet<string>();
         void Add(JsonObject pane, int depth)
         {
@@ -168,7 +168,7 @@ sealed class ProjectStore
                     "preview" => "Preview",
                     _ => folder?.Split('\\', StringSplitOptions.RemoveEmptyEntries).LastOrDefault() ?? "Files",
                 };
-            tree.Add((depth, name, folder));
+            tree.Add((depth, id, name, folder));
             foreach (var child in panes.Where(c => c["source"]?.ToString() == id)) Add(child, depth + 1);
         }
         foreach (var root in panes.Where(p => p["source"] is null)) Add(root, 0);

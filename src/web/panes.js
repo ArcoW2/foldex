@@ -225,3 +225,31 @@ class Layout {
     return layout;
   }
 }
+
+// The tree lines of rows in a tree (docs/plans/16-PLAN-tree-look.md 3.2), from their depths in the order shown: per row,
+// per level above it, 'pass' (an ancestor's line goes on below), 'mid' (its own joint, more siblings below), 'end' (its
+// own joint, the last child) or '' (an ancestor's line has ended); and down: an open node whose children follow.
+function treeGuides(depths) {
+  // Whether the line of level k (an ancestor at depth k) goes on below row i: a later row at depth k + 1 comes before
+  // one at depth k or less.
+  const goesOn = (i, k) => {
+    for (let j = i + 1; j < depths.length; j++) {
+      if (depths[j] <= k) return false;
+      if (depths[j] === k + 1) return true;
+    }
+    return false;
+  };
+  return depths.map((d, i) => ({
+    levels: Array.from({ length: d }, (_, k) => k === d - 1 ? (goesOn(i, k) ? 'mid' : 'end') : goesOn(i, k) ? 'pass' : ''),
+    down: (depths[i + 1] ?? -1) > d,
+  }));
+}
+
+// The pieces of line of one row (treeGuides) as elements: level k at `x(k)` px, its joint `joint` px long; a row that
+// is positioned (relative or absolute) holds them. Shown as the setting treeLines says (app.css).
+function guideElements({ levels, down }, x, joint) {
+  const pieces = levels.map((kind, k) => kind && Object.assign(document.createElement('span'),
+    { className: `guide ${kind}`, style: `left: ${x(k)}px; width: ${joint}px` })).filter(Boolean);
+  if (down) pieces.push(Object.assign(document.createElement('span'), { className: 'guide down', style: `left: ${x(levels.length)}px` }));
+  return pieces;
+}
