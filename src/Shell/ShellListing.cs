@@ -101,7 +101,7 @@ static class ShellListing
             icons.Start();
             var icon = ShellIcons.Of(info.FullName, folder);
             icons.Stop();
-            batcher.Add(new JsonObject
+            var entry = new JsonObject
             {
                 ["id"] = info.FullName,
                 ["name"] = info.Name,
@@ -113,9 +113,47 @@ static class ShellListing
                 ["own"] = !folder && ShellIcons.HasOwn(info.FullName),
                 ["link"] = (info.Attributes & FileAttributes.ReparsePoint) != 0,
                 ["subs"] = foldersOnly ? Subs(info.FullName) : null,
-            });
+            };
+            OwnColumns(entry, info, folder);
+            batcher.Add(entry);
         }
     }
+
+    /// <summary>The own columns of plan 11 3.1 that the listing reads anyway: created, accessed, the attributes as
+    /// letters, the extension, the shell's type name, a link's target, and the folder it is in.</summary>
+    static void OwnColumns(JsonObject entry, FileSystemInfo info, bool folder)
+    {
+        entry["created"] = new DateTimeOffset(info.CreationTimeUtc).ToUnixTimeMilliseconds();
+        entry["accessed"] = new DateTimeOffset(info.LastAccessTimeUtc).ToUnixTimeMilliseconds();
+        entry["attributes"] = Attributes(info.Attributes);
+        entry["ext"] = folder ? "" : info.Extension.TrimStart('.');
+        entry["type"] = TypeName(folder ? null : info.Extension);
+        entry["path"] = Path.GetDirectoryName(info.FullName.TrimEnd('\\'));
+        if ((info.Attributes & FileAttributes.ReparsePoint) != 0)
+            try { entry["target"] = info.LinkTarget; }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+    }
+
+    /// <summary>Attributes as letters, as Explorer's column: R H S A, then C (compressed), E (encrypted), L (a link),
+    /// O (offline).</summary>
+    public static string Attributes(FileAttributes a) => string.Concat(
+        (a & FileAttributes.ReadOnly) != 0 ? "R" : "", (a & FileAttributes.Hidden) != 0 ? "H" : "",
+        (a & FileAttributes.System) != 0 ? "S" : "", (a & FileAttributes.Archive) != 0 ? "A" : "",
+        (a & FileAttributes.Compressed) != 0 ? "C" : "", (a & FileAttributes.Encrypted) != 0 ? "E" : "",
+        (a & FileAttributes.ReparsePoint) != 0 ? "L" : "", (a & FileAttributes.Offline) != 0 ? "O" : "");
+
+    static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> typeNames = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The shell's type name of an extension ("Text Document"); null: a folder ("File folder"). Asked once per
+    /// extension.</summary>
+    public static string TypeName(string? extension) => typeNames.GetOrAdd(extension ?? "\\", ext =>
+    {
+        var info = new ShFileInfo();
+        var folder = ext == "\\";
+        Native.SHGetFileInfo(folder ? "folder" : "x" + ext, folder ? Native.FileAttributeDirectory : Native.FileAttributeNormal,
+            ref info, (uint)Marshal.SizeOf<ShFileInfo>(), Native.ShgfiTypeName | Native.ShgfiUseFileAttributes);
+        return info.szTypeName ?? "";
+    });
 
     /// <summary>For a tree's expander: whether a folder has subfolders: true, "hidden" (only hidden ones) or false.
     /// A link that refuses its own listing (C:\Documents and Settings) answers for the folder it opens (its target);
@@ -158,6 +196,7 @@ static class ShellListing
             }
             long? size = null;
             long? modified = null;
+            FileSystemInfo? fsInfo = null;
             if ((attrs & Native.SfgaoFileSystem) != 0)
                 try
                 {
@@ -167,10 +206,11 @@ static class ShellListing
                     {
                         if (info is FileInfo f) size = f.Length;
                         modified = new DateTimeOffset(info.LastWriteTimeUtc).ToUnixTimeMilliseconds();
+                        fsInfo = info;
                     }
                 }
                 catch (Exception ex) when (ex is COMException or IOException or UnauthorizedAccessException or ArgumentException) { }
-            batcher.Add(new JsonObject
+            var entry = new JsonObject
             {
                 ["id"] = Native.IdOf(item),
                 ["name"] = Native.DisplayName(item, Sigdn.NormalDisplay),
@@ -181,7 +221,22 @@ static class ShellListing
                 ["hidden"] = (attrs & Native.SfgaoHidden) != 0,
                 ["link"] = (attrs & Native.SfgaoLink) != 0,
                 ["subs"] = foldersOnly ? (attrs & Native.SfgaoHasSubfolder) != 0 : null,
-            });
+            };
+            // A drive in This PC: its total and free size (plan 11 3.1); a file system item: the own columns.
+            var id = entry["id"]!.GetValue<string>();
+            if (id.Length == 3 && id[1] == ':' && id[2] == '\\')
+                try
+                {
+                    var drive = new DriveInfo(id);
+                    if (drive.IsReady)
+                    {
+                        entry["total"] = drive.TotalSize;
+                        entry["free"] = drive.AvailableFreeSpace;
+                    }
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException) { }
+            else if (fsInfo is not null) OwnColumns(entry, fsInfo, folder);
+            batcher.Add(entry);
             Marshal.ReleaseComObject(item);
         }
         Marshal.ReleaseComObject(items);

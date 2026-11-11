@@ -26,6 +26,9 @@
   "paneBgOther": 100,             // the background of the other panes, the same way
   "treeExpanders": "chevron",     // a tree's expanders: "plus" (+ and -) or "chevron" (> and v)
   "treeLines": "dotted",          // a tree's lines: "dotted", "solid" or "none"
+  "rowLines": "none",             // rows in a list: "none", "stripes" (every other row shaded) or "lines" (a line under each)
+  "rowLinesIntensity": 8,         // 1 to 100: how strong the stripes or lines are, the text colour mixed in at that %
+  "rowHeight": 170,               // the row height in % of the pane font size, 100 to 300 (the icons follow it)
   "paneThemeIntensity": 100,      // the branch colours, in %: 100 the theme's, 0 faint, 200 strong
   "paneHeadMix": 100,             // 0 to 100: pane heads and tabs, 0 the window's colour, 100 the branch colour
   "paneThemeMix": 8,              // 0 to 100: the inside of a pane, 0 the window's colours, 100 the branch colour

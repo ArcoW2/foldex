@@ -23,6 +23,9 @@ function applyLook(settings, themes) {
   applyHeadText(6);
   // The tree lines (docs/plans/16-PLAN-tree-look.md 3.1): app.css draws them solid or dotted, or not at all.
   root.dataset.treeLines = ['solid', 'dotted', 'none'].includes(settings.treeLines) ? settings.treeLines : 'dotted';
+  // Rows with stripes or lines (plan 11 3.5): the text colour mixed in at rowLinesIntensity %.
+  root.dataset.rowLines = ['stripes', 'lines'].includes(settings.rowLines) ? settings.rowLines : 'none';
+  root.style.setProperty('--row-line-mix', `${Math.min(100, Math.max(1, Number(settings.rowLinesIntensity) || 8))}%`);
   applyFonts(settings);
 }
 
@@ -89,7 +92,9 @@ const fontStack = name => name ? `"${name.replace(/["\\]/g, '')}", "Segoe UI", s
 // A size as used: 0 (an old settings.json) the default, anything else held between 4 and 36 (a hand-edited 0.5).
 const pointSize = pt => pt ? Math.min(36, Math.max(4, pt)) : DefaultSize;
 const sizePx = pt => pointSize(pt) * 96 / 72;
-const paneRowHeight = settings => Math.max(16, Math.round(sizePx(settings.paneSize) * 22 / 13));
+// The row height: rowHeight (plan 11 3.5) in % of the pane font, 100 to 300; 170 the 22 px at 13 px of before.
+const rowHeightShare = settings => Math.min(300, Math.max(100, Number(settings.rowHeight) || 170)) / 100;
+const paneRowHeight = settings => Math.max(16, Math.round(sizePx(settings.paneSize) * rowHeightShare(settings)));
 
 function applyFonts(settings) {
   const root = document.documentElement.style;

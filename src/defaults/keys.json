@@ -22,6 +22,7 @@
   "Tab": "branch.down",
   "Shift+Tab": "branch.up",
   "F5": "refresh",
+  "Ctrl+R": "columns.fit",
   "Ctrl+H": "hidden.toggle",
   "Alt+P": "preview.toggle",
   "Ctrl+Alt+N": ["pane.newChild", "right"],

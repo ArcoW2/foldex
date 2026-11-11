@@ -29,6 +29,8 @@ function applyTheme() {
 // Rows of another height: every tree and list drawn again, the same rows at the top, the focused one kept in view.
 function setRowHeight(height) {
   setIconSize(height);
+  // The columns' widths are in em of the pane font (plan 11 3.4): the headers follow a new font size.
+  for (const v of views.values()) if (v.colhead) v.drawHeader();
   if (height === RowHeight) return;
   const old = RowHeight;
   RowHeight = height;
@@ -531,7 +533,20 @@ class ListView {
     this.el = paneElement(id, 'list', '');
     this.body = this.el.querySelector('.body');
     this.rows = this.el.querySelector('.rows');
-    this.body.addEventListener('scroll', () => this.render());
+    // The columns' header above the rows (plan 11 3.4), moving along when the rows scroll sideways.
+    this.colhead = document.createElement('div');
+    this.colhead.className = 'colhead';
+    this.body.before(this.colhead);
+    this.colhead.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      openMenu(e.clientX, e.clientY, columnHeaderMenu(this));
+    });
+    this.cols = paneColumns(id);
+    this.drawHeader();
+    this.body.addEventListener('scroll', () => {
+      this.colhead.firstChild?.style.setProperty('transform', `translateX(${-this.body.scrollLeft}px)`);
+      this.render();
+    });
     this.body.addEventListener('mousedown', e => {
       if (e.button !== 0) return;
       const x = this.entryAt(e.target);
@@ -560,11 +575,115 @@ class ListView {
       const x = this.entryAt(e.target);
       return x?.folder ? x.id : this.location;
     });
-    new ResizeObserver(() => this.render()).observe(this.body);
+    new ResizeObserver(() => {
+      this.render();
+      if (this.cols.fit && this.entries.length) this.fitColumns();
+    }).observe(this.body);
     iconUsers.add(this);
   }
 
   ids() { return this.entries.filter(x => this.selected.has(x.id)).map(x => x.id); }
+
+  // ---------- Columns (plan 11) ----------
+
+  fontPx() { return parseFloat(getComputedStyle(this.body).fontSize) || 13; }
+
+  // The columns for where it is (3.2): a folder's set when it (or a folder above it, with its subfolders) has one,
+  // else the pane's own generic columns. `again`: the sets changed; a set shown is taken fresh.
+  chooseColumns(again = false) {
+    const choice = setFor(columnSets.folders, this.location);
+    const set = choice && setNamed(choice.set);
+    const before = this.cols;
+    if (set) {
+      if (again || before.set !== set.name) this.cols = { ...copyColumns(set), set: set.name };
+    } else this.cols = paneColumns(this.id);
+    if (this.cols !== before) {
+      this.drawHeader();
+      if (again) {
+        this.askColumnValues();
+        this.sortEntries();
+      }
+    }
+  }
+
+  drawHeader() { drawColumnHeader(this); }
+
+  // A change in the header: drawn again; the pane's generic columns (not a folder's set) go with the layout.
+  columnsChanged() {
+    this.drawHeader();
+    this.askColumnValues();
+    this.render();
+    if (!this.cols.set) tellLayout();
+  }
+
+  comparer() {
+    const sort = this.cols.sort;
+    return sort ? columnComparer(sort.id, columnInfo(sort.id).kind, sort.desc) : byName;
+  }
+
+  // Sorted again (a click on a title): by a property of Windows, its value is read for every item first.
+  async sortEntries() {
+    const sort = this.cols.sort;
+    if (sort?.id.includes('.')) {
+      const missing = this.entries.filter(x => !(x.props && sort.id in x.props) && !x.propsAll);
+      if (missing.length) {
+        status(`Reading ${columnInfo(sort.id).title} of ${missing.length} items to sort by it...`);
+        await this.askProps(missing, [sort.id]);
+        for (const x of missing) x.propsAll = true;
+        status(`${this.name ?? ''}: ${this.entries.length} items`);
+      }
+    }
+    this.entries.sort(this.comparer());
+    this.render();
+  }
+
+  // The values that are not in the listing: the Git status of the folder's items, Windows' properties for the rows in
+  // view (as they come).
+  askColumnValues() {
+    if (this.cols.columns.some(c => c.id === 'git') && this.location && !this.gitAsked && /^[A-Za-z]:\\|^\\\\/.test(this.location)) {
+      this.gitAsked = true;
+      const at = this.location;
+      askHost({ op: 'git', folder: at }).then(m => {
+        if (this.location !== at || !m.status) return;
+        for (const x of this.entries) x.git = m.status[x.name] ?? null;
+        if (this.cols.sort?.id === 'git') this.entries.sort(this.comparer());
+        this.render();
+      });
+    }
+  }
+
+  askProps(items, names) {
+    const ids = items.map(x => x.id);
+    const byId = new Map(items.map(x => [x.id, x]));
+    const batches = [];
+    for (let k = 0; k < ids.length; k += 100) batches.push(askHost({ op: 'props', ids: ids.slice(k, k + 100), names }).then(m => {
+      for (const [id, values] of Object.entries(m.values)) {
+        const x = byId.get(id);
+        if (x) x.props = { ...x.props, ...Object.fromEntries(names.map(n => [n, values[n] ?? null])) };
+      }
+      this.render();
+    }));
+    return Promise.all(batches);
+  }
+
+  // Fit columns (3.4, Ctrl+R): each column as wide as its widest value here; too wide, the name gives way first.
+  fitColumns() {
+    const measure = document.createElement('canvas').getContext('2d');
+    const style = getComputedStyle(this.body);
+    measure.font = `${style.fontSize} ${style.fontFamily}`;
+    const fontPx = this.fontPx(), pad = 14;
+    const entries = this.entries.slice(0, 5000);
+    const needs = this.cols.columns.map((col, k) => {
+      let widest = measure.measureText(columnInfo(col.id).title).width + 16;
+      for (const x of entries) widest = Math.max(widest, measure.measureText(k === 0 ? x.name : columnText(x, col.id)).width);
+      return widest + pad + (k === 0 ? iconSize + 14 + measure.measureText(' link').width : 0);
+    });
+    const widths = fitWidths(needs, this.body.clientWidth - 2, NameMinEm * fontPx);
+    this.cols.columns.forEach((col, k) => { col.width = Math.round(widths[k] / fontPx * 10) / 10; });
+    this.drawHeader();
+    this.render();
+    if (!this.cols.set) tellLayout();
+  }
 
   load(location, elevated = false) {
     this.location = location;
@@ -573,6 +692,8 @@ class ListView {
     this.anchor = null;
     this.message = null;
     this.body.scrollTop = 0;
+    this.gitAsked = false;
+    this.chooseColumns();
     this.el.querySelector('.title').textContent = location ?? '';
     if (activePane === this.id) showLocation(location ?? '');
     this.render();
@@ -587,6 +708,7 @@ class ListView {
     if (!this.location || this.message) return;
     const keep = new Set(this.selected), top = this.body.scrollTop;
     let first = true;
+    this.gitAsked = false;
     list(this.id, this.location, false, part => this.take(part, first && !(first = false)), m => {
       this.done(m, first);
       this.selected = new Set([...keep].filter(id => this.entries.some(x => x.id === id)));
@@ -598,7 +720,7 @@ class ListView {
 
   take(entries, reset) {
     if (reset) this.entries = [];
-    this.entries = this.entries.concat(entries.filter(x => settings.showHidden || !x.hidden)).sort(byName);
+    this.entries = this.entries.concat(entries.filter(x => settings.showHidden || !x.hidden)).sort(this.comparer());
     this.render();
     status(`${this.entries.length} items so far...`);
   }
@@ -619,6 +741,9 @@ class ListView {
     const focus = layout.state(this.id).focus;
     if (focus && this.entries.some(x => same(x.id, focus))) this.select(this.entries.find(x => same(x.id, focus)), {}, true);
     this.backDone();
+    this.askColumnValues();
+    if (this.cols.sort?.id.includes('.')) this.sortEntries();
+    if (this.cols.fit) this.fitColumns();
     ribbonRefresh();
   }
 
@@ -637,39 +762,52 @@ class ListView {
       this.rows.replaceChildren(msg);
       return;
     }
+    // The rows as wide as the columns (a scroll bar sideways when wider than the pane), each column a cell at its
+    // width; the first holds the icon, the name and a link's mark.
+    const fontPx = this.fontPx();
+    const cols = this.cols.columns.map(c => ({ ...columnInfo(c.id), width: (c.width ?? columnInfo(c.id).width) * fontPx }));
     this.rows.style.height = `${this.entries.length * RowHeight}px`;
+    this.rows.style.width = `${cols.reduce((a, c) => a + c.width, 0)}px`;
     const [first, last] = visibleRange(this.body, this.entries.length);
     const focus = layout.state(this.id).focus;
-    const missing = [], own = [], nodes = [];
+    const missing = [], own = [], nodes = [], noProps = [];
+    const propNames = cols.filter(c => c.id.includes('.')).map(c => c.id);
     for (let i = first; i < last; i++) {
       const x = this.entries[i];
       if (x.own) { own.push(x.id); x.own = false; }   // its own icon asked once, when in view
+      if (propNames.length && propNames.some(n => !(x.props && n in x.props)) && !x.propsAsked) {
+        x.propsAsked = true;
+        noProps.push(x);
+      }
       const row = document.createElement('div');
-      row.className = 'row' + (this.selected.has(x.id) ? ' selected' : '') + (same(x.id, focus) ? ' focused' : '') + (x.hidden ? ' hidden' : '');
+      row.className = 'row cols' + (this.selected.has(x.id) ? ' selected' : '') + (same(x.id, focus) ? ' focused' : '')
+        + (x.hidden ? ' hidden' : '') + (i % 2 ? ' odd' : '');
       row.style.top = `${i * RowHeight}px`;
       row.dataset.index = i;
       row.draggable = true;
-      const name = document.createElement('span');
-      name.className = 'name';
-      name.textContent = x.name;
-      const size = document.createElement('span');
-      size.className = 'size';
-      size.textContent = formatSize(x.size);
-      const date = document.createElement('span');
-      date.className = 'date';
-      date.textContent = x.modified ? dateFormat.format(x.modified) : '';
-      row.append(iconImage(x, missing), name);
-      if (x.link) {
-        const link = document.createElement('span');
-        link.className = 'link';
-        link.textContent = 'link';
-        row.append(link);
-      }
-      row.append(size, date);
+      cols.forEach((c, k) => {
+        const cell = document.createElement('span');
+        cell.className = k === 0 ? 'cell first' : 'cell' + (RightAligned.has(c.kind) ? ' right' : '') + (c.id === 'git' && x.git ? ` git-${x.git === '!' ? 'conflict' : x.git}` : '');
+        cell.style.width = `${c.width}px`;
+        if (k === 0) {
+          const name = document.createElement('span');
+          name.className = 'name';
+          name.textContent = x.name;
+          cell.append(iconImage(x, missing), name);
+          if (x.link) {
+            const link = document.createElement('span');
+            link.className = 'link';
+            link.textContent = 'link';
+            cell.append(link);
+          }
+        } else cell.textContent = columnText(x, c.id);
+        row.append(cell);
+      });
       nodes.push(row);
     }
     this.rows.replaceChildren(...nodes);
     askIcons(missing, own);
+    if (noProps.length) this.askProps(noProps, propNames);
   }
 
   entryAt(target) {
@@ -1012,7 +1150,7 @@ function newTab(id) {
   if (!pane || view instanceof PreviewView) return;
   const place = { pane: id, side: 'tab' };
   if (pane.source !== null) {
-    const tab = layout.add({ source: pane.source, colour: layout.newColour(), kind: pane.kind, content: pane.content });
+    const tab = layout.add({ source: pane.source, colour: layout.newColour(), kind: pane.kind, content: pane.content, columns: pane.columns });
     placeView(new ListView(tab), place);
     activate(tab);   // its branch active: the parent's state for it starts as a copy of the one shown
     followParent(tab);
@@ -1562,6 +1700,7 @@ const events = {
     setRibbon(m.ribbon);
     version = m.version + (m.commit ? ` (${m.commit})` : '');
     setBars(m.bars);
+    setColumnSets(m.columnSets);
     post({ op: 'drives' });
     for (const o of m.ops) ops.set(o.id, o);
     showOps();
@@ -1573,6 +1712,12 @@ const events = {
   bars(m) { setBars(m.bars); },
   barsFailed(m) { status(`The bars could not be written: ${m.error}`, true); },
   drives(m) { setDrives(m.drives); },
+  // Columns (plan 11): the sets changed, Windows' properties for columns, the Git status and property values asked.
+  columnSets(m) { setColumnSets(m.columnSets); },
+  columnsFailed(m) { status(`The column sets could not be written: ${m.error}`, true); },
+  propList(m) { propListCame(m.list); },
+  git(m) { columnReply(m); },
+  props(m) { columnReply(m); },
   // The window's project renamed, or the window moved to another (plan 15 3.6).
   project(m) { showProject(m.project); },
   // A pane chosen in the Projects menu (plan 15 3.6): the focus to it, its tab shown.

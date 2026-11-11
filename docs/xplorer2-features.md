@@ -47,23 +47,23 @@ updated whenever a plan is written, built or closed that touches a feature here.
 
 | Feature | Edition | Foldex | Prio | Depends on |
 |---|---|---|---|---|
-| Columns: shell properties, column sets | P+ | plan 11 | 4 | -- |
+| Columns: shell properties, column sets | P+ | built (plan 11) | 4 | -- |
 | Cloud status columns | P+ | -- | 4 | Columns |
-| Sorting: secondary, natural, folders first | P+ | part: natural sort, folders first | 4 | Columns |
+| Sorting: secondary, natural, folders first | P+ | part: natural sort, folders first, by any column (plan 11); secondary -- | 4 | Columns |
 | Wildcard filter | All | -- | 4 | -- |
 | Quick filter box (live) | P+ | -- | 4 | Wildcard filter; bars (plan 10), for the box |
 | Hyperfilters (rules, saved) | P+ | -- | 4 | Wildcard filter; Columns (rules on properties) |
 | Colour coding by rule | P+ | -- | 4 | Hyperfilters (the rules) |
 | Colour tags on files | All | -- | 4 | -- |
-| Views: details, list, thumbnails, Ctrl+wheel thumbnail zoom | All | part: details-like list; Ctrl+wheel font size and icons that grow built (plan 08); columns plan 11 | 3 (mostly detail now) | Columns |
+| Views: details, list, thumbnails, Ctrl+wheel thumbnail zoom | All | part: details with columns (plan 11); Ctrl+wheel font size and icons that grow built (plan 08) | 3 (mostly detail now) | Columns |
 | Grouping, custom groups | P+ | -- | 3 | Columns; Sorting |
 | Select by mask, invert, by content, by rule | P+ | part: select all | 3 | Wildcard filter; Hyperfilters (by rule) |
 | Selection clipboard, sticky selection, checkboxes | P+ | -- | 3 | -- |
 | Type-ahead | P+ | -- | 3 | -- |
 | Programmable columns (expressions) | U | -- | 2 | Columns |
-| Per-folder view settings | P+ | plan 11 (a column set per folder) | 1 | Columns (column sets per folder, plan 11) |
+| Per-folder view settings | P+ | part: a column set per folder built (plan 11) | 1 | Columns (column sets per folder, plan 11) |
 | Browse flat (folder and subfolders as one list) | P+ | -- | 1 | Columns (the path column) |
-| Over 1000 system properties as columns | U | -- | No idea | Columns |
+| Over 1000 system properties as columns | U | built (plan 11: every property Windows has for columns) | No idea | Columns |
 
 ## Search, scrap
 

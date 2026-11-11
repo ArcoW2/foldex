@@ -49,6 +49,8 @@ sealed class MainForm : Form
         };
     }
 
+    static JsonArray? propList;   // the properties for columns, read once per run
+
     readonly System.Windows.Forms.Timer drivesSoon = new() { Interval = 500 }, drivesPoll = new() { Interval = 4000 };
     string driveLetters = "";
 
@@ -203,6 +205,7 @@ sealed class MainForm : Form
                     ["keys"] = KeysFile.Load(AppHost.DataDir),
                     ["ribbon"] = RibbonFile.Load(AppHost.DataDir, Path.Combine(AppHost.DefaultsDir, RibbonFile.Name)),
                     ["bars"] = BarsFile.Load(AppHost.DataDir, Path.Combine(AppHost.DefaultsDir, BarsFile.Name)),
+                    ["columnSets"] = AppHost.ColumnSets(),
                     ["paths"] = PathsArray(paths),
                     ["layout"] = freshLayout ? null : pageLayout?.DeepClone() ?? app.LayoutFor(this),
                     ["project"] = app.ProjectInfo(this),
@@ -325,6 +328,34 @@ sealed class MainForm : Form
                 break;
             case "drives":
                 await TellDrives();
+                break;
+            // Columns (docs/plans/executed/11-PLAN-columns.md 3.6): the Git status of a folder's items, the properties Windows
+            // has for columns (once per run), their values for items, and the column sets written.
+            case "git":
+            {
+                var folder = msg["folder"]!.GetValue<string>();
+                var status = Path.IsPathFullyQualified(folder) && Directory.Exists(folder) ? await Task.Run(() => GitStatus.Of(folder)) : null;
+                Post(new JsonObject { ["event"] = "git", ["req"] = msg["req"]?.DeepClone(), ["folder"] = folder, ["status"] = status });
+                break;
+            }
+            case "propList":
+                propList ??= await StaWorker.Once("props", ShellProps.List);
+                Post(new JsonObject { ["event"] = "propList", ["list"] = propList.DeepClone() });
+                break;
+            case "props":
+            {
+                var names = msg["names"]!.AsArray().Select(n => n!.GetValue<string>()).ToList();
+                var values = await StaWorker.Once("props", () => ShellProps.Values(ids, names));
+                Post(new JsonObject { ["event"] = "props", ["req"] = msg["req"]?.DeepClone(), ["values"] = values });
+                break;
+            }
+            case "columnSetsSave":
+            case "folderColumnsSave":
+                try { app.SaveColumns(msg["op"]!.GetValue<string>() == "columnSetsSave" ? msg["mine"] : null, msg["folders"]); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    Post(new JsonObject { ["event"] = "columnsFailed", ["error"] = ex.Message });
+                }
                 break;
             case "barsSave":
                 // A bar changed in the window (plan 10 3.3): your bars.json, and every window draws the bars again.

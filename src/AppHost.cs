@@ -197,6 +197,18 @@ sealed class AppHost : ApplicationContext
         foreach (var w in windows) w.Post((JsonObject)message.DeepClone());
     }
 
+    /// <summary>The column sets and the folders' choices (docs/plans/executed/11-PLAN-columns.md 3.3), shipped and yours.</summary>
+    public static JsonObject ColumnSets() => ColumnSetsFile.Load(DataDir, Path.Combine(DefaultsDir, ColumnSetsFile.SetsName));
+
+    /// <summary>Your column sets and/or the folders' choices written; every window gets them again.</summary>
+    public void SaveColumns(JsonNode? mine, JsonNode? folders)
+    {
+        if (mine is not null) ColumnSetsFile.SaveSets(DataDir, mine);
+        if (folders is not null) ColumnSetsFile.SaveFolders(DataDir, folders);
+        var message = new JsonObject { ["event"] = "columnSets", ["columnSets"] = ColumnSets() };
+        foreach (var w in windows) w.Post((JsonObject)message.DeepClone());
+    }
+
     /// <summary>Tells every page the settings and themes as they are now.</summary>
     public void Broadcast()
     {

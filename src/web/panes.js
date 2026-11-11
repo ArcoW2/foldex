@@ -23,9 +23,10 @@ class Layout {
 
   // A new pane; with a source (its parent) it follows that one, in `colour` or else as connect() says. `root` is the
   // window's first pane still there.
-  add({ source = null, colour = null, kind = 'list', content = 'both', location = null } = {}) {
+  add({ source = null, colour = null, kind = 'list', content = 'both', location = null, columns = null } = {}) {
     const id = `p${this.next++}`;
     const pane = { id, source: null, colour: null, kind, content, pinned: false, activeKey: null, states: {} };
+    if (columns) pane.columns = JSON.parse(JSON.stringify(columns));   // its own copy (plan 11 3.2)
     this.panes.set(id, pane);
     if (this.root === null) this.root = id;
     if (source !== null) this.connect(id, source, colour);
@@ -96,7 +97,8 @@ class Layout {
   // preview), else the defaults.
   childSettings(source) {
     const current = this.followers(source, this.keyOf(source)).find(f => f.kind !== 'preview');
-    return current ? { kind: current.kind, content: current.content } : { kind: 'list', content: 'both' };
+    return current ? { kind: current.kind, content: current.content, ...(current.columns ? { columns: current.columns } : {}) }
+      : { kind: 'list', content: 'both' };
   }
 
   // A colour no connection has yet; with all taken, the one used least.

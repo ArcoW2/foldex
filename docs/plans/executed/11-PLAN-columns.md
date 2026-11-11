@@ -1,11 +1,12 @@
 # Plan 11: Columns, column sets and rows
 
-Status: not started.
+Status: executed; see 6. As built.
 
 - 2026-11-10: draft.
 - 2026-11-10: revised: generic columns and sets per folder, Manage sets, fitting the name column, row lines and stripes,
   row height.
 - 2026-11-11: revised: a tree pane has columns as a list (plan 18).
+- 2026-11-12: executed.
 
 ## 1. What this is about
 
@@ -29,20 +30,20 @@ an intensity you set, and a height relative to the pane font.
 
 ### Built
 
-### Not yet built
+| Part | What | Reference |
+|---|---|---|
+| Own columns | the catalogue's own columns | 3.1; 6.1 |
+| Git status column | | 3.1; 6.1 |
+| Shell property columns | read for the rows in view; sorting by them | 3.1; 6.1 |
+| Generic columns | per pane, remembered | 3.2; 6.1 |
+| Set per folder | with or without its subfolders; `foldercolumns.json` | 3.2; 6.1 |
+| Column sets | shipped and yours, `columnsets.json`; Manage sets | 3.3; 6.1 |
+| Header | sorting, moving, resizing, its menu | 3.4; 6.1 |
+| Fit columns | Ctrl+R, and Fit by themselves | 3.4; 6.1 |
+| Rows | `rowLines`, `rowLinesIntensity`, `rowHeight` | 3.5; 6.1 |
+| Host | the `columns` ops, `GitStatus.cs`, `ColumnSetsFile.cs` | 3.6; 6.1 |
 
-| Part | What | Waits for | Reference |
-|---|---|---|---|
-| Own columns | the catalogue's own columns | -- | 3.1 |
-| Git status column | | -- | 3.1 |
-| Shell property columns | read for the rows in view; sorting by them | -- | 3.1 |
-| Generic columns | per pane, remembered | -- | 3.2 |
-| Set per folder | with or without its subfolders; `foldercolumns.json` | column sets | 3.2 |
-| Column sets | shipped and yours, `columnsets.json`; Manage sets | -- | 3.3 |
-| Header | sorting, moving, resizing, its menu | -- | 3.4 |
-| Fit columns | Ctrl+R, and Fit by themselves | -- | 3.4 |
-| Rows | `rowLines`, `rowLinesIntensity`, `rowHeight` | -- | 3.5 |
-| Host | the `columns` op, `GitStatus.cs`, `ColumnSetsFile.cs` | -- | 3.6 |
+### Not yet built
 
 ## 3. Details
 
@@ -143,3 +144,57 @@ Settings (the settings window, group Panes; the same for every list):
 ## 4. Open questions
 
 None.
+
+## 6. As built
+
+### 6.1 Built (2026-11-12, branch `plan01-foundation`)
+
+- Host:
+  - `ShellListing`: the own columns with every entry: created, accessed, attributes as letters (R H S A C E L O),
+    extension, the shell's type name (asked once per extension), a link's target, the folder it is in; a drive in
+    This PC: total and free.
+  - `Shell\GitStatus.cs` (LexPen's git status code): per item of a folder its status; a folder shows the strongest
+    status under it. Ignored items included (`--ignored`), untracked folders as one item.
+  - `Shell\ShellProps.cs`: the properties for columns (`PSEnumeratePropertyDescriptions`, those that can be a column),
+    and values per item through its property store, formatted as Explorer shows them (without the direction marks
+    Windows puts around some), with a raw number for sorting (dates in ms).
+  - `ColumnSetsFile.cs`: `columnsets.json` (shipped in `defaults`, yours replacing by name, adding, or deleting one) and
+    `foldercolumns.json`; ops `git`, `propList` (once per run), `props`, `columnSetsSave`, `folderColumnsSave`; every
+    window gets the sets again.
+- Page (`web/columns.js` and `ListView`):
+  - The header above a list (it moves along when the rows scroll sideways): a click sorts, again the other way;
+    dragging a title moves its column (the name stays first); dragging the edge after a title resizes it; its menu as
+    3.4.
+  - A cell per column at its width in em of the pane font; rows as wide as the columns, a scroll bar sideways when
+    wider than the pane.
+  - The pane's generic columns are kept on the pane, so they go with the layout into the project; a new child or tab
+    copies them. A folder's set: the folder's own choice, else the nearest folder above it with its subfolders.
+  - Property values asked for the rows in view, in batches of 100; sorting by a property reads it for every item
+    first (the status line says so). Git status asked once per folder shown, when the Git column is there.
+  - Fit columns (Ctrl+R, View > Columns): measured on a canvas with the pane font, at most the first 5000 items.
+  - Rows: `rowLines` (`none`, `stripes`, `lines`), `rowLinesIntensity`, `rowHeight` (% of the pane font; the icons
+    follow, as before) in Settings > Panes; selection and hover keep their colours over stripes and lines.
+- Decided while building:
+  - Manage sets is a window of the page (a dialog that is not modal, as the Size window of the bars), not a window of
+    its own as the settings: it edits the same `columnsets.json` and the panes can be used while it is open.
+  - One `rowLinesIntensity` for stripes and lines, default 8 (3.5 suggested 6 and 12).
+  - Folders stay first whatever the sort, as before; empty values sort last.
+  - A rename of a shipped set writes the new set and deletes the shipped name (yours); the folders that used it follow.
+- The tree gets its columns with plan 18.
+
+### 6.2 How it was tested
+
+- `dotnet test`: Failed 0, Passed 140 (`ColumnsTests`: the shipped sets; yours replace by name, add and delete; a
+  wrong entry reported and skipped; sets and folders written and read back; a folder's set or the nearest above it with
+  its subfolders; sorting by kind (names naturally, sizes, dates, a property's raw value, empty values last); fitting
+  lets the name give way first; the Git status of a test repository's items (modified, untracked, ignored, a folder
+  with a change); a property read from a picture made in the test (its width and height), the property list).
+- Test copy over CDP, dark theme: a new pane shows Generic (Name, Size, Type, Date modified) under a header that lines
+  up with the cells; Date created added from the header menu, Type dragged to the end, Size widened by its edge,
+  sorted by size and back by clicks: all still there after going into a subfolder and back; Ctrl+R fitted the columns;
+  Save as new set wrote `columnsets.json`; Use a set for this folder > Git > With its subfolders on a test repository:
+  the Git status there (Modified, Untracked, Ignored, a folder Modified) and in its subfolder, generic columns again
+  outside it, `foldercolumns.json` written, the same after a start; the Pictures set on a folder of pictures: their
+  dimensions, sorted by them; More columns offered the properties of Windows; Manage sets renamed a set; stripes,
+  lines at 25%, rows at 250% with larger icons (screenshots).
+- Not tried: the light theme, a folder of thousands of pictures (the speed of reading properties).

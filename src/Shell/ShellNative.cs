@@ -193,7 +193,7 @@ static class Native
         SfgaoLink = 0x00010000, SfgaoHasSubfolder = 0x80000000;
 
     public const uint ShgfiIcon = 0x100, ShgfiSysIconIndex = 0x4000, ShgfiSmallIcon = 0x1, ShgfiUseFileAttributes = 0x10,
-        ShgfiPidl = 0x8;
+        ShgfiPidl = 0x8, ShgfiTypeName = 0x400;
     public const uint FileAttributeDirectory = 0x10, FileAttributeNormal = 0x80;
 
     public const uint FofRenameOnCollision = 0x8, FofAllowUndo = 0x40, FofNoConfirmation = 0x10, FofNoConfirmMkDir = 0x200, FofxRecycleOnDelete = 0x00080000;

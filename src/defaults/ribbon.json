@@ -35,6 +35,9 @@
         { "action": "project.rename", "label": "Rename", "stack": true },
         { "action": "layout.saveDefault", "label": "Save layout as default" },
         { "action": "layout.resetDefault", "label": "Reset layout", "stack": true } ] },
+      { "name": "Columns", "items": [
+        { "action": "columns.fit", "label": "Fit columns" },
+        { "action": "columns.manage", "label": "Manage sets", "stack": true } ] },
       { "name": "Bars", "items": [
         { "action": "bars.add", "params": ["path"], "label": "Add path bar" },
         { "action": "bars.add", "params": ["drives"], "label": "Add drives bar", "stack": true },

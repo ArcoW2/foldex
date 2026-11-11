@@ -1,0 +1,29 @@
+// The column sets of Foldex (docs/plans/executed/11-PLAN-columns.md 3.3). A columnsets.json in your data folder replaces a set
+// here by its name, adds sets, or takes one away ({ "name": "Films", "deleted": true }); Manage sets writes it.
+//
+// A set: "name"; "columns", each { "id", "width" } (the width in em of the pane font; the first is always the name);
+// "sort": { "id", "desc" }; "fit": true (the columns fitted to their content after every listing). An id is one of
+// Foldex's own columns (name, size, type, modified, created, accessed, attributes, ext, target, path, total, free,
+// git) or a property of Windows by its canonical name (System.Media.Duration).
+{
+  "sets": [
+    { "name": "Generic", "columns": [
+      { "id": "name", "width": 22 }, { "id": "size", "width": 7 }, { "id": "type", "width": 12 }, { "id": "modified", "width": 11 } ] },
+    { "name": "Dates", "columns": [
+      { "id": "name", "width": 22 }, { "id": "modified", "width": 11 }, { "id": "created", "width": 11 }, { "id": "accessed", "width": 11 } ] },
+    { "name": "Pictures", "columns": [
+      { "id": "name", "width": 22 }, { "id": "System.Image.Dimensions", "width": 9 }, { "id": "System.Photo.DateTaken", "width": 11 },
+      { "id": "size", "width": 7 } ] },
+    { "name": "Music", "columns": [
+      { "id": "name", "width": 22 }, { "id": "System.Media.Duration", "width": 6 }, { "id": "System.Music.Artist", "width": 12 },
+      { "id": "System.Music.AlbumTitle", "width": 12 }, { "id": "System.Audio.EncodingBitrate", "width": 7 } ] },
+    { "name": "Films", "columns": [
+      { "id": "name", "width": 22 }, { "id": "System.Media.Duration", "width": 6 }, { "id": "System.Video.FrameWidth", "width": 6 },
+      { "id": "System.Video.FrameHeight", "width": 6 }, { "id": "size", "width": 7 } ] },
+    { "name": "Documents", "columns": [
+      { "id": "name", "width": 22 }, { "id": "System.Author", "width": 12 }, { "id": "System.Title", "width": 14 },
+      { "id": "System.Document.PageCount", "width": 5 }, { "id": "modified", "width": 11 } ] },
+    { "name": "Git", "columns": [
+      { "id": "name", "width": 22 }, { "id": "git", "width": 8 }, { "id": "modified", "width": 11 } ] }
+  ]
+}
