@@ -124,13 +124,11 @@ action('projects.menu', { title: 'Projects', hint: 'every project and its window
   run: () => projectsMenu() });
 action('projects.manage', { title: 'Manage projects', hint: 'every project in one list: open, close, merge, rename, delete',
   group: 'projects', run: () => post({ op: 'openProjects' }) });
-action('project.new', { title: 'New project', hint: 'a new window in a new project', group: 'projects', run: async () => {
+action('project.new', { title: 'New project', hint: 'a new project in a window of its own', group: 'projects', run: async () => {
   const name = await askText('Name of the new project', '', 'Empty: a number');
   if (name !== null) projectCommand('new', { name });
 } });
 action('project.rename', { title: 'Rename project', hint: 'the name of the project of this window', group: 'projects', run: () => renameProject() });
-action('project.moveWindow', { title: 'Move window to project', hint: 'this window into another project, or a new one', group: 'projects',
-  run: () => moveWindowMenu() });
 action('layout.saveDefault', { title: 'Save layout as default', group: 'projects',
   hint: 'the panes and docks of this window become the layout a new project starts with', run: () => saveLayoutAsDefault() });
 action('layout.resetDefault', { title: 'Reset layout to default', group: 'projects',

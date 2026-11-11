@@ -38,8 +38,8 @@ sealed class MainForm : Form
     public int Key { get; private set; }
 
     /// <summary>Opened at start: goes to the virtual desktop it was on. ReopenHere: a new window that becomes the
-    /// project closed last on its desktop (AppHost.WindowShown). WithProject: closed with its project (Manage projects).</summary>
-    public bool ToDesktop, ReopenHere, WithProject;
+    /// project closed last on its desktop (AppHost.WindowShown).</summary>
+    public bool ToDesktop, ReopenHere;
 
     /// <summary>Done once it is on its desktop and in its project (AppHost.WindowShown).</summary>
     public TaskCompletionSource Settled { get; } = new();

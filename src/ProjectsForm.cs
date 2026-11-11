@@ -6,8 +6,8 @@ namespace Foldex;
 /// <summary>
 /// The Manage projects window (docs/plans/15-PLAN-projects.md 3.7, as LexPen's): one for Foldex, not modal, its place
 /// kept (AppState.ProjectsWindow). Its page (web\projects.html, projects.js) lists every project with checkboxes, a
-/// search, sorting and details; its menus and buttons act on the checked projects through AppHost (open, close, merge,
-/// rename, delete, new). The list follows every change of the projects (AppHost.ProjectsChanged).
+/// search, sorting and details; its menus and buttons act on the checked projects through AppHost (open, close, rename,
+/// delete, new). The list follows every change of the projects (AppHost.ProjectsChanged).
 /// </summary>
 sealed class ProjectsForm : Form
 {
@@ -102,17 +102,12 @@ sealed class ProjectsForm : Form
             case "open":
                 foreach (var id in Ids(msg)) app.ProjectCommand(null, "open", new JsonObject { ["project"] = id });
                 return true;
-            case "window":
-                app.ProjectCommand(null, "window", new JsonObject { ["key"] = msg["key"]!.GetValue<int>() });
-                return true;
             case "new":
                 app.ProjectCommand(null, "new", new JsonObject { ["name"] = msg["name"]?.GetValue<string>() ?? "" });
                 return true;
             case "rename":
                 app.ProjectCommand(null, "rename", new JsonObject { ["project"] = msg["project"]!.GetValue<int>(), ["name"] = msg["name"]?.GetValue<string>() ?? "" });
                 return true;
-            case "merge":
-                return app.MergeProjects(this, Ids(msg));
             case "close":
                 app.CloseProjects(Ids(msg));
                 return true;

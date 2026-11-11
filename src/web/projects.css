@@ -7,8 +7,8 @@
 .pv-top { padding: 8px 10px; border-bottom: 1px solid var(--border); background: var(--bg-bar); }
 .pv-search { box-sizing: border-box; width: 100%; }
 
-/* One grid for the header and the rows: fold, check, name, state, folders, windows, created, last used. */
-.pv-grid { display: grid; grid-template-columns: 18px 22px minmax(140px, 1.2fr) 5em minmax(120px, 2fr) 4.5em 7.5em 10.5em;
+/* One grid for the header and the rows: fold, check, name, state, folders, created, last used. */
+.pv-grid { display: grid; grid-template-columns: 18px 22px minmax(140px, 1.2fr) 5em minmax(120px, 2fr) 7.5em 10.5em;
   align-items: center; gap: 0 8px; padding: 4px 10px; }
 .pv-head { color: var(--fg-dim); border-bottom: 1px solid var(--border); font-size: .92em; }
 .pv-head .pv-sort { font: inherit; color: inherit; background: none; border: 0; padding: 0; text-align: left; cursor: pointer; }
@@ -16,7 +16,6 @@
 .pv-head .pv-sort.pv-on { color: var(--accent); }
 .pv-head .pv-sort.pv-on::after { content: " \25B2"; font-size: .8em; }
 .pv-head .pv-sort.pv-on.pv-desc::after { content: " \25BC"; }
-.pv-num { text-align: right; font-variant-numeric: tabular-nums; }
 .pv-list { flex: 1; overflow: auto; outline: none; }
 .pv-row { border-left: 3px solid transparent; cursor: default; }
 .pv-row:hover { background: var(--hover); }
@@ -32,10 +31,8 @@
 .pv-state.pv-open-now { color: var(--accent); }
 .pv-folders, .pv-date { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg-dim); }
 .pv-details { padding: 2px 10px 8px 58px; color: var(--fg-dim); }
-.pv-window { display: block; width: 100%; text-align: left; font: inherit; color: inherit; background: none; border: 0; border-radius: 3px; padding: 2px 4px; cursor: pointer; }
-.pv-window:hover { background: var(--hover); color: var(--fg); }
-.pv-window b { color: var(--fg); font-weight: 600; }
-.pv-paths { display: block; padding-left: 1.5em; white-space: normal; overflow-wrap: anywhere; }
+.pv-pane { padding: 1px 4px; overflow-wrap: anywhere; }
+.pv-pane b { color: var(--fg); font-weight: 600; }
 .pv-mark { background: color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 2px; }
 .pv-empty { padding: 14px 10px; color: var(--fg-dim); }
 .pv-bottom { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-top: 1px solid var(--border); background: var(--bg-bar); }

@@ -1,12 +1,11 @@
 'use strict';
 // The Manage projects window's page (projects.html; ProjectsForm hosts it), docs/plans/15-PLAN-projects.md 3.7, as
-// LexPen's: every project in one list with a checkbox, its name, open or closed, its windows' folders, the number of
-// windows, created and last used; a row unfolds to show its windows with their panes' folders. A search filters on name
-// and folders; the list sorts by name, created or last used (View menu or the column headers; the setting
-// projectsSort). The menus (Project, Select, View; menu.js) and the buttons act on the checked projects that are
-// shown; the host does the work (AppHost: open, close, merge, rename, delete, new) and asks before merging and
-// deleting. Checking: a click toggles a project and is the anchor; Shift+click sets every row from the anchor to it to
-// the clicked one's new state. The order of checking is kept: the first one checked is the target of Merge.
+// LexPen's: every project in one list with a checkbox, its name, open or closed, its panes' folders, created and last
+// used; a row unfolds to show its window's panes as a tree. A search filters on name and folders; the list sorts by
+// name, created or last used (View menu or the column headers; the setting projectsSort). The menus (Project, Select,
+// View; menu.js) and the buttons act on the checked projects that are shown; the host does the work (AppHost: open,
+// close, rename, delete, new) and asks before deleting. Checking: a click toggles a project and is the anchor;
+// Shift+click sets every row from the anchor to it to the clicked one's new state.
 // Keys: Up / Down move, Space checks (Shift: range), Enter opens, F2 renames, Del deletes, Right / Left unfold and
 // fold (Ctrl: the checked rows, or all), Ctrl+A checks all, Ctrl+F searches, Esc empties the search, then goes back.
 
@@ -31,7 +30,7 @@ chrome.webview.addEventListener('message', e => {
 
 const view = {
   list: [], values: {}, search: $('.pv-search'), el: $('.pv-list'), count: $('.pv-count'),
-  checked: new Map(),   // id -> true, in the order of checking (Merge: the first is the target)
+  checked: new Map(),   // id -> true, in the order of checking
   anchor: null, focus: null, unfolded: new Set(), renaming: null, busy: false, shown: [],
 };
 const escapeHtml = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -61,8 +60,7 @@ function compare(a, b, by) {
 }
 
 const words = () => view.search.value.toLowerCase().split(/\s+/).filter(Boolean);
-const foldersOf = p => [...new Set(p.windows.flatMap(w => w.folders ?? (w.folder ? [w.folder] : [])))];
-const haystack = p => [p.display, ...foldersOf(p)].join('\n').toLowerCase();
+const haystack = p => [p.display, ...p.folders].join('\n').toLowerCase();
 
 // The rows shown: filtered, then sorted.
 function shownRows() {
@@ -92,30 +90,28 @@ function marked(text, ws) {
   for (const w of ws) html = html.replace(new RegExp(escapeHtml(w).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), m => `<span class="pv-mark">${m}</span>`);
   return html;
 }
-const windowFolders = p => [...new Set(p.windows.map(w => w.folder).filter(Boolean))];
+const PaneKinds = { tree: 'Tree', list: 'List', preview: 'Preview' };
 
 function rowHtml(p, ws) {
   const unfolded = view.unfolded.has(p.id);
   const cls = ['pv-row', 'pv-grid', view.checked.has(p.id) && 'pv-checked', view.focus === p.id && 'pv-focus', unfolded && 'pv-unfolded'].filter(Boolean).join(' ');
-  const folders = windowFolders(p);
+  const folders = p.folders;
   const name = view.renaming === p.id
     ? `<input class="pv-rename" value="${escapeHtml(p.name)}" placeholder="Empty: Project ${p.id}" spellcheck="false">`
     : marked(p.display, ws);
   let html = `<div class="${cls}" data-id="${p.id}">` +
-    `<button class="pv-fold" tabindex="-1" title="Its windows and their folders (Right / Left)"></button>` +
+    `<button class="pv-fold" tabindex="-1" title="Its panes (Right / Left)"></button>` +
     `<input type="checkbox" class="pv-check" tabindex="-1"${view.checked.has(p.id) ? ' checked' : ''}>` +
     `<span class="pv-name${p.name ? '' : ' pv-unnamed'}" title="${escapeHtml(p.display)}">${name}</span>` +
     `<span class="pv-state${p.open ? ' pv-open-now' : ''}">${p.open ? 'open' : 'closed'}</span>` +
     `<span class="pv-folders" title="${escapeHtml(folders.join('\n'))}">${marked(folders.join('; ') || '(no folder)', ws)}</span>` +
-    `<span class="pv-num">${p.windows.length}</span>` +
     `<span class="pv-date">${dateText(p.created, false)}</span>` +
     `<span class="pv-date">${dateText(p.used, true)}</span></div>`;
   if (unfolded) {
-    html += `<div class="pv-details" data-id="${p.id}">` + (p.windows.length ? p.windows.map((w, i) =>
-      `<button class="pv-window" data-key="${w.key}" title="Open just this window"><b>Window ${i + 1}</b>: ` +
-      `${marked(w.folder ?? '(no folder)', ws)}, ${w.open ? 'open' : 'closed'}` +
-      `<span class="pv-paths">${(w.folders ?? []).map(f => marked(f, ws)).join('<br>') || '(no panes)'}</span></button>`
-    ).join('') : '(no windows)') + '</div>';
+    // Its window's panes as a tree: a root, then its children a step in.
+    html += `<div class="pv-details" data-id="${p.id}">` + (p.panes.length ? p.panes.map(pane =>
+      `<div class="pv-pane" style="padding-left: ${pane.depth * 1.5}em"><b>${PaneKinds[pane.kind] ?? escapeHtml(pane.kind)}</b>: ` +
+      `${marked(pane.folder ?? '(nothing)', ws)}</div>`).join('') : '(no panes)') + '</div>';
   }
   return html;
 }
@@ -193,7 +189,6 @@ async function busy(work) {
 const openProjects = () => { const ids = targets(); if (ids.length) host('open', { projects: ids }); };
 const closeProjects = () => { const ids = targets().filter(id => byId(id)?.open); if (ids.length) busy(() => host('close', { projects: ids })); };
 const deleteProjects = () => { const ids = targets(); if (ids.length) busy(() => host('delete', { projects: ids })); };
-const mergeProjects = () => { const ids = selected(); if (ids.length > 1) busy(() => host('merge', { projects: ids })); };
 async function newProject() {
   const name = await askName('Name of the new project');
   if (name !== null) host('new', { name });
@@ -230,12 +225,11 @@ function askName(title) {
 // ---------- The menu bar (menu.js) ----------
 const MENUS = [
   ['Project', () => {
-    const sel = selected(), target = byId(sel[0]);
+    const sel = selected();
     return [
       { label: 'New project...', run: newProject },
       { label: 'Open (Enter)', run: openProjects, enabled: targets().length > 0 },
       { label: 'Close', run: closeProjects, enabled: targets().some(id => byId(id)?.open) },
-      { label: sel.length > 1 ? `Merge to '${target?.display ?? ''}'...` : 'Merge to...', run: mergeProjects, enabled: sel.length > 1 },
       { label: 'Rename (F2)', run: startRename, enabled: view.focus !== null || sel.length > 0 },
       '-',
       { label: 'Delete... (Del)', run: deleteProjects, enabled: targets().length > 0 },
@@ -280,8 +274,6 @@ for (const [title, items] of MENUS) {
 
 // ---------- Mouse ----------
 view.el.addEventListener('click', e => {
-  const win = e.target.closest('.pv-window');
-  if (win) return host('window', { key: +win.dataset.key });
   const row = e.target.closest('.pv-row');
   if (!row || e.target.closest('.pv-rename')) return;
   const id = +row.dataset.id;

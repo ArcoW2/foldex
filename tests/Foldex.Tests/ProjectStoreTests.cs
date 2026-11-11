@@ -49,17 +49,32 @@ public class ProjectStoreTests : IDisposable
     }
 
     [Fact]
-    public void AWindowClosedWhileAnotherOfItsProjectStaysIsForgotten()
+    public void AClosedProjectKeepsItsWindow()
     {
         var s = Empty();
         var p = s.NewProject("Klanten");
-        var a = s.AddWindow(p);
-        var b = s.AddWindow(p);
-        s.CloseByHand(a.Key);
-        Assert.Equal([b.Key], p.Windows.Select(w => w.Key));
-        s.CloseByHand(b.Key);   // the last: kept, closed
+        var w = s.AddWindow(p);
+        w.Session = Layout("p1");
+        s.CloseByHand(w.Key);
         Assert.False(Assert.Single(p.Windows).Open);
-        Assert.Same(p, s.Get(p.Id));
+        Assert.Equal("p1", s.LayoutOf(w.Key)!["active"]!.GetValue<string>());
+        Assert.Null(s.LayoutOf(s.AddWindow(s.NewProject("")).Key));   // a new project: the default layout
+    }
+
+    [Fact]
+    public void ThePanesAreATreeOfRootsAndTheirChildren()
+    {
+        // Two roots, A (a tree) and E; A drives B and D, B drives C (a preview). Each pane by its branch's state.
+        var session = JsonNode.Parse("""
+            { "panes": { "panes": [
+              { "id": "A", "kind": "tree", "source": null, "lastKey": 0, "states": { "0": { "focus": "C:\\" } } },
+              { "id": "B", "kind": "list", "source": "A", "lastKey": "", "states": { "": { "location": "C:\\Users" } } },
+              { "id": "E", "kind": "list", "source": null, "states": { "": { "location": null } } },
+              { "id": "C", "kind": "preview", "source": "B", "states": {} },
+              { "id": "D", "kind": "list", "source": "A", "lastKey": "", "states": { "": { "location": "D:\\" } } } ] } }
+            """);
+        var tree = ProjectStore.PaneTree(session).Select(t => $"{t.Depth} {t.Kind} {t.Folder}");
+        Assert.Equal(["0 tree C:\\", "1 list C:\\Users", "2 preview ", "1 list D:\\", "0 list "], tree);
     }
 
     [Fact]
@@ -85,64 +100,14 @@ public class ProjectStoreTests : IDisposable
     }
 
     [Fact]
-    public void CloseWithProjectKeepsEveryWindow()
+    public void DeleteRefusesAnOpenProject()
     {
         var s = Empty();
         var p = s.NewProject("Klanten");
-        var a = s.AddWindow(p);
-        var b = s.AddWindow(p);
-        s.CloseWithProject(a.Key);
-        s.CloseWithProject(b.Key);
-        Assert.Equal(2, p.Windows.Count);
-        Assert.All(p.Windows, w => Assert.False(w.Open));
-    }
-
-    [Fact]
-    public void MovingTheLastWindowOutDropsAnUnnamedProjectButNotANamedOne()
-    {
-        var s = Empty();
-        var unnamed = s.NewProject("");
-        var named = s.NewProject("Klanten");
-        var target = s.NewProject("Archief");
-        var a = s.AddWindow(unnamed);
-        var b = s.AddWindow(named);
-        s.MoveWindow(a.Key, target);
-        s.MoveWindow(b.Key, target);
-        Assert.Null(s.Get(unnamed.Id));
-        Assert.NotNull(s.Get(named.Id));
-        Assert.Equal(2, target.Windows.Count);
-    }
-
-    [Fact]
-    public void MergeMovesTheWindowsAndDeleteRefusesAnOpenProject()
-    {
-        var s = Empty();
-        var to = s.NewProject("Klanten");
-        var from = s.NewProject("Oud");
-        s.AddWindow(to);
-        var w = s.AddWindow(from);
-        s.Merge(to, [from]);
-        Assert.Null(s.Get(from.Id));
-        Assert.Same(to, s.ProjectOf(w.Key));
-        Assert.False(s.Delete(to));   // its windows are open
-        foreach (var o in to.Windows.ToList()) s.CloseWithProject(o.Key);
-        Assert.True(s.Delete(to));
-    }
-
-    [Fact]
-    public void ANewWindowTakesTheLayoutOfItsProjectsLastUsedWindow()
-    {
-        var s = Empty();
-        var p = s.NewProject("Klanten");
-        var old = s.AddWindow(p);
-        old.Session = Layout("old");
-        old.Used = DateTime.UtcNow.AddHours(-1);
-        var recent = s.AddWindow(p);
-        recent.Session = Layout("recent");
-        var fresh = s.AddWindow(p);
-        Assert.Equal("recent", s.LayoutOf(fresh.Key)!["active"]!.GetValue<string>());
-        Assert.Equal("old", s.LayoutOf(old.Key)!["active"]!.GetValue<string>());
-        Assert.Null(s.LayoutOf(s.AddWindow(s.NewProject("")).Key));   // a new project: the default layout
+        var w = s.AddWindow(p);
+        Assert.False(s.Delete(p));
+        s.CloseByHand(w.Key);
+        Assert.True(s.Delete(p));
     }
 
     [Fact]

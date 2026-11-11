@@ -5,8 +5,8 @@ namespace Foldex;
 
 /// <summary>
 /// Projects (docs/plans/15-PLAN-projects.md 3.1, as LexPen's ProjectStore): a project has a number, a name you can give
-/// it and windows; a window keeps its session (the page's layout: panes, docks, the active pane), its place and its
-/// virtual desktop. Kept in State\projects.json, written whole and atomically (a crash never leaves a broken file).
+/// it and one window (kept as a list of windows, as LexPen's file has it); the window keeps its session (the page's
+/// layout: panes, docks, the active pane), its place and its virtual desktop. Kept in State\projects.json, written whole and atomically (a crash never leaves a broken file).
 /// Pure apart from that file, so the rules can be tested without windows. Unnamed projects: only the last closed one
 /// of each desktop is kept (3.4).
 /// </summary>
@@ -143,13 +143,34 @@ sealed class ProjectStore
     public Window? WindowOf(int key) => Projects.SelectMany(p => p.Windows).FirstOrDefault(w => w.Key == key);
     public Project? Get(int id) => Projects.FirstOrDefault(p => p.Id == id);
 
-    /// <summary>The layout a window opens with (3.2): its own; for a new window the one of the most recently used
-    /// window of its project that has one; else null (the default layout).</summary>
-    public JsonNode? LayoutOf(int key)
+    /// <summary>The layout a window opens with (3.2): its own; null for a new one (the default layout).</summary>
+    public JsonNode? LayoutOf(int key) => WindowOf(key)?.Session is JsonObject own ? own.DeepClone() : null;
+
+    /// <summary>A session's panes as a tree (3.6): the roots in their order, each followed by its children (a level
+    /// deeper), down to the end; per pane its kind and folder (a list's location, a tree's focus; null for none).</summary>
+    public static List<(int Depth, string Kind, string? Folder)> PaneTree(JsonNode? session)
     {
-        if (WindowOf(key)?.Session is JsonObject own) return own.DeepClone();
-        return ProjectOf(key)?.Windows.Where(w => w.Key != key && w.Session is JsonObject)
-            .OrderByDescending(w => w.Used).FirstOrDefault()?.Session!.DeepClone();
+        var panes = session?["panes"]?["panes"]?.AsArray().OfType<JsonObject>().ToList() ?? [];
+        var tree = new List<(int, string, string?)>();
+        var seen = new HashSet<string>();
+        void Add(JsonObject pane, int depth)
+        {
+            var id = pane["id"]?.ToString() ?? "";
+            if (!seen.Add(id)) return;   // a cycle in a broken file
+            tree.Add((depth, pane["kind"]?.ToString() ?? "list", FolderOf(pane)));
+            foreach (var child in panes.Where(c => c["source"]?.ToString() == id)) Add(child, depth + 1);
+        }
+        foreach (var root in panes.Where(p => p["source"] is null)) Add(root, 0);
+        return tree;
+    }
+
+    // What a pane shows: the state of the branch it showed last (else its first), a list's location or a tree's focus.
+    static string? FolderOf(JsonObject pane)
+    {
+        var states = pane["states"] as JsonObject;
+        var state = states?[pane["lastKey"]?.ToString() ?? ""] ?? states?.Select(s => s.Value).FirstOrDefault();
+        var folder = state?["location"] ?? state?["focus"];
+        return folder?.GetValueKind() == JsonValueKind.String ? folder.GetValue<string>() : null;
     }
 
     public void Touch(int key)
@@ -169,38 +190,13 @@ sealed class ProjectStore
         return true;
     }
 
-    /// <summary>A window closed by hand while Foldex goes on, or the last one. Another open window of its project:
-    /// this window is forgotten. The last open window of its project: the project is closed and keeps this window
-    /// for when it is opened again. Then the rule for unnamed projects (DropIfUnwanted).</summary>
+    /// <summary>A window closed by hand (or from Manage projects): its project is closed and keeps the window for when
+    /// it is opened again. Then the rule for unnamed projects (DropIfUnwanted).</summary>
     public void CloseByHand(int key)
     {
         if (ProjectOf(key) is not { } p || WindowOf(key) is not { } w) return;
-        var others = p.Windows.Any(o => o != w && o.Open);
-        if (others) p.Windows.Remove(w);
-        else (w.Open, w.Used) = (false, DateTime.UtcNow);   // Used: when it closed (LastClosedOn)
-        if (!others) DropIfUnwanted(p);
-    }
-
-    /// <summary>A window closed with its whole project (Manage projects > Close): kept also while other windows of
-    /// the project are still open (they close next).</summary>
-    public void CloseWithProject(int key)
-    {
-        if (ProjectOf(key) is not { } p || WindowOf(key) is not { } w) return;
-        (w.Open, w.Used) = (false, DateTime.UtcNow);
-        if (!p.Windows.Any(o => o.Open)) DropIfUnwanted(p);
-    }
-
-    /// <summary>Merges projects into one: their windows move to <paramref name="to"/>, which keeps its name; the
-    /// projects left empty go.</summary>
-    public void Merge(Project to, IEnumerable<Project> from)
-    {
-        foreach (var p in from.Where(p => p != to).ToList())
-        {
-            to.Windows.AddRange(p.Windows);
-            p.Windows.Clear();
-            Projects.Remove(p);
-        }
-        to.Used = DateTime.UtcNow;
+        (w.Open, w.Used) = (false, DateTime.UtcNow);   // Used: when it closed (LastClosedOn)
+        DropIfUnwanted(p);
     }
 
     /// <summary>Forgets a window (a new one that became another project's, 3.5); its project per DropIfUnwanted.</summary>
@@ -209,16 +205,6 @@ sealed class ProjectStore
         if (ProjectOf(key) is not { } p || WindowOf(key) is not { } w) return;
         p.Windows.Remove(w);
         DropIfUnwanted(p);
-    }
-
-    /// <summary>Moves the window to another project; the old project, left without open windows: per DropIfUnwanted.</summary>
-    public void MoveWindow(int key, Project to)
-    {
-        if (ProjectOf(key) is not { } from || from == to || WindowOf(key) is not { } w) return;
-        from.Windows.Remove(w);
-        to.Windows.Add(w);
-        to.Used = DateTime.UtcNow;
-        if (!from.Windows.Any(o => o.Open)) DropIfUnwanted(from);
     }
 
     // The desktop a closed project was closed on: that of its window closed last.

@@ -3,7 +3,8 @@
 // mark or a colour swatch, greyed out when not possible, submenus that open beside them. Closed by a click outside,
 // Esc, or choosing. Keys: Up / Down, Right opens a submenu, Left closes it, Enter chooses.
 //
-// An item: '-' (a line) or { label, run, enabled (default true), checked, swatch (a CSS colour), items (a submenu) }.
+// An item: '-' (a line) or { label, run, enabled (default true), checked, swatch (a CSS colour), items (a submenu),
+// indent (steps in, for a tree) }.
 
 let openMenus = [];   // the menu and its open submenus, outermost first
 
@@ -34,6 +35,7 @@ function openMenu(x, y, items, level = 0) {
     const label = document.createElement('span');
     label.className = 'menu-label';
     label.textContent = item.label;
+    if (item.indent) label.style.paddingLeft = `${item.indent * 1.2}em`;
     row.append(check, label);
     row.addEventListener('mouseenter', () => hover(rows.indexOf(row)));
     row.addEventListener('mousedown', e => {

@@ -249,14 +249,14 @@ sealed class AppHost : ApplicationContext
     public Shell.FolderWatch? Folders { get; private set; }
 
     /// <summary>
-    /// A window. <paramref name="key"/>: a window of a project to open again (its session, place and, with toDesktop,
-    /// its desktop); 0: a new window, in <paramref name="project"/> or per the setting newWindowProject (plan 15 3.2).
+    /// A window. <paramref name="key"/>: the window of a project to open again (its session, place and, with toDesktop,
+    /// its desktop); 0: a new window, the one of <paramref name="project"/> or of a new project (plan 15 3.2).
     /// reopenHere: a new window that becomes the project closed last on its desktop, when there is one (WindowShown).
     /// </summary>
     MainForm Open(IReadOnlyList<string> paths, int key = 0, ProjectStore.Project? project = null, bool toDesktop = false, bool reopenHere = false)
     {
         var entry = key != 0 ? projects.WindowOf(key) : null;
-        entry ??= projects.AddWindow(project ?? ProjectForNewWindow());
+        entry ??= projects.AddWindow(project ?? projects.NewProject(""));
         var w = new MainForm(this, entry.Key, paths) { ToDesktop = toDesktop, ReopenHere = reopenHere };
         Place(w, entry);
         Watch();
@@ -308,21 +308,10 @@ sealed class AppHost : ApplicationContext
         return new Rectangle(area.X + area.Width / 8, area.Y + area.Height / 8, area.Width * 3 / 4, area.Height * 3 / 4);
     }
 
-    // The project of a new window: per the setting, the project of the last window used on this desktop, or a new one.
-    ProjectStore.Project ProjectForNewWindow()
-    {
-        if (SettingsFile.Load(DataDir)["values"]?["newWindowProject"]?.GetValue<string>() != "new"
-            && recent.FirstOrDefault(w => VirtualDesktop.OnCurrentDesktop(w.Handle)) is { } last
-            && projects.ProjectOf(last.Key) is { } p)
-            return p;
-        return projects.NewProject("");
-    }
-
     /// <summary>
     /// A window is shown: now Windows knows it, so it can go to its own desktop (a window opened at start) and tell
     /// which desktop it is on; tried for up to about 3 seconds. A new window on a desktop whose last Foldex window was
-    /// closed by hand becomes that project's window (the most recently closed one there, at its place), and the
-    /// project's other closed windows open too (plan 15 3.5). The page loads after this.
+    /// closed by hand becomes the window of that project, at its place (plan 15 3.5). The page loads after this.
     /// </summary>
     public async Task WindowShown(MainForm w)
     {
@@ -350,8 +339,6 @@ sealed class AppHost : ApplicationContext
                 w.Bounds = new Rectangle(x, y, width, height);
                 if (reuse.Maximized) w.WindowState = FormWindowState.Maximized;
             }
-            foreach (var other in closed.Windows.Where(o => o != reuse && !o.Open).ToList())
-                Open([], other.Key);
         }
         projects.Touch(w.Key);
         WindowPlaceChanged(w);
@@ -364,11 +351,10 @@ sealed class AppHost : ApplicationContext
         Folders?.Forget(w);
         windows.Remove(w);
         recent.Remove(w);
-        // Closed by hand, the last window too: the project's rules (ProjectStore.CloseByHand); the project comes back
-        // when Foldex starts on that desktop (LastClosedOn). Windows closing it (log-off, shutdown, Task Manager): the
-        // windows stay open in their projects and all come back at the next start, each on its desktop.
-        if (w.WithProject) projects.CloseWithProject(w.Key);
-        else if (reason is not (CloseReason.WindowsShutDown or CloseReason.TaskManagerClosing)) projects.CloseByHand(w.Key);
+        // Closed by hand, the last window too: its project closes (ProjectStore.CloseByHand) and comes back when Foldex
+        // starts on that desktop (LastClosedOn). Windows closing it (log-off, shutdown, Task Manager): the windows stay
+        // open in their projects and all come back at the next start, each on its desktop.
+        if (reason is not (CloseReason.WindowsShutDown or CloseReason.TaskManagerClosing)) projects.CloseByHand(w.Key);
         // The place for a window without one of its own (plan 15 3.8).
         var b = w.WindowState == FormWindowState.Normal ? w.Bounds : w.RestoreBounds;
         SaveState(new AppState
@@ -471,7 +457,7 @@ sealed class AppHost : ApplicationContext
         return new JsonObject { ["id"] = p?.Id, ["name"] = p?.Name ?? "", ["display"] = p is null ? "" : ProjectStore.Display(p) };
     }
 
-    // A project made, renamed, merged, a window opened, closed or moved: titles, bottom bars and the Manage list follow.
+    // A project made, renamed or deleted, a window opened or closed: titles, bottom bars and the Manage list follow.
     void ProjectsChanged()
     {
         foreach (var w in windows)
@@ -484,73 +470,52 @@ sealed class AppHost : ApplicationContext
         SaveProjectsSoon();
     }
 
-    // A window's folder: that of its active pane (a list's location, a tree's focus); its folders: every pane's. A shell
-    // place without a path (This PC, "::{...}") by its name.
-    static IEnumerable<string> FoldersOf(JsonNode? session, bool activeOnly) =>
-        RawFoldersOf(session, activeOnly).Select(f => f.StartsWith("::") || f.StartsWith("shell:") ? Shell.ShellListing.NameOf(f) : f);
-
-    static IEnumerable<string> RawFoldersOf(JsonNode? session, bool activeOnly)
-    {
-        var panes = session?["panes"]?["panes"]?.AsArray().OfType<JsonObject>() ?? [];
-        var active = session?["active"]?.ToString();
-        foreach (var pane in activeOnly ? panes.Where(p => p["id"]?.ToString() == active) : panes)
-        {
-            var states = pane["states"] as JsonObject;
-            var state = states?[pane["lastKey"]?.ToString() ?? ""] ?? states?.Select(s => s.Value).FirstOrDefault();
-            if ((state?["location"] ?? state?["focus"])?.GetValueKind() == JsonValueKind.String)
-                yield return (state!["location"] ?? state["focus"])!.GetValue<string>();
-        }
-    }
+    // A shell place without a path (This PC, "::{...}") by its name.
+    static string? Shown(string? folder) =>
+        folder is not null && (folder.StartsWith("::") || folder.StartsWith("shell:")) ? Shell.ShellListing.NameOf(folder) : folder;
 
     /// <summary>The Projects menu and the Manage projects list: every project (this window's first, then the newest
-    /// used), its windows, which are open; per window its folder, with details also its panes' folders.</summary>
+    /// used), whether it is open, and its window's panes as a tree (ProjectStore.PaneTree: depth, kind, folder). With
+    /// details (Manage): also the folders of those panes.</summary>
     public JsonArray ProjectList(MainForm? from, bool details = false)
     {
         var mine = from is null ? null : projects.ProjectOf(from.Key);
         var open = windows.Select(w => w.Key).ToHashSet();
-        JsonObject Window(ProjectStore.Window w)
+        return new JsonArray(projects.Projects.OrderByDescending(p => p == mine).ThenByDescending(p => p.Used).Select(p =>
         {
+            var panes = ProjectStore.PaneTree(p.Windows.FirstOrDefault()?.Session)
+                .Select(t => (Depth: t.Depth, Kind: t.Kind, Folder: Shown(t.Folder))).ToList();
             var o = new JsonObject
             {
-                ["key"] = w.Key, ["open"] = open.Contains(w.Key), ["mine"] = w.Key == from?.Key,
-                ["folder"] = FoldersOf(w.Session, true).FirstOrDefault(),
+                ["id"] = p.Id, ["name"] = p.Name, ["display"] = ProjectStore.Display(p), ["mine"] = p == mine,
+                ["open"] = p.Windows.Any(w => open.Contains(w.Key)),
+                ["used"] = p.Used == DateTime.MinValue ? null : p.Used.ToString("o"),
+                ["created"] = p.Created?.ToString("o"),
+                ["panes"] = new JsonArray(panes.Select(t => (JsonNode?)new JsonObject
+                {
+                    ["depth"] = t.Depth, ["kind"] = t.Kind, ["folder"] = t.Folder,
+                }).ToArray()),
             };
-            if (details) o["folders"] = new JsonArray(FoldersOf(w.Session, false).Distinct(StringComparer.OrdinalIgnoreCase).Select(f => (JsonNode?)f).ToArray());
-            return o;
-        }
-        return new JsonArray(projects.Projects.OrderByDescending(p => p == mine).ThenByDescending(p => p.Used).Select(p => (JsonNode?)new JsonObject
-        {
-            ["id"] = p.Id, ["name"] = p.Name, ["display"] = ProjectStore.Display(p), ["mine"] = p == mine,
-            ["open"] = p.Windows.Any(w => open.Contains(w.Key)),
-            ["used"] = p.Used == DateTime.MinValue ? null : p.Used.ToString("o"),
-            ["created"] = p.Created?.ToString("o"),
-            ["windows"] = new JsonArray(p.Windows.Select(w => (JsonNode?)Window(w)).ToArray()),
+            if (details)
+                o["folders"] = new JsonArray(panes.Select(t => t.Folder).OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase)
+                    .Select(f => (JsonNode?)f).ToArray());
+            return (JsonNode?)o;
         }).ToArray());
     }
 
-    /// <summary>The Projects menu's commands (from: its window; null: the Manage projects window). Windows opened from
-    /// it come on the desktop you are on.</summary>
+    /// <summary>The Projects menu's commands (from: its window; null: the Manage projects window). A window opened from
+    /// it comes on the desktop you are on.</summary>
     public void ProjectCommand(MainForm? from, string kind, JsonNode? msg)
     {
         int Id() => msg!["project"]!.GetValue<int>();
         string Name() => msg?["name"]?.GetValue<string>() ?? "";
         switch (kind)
         {
-            case "open":   // all its windows: the closed ones open, the open ones come to the front
+            case "open":   // its window: opened when closed, else to the front
                 if (projects.Get(Id()) is not { } p) return;
-                MainForm? last = null;
-                foreach (var entry in p.Windows.ToList())
-                    last = windows.FirstOrDefault(w => w.Key == entry.Key) ?? Open([], entry.Key);
-                last ??= Open([], project: p);   // a named project without windows
-                BringToFront(last);
-                break;
-            case "window":
-                var key = msg!["key"]!.GetValue<int>();
-                if ((windows.FirstOrDefault(w => w.Key == key) ?? (projects.WindowOf(key) is not null ? Open([], key) : null)) is { } shown)
-                    BringToFront(shown);
-                break;
-            case "newWindow":
-                if (projects.Get(Id()) is { } target) BringToFront(Open([], project: target));
+                BringToFront(p.Windows.FirstOrDefault() is { } entry
+                    ? windows.FirstOrDefault(w => w.Key == entry.Key) ?? Open([], entry.Key)
+                    : Open([], project: p));   // a named project without a window
                 break;
             case "new":
                 BringToFront(Open([], project: projects.NewProject(Name())));
@@ -558,10 +523,6 @@ sealed class AppHost : ApplicationContext
             case "rename":
                 if (msg?["project"] is not null) { if (projects.Get(Id()) is { } named) projects.Rename(named, Name()); }
                 else if (from is not null && projects.ProjectOf(from.Key) is { } mine) projects.Rename(mine, Name());
-                break;
-            case "move":
-                var to = msg?["project"] is null ? projects.NewProject(Name()) : projects.Get(Id());
-                if (from is not null && to is not null) projects.MoveWindow(from.Key, to);
                 break;
             case "delete":
                 if (projects.Get(Id()) is { } gone) projects.Delete(gone);
@@ -593,31 +554,12 @@ sealed class AppHost : ApplicationContext
     /// <summary>The window worked in last: where the Manage window's questions and Esc go.</summary>
     public MainForm? LastActive => recent.FirstOrDefault(w => !w.IsDisposed);
 
-    /// <summary>Merges the projects into the first one (the first checked): asks first. True when merged.</summary>
-    public bool MergeProjects(IWin32Window owner, List<int> ids)
-    {
-        var list = ids.Select(projects.Get).OfType<ProjectStore.Project>().Distinct().ToList();
-        if (list.Count < 2) return false;
-        var (to, from) = (list[0], list.Skip(1).ToList());
-        var names = from.Select(ProjectStore.Display).ToList();
-        var named = names.Count == 1 ? names[0] : string.Join(", ", names[..^1]) + " and " + names[^1];
-        if (MessageBox.Show(owner, $"Their windows move to '{ProjectStore.Display(to)}'; {named} {(names.Count == 1 ? "is" : "are")} removed.",
-                $"Merge {list.Count} projects into '{ProjectStore.Display(to)}'?", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
-            return false;
-        projects.Merge(to, from);
-        ProjectsChanged();
-        return true;
-    }
-
-    /// <summary>Closes the projects' open windows; the windows stay in their projects. Nothing is unsaved in Foldex.</summary>
+    /// <summary>Closes the projects' windows, as closing them by hand does. Nothing is unsaved in Foldex.</summary>
     public void CloseProjects(List<int> ids)
     {
         foreach (var p in ids.Select(projects.Get).OfType<ProjectStore.Project>().ToList())
             foreach (var w in windows.Where(o => projects.ProjectOf(o.Key) == p).ToList())
-            {
-                w.WithProject = true;
                 w.Close();
-            }
     }
 
     /// <summary>Deletes the projects after asking; their open windows close first.</summary>
@@ -626,7 +568,7 @@ sealed class AppHost : ApplicationContext
         var list = ids.Select(projects.Get).OfType<ProjectStore.Project>().ToList();
         if (list.Count == 0) return;
         var what = list.Count == 1 ? $"'{ProjectStore.Display(list[0])}'" : $"{list.Count} projects";
-        if (MessageBox.Show(owner, "Their windows close; folders and files are not touched.", $"Delete {what}?",
+        if (MessageBox.Show(owner, "An open one closes; folders and files are not touched.", $"Delete {what}?",
                 MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
             return;
         CloseProjects(ids);
@@ -637,6 +579,7 @@ sealed class AppHost : ApplicationContext
 
     /// <summary>One setting for the Manage window (projectsSort), without telling every page.</summary>
     public static void SetQuietly(string name, JsonNode? value) => SettingsFile.Write(DataDir, name, value);
+
     // Later launches hand their arguments over this pipe (Program.Send).
     public async void Listen(string pipeName)
     {
