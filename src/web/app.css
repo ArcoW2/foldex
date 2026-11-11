@@ -329,23 +329,23 @@ body {
   white-space: nowrap;
   cursor: default;
   color: var(--fg-dim);
-  background: color-mix(in srgb, var(--branch, var(--accent)) 18%, var(--bg-bar));
+  background: color-mix(in srgb, var(--branch, var(--accent)) calc(18% * var(--head-mix, 1)), var(--bg-bar));
 }
 
 .dock-tab.on {
   color: var(--fg);
-  background: color-mix(in srgb, var(--branch, var(--accent)) 45%, var(--bg-bar));
+  background: color-mix(in srgb, var(--branch, var(--accent)) calc(45% * var(--head-mix, 1)), var(--bg-bar));
 }
 
 .dock-tab.active {
-  color: var(--bg);
-  background: var(--branch, var(--accent));
+  color: var(--branch-text, var(--bg));
+  background: color-mix(in srgb, var(--branch, var(--accent)) calc(100% * var(--head-mix, 1)), var(--bg-bar));
   font-weight: 600;
 }
 
 body[data-focus-away] .dock-tab.active {
   color: var(--fg);
-  background: color-mix(in srgb, var(--branch, var(--accent)) 55%, var(--bg-bar));
+  background: color-mix(in srgb, var(--branch, var(--accent)) calc(55% * var(--head-mix, 1)), var(--bg-bar));
 }
 
 .pane {
@@ -394,22 +394,22 @@ body[data-focus-away] .pane.active::after {
   align-items: center;
   gap: 6px;
   padding: 3px 8px;
-  /* The head in its branch colour: a tint while another pane has the keyboard, full (text in the background colour)
-     on the active one. */
-  background: color-mix(in srgb, var(--pane-colour) 22%, var(--bg-bar));
+  /* The head in its branch colour, by paneHeadMix (look.js): a tint while another pane has the keyboard, the full
+     share on the active one, its text the colour that stands out most from it (--branch-text). */
+  background: color-mix(in srgb, var(--pane-colour) calc(22% * var(--head-mix, 1)), var(--bg-bar));
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
   overflow: hidden;
 }
 
 .pane.active > .head {
-  background: var(--pane-colour);
-  color: var(--bg);
+  background: color-mix(in srgb, var(--pane-colour) calc(100% * var(--head-mix, 1)), var(--bg-bar));
+  color: var(--branch-text, var(--bg));
   font-weight: 600;
 }
 
 body[data-focus-away] .pane.active > .head {
-  background: color-mix(in srgb, var(--pane-colour) 55%, var(--bg-bar));
+  background: color-mix(in srgb, var(--pane-colour) calc(55% * var(--head-mix, 1)), var(--bg-bar));
   color: var(--fg);
 }
 

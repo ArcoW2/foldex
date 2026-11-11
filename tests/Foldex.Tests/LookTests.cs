@@ -20,22 +20,34 @@ public class LookTests
     }
 
     [Fact]
-    public void AtTheDefaultsTheInsideIsTheWindowsColourWithAShareOfTheBase()
+    public void AtTheDefaultsTheInsideIsTheWindowsColourWithAShareOfTheBranchColour()
     {
         var v = Vars("{}");
         Assert.Equal("#0969da", v["--branch-0"]);
-        Assert.Equal("color-mix(in srgb, #0969da 8%, var(--bg))", v["--branch-0-bg"]);
-        Assert.Equal("color-mix(in srgb, #0969da 8%, var(--bg-side))", v["--branch-0-bg-side"]);
-        Assert.Equal("color-mix(in srgb, #0969da 35%, var(--select))", v["--branch-0-select"]);
-        Assert.Equal("color-mix(in srgb, #0969da 14%, var(--hover))", v["--branch-0-hover"]);
+        Assert.Equal("1", v["--head-mix"]);
+        Assert.Equal("color-mix(in srgb, var(--branch-0) 8%, var(--bg))", v["--branch-0-bg"]);
+        Assert.Equal("color-mix(in srgb, var(--branch-0) 8%, var(--bg-side))", v["--branch-0-bg-side"]);
+        Assert.Equal("color-mix(in srgb, var(--branch-0) 34.1%, var(--select))", v["--branch-0-select"]);
+        Assert.Equal("color-mix(in srgb, var(--branch-0) 15.4%, var(--hover))", v["--branch-0-hover"]);
         Assert.Equal("var(--branch-0)", v["--branch-0-accent"]);
     }
 
     [Fact]
-    public void MixMinus100IsTheWindowsOwnAndPlus100MoreOfTheBase()
+    public void MixZeroIsTheWindowsOwnAndHundredTheBranchColourAtItsIntensity()
     {
-        Assert.Equal("var(--bg)", Vars("{ paneThemeMix: -100 }")["--branch-0-bg"]);
-        Assert.Equal("color-mix(in srgb, #0969da 54%, var(--bg))", Vars("{ paneThemeMix: 100 }")["--branch-0-bg"]);
+        var none = Vars("{ paneThemeMix: 0 }");
+        Assert.Equal("var(--bg)", none["--branch-0-bg"]);
+        Assert.Equal("var(--select)", none["--branch-1-select"]);   // also a colour the pane theme sets
+        Assert.Equal("var(--accent)", none["--branch-0-accent"]);
+        Assert.Equal("var(--branch-0)", Vars("{ paneThemeMix: 100 }")["--branch-0-bg"]);
+        Assert.Equal("color-mix(in srgb, var(--branch-0) 50%, var(--bg))", Vars("{ paneThemeMix: 50 }")["--branch-0-bg"]);
+    }
+
+    [Fact]
+    public void TheHeadMixIsAFactorForAppCss()
+    {
+        Assert.Equal("0", Vars("{ paneHeadMix: 0 }")["--head-mix"]);
+        Assert.Equal("0.5", Vars("{ paneHeadMix: 50 }")["--head-mix"]);
     }
 
     [Fact]
@@ -47,19 +59,9 @@ public class LookTests
     }
 
     [Fact]
-    public void AColourThePaneThemeSetsIsUsedAsItIsAndNotMixed()
+    public void AColourThePaneThemeSetsIsUsedAsItIs()
     {
         Assert.Equal("#ffcccc", Vars("{}")["--branch-1-select"]);
-        Assert.Equal("#ffcccc", Vars("{ paneThemeMix: -100 }")["--branch-1-select"]);
-    }
-
-    [Fact]
-    public void NotFollowingTheBranchGivesTheWindowsColoursInside()
-    {
-        var v = Vars("{ paneThemeFollowsBranch: false }");
-        Assert.Equal("var(--bg)", v["--branch-1-bg"]);
-        Assert.Equal("var(--select)", v["--branch-1-select"]);
-        Assert.Equal("var(--accent)", v["--branch-1-accent"]);
-        Assert.Equal("#cf222e", v["--branch-1"]);
+        Assert.Equal("#ffcccc", Vars("{ paneThemeMix: 100 }")["--branch-1-select"]);
     }
 }

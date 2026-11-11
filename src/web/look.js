@@ -20,34 +20,64 @@ function applyLook(settings, themes) {
   const vars = { ...themeVars, ...paneThemeVars(settings, themeVars) };
   lookVars = Object.keys(vars);
   for (const name of lookVars) root.style.setProperty(name, vars[name]);
+  applyHeadText(6);
   applyFonts(settings);
 }
 
 // Pane themes (docs/plans/executed/13-PLAN-pane-themes.md 3.2, 3.3): per branch place N, from the theme's base colour
 // (--branch-N) and the colours it sets itself (--branch-N-bg, ...), the variables app.js drawHeads puts on a pane:
-// --branch-N the base colour at its intensity; --branch-N-bg, -bg-side, -select, -hover the inside, set or calculated;
-// --branch-N-accent the focused row's outline. No DOM: the tests run it.
-const PaneShares = { 'bg': 8, 'bg-side': 8, 'select': 35, 'hover': 14 };   // % of the base colour at mix 0
+// --branch-N the base colour at its intensity (rings, marks, and the colour the mixes start from); --branch-N-bg,
+// -bg-side, -select, -hover the inside; --branch-N-accent the focused row's outline. And --head-mix, 0 to 1, by which
+// app.css multiplies each head's and tab's share of the branch colour. No DOM: the tests run it.
+// The inside: at mix m each colour takes 1 - (1 - m)^weight of the branch colour, so 0 is the window's colour, 100 the
+// branch colour, and in between selection and hover take more of it than the background.
+const PaneWeights = { 'bg': 1, 'bg-side': 1, 'select': 5, 'hover': 2 };
 const mixed = (colour, p, other) => p <= 0 ? other : p >= 100 ? colour : `color-mix(in srgb, ${colour} ${p}%, ${other})`;
 const between = (v, min, max, otherwise) => Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : otherwise;
+const tenth = v => Math.round(v * 10) / 10;
 
 function paneThemeVars(settings, themeVars) {
-  const follow = settings.paneThemeFollowsBranch !== false;
-  const mix = between(settings.paneThemeMix, -100, 100, 0);
   const intensity = between(settings.paneThemeIntensity, 0, 200, 100);
-  // Mix -100 the window's colour, 0 the share as tuned, +100 halfway from it to the base colour.
-  const share = s => Math.round((mix < 0 ? s * (100 + mix) / 100 : s + (100 - s) * mix / 200) * 10) / 10;
-  const vars = {};
+  const headMix = between(settings.paneHeadMix, 0, 100, 100);
+  const mix = between(settings.paneThemeMix, 0, 100, 8);
+  const vars = { '--head-mix': String(headMix / 100) };
   for (let n = 0; themeVars[`--branch-${n}`]; n++) {
     const base = themeVars[`--branch-${n}`];
     vars[`--branch-${n}`] = intensity <= 100 ? mixed(base, intensity, 'var(--bg)') : mixed(base, 200 - intensity, 'var(--fg)');
-    for (const name of Object.keys(PaneShares)) {
+    for (const [name, weight] of Object.entries(PaneWeights)) {
+      // A colour the theme sets is the pane theme's own: used as it is, except at 0 (no difference to the window).
       const own = themeVars[`--branch-${n}-${name}`];
-      vars[`--branch-${n}-${name}`] = !follow ? `var(--${name})` : own ?? mixed(base, share(PaneShares[name]), `var(--${name})`);
+      const share = tenth(100 * (1 - (1 - mix / 100) ** weight));
+      vars[`--branch-${n}-${name}`] = mix === 0 ? `var(--${name})` : own ?? mixed(`var(--branch-${n})`, share, `var(--${name})`);
     }
-    vars[`--branch-${n}-accent`] = follow ? `var(--branch-${n})` : 'var(--accent)';
+    vars[`--branch-${n}-accent`] = mix === 0 ? 'var(--accent)' : `var(--branch-${n})`;
   }
   return vars;
+}
+
+// The text on an active head or tab (--branch-N-text): the window's text or background colour, whichever stands out
+// more from that head's colour as drawn, so a faint branch colour on a dark theme gets light text, not dark.
+function applyHeadText(count) {
+  const root = document.documentElement;
+  const probe = document.createElement('div');
+  probe.style.display = 'none';
+  root.appendChild(probe);
+  const rgb = css => {
+    probe.style.color = '';
+    probe.style.color = css;
+    const nums = getComputedStyle(probe).color.match(/[\d.]+/g)?.map(Number) ?? [0, 0, 0];
+    // "color(srgb r g b)" in 0..1, "rgb(r, g, b)" in 0..255.
+    return getComputedStyle(probe).color.startsWith('color(') ? nums.slice(0, 3) : nums.slice(0, 3).map(v => v / 255);
+  };
+  const lum = ([r, g, b]) => [r, g, b].map(c => c <= .03928 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4)
+    .reduce((sum, c, i) => sum + c * [.2126, .7152, .0722][i], 0);
+  const contrast = (a, b) => (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
+  const fg = lum(rgb('var(--fg)')), bg = lum(rgb('var(--bg)'));
+  for (let n = 0; n < count; n++) {
+    const head = lum(rgb(`color-mix(in srgb, var(--branch-${n}) calc(100% * var(--head-mix)), var(--bg-bar))`));
+    root.style.setProperty(`--branch-${n}-text`, contrast(head, fg) >= contrast(head, bg) ? 'var(--fg)' : 'var(--bg)');
+  }
+  probe.remove();
 }
 
 // The fonts (docs/plans/08-PLAN-fonts.md): the window's (appFont, appSize) and the panes' rows (paneFont, paneSize), in

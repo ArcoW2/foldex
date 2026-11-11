@@ -6,6 +6,8 @@ Status: executed; see 6. As built.
 - 2026-11-11: revised: a pane theme is a branch of the window theme, set colours or calculated ones; three settings with
   sliders defaulting in the middle; a root pane without children in the first pane theme.
 - 2026-11-11: executed.
+- 2026-11-11: revised and executed: the intensity feeds both mixes; a mix for the pane heads; both mixes 0 to
+  100; the switch dropped (mix 0 is the same); the text on a head chosen by contrast.
 
 Builds on plan 07 (themes, branch colours) and plan 03 (branches, the colour a parent takes from the path it
 serves).
@@ -24,9 +26,9 @@ highlight all from that same pane theme.
 A pane theme is a branch of the window theme, which each theme chooses to fit itself: at least a base colour, and
 optionally its own background, selection, hover and so on. A colour it does not set is calculated from its base colour
 and the window theme's own colours, so a pane's background stays close to the window's light or dark background. Three
-settings: whether the inside of a pane follows its pane theme at all, how much the base colour weighs against the
-window colours in the calculated colours, and how intense the base colour (head, ring, tab, marks) is; both sliders
-have their default in the middle. A pane draws itself in the pane theme of the path it serves (plan 03), a root pane
+settings, in this order: how intense the branch colours are, how much of that colour the pane heads and tabs take, and
+how much of it the inside of a pane takes; for both mixes 0 is the window's colours and 100 the branch colour at its
+intensity. The text on a head is whichever of the window's text and background colours stands out more. A pane draws itself in the pane theme of the path it serves (plan 03), a root pane
 without children in the first one, by setting those colours on its own element, so everything inside it follows. The
 background sliders keep working on top.
 
@@ -38,7 +40,8 @@ background sliders keep working on top.
 |---|---|---|
 | `branches` entries | a colour, or an object with `base` and any of `bg`, `bgSide`, `select`, `hover` | 3.1; 6.1 |
 | Calculated colours | the window's colour with a share of the base colour, per branch place, in `look.js` | 3.2; 6.1 |
-| Settings | `paneThemeFollowsBranch`, `paneThemeMix`, `paneThemeIntensity`, in the settings window's group Panes | 3.3 |
+| Settings | `paneThemeIntensity`, `paneHeadMix`, `paneThemeMix`, in the settings window's group Panes | 3.3; 6.3 |
+| Head text | the window's text or background colour, whichever stands out more from the head | 3.3; 6.3 |
 | Pane colours | per pane from its path's pane theme; a root pane without children in the first one; tabs and marks in the base colour | 3.4; 6.1 |
 | Background sliders | working on the pane theme's background | 3.5 |
 | Shipped themes reviewed | the first branch the theme's own accent | 3.6; 6.1 |
@@ -78,19 +81,23 @@ For each colour the pane theme does not set, from its base colour and the window
 
 ### 3.3 Settings
 
-In the settings window, group Panes (as rows of `settingrows.js`, defaults in `defaults\settings.json`):
+In the settings window, group Panes (as rows of `settingrows.js`, defaults in `defaults\settings.json`), in this
+order:
 
-- `paneThemeFollowsBranch` (toggle, default on): on, the inside of a pane is its pane theme's (set or calculated);
-  off, the inside is the window theme's and only the base colour shows the branch (as now).
-- `paneThemeMix` (slider, -100 to +100, default 0): how much the base colour weighs against the window colour in the
-  calculated colours. 0 is the calculation as tuned; toward -100 the window's colours, -100 the window's own; toward
-  +100 more of the base colour. Colours a pane theme sets itself are not mixed.
-- `paneThemeIntensity` (slider, 0 to 200%, default 100%): how intense the base colour is. 100% the theme's colour as
-  it is; toward 0% fainter, mixed toward the window's background; toward 200% stronger, mixed toward the window's text
-  colour.
+- `paneThemeIntensity` (slider, 0 to 200%, default 100%): how intense every branch colour is. 100% the theme's colour
+  as it is; toward 0% fainter, mixed toward the window's background; toward 200% stronger, mixed toward the window's
+  text colour. The rings and marks show it as it is; the two mixes below start from it.
+- `paneHeadMix` (slider, 0 to 100%, default 100%): the pane heads and tabs. 0% the window's colours (no colour
+  difference), 100% the branch colour at its intensity; the shares a head and a tab already had (full when active, a
+  tint otherwise) are multiplied by it.
+- `paneThemeMix` (slider, 0 to 100%, default 8%): the inside of a pane (background, selection, hover, the focused
+  row's outline). 0% the window's colours, 100% the branch colour at its intensity. Selection and hover take more of
+  it than the background: at mix m a colour takes 1 - (1 - m)^w of the branch colour, w 1 for the background, 2 for
+  hover, 5 for selection (at 8%: 8%, about 15%, about 34%). A colour the pane theme sets is used as it is, except at
+  0%.
 
-The fixed shares behind mix 0: background 8%, selection 35%, hover 14% of the base colour, looked at in a test copy
-against the light and dark themes (6.2). Above 0 a share moves toward the base colour, at +100 halfway.
+The text on an active head or tab is the window's text or background colour, whichever has the higher contrast with
+the head as drawn, so a faint branch colour on a dark theme gets light text.
 
 ### 3.4 Applied per pane
 
@@ -131,8 +138,8 @@ background.
 
 - Under Jint (the `look.js` calculation, without DOM): for a light and a dark window theme, a base colour gives the
   window's own colours at mix -100 and more of the base colour at +100; intensity 100% gives the base colour as it
-  is, 0% the window's background, 200% the window's text colour; a colour the pane theme sets is used as it is;
-  `paneThemeFollowsBranch` off gives the window's colours inside.
+  is, 0% the window's background, 200% the window's text colour; mix 0 the window's colours, 100 the branch colour;
+  a colour the pane theme sets is used as it is; the head mix as a factor.
 - `ThemeFileTests`: a `branches` entry as a colour and as an object; an object without `base` reported as a problem;
   every settings row names a setting (existing test, now with the new rows).
 - `PanesTests`: a root pane without children has the first branch's colour.
@@ -172,7 +179,22 @@ None.
 - `dotnet test`: Failed 0, Passed 101 (`LookTests`: defaults, mix -100 and +100, intensity 0, 50 and 200, a set colour
   not mixed, following off; `ThemeFileTests`: an entry as a colour and as an object, three wrong entries reported;
   `PanesTests`: a root without children in branch 0, a root with children in the colour of its path).
+- Revised (6.3): `LookTests` rewritten for the scales of 6.3; Failed 0, Passed 101.
 - A test copy over CDP: the default layout's tree and list tinted in branch 0; a second child of the tree below it in
   branch 1, the tree in branch 1's colour while that child had the keyboard; dark and light; Light seafoam with its
   green as branch 0; mix -100 and following off gave the window's own backgrounds, intensity 0 a base colour equal to
   the background. Screenshots of dark and Light seafoam looked at. Hover was not looked at by hand.
+
+### 6.3 Revised (2026-11-11): intensity first, a head mix, both mixes 0 to 100
+
+- The settings, in this order: `paneThemeIntensity`, `paneHeadMix` (new), `paneThemeMix` (now 0 to 100, default 8,
+  the background's share at the old default). `paneThemeFollowsBranch` dropped: mix 0 is the same.
+- `look.js`: the inside mixes `var(--branch-N)` (the colour at its intensity), no longer the theme's colour as it is;
+  shares by the weights of 3.3. `--head-mix` (0 to 1) multiplies each head's and tab's share in `app.css` with
+  `calc()`, so a tab keeps its 18% and 45% and a head its 22%, 55% and full. `applyHeadText` resolves each branch's
+  active head colour on a hidden element and sets `--branch-N-text`; `drawHeads` puts it on panes and tabs as
+  `--branch-text`.
+- Test copy over CDP: dark with intensity 40 and 10 and head mix 30 gave light text, the defaults dark text on the
+  full colour; light with intensity 10 dark text, 200 light text. Head mix 0 drew every head in the window's bar
+  colour; mix 0 the window's backgrounds; mix 100 at intensity 50 the branch colour at half. Screenshot of dark at
+  intensity 30 looked at: the light text on the faint red head reads.

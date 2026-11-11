@@ -197,8 +197,8 @@ function drawHeads() {
     const key = layout.pathColour(v.id);
     v.el.style.setProperty('--branch', key !== null ? `var(--branch-${key})` : '');
     // Its pane theme inside it (plan 13 3.4): the page's own variables, so every rule in the pane follows.
-    for (const name of ['bg', 'bg-side', 'select', 'hover', 'accent'])
-      v.el.style.setProperty(`--${name}`, key !== null ? `var(--branch-${key}-${name})` : '');
+    for (const name of ['bg', 'bg-side', 'select', 'hover', 'accent', 'text'])
+      v.el.style.setProperty(name === 'text' ? '--branch-text' : `--${name}`, key !== null ? `var(--branch-${key}-${name})` : '');
     v.el.classList.toggle('child', pane.source !== null);
     v.el.classList.toggle('pinned', pane.pinned);
     v.el.querySelector('.pin').title = pane.pinned ? 'Pinned: click to follow the parent again' : 'Pin: stop following the parent';
@@ -889,6 +889,7 @@ function drawTabs() {
       const pane = layout.pane(id);
       const key = layout.pathColour(id);
       tab.style.setProperty('--branch', key !== null ? `var(--branch-${key})` : '');
+      tab.style.setProperty('--branch-text', key !== null ? `var(--branch-${key}-text)` : '');
       tab.addEventListener('mousedown', e => {
         if (e.button !== 0) return;
         e.preventDefault();
