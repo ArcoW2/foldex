@@ -475,7 +475,7 @@ sealed class AppHost : ApplicationContext
         folder is not null && (folder.StartsWith("::") || folder.StartsWith("shell:")) ? Shell.ShellListing.NameOf(folder) : folder;
 
     /// <summary>The Projects menu and the Manage projects list: every project (this window's first, then the newest
-    /// used), whether it is open, and its window's panes as a tree (ProjectStore.PaneTree: depth, kind, folder). With
+    /// used), whether it is open, and its window's panes as a tree (ProjectStore.PaneTree: depth and name). With
     /// details (Manage): also the folders of those panes.</summary>
     public JsonArray ProjectList(MainForm? from, bool details = false)
     {
@@ -484,7 +484,7 @@ sealed class AppHost : ApplicationContext
         return new JsonArray(projects.Projects.OrderByDescending(p => p == mine).ThenByDescending(p => p.Used).Select(p =>
         {
             var panes = ProjectStore.PaneTree(p.Windows.FirstOrDefault()?.Session)
-                .Select(t => (Depth: t.Depth, Kind: t.Kind, Folder: Shown(t.Folder))).ToList();
+                .Select(t => (t.Depth, t.Name, Folder: Shown(t.Folder))).ToList();
             var o = new JsonObject
             {
                 ["id"] = p.Id, ["name"] = p.Name, ["display"] = ProjectStore.Display(p), ["mine"] = p == mine,
@@ -493,7 +493,7 @@ sealed class AppHost : ApplicationContext
                 ["created"] = p.Created?.ToString("o"),
                 ["panes"] = new JsonArray(panes.Select(t => (JsonNode?)new JsonObject
                 {
-                    ["depth"] = t.Depth, ["kind"] = t.Kind, ["folder"] = t.Folder,
+                    ["depth"] = t.Depth, ["name"] = t.Name,
                 }).ToArray()),
             };
             if (details)

@@ -10,6 +10,7 @@ Status: partly executed; see Status and 6. As built.
 - 2026-11-11: partly executed: everything but the checks by hand.
 - 2026-11-11: revised and executed: one window per project; the Projects menu shows a project's panes as a tree, not
   a folder per window.
+- 2026-11-11: revised and executed: the panes in that tree by their names, as their heads show them.
 
 Builds on plan 12 (docking panes) and plan 03 (connected panes). As LexPen's projects
 (LexPen `docs/plans/executed/PLAN-window-sessions.md` and `PLAN-manage-projects.md`), with one window per project.
@@ -27,7 +28,7 @@ Work is organised in projects, as in LexPen, one window per project. A project h
 and its window's session (its panes with their connections and state per branch, its docks, its place and its virtual
 desktop), saved continuously in `State\projects.json`. At start every window that was open comes back, each on its
 own desktop. The project of a window is shown at the left of the bottom bar; a click there opens the Projects menu:
-every project with its panes as a tree, a new project, rename, Manage projects. The same commands are in the ribbon,
+every project with its panes by name as a tree, a new project, rename, Manage projects. The same commands are in the ribbon,
 View > Projects. A window's layout can be saved as the default a new project starts with, and a window reset to it.
 Manage projects is a window of its own with every project in one list, to open, close, rename and delete several at
 once. A named project stays until deleted; of the unnamed ones only the last closed per desktop is kept.
@@ -117,11 +118,11 @@ opens the Projects menu there (the page's own menu, `menu.js`):
 
 ```
 Projects
-  v Foldex  (this window)          >    Tree: D:\prive
-  v Klanten                        >      List: D:\prive\foldex
-    Project 7                      >        Preview: (nothing)
-  -----------------------------           List: D:\prive\LexPen
-  New project...                        Tree: C:\Users\acw
+  v Foldex  (this window)          >    Folders
+  v Klanten                        >      foldex
+    Project 7                      >        Preview
+  -----------------------------           LexPen
+  New project...                        Folders
   Rename this project...                ------------------------------------
   -----------------------------         Open project / Show project
   Manage projects...                    Delete project...                  (closed projects)
@@ -131,9 +132,9 @@ Projects
 
 - The projects: open ones checked, this window's project first and marked, then the most recently used first.
 - A project's submenu: its window's panes as a tree: each root pane, then the panes that follow it a step in, down
-  to the end, each by its kind and what it shows (a list's folder, a tree's focused folder; a shell place without a
-  path, as This PC, by its name). A click on a pane, or Open project, opens a closed project; Show project brings an
-  open one to the front. Delete project... (a closed project only; asks first).
+  to the end, each by its name as its head and tab show it (a tree "Folders", a list its folder's name, "Preview").
+  The page keeps those names with its layout. A click on a pane, or Open project, opens a closed project; Show
+  project brings an open one to the front. Delete project... (a closed project only; asks first).
 - New project...: asks a name (empty: "Project 8"); opens a new window with the default layout in it. Rename this
   project...: the name of this window's project (empty: unnamed again).
 - The name is asked in a small dialog of the page (a text box, OK and Cancel; Enter and Esc).
@@ -177,6 +178,8 @@ kept. From top to bottom: a menu bar, a search box, the list, two buttons.
   a new window in a project, the setting `newWindowProject`) only made the menus longer.
 - A folder per window in the Projects menu: it was the folder of the pane active when the session was saved, mostly
   the root tree's selection, which says little about the project. The pane tree shows all of it.
+- A pane in that tree by its kind and folder ("Tree: D:\prive"): a tree's folder is only the item selected in it.
+  A pane is an item of the window with a name of its own, as its head shows it.
 - Keeping every unnamed project (LexPen's `keepUnnamedProjects`): LexPen drops one without files; Foldex windows have
   no files, so every closed window would leave a "Project n" behind.
 - Dropping every unnamed project on close: closing the last window would lose its layout, which plan 12 keeps now.
@@ -186,8 +189,8 @@ kept. From top to bottom: a menu bar, a search box, the list, two buttons.
 ### 3.10 Tests
 
 - Unit, `ProjectStoreTests`: numbers never reused; save and load round trip; `state.json` becoming project 1; a
-  closed project keeps its window and layout, a new one has none; the pane tree (roots, children a step in, kind and
-  folder per pane); an unnamed closed project replaces the older unnamed closed one of the same desktop, not one of
+  closed project keeps its window and layout, a new one has none; the pane tree (roots, children a step in, a name and
+  folder per pane, the name kept by the page or made as the page makes it); an unnamed closed project replaces the older unnamed closed one of the same desktop, not one of
   another desktop, a named one stays; delete refuses an open project; start windows; forget.
 - Every settings row names a setting; every ribbon button names an action (existing tests); every page script
   parses.
@@ -251,3 +254,8 @@ None.
 - Added: `ProjectStore.PaneTree` (roots in order, each followed by its followers a level deeper; a pane's folder from
   the state of the branch it showed last); `ProjectList` gives `panes` (depth, kind, folder) and, for Manage,
   `folders` (every pane's); `menu.js` items take `indent`.
+- Then (the same day): the panes by name. `app.js windowLayout` adds `names` (each pane's `tabTitle`) to the layout
+  the page tells; `PaneTree` gives a pane's name from it, or for a layout from before as the page makes it (Folders,
+  Preview, a list's folder's last part, else Files); the menu and Manage's details show only the name. Test copy: a
+  child list sent to C:\Windows was "Windows" on the page and in `projects.json`; the menu showed Folders with its
+  lists a step in. `dotnet test`: Failed 0, Passed 109.

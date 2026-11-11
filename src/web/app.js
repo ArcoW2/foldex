@@ -1099,7 +1099,9 @@ async function start(paths, saved) {
 // ---------- The layout kept (plan 12 3.4): told to the host, the window's session in its project (plan 15) ----------
 
 let layoutTimer = 0;
-const windowLayout = () => JSON.parse(JSON.stringify({ panes: layout.toJSON(), docks: docks.toJSON(), active: activePane }));
+// With each pane's name as its head and tab show it (tabTitle), for the Projects menu (plan 15 3.6).
+const windowLayout = () => JSON.parse(JSON.stringify({ panes: layout.toJSON(), docks: docks.toJSON(), active: activePane,
+  names: Object.fromEntries([...views].map(([id, v]) => [id, v.tabTitle()])) }));
 function tellLayout() {
   clearTimeout(layoutTimer);
   layoutTimer = setTimeout(() => post({ op: 'layout', layout: windowLayout() }), 800);

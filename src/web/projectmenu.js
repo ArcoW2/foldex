@@ -1,7 +1,7 @@
 'use strict';
 // Projects in a window (docs/plans/15-PLAN-projects.md 3.6, as LexPen's): the window's project at the left of the bottom
 // bar; a click there (or the action projects.menu) opens the Projects menu (menu.js): every project, each with the panes
-// of its window as a tree (roots, their children indented), New project, Rename this project, Manage projects. The
+// of its window by name as a tree (roots, their children indented), New project, Rename this project, Manage projects. The
 // host keeps the projects (AppHost, ProjectStore); a name is asked in a small dialog of the page (askText). Loaded after
 // menu.js, before app.js.
 
@@ -23,8 +23,6 @@ function projectsMenu(at = null) {
 
 const projectCommand = (kind, args = {}) => post({ op: 'projectCommand', kind, ...args });
 
-const PaneKinds = { tree: 'Tree', list: 'List', preview: 'Preview' };
-
 function projectMenuItems(list) {
   const mine = list.find(p => p.mine);
   const projectItem = p => {
@@ -33,9 +31,7 @@ function projectMenuItems(list) {
       label: p.display + (p.mine ? '  (this window)' : ''), checked: p.open,
       items: [
         // Its window's panes: a root, then its children a step in, as they follow each other.
-        ...p.panes.map(pane => ({
-          label: `${PaneKinds[pane.kind] ?? pane.kind}: ${pane.folder ?? '(nothing)'}`, indent: pane.depth, run: open,
-        })),
+        ...p.panes.map(pane => ({ label: pane.name, indent: pane.depth, run: open })),
         ...(p.panes.length ? ['-'] : []),
         { label: p.open ? 'Show project' : 'Open project', run: open, enabled: !p.mine },
         { label: 'Delete project...', enabled: !p.open, run: async () => {

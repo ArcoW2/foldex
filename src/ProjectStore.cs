@@ -147,17 +147,28 @@ sealed class ProjectStore
     public JsonNode? LayoutOf(int key) => WindowOf(key)?.Session is JsonObject own ? own.DeepClone() : null;
 
     /// <summary>A session's panes as a tree (3.6): the roots in their order, each followed by its children (a level
-    /// deeper), down to the end; per pane its kind and folder (a list's location, a tree's focus; null for none).</summary>
-    public static List<(int Depth, string Kind, string? Folder)> PaneTree(JsonNode? session)
+    /// deeper), down to the end; per pane its name as its head shows it (the page keeps them in "names"; from before
+    /// that, as the page makes them: Folders, Preview, a list's folder) and its folder (a list's location, a tree's
+    /// focus; null for none).</summary>
+    public static List<(int Depth, string Name, string? Folder)> PaneTree(JsonNode? session)
     {
         var panes = session?["panes"]?["panes"]?.AsArray().OfType<JsonObject>().ToList() ?? [];
+        var names = session?["names"] as JsonObject;
         var tree = new List<(int, string, string?)>();
         var seen = new HashSet<string>();
         void Add(JsonObject pane, int depth)
         {
             var id = pane["id"]?.ToString() ?? "";
             if (!seen.Add(id)) return;   // a cycle in a broken file
-            tree.Add((depth, pane["kind"]?.ToString() ?? "list", FolderOf(pane)));
+            var folder = FolderOf(pane);
+            var name = names?[id]?.GetValueKind() == JsonValueKind.String ? names[id]!.GetValue<string>()
+                : pane["kind"]?.ToString() switch
+                {
+                    "tree" => "Folders",
+                    "preview" => "Preview",
+                    _ => folder?.Split('\\', StringSplitOptions.RemoveEmptyEntries).LastOrDefault() ?? "Files",
+                };
+            tree.Add((depth, name, folder));
             foreach (var child in panes.Where(c => c["source"]?.ToString() == id)) Add(child, depth + 1);
         }
         foreach (var root in panes.Where(p => p["source"] is null)) Add(root, 0);

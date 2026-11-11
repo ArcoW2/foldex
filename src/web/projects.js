@@ -90,7 +90,6 @@ function marked(text, ws) {
   for (const w of ws) html = html.replace(new RegExp(escapeHtml(w).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), m => `<span class="pv-mark">${m}</span>`);
   return html;
 }
-const PaneKinds = { tree: 'Tree', list: 'List', preview: 'Preview' };
 
 function rowHtml(p, ws) {
   const unfolded = view.unfolded.has(p.id);
@@ -110,8 +109,7 @@ function rowHtml(p, ws) {
   if (unfolded) {
     // Its window's panes as a tree: a root, then its children a step in.
     html += `<div class="pv-details" data-id="${p.id}">` + (p.panes.length ? p.panes.map(pane =>
-      `<div class="pv-pane" style="padding-left: ${pane.depth * 1.5}em"><b>${PaneKinds[pane.kind] ?? escapeHtml(pane.kind)}</b>: ` +
-      `${marked(pane.folder ?? '(nothing)', ws)}</div>`).join('') : '(no panes)') + '</div>';
+      `<div class="pv-pane" style="padding-left: ${pane.depth * 1.5}em">${escapeHtml(pane.name)}</div>`).join('') : '(no panes)') + '</div>';
   }
   return html;
 }

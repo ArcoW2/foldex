@@ -64,17 +64,18 @@ public class ProjectStoreTests : IDisposable
     [Fact]
     public void ThePanesAreATreeOfRootsAndTheirChildren()
     {
-        // Two roots, A (a tree) and E; A drives B and D, B drives C (a preview). Each pane by its branch's state.
+        // Two roots, A (a tree) and E; A drives B and D, B drives C (a preview). Each pane by its branch's state; B by
+        // the name the page kept, the others as the page names them.
         var session = JsonNode.Parse("""
-            { "panes": { "panes": [
+            { "names": { "B": "Users (C:)" }, "panes": { "panes": [
               { "id": "A", "kind": "tree", "source": null, "lastKey": 0, "states": { "0": { "focus": "C:\\" } } },
               { "id": "B", "kind": "list", "source": "A", "lastKey": "", "states": { "": { "location": "C:\\Users" } } },
               { "id": "E", "kind": "list", "source": null, "states": { "": { "location": null } } },
               { "id": "C", "kind": "preview", "source": "B", "states": {} },
               { "id": "D", "kind": "list", "source": "A", "lastKey": "", "states": { "": { "location": "D:\\" } } } ] } }
             """);
-        var tree = ProjectStore.PaneTree(session).Select(t => $"{t.Depth} {t.Kind} {t.Folder}");
-        Assert.Equal(["0 tree C:\\", "1 list C:\\Users", "2 preview ", "1 list D:\\", "0 list "], tree);
+        var tree = ProjectStore.PaneTree(session).Select(t => $"{t.Depth} {t.Name} {t.Folder}");
+        Assert.Equal(["0 Folders C:\\", "1 Users (C:) C:\\Users", "2 Preview ", "1 D: D:\\", "0 Files "], tree);
     }
 
     [Fact]
