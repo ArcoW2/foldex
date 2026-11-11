@@ -1,5 +1,5 @@
 'use strict';
-// A menu of the page's own (the pane head's menu, docs/plans/12-PLAN-docking-and-pane-menu.md 3.2): items with a check
+// A menu of the page's own (the pane head's menu, docs/plans/executed/12-PLAN-docking-and-pane-menu.md 3.2): items with a check
 // mark or a colour swatch, greyed out when not possible, submenus that open beside them. Closed by a click outside,
 // Esc, or choosing. Keys: Up / Down, Right opens a submenu, Left closes it, Enter chooses.
 //

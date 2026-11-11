@@ -2,7 +2,7 @@ using System.Text.Json;
 
 namespace Foldex.Tests;
 
-// web/docks.js run under Jint: where the panes of a window are (docs/plans/12-PLAN-docking-and-pane-menu.md 3.1).
+// web/docks.js run under Jint: where the panes of a window are (docs/plans/executed/12-PLAN-docking-and-pane-menu.md 3.1).
 public class DocksTests
 {
     static readonly string Source = File.ReadAllText(Path.Combine(AppHost.FindProjectFolder(AppContext.BaseDirectory, "web")!, "docks.js"));

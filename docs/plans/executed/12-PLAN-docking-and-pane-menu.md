@@ -1,10 +1,11 @@
 # Plan 12: Docking panes, tabs, and the pane header's menu
 
-Status: partly executed; see Status and 6. As built.
+Status: executed; see 6. As built.
 
 - 2026-11-10: draft.
 - 2026-11-10: revised: a new child at the right of or below its parent; a tab is New tab.
 - 2026-11-10: executed, except floating panes (open question 1) and the layout in the project.
+- 2026-11-11: floating panes moved to plan 14, the layout in the project to plan 15; executed.
 
 Takes the docking row of plan 01 3.3 into a plan of its own, for Foldex's panes; changes plan 03 (a pane can now be
 detached and attached).
@@ -44,10 +45,7 @@ no tab mechanism of their own.
 
 ### Not yet built
 
-| Part | What | Waits for | Reference |
-|---|---|---|---|
-| Floating panes | | open question 1 | 3.1 |
-| Layout in the project | | plan 01's projects | 3.4 |
+Moved out: floating panes to plan 14, the layout in the project to plan 15.
 
 ## 3. Details
 
@@ -64,7 +62,7 @@ no tab mechanism of their own.
 - Where a pane docks has nothing to do with its connections (plan 03 3.4).
 - The default layout (plan 03 3.5): the root tree in the left area, its child in the center.
 - Bars (plan 10) dock at the same sides, as lines outside the panes' areas.
-- Floating panes (a window of their own): open question 1.
+- Floating panes (a window of their own): plan 14.
 
 ### 3.2 The pane header's menu
 
@@ -95,8 +93,8 @@ A right-click on a pane's header (or its tab):
 ### 3.4 Kept
 
 - The layout of each window (areas, groups, splits, sizes, tabs, which tab is shown) with the panes and their
-  connections: in the project (plan 01 3.5). Until projects are built, the layout of the last closed window in
-  `State\state.json`, so a restart brings it back.
+  connections: the layout of the last closed window in `State\state.json`, so a restart brings it back. In the
+  project: plan 15.
 
 ### 3.5 Tests
 
@@ -111,8 +109,7 @@ A right-click on a pane's header (or its tab):
 
 ## 4. Open questions
 
-1. **Floating panes.** LexPen's panes can also float as a window of their own (for another monitor). Wanted for
-   Foldex's panes too, later, or not?
+None.
 
 ## 6. As built
 

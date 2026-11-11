@@ -1,4 +1,4 @@
-// Where the panes of a window are (docs/plans/12-PLAN-docking-and-pane-menu.md 3.1): no DOM, so the tests run it under
+// Where the panes of a window are (docs/plans/executed/12-PLAN-docking-and-pane-menu.md 3.1): no DOM, so the tests run it under
 // Jint; app.js draws what this decides. Where a pane docks has nothing to do with its connections (panes.js).
 //
 // Five areas: left, right, top, bottom and center. An area holds one node or nothing. A node is a group (panes as
