@@ -89,12 +89,14 @@ None.
 - Defaults: `chevron` (first `plus`) and `dotted`.
 - An expander only for a folder with subfolders to show: a tree's listing (folders only) gives each folder `subs`:
   true, `hidden` (only hidden subfolders) or false (`ShellListing.Subs` on disk; `SFGAO_HASSUBFOLDER` for shell
-  folders); a folder without access counts as true. Before that, every folder not yet opened had one.
+  folders); a link answers for its target (read through it, or, when its own listing is refused as
+  C:\Documents and Settings's is, from the target itself); a folder without access counts as true. Before that, every folder not yet opened had one.
 
 ### 6.2 How it was tested
 
 - `dotnet test`: Failed 0, Passed 110 (`PanesTests.TreeLinesPassJoinAndEnd`).
-- The subfolder fix: `ShellTests.ATreeListingSaysWhichFoldersHaveSubfolders`; test copy: under C:\ the folders
+- The subfolder fix: `ShellTests.ATreeListingSaysWhichFoldersHaveSubfolders` and `ALinkHasSubfoldersWhenItsTargetHas` (junctions,
+  one refusing its listing); test copy: under C:\ the folders
   without subfolders (Cache, PerfLogs, tmp) without a chevron, the others with one.
 - Test copy over CDP, dark theme: the Folders tree with dotted lines (screenshot); chevrons with solid lines
   (screenshot); the Projects menu's tree of Klanten with its joints (screenshot).

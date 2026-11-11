@@ -118,7 +118,8 @@ static class ShellListing
     }
 
     /// <summary>For a tree's expander: whether a folder has subfolders: true, "hidden" (only hidden ones) or false.
-    /// Unknown (no access) counts as true, so the folder can still be opened and show why not.</summary>
+    /// A link that refuses its own listing (C:\Documents and Settings) answers for the folder it opens (its target);
+    /// otherwise unknown (no access) counts as true, so the folder can still be opened and show why not.</summary>
     static JsonNode Subs(string path)
     {
         try
@@ -131,7 +132,10 @@ static class ShellListing
             }
             return hidden ? "hidden" : false;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException) { return true; }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+        {
+            return LinkTarget(path) is { } target && !target.Equals(path, StringComparison.OrdinalIgnoreCase) ? Subs(target) : true;
+        }
     }
 
     static void ListShell(string location, Batcher batcher, CancellationToken cancel, bool foldersOnly)

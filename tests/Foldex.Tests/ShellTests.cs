@@ -14,7 +14,12 @@ public class ShellTests : IDisposable
         File.WriteAllText(Path.Combine(dir, "b.exe"), "");
     }
 
-    public void Dispose() => Directory.Delete(dir, true);
+    public void Dispose()
+    {
+        // Junctions first, one by one: a recursive delete stumbles over them.
+        foreach (var link in new DirectoryInfo(dir).EnumerateDirectories().Where(d => d.LinkTarget is not null)) link.Delete();
+        Directory.Delete(dir, true);
+    }
 
     [Fact]
     public async Task FolderOnDiskIsListedWithSizesAndOwnIconMarks()
@@ -41,6 +46,36 @@ public class ShellTests : IDisposable
         Assert.False(byName["sub"]["subs"]!.GetValue<bool>());
         Assert.True(byName["deep"]["subs"]!.GetValue<bool>());
         Assert.Equal("hidden", byName["veiled"]["subs"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task ALinkHasSubfoldersWhenItsTargetHas()
+    {
+        Directory.CreateDirectory(Path.Combine(dir, "deep", "inner"));
+        Junction("toDeep", "deep");
+        Junction("toSub", "sub");
+        // As C:\Documents and Settings: a junction that refuses its own listing.
+        Junction("veiledSub", "sub");
+        Run("icacls", $"\"{Path.Combine(dir, "veiledSub")}\" /deny \"{Environment.UserName}:(RD)\"");
+        Assert.Throws<UnauthorizedAccessException>(() => Directory.GetDirectories(Path.Combine(dir, "veiledSub")));
+        var r = await StaWorker.Once("t", () => ShellListing.List(dir, null, default, true));
+        var byName = r.Entries.ToDictionary(e => e!["name"]!.GetValue<string>(), e => e!);
+        Assert.True(byName["toDeep"]["subs"]!.GetValue<bool>());
+        Assert.False(byName["toSub"]["subs"]!.GetValue<bool>());
+        Assert.False(byName["veiledSub"]["subs"]!.GetValue<bool>());
+        Run("icacls", $"\"{Path.Combine(dir, "veiledSub")}\" /remove:d \"{Environment.UserName}\"");
+    }
+
+    void Junction(string name, string target) =>
+        Run("cmd", $"/c mklink /J \"{Path.Combine(dir, name)}\" \"{Path.Combine(dir, target)}\"");
+
+    static void Run(string file, string args)
+    {
+        using var p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(file, args)
+            { CreateNoWindow = true, UseShellExecute = false, RedirectStandardOutput = true })!;
+        p.StandardOutput.ReadToEnd();
+        p.WaitForExit();
+        Assert.Equal(0, p.ExitCode);
     }
 
     [Fact]
