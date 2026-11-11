@@ -2,7 +2,7 @@ using System.Text.Json;
 
 namespace Foldex.Tests;
 
-// web/panes.js run under Jint: the panes of a window, their connections and branches (docs/plans/03-PLAN-connected-panes.md).
+// web/panes.js run under Jint: the panes of a window, their connections and branches (docs/plans/executed/03-PLAN-connected-panes.md).
 public class PanesTests
 {
     static readonly string Source = File.ReadAllText(Path.Combine(AppHost.FindProjectFolder(AppContext.BaseDirectory, "web")!, "panes.js"));

@@ -1,5 +1,5 @@
 // The page of a Foldex window. It asks the host ({ op, ... }) and is told ({ event, ... }); see MainForm.cs.
-// The panes of plan 03 (docs/plans/03-PLAN-connected-panes.md): panes.js decides what each pane shows, this file draws
+// The panes of plan 03 (docs/plans/executed/03-PLAN-connected-panes.md): panes.js decides what each pane shows, this file draws
 // them. The default layout (3.5): the root, a tree of folders on the left; a list following it; a preview on request.
 'use strict';
 
@@ -88,17 +88,17 @@ function setIconSize(rowHeight) {
   document.documentElement.style.setProperty('--icon-size', `${iconSize}px`);
 }
 
-function iconImage(entry, missing) {
+function iconImage(entry, missing, source = iconSource) {
   const img = document.createElement('img');
-  const key = `${iconSource}:${entry.icon}`;
+  const key = `${source}:${entry.icon}`;
   const stand = icons.get(key) ?? IconSources.map(s => icons.get(`${s}:${entry.icon}`)).find(u => u);
   if (stand) img.src = stand;
   if (!icons.has(key) && entry.icon >= 0 && !iconsAsked.has(key)) { iconsAsked.add(key); missing.push(entry.icon); }
   return img;
 }
 
-function askIcons(missing, own) {
-  if (missing.length) post({ op: 'icons', indexes: missing, size: iconSource });
+function askIcons(missing, own, source = iconSource) {
+  if (missing.length) post({ op: 'icons', indexes: missing, size: source });
   if (own.length) post({ op: 'ownIcons', ids: own });
 }
 
@@ -112,6 +112,17 @@ function list(channel, location, foldersOnly, onPart, onDone, elevated = false, 
   const req = ++lastReq;
   listeners.set(channel, { req, onPart, onDone, sent: performance.now() });
   post({ op: elevated ? 'listElevated' : 'list', channel, location, foldersOnly, tree, req });
+}
+
+// A pane's own view settings (plan 03 3.1). Hidden items: its own choice, else the setting showHidden. A filter:
+// wildcards for files ("*.cs;*.md"), folders always shown.
+const showsHidden = id => layout.pane(id)?.hidden ?? !!settings.showHidden;
+
+function filterTest(pattern) {
+  const parts = (pattern ?? '').split(/[;,]/).map(p => p.trim()).filter(Boolean);
+  if (!parts.length) return () => true;
+  const res = parts.map(p => new RegExp('^' + p.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.') + '$', 'i'));
+  return x => x.folder !== false || res.some(re => re.test(x.name));
 }
 
 // The view of a pane as its kind says: a tree, a list or a preview.
@@ -229,13 +240,14 @@ function drawHeads() {
   drawTabs();
 }
 
-// Followers take what a pane focused once the cursor rests (3.3, debounce).
+// Followers take what a pane focused once the cursor rests (3.3, debounce): followDelay ms, 0 to 1000.
+const followDelay = () => Math.min(1000, Math.max(0, Number(settings.followDelay ?? 150) || 0));
 const focusTimers = new Map();
 
 function focusItem(paneId, item) {
   layout.state(paneId).focus = item ? item.id : null;
   clearTimeout(focusTimers.get(paneId));
-  focusTimers.set(paneId, setTimeout(() => apply(layout.focus(paneId, item)), 150));
+  focusTimers.set(paneId, setTimeout(() => apply(layout.focus(paneId, item)), followDelay()));
 }
 
 function apply(updates) {
@@ -454,9 +466,11 @@ class TreeView {
 
   flatten() {
     this.flat = [];
+    const hidden = showsHidden(this.id), filter = filterTest(layout.pane(this.id).filter);
     const walk = list => {
       for (const n of list) {
-        if (n.hidden && !settings.showHidden && n.depth > 0) continue;
+        if (n.hidden && !hidden && n.depth > 0) continue;
+        if (!filter(n)) continue;
         this.flat.push(n);
         if (n.expanded && n.children) walk(n.children);
       }
@@ -473,8 +487,9 @@ class TreeView {
   // so it gets one).
   hasItems(n) {
     if (n.folder === false) return false;
-    if (n.children) return n.children.some(c => settings.showHidden || !c.hidden);
-    const some = v => v === undefined || v === true || (v === 'hidden' && settings.showHidden);
+    const hidden = showsHidden(this.id);
+    if (n.children) return n.children.some(c => hidden || !c.hidden);
+    const some = v => v === undefined || v === true || (v === 'hidden' && hidden);
     return some(n.subs) || (this.showsFiles() && n.files !== null && some(n.files));
   }
 
@@ -742,6 +757,7 @@ class ListView {
     });
     this.cols = paneColumns(id);
     this.drawHeader();
+    this.colhead.hidden = this.iconsView();
     this.body.addEventListener('scroll', () => {
       this.colhead.firstChild?.style.setProperty('transform', `translateX(${-this.body.scrollLeft}px)`);
       this.render();
@@ -905,6 +921,51 @@ class ListView {
   // Show (plan 18 3.2): folders, files or both.
   content() { return layout.pane(this.id).content ?? 'both'; }
 
+  // The view (plan 03 3.1): details (the columns) or icons (tiles of large icons, in rows as wide as the pane).
+  iconsView() { return layout.pane(this.id).view === 'icons'; }
+
+  tile() {
+    const fontPx = this.fontPx();
+    const width = Math.max(80, Math.round(fontPx * 7.5));
+    return { width, height: 48 + 14 + Math.round(fontPx * 2.7), perRow: Math.max(1, Math.floor(this.body.clientWidth / width)) };
+  }
+
+  // An item in view: its row of tiles, or its row.
+  scrollTo(index) {
+    if (!this.iconsView()) return scrollIntoView(this.body, index);
+    const { height, perRow } = this.tile(), top = Math.floor(index / perRow) * height;
+    if (top < this.body.scrollTop) this.body.scrollTop = top;
+    else if (top + height > this.body.scrollTop + this.body.clientHeight) this.body.scrollTop = top + height - this.body.clientHeight;
+  }
+
+  renderIcons() {
+    const { width, height, perRow } = this.tile();
+    this.rows.style.height = `${Math.ceil(this.entries.length / perRow) * height}px`;
+    this.rows.style.width = '';
+    const firstRow = Math.max(0, Math.floor(this.body.scrollTop / height) - 2);
+    const lastRow = Math.ceil((this.body.scrollTop + this.body.clientHeight) / height) + 2;
+    const focus = layout.state(this.id).focus;
+    const missing = [], own = [], nodes = [];
+    for (let i = firstRow * perRow; i < Math.min(this.entries.length, lastRow * perRow); i++) {
+      const x = this.entries[i];
+      if (x.own) { own.push(x.id); x.own = false; }
+      const tile = document.createElement('div');
+      tile.className = 'tile' + (this.selected.has(x.id) ? ' selected' : '') + (same(x.id, focus) ? ' focused' : '') + (x.hidden ? ' hidden' : '');
+      Object.assign(tile.style, { left: `${(i % perRow) * width}px`, top: `${Math.floor(i / perRow) * height}px`,
+        width: `${width}px`, height: `${height}px` });
+      tile.dataset.index = i;
+      tile.draggable = true;
+      tile.title = x.name;
+      const name = document.createElement('span');
+      name.className = 'name';
+      name.textContent = x.name;
+      tile.append(iconImage(x, missing, 48), name);
+      nodes.push(tile);
+    }
+    this.rows.replaceChildren(...nodes);
+    askIcons(missing, own, 48);
+  }
+
   shows(x) {
     const content = this.content();
     return content === 'files' ? !x.folder : content === 'folders' ? x.folder : true;
@@ -930,7 +991,8 @@ class ListView {
 
   take(entries, reset) {
     if (reset) this.entries = [];
-    this.entries = this.entries.concat(entries.filter(x => (settings.showHidden || !x.hidden) && this.shows(x))).sort(this.comparer());
+    const hidden = showsHidden(this.id), filter = filterTest(layout.pane(this.id).filter);
+    this.entries = this.entries.concat(entries.filter(x => (hidden || !x.hidden) && this.shows(x) && filter(x))).sort(this.comparer());
     this.render();
     status(`${this.entries.length} items so far...`);
   }
@@ -958,6 +1020,7 @@ class ListView {
   }
 
   render() {
+    if (this.iconsView() && !(this.message && !this.entries.length)) return this.renderIcons();
     if (this.message && !this.entries.length) {
       const msg = document.createElement('div');
       msg.className = 'message';
@@ -1021,7 +1084,7 @@ class ListView {
   }
 
   entryAt(target) {
-    const row = target.closest('.row');
+    const row = target.closest('.row, .tile');
     return row ? this.entries[Number(row.dataset.index)] : null;
   }
 
@@ -1041,7 +1104,7 @@ class ListView {
     }
     layout.state(this.id).selection = [...this.selected];
     layout.state(this.id).focus = x.id;   // before drawing: the focus outline moves with the click
-    scrollIntoView(this.body, index);
+    this.scrollTo(index);
     this.render();
     if (!quiet) {
       focusItem(this.id, { id: x.id, folder: x.folder });
@@ -1054,6 +1117,16 @@ class ListView {
     const focus = layout.state(this.id).focus;
     const i = this.entries.findIndex(x => same(x.id, focus));
     const to = k => { const x = this.entries[Math.max(0, Math.min(this.entries.length - 1, k))]; if (x) this.select(x, e); e.preventDefault(); };
+    if (this.iconsView()) {
+      // Tiles: left and right one, up and down a row of them.
+      const { height, perRow } = this.tile();
+      const page = perRow * Math.max(1, Math.floor(this.body.clientHeight / height) - 1);
+      const step = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -perRow, ArrowDown: perRow, PageUp: -page, PageDown: page }[e.key];
+      if (step) to(i < 0 ? 0 : i + step);
+      else if (e.key === 'Home') to(0);
+      else if (e.key === 'End') to(this.entries.length - 1);
+      return;
+    }
     const page = Math.max(1, Math.floor(this.body.clientHeight / RowHeight) - 1);
     if (e.key === 'ArrowDown') to(i + 1);
     else if (e.key === 'ArrowUp') to(i - 1);
@@ -1407,9 +1480,50 @@ function paneMenu(id) {
         enabled: !(pane.kind === 'tree' && content === 'files'), run: () => setPaneContent(id, content) })) },
     { label: 'Shape', enabled: pane.kind !== 'preview', items: [['tree', 'Tree'], ['list', 'One folder']]
       .map(([kind, label]) => ({ label, checked: pane.kind === kind, run: () => setPaneShape(id, kind) })) },
+    { label: 'View', enabled: pane.kind === 'list', items: [['details', 'Details'], ['icons', 'Icons']]
+      .map(([view, label]) => ({ label, checked: (pane.view ?? 'details') === view, run: () => setPaneView(id, view) })) },
+    { label: 'Hidden items', enabled: pane.kind !== 'preview', checked: pane.kind !== 'preview' && showsHidden(id),
+      run: () => setPaneHidden(id, !showsHidden(id)) },
+    { label: pane.filter ? `Filter: ${pane.filter}...` : 'Filter...', enabled: pane.kind !== 'preview', run: () => askPaneFilter(id) },
     '-',
     { label: 'Close pane', run: () => closePane(id) },
   ];
+}
+
+// The view of a one-folder pane (plan 03 3.1): details (its columns) or icons.
+function setPaneView(id, view) {
+  const pane = layout.pane(id), v = views.get(id);
+  if (!pane || !(v instanceof ListView)) return;
+  pane.view = view === 'icons' ? 'icons' : undefined;
+  v.colhead.hidden = v.iconsView();
+  v.body.scrollTop = 0;
+  v.render();
+  const i = v.entries.findIndex(x => same(x.id, layout.state(id).focus));
+  if (i >= 0) v.scrollTo(i);
+  tellLayout();
+}
+
+// Hidden items and a filter for one pane (plan 03 3.1): it reads or draws again.
+function setPaneHidden(id, on) {
+  const pane = layout.pane(id), v = views.get(id);
+  if (!pane || !v || v instanceof PreviewView) return;
+  pane.hidden = on;
+  if (v instanceof TreeView) v.flatten();
+  else v.reshow();
+  drawHeads();
+  tellLayout();
+}
+
+async function askPaneFilter(id) {
+  const pane = layout.pane(id), v = views.get(id);
+  if (!pane || !v || v instanceof PreviewView) return;
+  const pattern = await askText('Filter: the files to show, as wildcards (*.cs;*.md). Empty: all of them.', pane.filter ?? '');
+  if (pattern === null) return;
+  pane.filter = pattern.trim() || undefined;
+  if (v instanceof TreeView) v.flatten();
+  else v.reshow();
+  drawHeads();
+  tellLayout();
 }
 
 // Show (plan 18 3.2): folders, files or both; Files is not for a tree (it needs folders to open).
@@ -1578,6 +1692,54 @@ function restoreLayout(saved, path) {
     status(`The saved layout could not be used: ${e.message}`, true);
     return false;
   }
+}
+
+// The presets (3.5): the window's panes made again, at the folder shown now. default: the root tree and its list;
+// dual: the root drives two lists in two colours; columns: a chain of lists, each following the one before (as
+// Finder's column view); preview: the default with a preview following the list.
+function applyPreset(name) {
+  const at = currentFolder();
+  if (preview) {
+    preview.close();
+    preview = null;
+  }
+  for (const v of views.values()) {
+    v.el.remove();
+    iconUsers.delete(v);
+  }
+  views.clear();
+  Object.assign(layout, new Layout());
+  Object.assign(docks, new Docks());
+  activePane = null;
+  const tree = newRootPane(at);
+  const first = newChildPane(tree.id, 'right', { area: 'center' });
+  if (name === 'dual') newChildPane(tree.id, 'below', { pane: first.id, side: 'bottom' });
+  if (name === 'columns') {
+    let last = first;
+    for (let k = 0; k < 2; k++) last = newChildPane(last.id, 'right');
+  }
+  if (name === 'preview') {
+    activate(first.id);
+    togglePreview();
+  }
+  // Once the tree is on its folder, each of its children shows it (a child made before that, in another branch than
+  // the active one, would stay empty).
+  tree.ready.then(() => {
+    const focus = layout.state(tree.id).focus;
+    for (const f of layout.followers(tree.id)) if (f.kind !== 'preview') {
+      activate(f.id);
+      const state = layout.state(tree.id);   // the tree's state for that branch: copied before it had a folder
+      if (!state.focus) state.focus = focus;
+      followParent(f.id);
+    }
+    activate(first.id);
+    drawHeads();
+  });
+  activate(first.id);
+  drawHeads();
+  first.body.focus();
+  tellLayout();
+  status(`Preset ${Presets[name]}: the window's panes made again${at ? `, at ${at}` : ''}.`);
 }
 
 // A new root: a tree of folders (3.4, New pane), in the left area (or at `place`), on `path` or else This PC.
@@ -1900,7 +2062,7 @@ function setSetting(name, value) {
 function settingsChanged(before) {
   applyTheme();
   if (before.showHidden !== settings.showHidden) {
-    for (const v of views.values()) if (v instanceof TreeView) v.flatten(); else v.refresh();
+    for (const v of views.values()) if (layout.pane(v.id)?.hidden === undefined) if (v instanceof TreeView) v.flatten(); else v.refresh();
   } else if (before.treeExpanders !== settings.treeExpanders) {
     for (const v of views.values()) if (v instanceof TreeView) v.render();
   }

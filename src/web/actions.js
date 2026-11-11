@@ -71,7 +71,7 @@ action('folder.up', { title: 'Up', hint: 'the folder above, through the parent p
   run: () => activeView().up() });
 action('refresh', { title: 'Refresh', group: 'folders', enabled: () => !!activeView(), run: () => activeView().refresh() });
 
-// ---------- Panes (docs/plans/03-PLAN-connected-panes.md 3.4) ----------
+// ---------- Panes (docs/plans/executed/03-PLAN-connected-panes.md 3.4) ----------
 
 action('pane.new', { title: 'New pane', hint: 'a folder tree of its own, without a parent', group: 'panes', run: () => newRootPane() });
 action('pane.newChild', { title: 'New child pane', group: 'panes', enabled: () => !!activeView() && !(activeView() instanceof PreviewView),
@@ -113,8 +113,11 @@ action('pane.previous', { title: 'Previous pane', group: 'panes', enabled: () =>
 
 action('preview.toggle', { title: 'Preview', hint: 'a preview pane following the list', group: 'view',
   checked: () => !!preview, run: () => togglePreview() });
-action('hidden.toggle', { title: 'Hidden items', hint: 'show hidden and system files and folders', group: 'view',
-  checked: () => !!settings.showHidden, run: () => setSetting('showHidden', !settings.showHidden) });
+action('hidden.toggle', { title: 'Hidden items', hint: 'hidden and system files and folders in the active pane (its own choice; the setting is for the others)',
+  group: 'view', enabled: () => !!activePane && !(views.get(activePane) instanceof PreviewView),
+  checked: () => !!activePane && showsHidden(activePane), run: () => setPaneHidden(activePane, !showsHidden(activePane)) });
+action('pane.filter', { title: 'Filter...', hint: 'the files the active pane shows, as wildcards (*.cs;*.md)', group: 'view',
+  enabled: () => !!activePane && !(views.get(activePane) instanceof PreviewView), run: () => askPaneFilter(activePane) });
 
 // ---------- Foldex ----------
 
@@ -145,5 +148,10 @@ action('bars.add', { title: 'Add a bar', hint: 'a bar at the top: the path or th
   run: params => addBar(params[0] ?? 'path') });
 action('bars.reset', { title: 'Reset the bars', hint: 'the bars as Foldex ships them (your bars.json removed)', group: 'view',
   run: () => askYes('Put the bars back as Foldex ships them?').then(yes => yes && post({ op: 'barsReset' })) });
+// The presets (docs/plans/executed/03-PLAN-connected-panes.md 3.5; app.js applyPreset).
+const Presets = { default: 'Default', dual: 'Dual', columns: 'Columns', preview: 'With preview' };
+action('layout.preset', { title: 'Preset', hint: 'the panes of this window made again in a preset arrangement, at the folder shown now', group: 'projects',
+  variants: Object.keys(Presets).map(p => [p]), variantTitles: Object.fromEntries(Object.entries(Presets).map(([p, t]) => [p, `Preset: ${t}`])),
+  run: params => applyPreset(Presets[params[0]] ? params[0] : 'default') });
 action('settings.open', { title: 'Settings', hint: 'every setting, the theme included, in a window of its own', group: 'app',
   run: () => post({ op: 'openSettings' }) });

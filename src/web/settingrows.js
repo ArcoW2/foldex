@@ -36,6 +36,8 @@ const SETTING_ROWS = [
   { group: 'Panes', name: 'treeLines', kind: 'choice', title: 'Tree lines',
     options: [['dotted', 'Dotted'], ['solid', 'Solid'], ['none', 'None']],
     hint: 'The lines joining each folder to the one above it, in every tree and in the Projects menu.' },
+  { group: 'Panes', name: 'followDelay', kind: 'range', range: [0, 1000, 10], unit: 'ms', title: 'Follow delay',
+    hint: 'How long the cursor rests in a pane before its children follow it: a quick walk with the arrows loads nothing on the way.' },
   { group: 'Panes', name: 'rowLines', kind: 'choice', title: 'Row lines',
     options: [['none', 'None'], ['stripes', 'Stripes'], ['lines', 'Lines']],
     hint: 'Every other row shaded, or a line under each row, in every list; to follow a row across the columns.' },

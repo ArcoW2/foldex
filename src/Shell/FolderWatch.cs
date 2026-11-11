@@ -1,7 +1,7 @@
 namespace Foldex.Shell;
 
 /// <summary>
-/// Folders shown are watched (docs/plans/03-PLAN-connected-panes.md 3.8): each window says which folders on disk it
+/// Folders shown are watched (docs/plans/executed/03-PLAN-connected-panes.md 3.8): each window says which folders on disk it
 /// shows (its lists, the folders open in its trees); one watcher per folder, shared by the windows that show it. A
 /// change is told to those windows once things have been quiet for a moment, so a file being written does not make
 /// its folder read again and again. Shell folders (This PC, the Recycle Bin) are not watched.

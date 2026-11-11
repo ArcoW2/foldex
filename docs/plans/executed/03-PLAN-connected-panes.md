@@ -1,6 +1,6 @@
 # Plan 03: Connected panes and branches
 
-Status: partly executed; see Status and 6. As built.
+Status: executed; see 6. As built.
 
 - 2026-11-10: draft.
 - 2026-11-10: revised: collection panes (plan 06); state per branch; default layout, executing; parent and child, the
@@ -9,6 +9,7 @@ Status: partly executed; see Status and 6. As built.
 - 2026-11-10: partly executed: detach, attach, branch colour, pinning, keys, back and forward, watching folders.
 - 2026-11-11: content and tree or list per pane moved to plan 18.
 - 2026-11-11: back and forward per pane (plan 17) replace back and forward per branch.
+- 2026-11-12: executed: the view, a filter and hidden items per pane; the follow delay; the presets.
 
 The core idea of Foldex.
 
@@ -54,15 +55,12 @@ a parent the folder expands in place, as in a tree.
 | Keys between panes | to the parent, the child, the next branch | 3.6 |
 | Back and forward | per pane since plan 17 (was per branch), a selection kept with its step | 3.6; plan 17 |
 | Watching folders | | 3.8 |
+| View settings per pane | view (details, icons), sort (plan 11), filter, per pane | 3.1; 6.4 |
+| Hidden files per pane | its own choice; the setting `showHidden` for the panes without one | 3.1; 6.4 |
+| Debounce delay setting | `followDelay`, 150 ms by default | 3.3; 6.4 |
+| Other presets | dual, columns, with preview (and the default again) | 3.5; 6.4 |
 
 ### Not yet built
-
-| Part | What | Waits for | Reference |
-|---|---|---|---|
-| View settings per pane | view (details, icons), sort, filter changeable per pane | -- | 3.1 |
-| Hidden files per pane | now one `showHidden` for every pane | -- | 3.1; plan 01 6.2 |
-| Debounce delay setting | fixed at 150 ms now | -- | 3.3; 6.1 |
-| Other presets | presets other than the default | -- | 3.5 |
 
 Moved out: a child below, as a tab or floating, New tab, Attach to, the pane header's menu, to plan 12; the layout in
 the project to plan 15; content (folders, files, both) and tree or list per pane, to plan 18.
@@ -130,7 +128,7 @@ second red pane as thumbnails.
   follows.
 - **Pinned child**: a pin in the pane header stops it following until unpinned; its connection and colour stay.
 - **Debounce**: arrowing quickly through a parent updates its children once the cursor rests, so a long walk does not
-  load every folder on the way. The delay is a setting [default not yet decided].
+  load every folder on the way. The delay is a setting (`followDelay`, 150 ms by default).
 
 ### 3.4 Making, closing and changing panes
 
@@ -265,3 +263,27 @@ None.
   went to the tree, back to the list, and to a second branch. Watching: a file made and removed in the list's folder
   from outside appeared and went, `b.txt` staying selected; a folder made and removed in a folder open in the tree
   appeared and went there.
+
+### 6.4 The rest (2026-11-12)
+
+- The pane menu: View (Details, Icons: a one-folder pane), Hidden items (a check), Filter... (wildcards for files,
+  folders always shown; the menu shows the filter set). They are kept on the pane (`view`, `hidden`, `filter`), so they
+  go with the layout into the project.
+  - Icons: tiles of the 48 px icons with their names (two lines at most) in rows as wide as the pane, the header hidden;
+    the arrows move a tile or a row of tiles.
+  - Hidden items: the pane's own choice; the setting `showHidden` is for the panes without one. View > Hidden items and
+    Ctrl+H now act on the active pane.
+  - Sort per pane came with the columns (plan 11).
+- `followDelay` (Settings > Panes, 0 to 1000 ms, 150 by default): how long the cursor rests before the children follow.
+- The presets (View > Presets, and F1): Default, Dual (the tree drives two lists in two colours, one under the other),
+  Columns (the tree drives a chain of three lists, each following the one before), With preview (the default and a
+  preview following the list). The window's panes are made again at the folder shown; once the tree is on it, each of
+  its lists shows it (a list in another branch than the active one would else stay empty, its branch's state of the
+  tree having been copied before the tree had a folder).
+- Layouts of your own saved by name (3.5, "come later"): not built; the default layout of plan 15 is the one there is.
+- Tested: `dotnet test` Failed 0, Passed 141. Test copy over CDP: Icons on a folder of ten items (screenshot), Right
+  and Down moving by a tile and by a row; a hidden file shown in one list with Hidden items on there, the setting off,
+  and gone with it off again; Filter `*.dat;*.log`: the folder and those files only, the menu saying so, and all ten
+  again when cleared; `followDelay` 600: the list still on its folder after 300 ms, on the new one after 900 ms; each
+  preset's panes and connections (Dual: two lists of the tree in two colours, both on its folder, screenshot; Columns:
+  the third pane on the folder focused in the second).

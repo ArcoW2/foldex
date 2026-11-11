@@ -28,7 +28,7 @@ updated whenever a plan is written, built or closed that touches a feature here.
 | Ribbon or menu bar, quick access toolbar | All | part: ribbon built; menus, QAT -- | 5 | -- |
 | Drive bar with free space | P+ | built (plan 10, drives bar) | 5 | bars (plan 10) |
 | Detachable, floating, docked panes | P+ | built (plan 12); floating: plan 14 | 4 | -- |
-| Miller columns | P+ | plan 03 (preset "columns") | 4 | presets (plan 03) |
+| Miller columns | P+ | built (plan 03, preset "Columns") | 4 | presets (plan 03) |
 | Named window layouts (workspaces) | P+ | built (plan 15): projects, a default layout | 4 | -- |
 | Address bar: breadcrumbs, typed path, autocomplete | P+ | part: the path bar (plan 10), typed; breadcrumbs in a column; autocomplete -- | 4 | bars (plan 10) |
 | Back / forward / up | P+ | built (per pane, plan 17; the mouse's buttons too) | 4 | -- |
@@ -50,12 +50,12 @@ updated whenever a plan is written, built or closed that touches a feature here.
 | Columns: shell properties, column sets | P+ | built (plan 11) | 4 | -- |
 | Cloud status columns | P+ | -- | 4 | Columns |
 | Sorting: secondary, natural, folders first | P+ | part: natural sort, folders first, by any column (plan 11); secondary -- | 4 | Columns |
-| Wildcard filter | All | -- | 4 | -- |
+| Wildcard filter | All | built (plan 03: a filter per pane, wildcards for files) | 4 | -- |
 | Quick filter box (live) | P+ | -- | 4 | Wildcard filter; bars (plan 10), for the box |
 | Hyperfilters (rules, saved) | P+ | -- | 4 | Wildcard filter; Columns (rules on properties) |
 | Colour coding by rule | P+ | -- | 4 | Hyperfilters (the rules) |
 | Colour tags on files | All | -- | 4 | -- |
-| Views: details, list, thumbnails, Ctrl+wheel thumbnail zoom | All | part: details with columns (plan 11); Ctrl+wheel font size and icons that grow built (plan 08) | 3 (mostly detail now) | Columns |
+| Views: details, list, thumbnails, Ctrl+wheel thumbnail zoom | All | part: details with columns (plan 11), icons (plan 03); Ctrl+wheel font size and icons that grow built (plan 08); thumbnails -- | 3 (mostly detail now) | Columns |
 | Grouping, custom groups | P+ | -- | 3 | Columns; Sorting |
 | Select by mask, invert, by content, by rule | P+ | part: select all | 3 | Wildcard filter; Hyperfilters (by rule) |
 | Selection clipboard, sticky selection, checkboxes | P+ | -- | 3 | -- |

@@ -35,6 +35,11 @@
         { "action": "project.rename", "label": "Rename", "stack": true },
         { "action": "layout.saveDefault", "label": "Save layout as default" },
         { "action": "layout.resetDefault", "label": "Reset layout", "stack": true } ] },
+      { "name": "Presets", "items": [
+        { "action": "layout.preset", "params": ["default"], "label": "Default" },
+        { "action": "layout.preset", "params": ["dual"], "label": "Dual", "stack": true },
+        { "action": "layout.preset", "params": ["columns"], "label": "Columns", "stack": true },
+        { "action": "layout.preset", "params": ["preview"], "label": "With preview", "stack": true } ] },
       { "name": "Columns", "items": [
         { "action": "columns.fit", "label": "Fit columns" },
         { "action": "columns.manage", "label": "Manage sets", "stack": true } ] },

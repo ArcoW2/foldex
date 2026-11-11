@@ -1,4 +1,4 @@
-// The panes of a window and how they are connected (docs/plans/03-PLAN-connected-panes.md 3.1): no DOM, so the tests
+// The panes of a window and how they are connected (docs/plans/executed/03-PLAN-connected-panes.md 3.1): no DOM, so the tests
 // run it under Jint. app.js draws what this decides.
 //
 // A pane (a child) follows at most one other (its parent; `source` here); a pane without one is a root, as the window's
