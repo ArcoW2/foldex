@@ -24,7 +24,7 @@ static class ShellListing
     /// <summary>Lists a location. `batch` gets the entries read so far every few hundred milliseconds (on this thread);
     /// the result holds the rest.</summary>
     public static Result List(string location, Action<JsonArray>? batch = null, CancellationToken cancel = default,
-        bool foldersOnly = false)
+        bool foldersOnly = false, bool tree = false)
     {
         var clock = Stopwatch.StartNew();
         var batcher = new Batcher(batch);
@@ -34,18 +34,18 @@ static class ShellListing
             {
                 var icons = new Stopwatch();
                 string? target = null;
-                try { ListFolder(location, icons, batcher, cancel, foldersOnly); }
+                try { ListFolder(location, icons, batcher, cancel, foldersOnly, tree); }
                 catch (UnauthorizedAccessException) when (LinkTarget(location) is string to)
                 {
                     // A compatibility link such as C:\Documents and Settings denies listing to everyone, administrators
                     // included; its target is the folder meant (docs/plans/05-PLAN-elevation.md 3.1).
                     target = to;
-                    ListFolder(to, icons, batcher, cancel, foldersOnly);
+                    ListFolder(to, icons, batcher, cancel, foldersOnly, tree);
                 }
                 return new Result(batcher.Rest, null, false, clock.ElapsedMilliseconds, "disk", icons.ElapsedMilliseconds,
                     cancel.IsCancellationRequested, target);
             }
-            ListShell(location, batcher, cancel, foldersOnly);
+            ListShell(location, batcher, cancel, foldersOnly, tree);
             return new Result(batcher.Rest, null, false, clock.ElapsedMilliseconds, "shell", 0, cancel.IsCancellationRequested);
         }
         catch (UnauthorizedAccessException ex) { return new Result(batcher.Rest, ex.Message, true, clock.ElapsedMilliseconds, "disk"); }
@@ -91,7 +91,9 @@ static class ShellListing
         IgnoreInaccessible = false, AttributesToSkip = 0, RecurseSubdirectories = false, ReturnSpecialDirectories = false,
     };
 
-    static void ListFolder(string path, Stopwatch icons, Batcher batcher, CancellationToken cancel, bool foldersOnly)
+    // `tree`: a tree's listing (plan 18), whose folders say whether they have subfolders and, with files shown, files
+    // (for their expanders); a list of folders only says so too, as before.
+    static void ListFolder(string path, Stopwatch icons, Batcher batcher, CancellationToken cancel, bool foldersOnly, bool tree)
     {
         var dir = new DirectoryInfo(path);
         foreach (var info in foldersOnly ? dir.EnumerateDirectories("*", All) : dir.EnumerateFileSystemInfos("*", All))
@@ -112,8 +114,13 @@ static class ShellListing
                 ["hidden"] = (info.Attributes & FileAttributes.Hidden) != 0,
                 ["own"] = !folder && ShellIcons.HasOwn(info.FullName),
                 ["link"] = (info.Attributes & FileAttributes.ReparsePoint) != 0,
-                ["subs"] = foldersOnly ? Subs(info.FullName) : null,
             };
+            if (folder && (foldersOnly || tree))
+            {
+                var (subs, files) = Contents(info.FullName, tree && !foldersOnly);
+                entry["subs"] = subs;
+                if (tree && !foldersOnly) entry["files"] = files;
+            }
             OwnColumns(entry, info, folder);
             batcher.Add(entry);
         }
@@ -155,28 +162,39 @@ static class ShellListing
         return info.szTypeName ?? "";
     });
 
-    /// <summary>For a tree's expander: whether a folder has subfolders: true, "hidden" (only hidden ones) or false.
-    /// A link that refuses its own listing (C:\Documents and Settings) answers for the folder it opens (its target);
-    /// otherwise unknown (no access) counts as true, so the folder can still be opened and show why not.</summary>
-    static JsonNode Subs(string path)
+    /// <summary>For a tree's expander: whether a folder has subfolders and (`files`) files, each true, "hidden" (only
+    /// hidden ones) or false, read in one pass that stops once both are settled. A link that refuses its own listing
+    /// (C:\Documents and Settings) answers for the folder it opens (its target); otherwise unknown (no access) counts as
+    /// true, so the folder can still be opened and show why not.</summary>
+    static (JsonNode Subs, JsonNode? Files) Contents(string path, bool files)
     {
         try
         {
-            var hidden = false;
-            foreach (var sub in new DirectoryInfo(path).EnumerateDirectories("*", All))
+            bool subVisible = false, subHidden = false, fileVisible = false, fileHidden = false;
+            var dir = new DirectoryInfo(path);
+            foreach (var item in files ? dir.EnumerateFileSystemInfos("*", All) : dir.EnumerateDirectories("*", All))
             {
-                if ((sub.Attributes & FileAttributes.Hidden) == 0) return true;
-                hidden = true;
+                var hidden = (item.Attributes & FileAttributes.Hidden) != 0;
+                if ((item.Attributes & FileAttributes.Directory) != 0)
+                {
+                    if (hidden) subHidden = true;
+                    else subVisible = true;
+                }
+                else if (hidden) fileHidden = true;
+                else fileVisible = true;
+                if (subVisible && (fileVisible || !files)) break;
             }
-            return hidden ? "hidden" : false;
+            JsonNode Mark(bool visible, bool hiddenOnly) => visible ? true : hiddenOnly ? "hidden" : false;
+            return (Mark(subVisible, subHidden), files ? Mark(fileVisible, fileHidden) : null);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
         {
-            return LinkTarget(path) is { } target && !target.Equals(path, StringComparison.OrdinalIgnoreCase) ? Subs(target) : true;
+            return LinkTarget(path) is { } target && !target.Equals(path, StringComparison.OrdinalIgnoreCase)
+                ? Contents(target, files) : (true, files ? true : null);
         }
     }
 
-    static void ListShell(string location, Batcher batcher, CancellationToken cancel, bool foldersOnly)
+    static void ListShell(string location, Batcher batcher, CancellationToken cancel, bool foldersOnly, bool tree)
     {
         var parent = Native.Item(location);
         var hr = parent.BindToHandler(IntPtr.Zero, Native.BhidEnumItems, Native.IidIEnumShellItems, out var ptr);
@@ -186,7 +204,7 @@ static class ShellListing
         while (!cancel.IsCancellationRequested && items.Next(1, out var item, out var fetched) == 0 && fetched == 1)
         {
             item.GetAttributes(Native.SfgaoFolder | Native.SfgaoFileSystem | Native.SfgaoStream | Native.SfgaoHidden | Native.SfgaoLink
-                | (foldersOnly ? Native.SfgaoHasSubfolder : 0), out var attrs);
+                | (foldersOnly || tree ? Native.SfgaoHasSubfolder : 0), out var attrs);
             // A zip file is a folder and a stream to the shell: Foldex shows it as a file.
             var folder = (attrs & Native.SfgaoFolder) != 0 && (attrs & Native.SfgaoStream) == 0;
             if (foldersOnly && !folder)
@@ -220,7 +238,9 @@ static class ShellListing
                 ["icon"] = ShellIcons.Of(item),
                 ["hidden"] = (attrs & Native.SfgaoHidden) != 0,
                 ["link"] = (attrs & Native.SfgaoLink) != 0,
-                ["subs"] = foldersOnly ? (attrs & Native.SfgaoHasSubfolder) != 0 : null,
+                ["subs"] = folder && (foldersOnly || tree) ? (attrs & Native.SfgaoHasSubfolder) != 0 : null,
+                // Whether a shell folder has files is not known without listing it: it may, so it gets an expander.
+                ["files"] = folder && tree && !foldersOnly ? true : null,
             };
             // A drive in This PC: its total and free size (plan 11 3.1); a file system item: the own columns.
             var id = entry["id"]!.GetValue<string>();

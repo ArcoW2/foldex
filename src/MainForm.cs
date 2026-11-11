@@ -217,7 +217,7 @@ sealed class MainForm : Form
                 break;
             case "list":
                 await List(msg["location"]!.GetValue<string>(), msg["req"]?.GetValue<int>() ?? 0,
-                    msg["channel"]?.GetValue<string>() ?? "", msg["foldersOnly"]?.GetValue<bool>() == true);
+                    msg["channel"]?.GetValue<string>() ?? "", msg["foldersOnly"]?.GetValue<bool>() == true, msg["tree"]?.GetValue<bool>() == true);
                 break;
             case "listElevated":
                 await ListElevated(msg["location"]!.GetValue<string>(), msg["req"]?.GetValue<int>() ?? 0,
@@ -423,14 +423,14 @@ sealed class MainForm : Form
     readonly Dictionary<string, CancellationTokenSource> listings = [];
 
     // On a thread of its own: a slow location never holds up the next one; what is read so far comes in batches.
-    async Task List(string location, int req, string channel, bool foldersOnly)
+    async Task List(string location, int req, string channel, bool foldersOnly, bool tree = false)
     {
         if (listings.Remove(channel, out var before)) before.Cancel();
         var cancel = listings[channel] = new CancellationTokenSource();
         var clock = System.Diagnostics.Stopwatch.StartNew();
         var r = await StaWorker.Once("listing", () => ShellListing.List(location,
             part => BeginInvoke(() => Post(new JsonObject { ["event"] = "listing", ["req"] = req, ["channel"] = channel, ["entries"] = part })),
-            cancel.Token, foldersOnly));
+            cancel.Token, foldersOnly, tree));
         if (listings.GetValueOrDefault(channel) == cancel) listings.Remove(channel);
         if (r.Cancelled) return;
         var name = await StaWorker.Once("name", () => ShellListing.NameOf(location));

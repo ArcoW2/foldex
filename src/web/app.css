@@ -918,11 +918,11 @@ body[data-focus-away] .row.selected {
   cursor: ew-resize;
 }
 
-.list .body {
+.list .body, .tree .body {
   overflow-x: auto;
 }
 
-.list .rows {
+.list .rows, .tree .rows {
   min-width: 100%;
 }
 

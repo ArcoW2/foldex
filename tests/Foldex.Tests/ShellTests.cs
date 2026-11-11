@@ -49,6 +49,23 @@ public class ShellTests : IDisposable
     }
 
     [Fact]
+    public async Task ATreeWithFilesSaysWhichFoldersHaveFiles()
+    {
+        Directory.CreateDirectory(Path.Combine(dir, "deep", "inner"));
+        File.WriteAllText(Path.Combine(dir, "sub", "f.txt"), "x");
+        var veiled = Path.Combine(dir, "deep", "v.txt");
+        File.WriteAllText(veiled, "x");
+        File.SetAttributes(veiled, FileAttributes.Hidden);
+        var r = await StaWorker.Once("t", () => ShellListing.List(dir, null, default, false, true));
+        var byName = r.Entries.ToDictionary(e => e!["name"]!.GetValue<string>(), e => e!);
+        Assert.False(byName["sub"]["subs"]!.GetValue<bool>());
+        Assert.True(byName["sub"]["files"]!.GetValue<bool>());
+        Assert.True(byName["deep"]["subs"]!.GetValue<bool>());
+        Assert.Equal("hidden", byName["deep"]["files"]!.GetValue<string>());
+        Assert.Null(byName["a.txt"]["files"]);   // a file has neither
+    }
+
+    [Fact]
     public async Task ALinkHasSubfoldersWhenItsTargetHas()
     {
         Directory.CreateDirectory(Path.Combine(dir, "deep", "inner"));

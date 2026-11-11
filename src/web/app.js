@@ -107,10 +107,17 @@ function askIcons(missing, own) {
 let lastReq = 0;
 const listeners = new Map();
 
-function list(channel, location, foldersOnly, onPart, onDone, elevated = false) {
+// `tree`: a tree's listing, whose folders say whether they have subfolders and files (their expanders, plan 18 3.4).
+function list(channel, location, foldersOnly, onPart, onDone, elevated = false, tree = false) {
   const req = ++lastReq;
   listeners.set(channel, { req, onPart, onDone, sent: performance.now() });
-  post({ op: elevated ? 'listElevated' : 'list', channel, location, foldersOnly, req });
+  post({ op: elevated ? 'listElevated' : 'list', channel, location, foldersOnly, tree, req });
+}
+
+// The view of a pane as its kind says: a tree, a list or a preview.
+function makeView(id) {
+  const kind = layout.pane(id).kind;
+  return kind === 'tree' ? new TreeView(id) : kind === 'preview' ? new PreviewView(id) : new ListView(id);
 }
 
 // ---------- Rows in view only ----------
@@ -269,23 +276,44 @@ function parentOf(path) {
   return /^[A-Za-z]:$/.test(parent) ? parent + '\\' : parent;
 }
 
-// ---------- The root: a tree of folders (3.5) ----------
+// ---------- A tree (3.5; plan 18): of folders, or folders and files, with the columns of a list ----------
 
+// A pane's tree. Without a parent: the tree's tops (your profile folder, This PC, Network, the Recycle Bin). As a child
+// (plan 18 3.3): the items of the folder its parent focuses, without a row for that folder (its head names it); the
+// lines start at the head and every row is one level in. Show (plan 18 3.2): folders, or folders and files; a file is a
+// row without an expander.
 class TreeView {
   constructor(id) {
     this.id = id;
     this.nodes = new Map();   // lower-case id -> node
     this.top = [];
     this.flat = [];
+    this.folder = layout.pane(id).source !== null;   // a child: its parent's folder
+    this.root = null;                                  // that folder
     this.el = paneElement(id, 'tree', 'Folders');
     this.body = this.el.querySelector('.body');
     this.rows = this.el.querySelector('.rows');
-    this.body.addEventListener('scroll', () => this.render());
+    // The columns, as a list's (plan 11; plan 18 3.3): the pane's generic ones, the tree in the first.
+    this.colhead = document.createElement('div');
+    this.colhead.className = 'colhead';
+    this.body.before(this.colhead);
+    this.colhead.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      openMenu(e.clientX, e.clientY, columnHeaderMenu(this));
+    });
+    this.cols = paneColumns(id);
+    this.drawHeader();
+    this.body.addEventListener('scroll', () => {
+      this.colhead.firstChild?.style.setProperty('transform', `translateX(${-this.body.scrollLeft}px)`);
+      this.render();
+    });
     this.body.addEventListener('mousedown', e => this.click(e));
     this.body.addEventListener('dblclick', e => {
       const n = this.nodeAt(e.target);
       if (!n || e.target.classList.contains('twisty')) return;
-      // Opened in the tree itself as well as in its children.
+      if (n.folder === false) return execute(this.id, { id: n.id, folder: false });   // a file opens
+      // Opened in the tree itself as well as in its children; a child tree opens it only in itself (its parent stays).
+      if (this.folder) return this.expand(n, !n.expanded);
       if (!n.expanded) this.expand(n);
       execute(this.id, { id: n.id, folder: true });
     });
@@ -295,7 +323,7 @@ class TreeView {
       const n = this.nodeAt(e.target);
       if (n) post({ op: 'menu', ids: [n.id], x: e.clientX * devicePixelRatio, y: e.clientY * devicePixelRatio, extended: e.shiftKey });
     });
-    dropTarget(this.body, e => this.nodeAt(e.target)?.id ?? null);
+    dropTarget(this.body, e => { const n = this.nodeAt(e.target); return n?.folder === false ? n.parent?.id ?? this.root : n?.id ?? this.root; });
     iconUsers.add(this);
     // Made shorter (the ribbon or the status line coming in, the window resized): the focused folder, in view at the
     // old height, stays in view.
@@ -303,6 +331,7 @@ class TreeView {
     new ResizeObserver(() => {
       const before = height;
       height = this.body.clientHeight;
+      if (this.cols.fit && this.flat.length) this.fitColumns();
       if (height >= before) return;
       const i = this.flat.findIndex(x => same(x.id, layout.state(this.id).focus));
       const top = i * RowHeight - this.body.scrollTop;
@@ -310,20 +339,25 @@ class TreeView {
     }).observe(this.body);
   }
 
+  // Files shown (plan 18 3.2): Folders and files; Files alone is not for a tree.
+  showsFiles() { return layout.pane(this.id).content !== 'folders'; }
+
   node(id) { return id == null ? undefined : this.nodes.get(id.toLowerCase()); }
 
   add(entry, parent) {
     const known = this.node(entry.id);
     if (known) {
-      if (!known.children) known.subs = entry.subs;   // read again: it may have got (or lost) subfolders
+      if (!known.children) Object.assign(known, { subs: entry.subs, files: entry.files });   // it may have got or lost some
       return known;
     }
-    const n = { ...entry, parent, children: null, expanded: false, depth: parent ? parent.depth + 1 : 0 };
+    const n = { ...entry, parent, children: null, expanded: false, depth: parent ? parent.depth + 1 : this.folder ? 1 : 0 };
     this.nodes.set(entry.id.toLowerCase(), n);
     return n;
   }
 
+  // Ready to show: the tops, or (a child) its folder.
   init() {
+    if (this.folder) return this.load(layout.state(this.id).location);
     return new Promise(done => {
       described.set(++lastReq, entries => {
         this.top = entries.map(e => this.add(e, null));
@@ -334,47 +368,81 @@ class TreeView {
     });
   }
 
-  // Loads a node's subfolders (once); resolves when they are there.
-  load(n) {
+  // A child tree on a folder (following its parent, as a list loads one): its items as the top rows, its focus back
+  // when it is there.
+  load(location) {
+    this.root = location;
+    this.nodes.clear();
+    this.top = [];
+    this.flatten();
+    this.el.querySelector('.title').textContent = location ?? '';
+    if (activePane === this.id) showLocation(this.locationText());
+    if (!location) return Promise.resolve();
+    return new Promise(done => {
+      const kids = [];
+      list(`tree:${this.id}:`, location, !this.showsFiles(), part => kids.push(...part), m => {
+        if (this.root !== location) return done();
+        this.top = kids.concat(m.entries).sort(this.comparer()).map(e => this.add(e, null));
+        this.name = m.name;
+        this.el.querySelector('.title').textContent = m.name;
+        if (m.error) status(`${m.name}: ${m.error}`, true);
+        this.flatten();
+        drawTabs();
+        this.askColumnValues();
+        const focus = layout.state(this.id).focus;
+        (focus ? this.reveal(focus, true) : Promise.resolve()).then(done);
+      }, false, true);
+    });
+  }
+
+  // Loads a node's items (once); resolves when they are there.
+  loadNode(n) {
     if (n.children) return Promise.resolve();
     if (n.loading) return n.loading;
     n.loading = new Promise(done => {
       const kids = [];
-      list(`tree:${this.id}:${n.id}`, n.id, true, part => kids.push(...part), m => {
-        n.children = kids.concat(m.entries).sort(byName).map(e => this.add(e, n));
+      list(`tree:${this.id}:${n.id}`, n.id, !this.showsFiles(), part => kids.push(...part), m => {
+        n.children = kids.concat(m.entries).sort(this.comparer()).map(e => this.add(e, n));
         n.error = m.error;
         n.loading = null;
         this.flatten();
+        this.askColumnValues();
         done();
-      });
+      }, false, true);
     });
     return n.loading;
   }
 
-  // A folder changed on disk (3.8): its subfolders read again beside the ones shown, put in only when the names
-  // differ (a folder's own date changing, as a watcher also reports, changes nothing); the focused row stays where it
-  // is on screen.
+  // A folder changed on disk (3.8): its items read again beside the ones shown, put in only when the names differ (a
+  // folder's own date changing, as a watcher also reports, changes nothing); the focused row stays where it is on
+  // screen. `n` null: a child tree's own folder.
   reread(n) {
     const kids = [];
-    list(`tree:${this.id}:${n.id}`, n.id, true, part => kids.push(...part), m => {
+    const at = n ? n.id : this.root;
+    if (!at) return;
+    list(`tree:${this.id}:${n ? n.id : ''}`, at, !this.showsFiles(), part => kids.push(...part), m => {
       if (m.error) return;
-      const next = kids.concat(m.entries).sort(byName).map(e => this.add(e, n));
-      if (n.children && next.length === n.children.length && next.every((c, k) => c === n.children[k])) return;
+      const parent = n ?? null;
+      const shown = n ? n.children : this.top;
+      const next = kids.concat(m.entries).sort(this.comparer()).map(e => this.add(e, parent));
+      if (shown && next.length === shown.length && next.every((c, k) => c === shown[k])) return;
       const focus = this.node(layout.state(this.id).focus);
       const offset = focus ? this.flat.indexOf(focus) * RowHeight - this.body.scrollTop : 0;
-      for (const gone of n.children ?? []) if (!next.includes(gone)) this.nodes.delete(gone.id.toLowerCase());
-      n.children = next;
+      for (const gone of shown ?? []) if (!next.includes(gone)) this.nodes.delete(gone.id.toLowerCase());
+      if (n) n.children = next;
+      else this.top = next;
       this.flatten();
-      const at = focus ? this.flat.indexOf(focus) : -1;
-      if (at >= 0) {
-        this.body.scrollTop = at * RowHeight - offset;
+      const i = focus ? this.flat.indexOf(focus) : -1;
+      if (i >= 0) {
+        this.body.scrollTop = i * RowHeight - offset;
         this.render();
       }
-    });
+    }, false, true);
   }
 
   async expand(n, open = true) {
-    if (open) await this.load(n);
+    if (n.folder === false) return;
+    if (open) await this.loadNode(n);
     n.expanded = open;
     this.flatten();
   }
@@ -400,45 +468,70 @@ class TreeView {
     tellWatched();
   }
 
+  // Whether a node gets an expander: a folder with something to show (plan 16; plan 18 3.4): its items once read, else
+  // what the listing said (subs, and with files shown files: true, 'hidden' or false; absent, as for the tops: unknown,
+  // so it gets one).
+  hasItems(n) {
+    if (n.folder === false) return false;
+    if (n.children) return n.children.some(c => settings.showHidden || !c.hidden);
+    const some = v => v === undefined || v === true || (v === 'hidden' && settings.showHidden);
+    return some(n.subs) || (this.showsFiles() && n.files !== null && some(n.files));
+  }
+
   render() {
+    const fontPx = this.fontPx();
+    const cols = this.cols.columns.map(c => ({ ...columnInfo(c.id), width: (c.width ?? columnInfo(c.id).width) * fontPx }));
     this.rows.style.height = `${this.flat.length * RowHeight}px`;
+    this.rows.style.width = `${cols.reduce((a, c) => a + c.width, 0)}px`;
     const [first, last] = visibleRange(this.body, this.flat.length);
     const focus = layout.state(this.id).focus;
-    const missing = [], nodes = [];
+    const missing = [], nodes = [], noProps = [];
+    const propNames = cols.filter(c => c.id.includes('.')).map(c => c.id);
     for (let i = first; i < last; i++) {
       const n = this.flat[i];
-      const row = document.createElement('div');
-      row.className = 'row' + (same(n.id, focus) ? ' selected focused' : '') + (n.hidden ? ' hidden' : '');
-      row.style.top = `${i * RowHeight}px`;
-      row.style.paddingLeft = `${8 + n.depth * 14}px`;
-      row.dataset.index = i;
-      const twisty = document.createElement('span');
-      // No expander for a folder without subfolders to show: its children once read, else what the listing said
-      // (subs: true, 'hidden' or false; absent, as for the top items: unknown, so it gets one).
-      const leaf = n.children ? !n.children.some(c => settings.showHidden || !c.hidden)
-        : n.subs === false || (n.subs === 'hidden' && !settings.showHidden);
-      // The expanders as the setting treeExpanders says (plan 16 3.1): + and -, or a chevron drawn by app.css.
-      if (settings.treeExpanders === 'chevron') twisty.className = 'twisty' + (leaf ? '' : n.expanded ? ' chev open' : ' chev');
-      else {
-        twisty.className = 'twisty';
-        twisty.textContent = leaf ? '' : n.expanded ? '-' : '+';
+      if (propNames.length && propNames.some(p => !(n.props && p in n.props)) && !n.propsAsked && /^[A-Za-z]:\\|^\\\\/.test(n.id)) {
+        n.propsAsked = true;
+        noProps.push(n);
       }
-      const name = document.createElement('span');
-      name.className = 'name';
-      name.textContent = n.name;
-      row.append(twisty, iconImage(n, missing), name);
+      const row = document.createElement('div');
+      row.className = 'row cols' + (same(n.id, focus) ? ' selected focused' : '') + (n.hidden ? ' hidden' : '') + (i % 2 ? ' odd' : '');
+      row.style.top = `${i * RowHeight}px`;
+      row.dataset.index = i;
+      cols.forEach((c, k) => {
+        const cell = document.createElement('span');
+        cell.className = k === 0 ? 'cell first' : 'cell' + (RightAligned.has(c.kind) ? ' right' : '') + (c.id === 'git' && n.git ? ` git-${n.git === '!' ? 'conflict' : n.git}` : '');
+        cell.style.width = `${c.width}px`;
+        if (k > 0) cell.textContent = columnText(n, c.id);
+        else {
+          cell.style.paddingLeft = `${8 + n.depth * 14}px`;
+          const twisty = document.createElement('span');
+          const leaf = !this.hasItems(n);
+          // The expanders as the setting treeExpanders says (plan 16 3.1): + and -, or a chevron drawn by app.css.
+          if (settings.treeExpanders === 'chevron') twisty.className = 'twisty' + (leaf ? '' : n.expanded ? ' chev open' : ' chev');
+          else {
+            twisty.className = 'twisty';
+            twisty.textContent = leaf ? '' : n.expanded ? '-' : '+';
+          }
+          const name = document.createElement('span');
+          name.className = 'name';
+          name.textContent = n.name;
+          cell.append(twisty, iconImage(n, missing), name);
+          if (n.link) {
+            const link = document.createElement('span');
+            link.className = 'link';
+            link.textContent = 'link';
+            cell.append(link);
+          }
+        }
+        row.append(cell);
+      });
       // Its tree lines: the expander of level k is centred at 14 + 14k px (padding 8 + 14 per level, 12 wide).
       if (n.guides) row.append(...guideElements(n.guides, k => 14 + 14 * k, 8));
-      if (n.link) {
-        const link = document.createElement('span');
-        link.className = 'link';
-        link.textContent = 'link';
-        row.append(link);
-      }
       nodes.push(row);
     }
     this.rows.replaceChildren(...nodes);
     askIcons(missing, []);
+    if (noProps.length) this.askProps(noProps, propNames);
   }
 
   nodeAt(target) {
@@ -454,11 +547,15 @@ class TreeView {
     this.select(n.id);
   }
 
-  select(id) {
+  // A row focused: its children follow it (a folder: they show it; a file: a preview shows it).
+  select(id, quiet = false) {
     const n = this.node(id);
     if (!n) return;
-    focusItem(this.id, { id: n.id, folder: true });
-    recordStep();
+    if (quiet) layout.state(this.id).focus = n.id;
+    else {
+      focusItem(this.id, { id: n.id, folder: n.folder !== false });
+      recordStep();
+    }
     const i = this.flat.indexOf(n);
     if (i >= 0) scrollIntoView(this.body, i);
     this.render();
@@ -478,10 +575,19 @@ class TreeView {
     else if (e.key === 'ArrowLeft' && n) { if (n.expanded) this.expand(n, false); else if (n.parent) this.select(n.parent.id); e.preventDefault(); }
   }
 
-  // Shows a folder in the tree: expanded down to it and selected. Paths on disk are found from This PC down; other
-  // places only when the tree has them already.
-  async reveal(path) {
-    if (!this.node(path) && /^[A-Za-z]:\\/.test(path)) {
+  // Shows an item in the tree: expanded down to it and focused (`quiet`: without its children following). Paths on disk
+  // are found from This PC down (a child tree: from its folder down); other places only when the tree has them already.
+  async reveal(path, quiet = false) {
+    const base = this.root?.replace(/\\+$/, '');
+    if (!this.node(path) && this.folder && base && path.toLowerCase().startsWith(base.toLowerCase() + '\\')) {
+      const parts = path.slice(base.length + 1).split('\\');
+      for (let k = 0, at = base; k < parts.length - 1; k++) {
+        at += '\\' + parts[k];
+        const here = this.node(at);
+        if (!here) break;
+        await this.expand(here);
+      }
+    } else if (!this.node(path) && !this.folder && /^[A-Za-z]:\\/.test(path)) {
       const pc = this.node(ThisPC);
       if (pc) {
         await this.expand(pc);
@@ -496,27 +602,120 @@ class TreeView {
       for (let p = this.node(path).parent; p; p = p.parent) p.expanded = true;
       this.flatten();
     }
-    this.select(path);
+    this.select(path, quiet);
   }
 
-  restore() { this.render(); }
+  // Back on this pane's state for the branch now active (plan 03 3.1); from history (`back`, plan 17): its folder (a
+  // child tree) and its focus, which its children follow.
+  restore(back = false) {
+    const s = layout.state(this.id);
+    if (this.folder && !same(s.location, this.root)) {
+      this.load(s.location).then(() => { if (back && s.focus) this.reveal(s.focus); });
+    } else if (back && s.focus) this.reveal(s.focus);
+    else this.render();
+  }
 
   up() {
     const n = this.node(layout.state(this.id).focus);
     if (n?.parent) this.select(n.parent.id);
+    else if (this.folder && this.root) goTo(this.id, parentOf(this.root));
   }
 
-  // The focused folder's subfolders read again.
+  // The focused folder's items read again (a child tree on nothing focused: its folder).
   refresh() {
     const n = this.node(layout.state(this.id).focus);
-    if (!n) return;
+    if (!n || n.folder === false) {
+      if (this.folder) this.load(this.root);
+      return;
+    }
     n.children = null;
     this.expand(n, n.expanded);
   }
 
-  locationText() { return layout.state(this.id).focus ?? ''; }
+  // Show changed (plan 18 3.2): read again, the focus kept.
+  reshow() {
+    const focus = layout.state(this.id).focus;
+    if (this.folder) return this.load(this.root);
+    this.nodes.clear();
+    this.top = [];
+    this.ready = this.init().then(() => focus ? this.reveal(focus, true) : null);
+  }
 
-  tabTitle() { return 'Folders'; }
+  locationText() { return layout.state(this.id).focus ?? this.root ?? ''; }
+
+  tabTitle() { return this.folder ? this.name ?? (this.root ?? '').split('\\').filter(x => x).pop() ?? 'Folders' : 'Folders'; }
+
+  // ---------- Columns (plan 11; plan 18 3.3): the pane's generic ones; no set per folder for a tree ----------
+
+  fontPx() { return parseFloat(getComputedStyle(this.body).fontSize) || 13; }
+
+  chooseColumns() { }
+
+  drawHeader() { drawColumnHeader(this); }
+
+  columnsChanged() {
+    this.drawHeader();
+    this.askColumnValues();
+    this.render();
+    tellLayout();
+  }
+
+  comparer() {
+    const sort = this.cols.sort;
+    return sort ? columnComparer(sort.id, columnInfo(sort.id).kind, sort.desc) : byName;
+  }
+
+  // Sorted again: every level read so far.
+  async sortEntries() {
+    const sort = this.cols.sort;
+    if (sort?.id.includes('.')) {
+      const missing = [...this.nodes.values()].filter(n => !(n.props && sort.id in n.props) && /^[A-Za-z]:\\|^\\\\/.test(n.id));
+      if (missing.length) await this.askProps(missing, [sort.id]);
+    }
+    const compare = this.comparer();
+    if (this.folder) this.top.sort(compare);
+    for (const n of this.nodes.values()) n.children?.sort(compare);
+    this.flatten();
+  }
+
+  // The Git status of the folders read so far (once each), when the Git column is there.
+  askColumnValues() {
+    if (!this.cols.columns.some(c => c.id === 'git')) return;
+    const top = this.folder && this.root && this.gitRootAsked !== this.root ? [{ id: this.root, top: true }] : [];
+    for (const f of [...top, ...[...this.nodes.values()].filter(n => n.children)]) {
+      if (f.gitAsked || !/^[A-Za-z]:\\|^\\\\/.test(f.id)) continue;
+      f.gitAsked = true;
+      if (f.top) this.gitRootAsked = this.root;
+      askHost({ op: 'git', folder: f.id }).then(m => {
+        if (!m.status) return;
+        for (const c of f.top ? this.top : f.children ?? []) c.git = m.status[c.name] ?? null;
+        this.render();
+      });
+    }
+  }
+
+  askProps(items, names) { return ListView.prototype.askProps.call(this, items, names); }
+
+  // Fit columns (Ctrl+R): as a list's, the name column counting each row's indent and expander.
+  fitColumns() {
+    const measure = document.createElement('canvas').getContext('2d');
+    const style = getComputedStyle(this.body);
+    measure.font = `${style.fontSize} ${style.fontFamily}`;
+    const fontPx = this.fontPx(), pad = 14;
+    const rows = this.flat.slice(0, 5000);
+    const needs = this.cols.columns.map((col, k) => {
+      let widest = measure.measureText(columnInfo(col.id).title).width + 16;
+      for (const n of rows) widest = Math.max(widest, k === 0
+        ? measure.measureText(n.name).width + n.depth * 14 + 12 + iconSize + 12 + (n.link ? measure.measureText(' link').width : 0)
+        : measure.measureText(columnText(n, col.id)).width);
+      return widest + pad;
+    });
+    const widths = fitWidths(needs, this.body.clientWidth - 2, NameMinEm * fontPx);
+    this.cols.columns.forEach((col, k) => { col.width = Math.round(widths[k] / fontPx * 10) / 10; });
+    this.drawHeader();
+    this.render();
+    tellLayout();
+  }
 }
 
 const described = new Map();
@@ -700,8 +899,19 @@ class ListView {
     tellWatched();
     if (!location) return;
     let first = true;
-    list(this.id, location, false, part => this.take(part, first && !(first = false)), m => this.done(m, first), elevated);
+    list(this.id, location, this.content() === 'folders', part => this.take(part, first && !(first = false)), m => this.done(m, first), elevated);
   }
+
+  // Show (plan 18 3.2): folders, files or both.
+  content() { return layout.pane(this.id).content ?? 'both'; }
+
+  shows(x) {
+    const content = this.content();
+    return content === 'files' ? !x.folder : content === 'folders' ? x.folder : true;
+  }
+
+  // Show changed: read again where it is.
+  reshow() { if (this.location) this.load(this.location); }
 
   // The folder changed on disk (3.8): read again where it is, the selection and the scroll position kept.
   reread() {
@@ -709,7 +919,7 @@ class ListView {
     const keep = new Set(this.selected), top = this.body.scrollTop;
     let first = true;
     this.gitAsked = false;
-    list(this.id, this.location, false, part => this.take(part, first && !(first = false)), m => {
+    list(this.id, this.location, this.content() === 'folders', part => this.take(part, first && !(first = false)), m => {
       this.done(m, first);
       this.selected = new Set([...keep].filter(id => this.entries.some(x => x.id === id)));
       layout.state(this.id).selection = [...this.selected];
@@ -720,7 +930,7 @@ class ListView {
 
   take(entries, reset) {
     if (reset) this.entries = [];
-    this.entries = this.entries.concat(entries.filter(x => settings.showHidden || !x.hidden)).sort(this.comparer());
+    this.entries = this.entries.concat(entries.filter(x => (settings.showHidden || !x.hidden) && this.shows(x))).sort(this.comparer());
     this.render();
     status(`${this.entries.length} items so far...`);
   }
@@ -1151,7 +1361,7 @@ function newTab(id) {
   const place = { pane: id, side: 'tab' };
   if (pane.source !== null) {
     const tab = layout.add({ source: pane.source, colour: layout.newColour(), kind: pane.kind, content: pane.content, columns: pane.columns });
-    placeView(new ListView(tab), place);
+    placeView(makeView(tab), place);
     activate(tab);   // its branch active: the parent's state for it starts as a copy of the one shown
     followParent(tab);
     drawHeads();
@@ -1192,8 +1402,49 @@ function paneMenu(id) {
         run: () => setBranchColour(id, b) })) } ] },
     { label: 'Pin', enabled: child, checked: pane.pinned, run: () => togglePin(id) },
     '-',
+    { label: 'Show', enabled: pane.kind !== 'preview', items: [['folders', 'Folders'], ['files', 'Files'], ['both', 'Folders and files']]
+      .map(([content, label]) => ({ label, checked: (pane.content ?? 'both') === content,
+        enabled: !(pane.kind === 'tree' && content === 'files'), run: () => setPaneContent(id, content) })) },
+    { label: 'Shape', enabled: pane.kind !== 'preview', items: [['tree', 'Tree'], ['list', 'One folder']]
+      .map(([kind, label]) => ({ label, checked: pane.kind === kind, run: () => setPaneShape(id, kind) })) },
+    '-',
     { label: 'Close pane', run: () => closePane(id) },
   ];
+}
+
+// Show (plan 18 3.2): folders, files or both; Files is not for a tree (it needs folders to open).
+function setPaneContent(id, content) {
+  const pane = layout.pane(id);
+  if (!pane || pane.kind === 'preview' || (pane.kind === 'tree' && content === 'files') || pane.content === content) return;
+  pane.content = content;
+  views.get(id)?.reshow();
+  tellLayout();
+}
+
+// Shape (plan 18 3.3): a tree or one folder. A new view for the pane, the same id, connections and states; it keeps
+// its place: a tree without a parent made one folder shows the folder it focused; one folder made a tree opens the
+// tree down to the folder it showed. A tree showing Files shows Folders and files.
+function setPaneShape(id, kind) {
+  const pane = layout.pane(id), old = views.get(id);
+  if (!pane || !old || pane.kind === kind || pane.kind === 'preview') return;
+  const s = layout.state(id);
+  const shown = old instanceof ListView ? old.location : null;
+  if (kind === 'tree' && pane.content === 'files') pane.content = 'both';
+  if (kind === 'list' && pane.source === null && s.focus && old.node?.(s.focus)?.folder !== false) {
+    s.location = s.focus;
+    s.focus = null;
+  }
+  pane.kind = kind;
+  iconUsers.delete(old);
+  const view = makeView(id);
+  views.set(id, view);
+  renderDock();
+  if (view instanceof ListView) view.load(s.location);
+  else if (view.folder) view.ready = view.init();
+  else view.ready = view.init().then(() => shown ? view.reveal(shown) : s.focus ? view.reveal(s.focus) : view.select(ThisPC));
+  drawHeads();
+  if (activePane === id) view.body.focus();
+  tellLayout();
 }
 
 function openPaneMenu(id, e) {
@@ -1301,15 +1552,15 @@ function restoreLayout(saved, path) {
     for (const id of placed.panes()) if (!layout.pane(id)) docks.remove(id);
     for (const id of [...layout.panes.keys()]) if (!docks.find(id)) layout.remove(id);
     for (const id of docks.panes()) {
-      const kind = layout.pane(id).kind;
-      const view = kind === 'tree' ? new TreeView(id) : kind === 'preview' ? new PreviewView(id) : new ListView(id);
+      const view = makeView(id);
       views.set(id, view);
       if (view instanceof PreviewView) preview = view;
     }
     renderDock();
     let firstTree = path ? null : true;
     for (const [id, view] of views) {
-      if (view instanceof TreeView) {
+      if (view instanceof TreeView && view.folder) view.ready = view.init();
+      else if (view instanceof TreeView) {
         const focus = firstTree === null ? path : layout.state(id).focus;
         firstTree = true;
         view.ready = view.init().then(() => focus ? view.reveal(focus) : view.select(ThisPC));
@@ -1343,7 +1594,7 @@ function newRootPane(path, place = { area: 'left' }) {
 // it shows what the parent focuses. A tab is New tab, not a child.
 function newChildPane(parentId, where = 'right', place = null) {
   const id = layout.add({ source: parentId, ...layout.childSettings(parentId) });
-  const view = placeView(new ListView(id), place ?? { pane: parentId, side: where === 'below' ? 'bottom' : 'right' });
+  const view = placeView(makeView(id), place ?? { pane: parentId, side: where === 'below' ? 'bottom' : 'right' });
   // Its branch active first (a new one starts from a copy of the parent's state), then it shows the parent's focused
   // item when that is a folder (3.3); the other branches' children stay as they are.
   activate(id);
@@ -1412,7 +1663,10 @@ function tellWatched() {
     const folders = new Set();
     for (const v of views.values()) {
       if (v instanceof ListView && v.location) folders.add(v.location);
-      if (v instanceof TreeView) for (const n of v.flat) if (n.expanded) folders.add(n.id);
+      if (v instanceof TreeView) {
+        if (v.folder && v.root) folders.add(v.root);
+        for (const n of v.flat) if (n.expanded) folders.add(n.id);
+      }
     }
     const list = [...folders].sort();
     if (list.join('|') === watchedNow) return;
@@ -1426,6 +1680,7 @@ function folderChanged(folder) {
   for (const v of views.values()) {
     if (v instanceof ListView && same(v.location, folder)) v.reread();
     if (v instanceof TreeView) {
+      if (v.folder && same(v.root, folder)) v.reread(null);
       const n = v.node(folder);
       if (n?.children) v.reread(n);
     }
@@ -1471,9 +1726,7 @@ const canGo = step => activePane !== null && !!layout.pane(activePane) && layout
 function goHistory(step) {
   if (!canGo(step)) return;
   const id = layout.go(activePane, step);
-  const s = layout.state(id), v = views.get(id);
-  if (v instanceof TreeView) { if (s.focus) v.reveal(s.focus); }
-  else v?.restore(true);
+  views.get(id)?.restore(true);
   recordStep();
   ribbonRefresh();
 }

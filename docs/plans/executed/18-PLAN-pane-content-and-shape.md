@@ -1,11 +1,12 @@
 # Plan 18: Pane content and shape
 
-Status: not started; see Status.
+Status: executed; see 6. As built.
 
 - 2026-11-11: draft; the part "View settings per pane" of plan 03 (content and tree or list) moved here.
 - 2026-11-11: revised: Files is greyed out in a tree.
 - 2026-11-11: revised: a tree child has no row for its folder; its lines start at the header.
 - 2026-11-11: revised: a tree has the columns of a list, also with folders only.
+- 2026-11-12: executed.
 
 Builds on plan 03 (panes of one kind, following) and plan 12 (the pane header's menu). The number in the file name is
 the priority; rename to reorder.
@@ -28,16 +29,16 @@ columns as a list, whatever it shows.
 
 ### Built
 
-### Not yet built
+| Part | What | Reference |
+|---|---|---|
+| Show | folders, files, both: in the header's menu; a list and a tree honour it; Files greyed out in a tree | 3.1; 3.2; 6.1 |
+| Shape | tree or one folder, in the header's menu; the pane's view switches, its state kept | 3.1; 3.3; 6.1 |
+| A tree with files | files as rows without an arrow; a click focuses, a double-click opens | 3.2; 6.1 |
+| Columns in a tree | the list's columns, plan 11's included; the tree in the name column | 3.3; 6.1 |
+| Arrows with files shown | the listing also tells whether a folder has files | 3.4; 6.1 |
+| Saved | `kind` and `content` per pane, as now; a new child copies them, as now | 3.5; 6.1 |
 
-| Part | What | Waits for | Reference |
-|---|---|---|---|
-| Show | folders, files, both: in the header's menu; a list and a tree honour it; Files greyed out in a tree | -- | 3.1; 3.2 |
-| Shape | tree or one folder, in the header's menu; the pane's view switches, its state kept | -- | 3.1; 3.3 |
-| A tree with files | files as rows without an arrow; a click focuses, a double-click opens | -- | 3.2 |
-| Columns in a tree | the list's columns (name, size, modified now; plan 11's later); the tree in the name column | -- | 3.3 |
-| Arrows with files shown | the listing also tells whether a folder has files | -- | 3.4 |
-| Saved | `kind` and `content` per pane, as now; a new child copies them, as now | -- | 3.5 |
+### Not yet built
 
 ## 3. Details
 
@@ -109,3 +110,41 @@ columns as a list, whatever it shows.
 ## 4. Open questions
 
 None.
+
+## 6. As built
+
+### 6.1 Built (2026-11-12, branch `plan01-foundation`)
+
+- The pane menu: Show (Folders, Files, Folders and files; Files greyed out in a tree) and Shape (Tree, One folder),
+  below Branch and Pin, not for a preview. `setPaneContent` reads the pane again; `setPaneShape` makes a new view for
+  the same pane (`makeView`, also used now for a new child, a new tab and a saved layout, which before always made a
+  list for a child) and keeps its place as 3.3 says.
+- `TreeView`:
+  - Without a parent: the tops as before. As a child (`folder`): the items of its parent's folder (`load(location)`,
+    called by following as a list's is), no row for that folder, the head showing its name, every row one level in so
+    the lines start at the head; watched and read again when that folder changes; Up at its top goes to the folder
+    above through the parent; a double-click on a folder opens it in the tree only (its parent stays); Back and
+    Forward restore its folder and focus.
+  - With files: listed with the tree's marks (`tree` on the `list` op); a file is a row without an expander; a click
+    focuses it (its children: a preview shows it, a list keeps its folder); a double-click opens it.
+  - The columns of plan 11: the header, sorting (every level read so far), moving, resizing, its menu, Fit columns
+    (the name counting each row's indent), property values and the Git status of the folders read so far. A tree has
+    the pane's generic columns only: "Use a set for this folder" is for a list (a tree shows many folders).
+- Host: `ShellListing.List(..., tree)`: for a tree's folders `subs` and, with files shown, `files` (true, `hidden`,
+  false), read in one pass that stops once both are settled (`Contents`); a link answers for its target; a shell folder
+  gets `files` true (not known without listing it).
+- `ListView` honours Show: folders only are listed as such (cheaper); files only leave the folders out.
+
+### 6.2 How it was tested
+
+- `dotnet test`: Failed 0, Passed 141 (`ShellTests.ATreeWithFilesSaysWhichFoldersHaveFiles`: a folder with only files,
+  one with only hidden files and a subfolder; the earlier tests of `subs` unchanged).
+- Test copy over CDP: the root tree with its column header; Show > Folders and files: files under the folders, a folder
+  with only files (`pics`) and one with only a file (`__pycache__`) with an arrow; the tree's Show menu with Files
+  greyed out; the list made a Tree: its head `h`, no row for `h`, `one` one level in with the line from the head
+  (screenshot), the pane's columns with a size for `a.txt`; the parent on `one`: the child tree on `one`; back to One
+  folder: the list on `h`; Show > Folders: only `one`; Files: nothing (h has no files); Files then Tree: Folders and
+  files; closed and started again: the tree child and the root's Show as they were; a file focused in the root tree:
+  the child tree kept its folder; Fit columns on the tree.
+- Not tried: a preview following a file in a tree (no preview pane in the test layout), a double-click on a file in
+  a tree (it opens it in its program).
