@@ -59,6 +59,35 @@ public class ThemeFileTests
     }
 
     [Fact]
+    public void ABranchIsAColourOrAPaneThemeWithItsOwnColours()
+    {
+        // Plan 13 3.1: "base" is the branch colour, the others go to --branch-N-<name>.
+        var r = Resolve(("t", """
+            { "branches": ["#000001", { "base": "#000002", "bg": "#f3f8ff", "bgSide": "#eeeeee", "select": "#b6d7ff" },
+              "#000003", "#000004", "#000005", "#000006"] }
+            """));
+        Assert.Empty(r["problems"]!.AsArray());
+        Assert.Equal("#000001", Var(r, "t", "--branch-0"));
+        Assert.Equal("#000002", Var(r, "t", "--branch-1"));
+        Assert.Equal("#f3f8ff", Var(r, "t", "--branch-1-bg"));
+        Assert.Equal("#eeeeee", Var(r, "t", "--branch-1-bg-side"));
+        Assert.Equal("#b6d7ff", Var(r, "t", "--branch-1-select"));
+        Assert.Null(r["themes"]!["t"]!["vars"]!["--branch-1-hover"]);
+    }
+
+    [Theory]
+    [InlineData("""{ "bg": "#ffffff" }""")]                        // no base
+    [InlineData("""{ "base": "#000002", "fg": "#ffffff" }""")]     // not a pane colour
+    [InlineData("""{ "base": "#000002", "bg": "white; x" }""")]    // not a colour
+    public void AWrongPaneThemeIsReportedAndTheBasesBranchesUsed(string entry)
+    {
+        var r = Resolve(("root", $$"""{ "branches": {{Branches}} }"""),
+            ("t", $$"""{ "base": "root", "branches": ["#0000aa", {{entry}}, "#0000aa", "#0000aa", "#0000aa", "#0000aa"] }"""));
+        Assert.Single(r["problems"]!.AsArray());
+        Assert.Equal("#000001", Var(r, "t", "--branch-0"));
+    }
+
+    [Fact]
     public void YourThemeReplacesAShippedOneOfTheSameName()
     {
         var data = Path.Combine(Path.GetTempPath(), "foldex-themes-" + Guid.NewGuid().ToString("N"));

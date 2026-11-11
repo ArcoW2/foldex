@@ -114,6 +114,18 @@ public class PanesTests
     }
 
     [Fact]
+    public void ARootWithoutChildrenHasTheFirstBranchsColour()
+    {
+        // Plan 13 3.4: the start of the first branch; a root with children takes the path it serves.
+        var r = Run("""
+            const l = new Layout(); const T = l.add({ kind: 'tree' }); const R = l.add({});
+            const B = l.add({ source: T }); const C = l.add({ source: T });
+            l.activate(C);
+            """, "[l.pathColour(R), l.pathColour(T)]");
+        Assert.Equal("[0,1]", r.GetRawText());
+    }
+
+    [Fact]
     public void TheChildrenOfTwoRootsTakeDifferentColours()
     {
         // A's children take branches 0 and 1; the first child of a second root E takes 2, not 0 again.

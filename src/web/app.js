@@ -196,6 +196,9 @@ function drawHeads() {
     v.el.classList.toggle('in-branch', v.id !== activePane && branch.includes(v.id));
     const key = layout.pathColour(v.id);
     v.el.style.setProperty('--branch', key !== null ? `var(--branch-${key})` : '');
+    // Its pane theme inside it (plan 13 3.4): the page's own variables, so every rule in the pane follows.
+    for (const name of ['bg', 'bg-side', 'select', 'hover', 'accent'])
+      v.el.style.setProperty(`--${name}`, key !== null ? `var(--branch-${key}-${name})` : '');
     v.el.classList.toggle('child', pane.source !== null);
     v.el.classList.toggle('pinned', pane.pinned);
     v.el.querySelector('.pin').title = pane.pinned ? 'Pinned: click to follow the parent again' : 'Pin: stop following the parent';
@@ -994,7 +997,7 @@ function paneMenu(id) {
   const title = p => `${views.get(p)?.tabTitle() ?? p}${layout.pane(p).kind === 'tree' ? ' (tree)' : ''}`;
   const colourOf = p => {
     const k = layout.pane(p).source === null ? layout.keyOf(p) : layout.pane(p).colour;
-    return k !== '' && k !== null ? `var(--branch-${k})` : 'var(--accent)';
+    return k !== '' && k !== null ? `var(--branch-${k})` : 'var(--branch-0)';   // a root without children: the first
   };
   // The panes it can follow: not itself, not one below it (a cycle), not a preview, not its parent now.
   const below = p => { for (let q = p; q !== null; q = layout.pane(q).source) if (q === id) return true; return false; };

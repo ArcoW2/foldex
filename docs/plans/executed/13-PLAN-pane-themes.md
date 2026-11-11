@@ -1,10 +1,11 @@
 # Plan 13: Pane themes per branch
 
-Status: not started.
+Status: executed; see 6. As built.
 
 - 2026-11-11: draft.
 - 2026-11-11: revised: a pane theme is a branch of the window theme, set colours or calculated ones; three settings with
   sliders defaulting in the middle; a root pane without children in the first pane theme.
+- 2026-11-11: executed.
 
 Builds on plan 07 (themes, branch colours) and plan 03 (branches, the colour a parent takes from the path it
 serves).
@@ -33,16 +34,16 @@ background sliders keep working on top.
 
 ### Built
 
-### Not yet built
+| Part | What | Reference |
+|---|---|---|
+| `branches` entries | a colour, or an object with `base` and any of `bg`, `bgSide`, `select`, `hover` | 3.1; 6.1 |
+| Calculated colours | the window's colour with a share of the base colour, per branch place, in `look.js` | 3.2; 6.1 |
+| Settings | `paneThemeFollowsBranch`, `paneThemeMix`, `paneThemeIntensity`, in the settings window's group Panes | 3.3 |
+| Pane colours | per pane from its path's pane theme; a root pane without children in the first one; tabs and marks in the base colour | 3.4; 6.1 |
+| Background sliders | working on the pane theme's background | 3.5 |
+| Shipped themes reviewed | the first branch the theme's own accent | 3.6; 6.1 |
 
-| Part | What | Waits for | Reference |
-|---|---|---|---|
-| `branches` entries | a colour, or an object with its own colours | -- | 3.1 |
-| Calculated colours | from the base colour and the window theme | -- | 3.2 |
-| Settings | `paneThemeFollowsBranch`, `paneThemeMix`, `paneThemeIntensity` | -- | 3.3 |
-| Pane colours | per pane from its path's pane theme; a root pane without children in the first one; tabs and marks in the base colour | -- | 3.4 |
-| Background sliders | on the pane theme's background | -- | 3.5 |
-| Shipped themes reviewed | their pane themes, the first fitting the theme | -- | 3.6 |
+### Not yet built
 
 ## 3. Details
 
@@ -88,8 +89,8 @@ In the settings window, group Panes (as rows of `settingrows.js`, defaults in `d
   it is; toward 0% fainter, mixed toward the window's background; toward 200% stronger, mixed toward the window's text
   colour.
 
-The fixed shares behind mix 0 (for the background, and the larger ones for selection and hover) are [not yet
-decided]; they are tuned in a test copy against the light and dark themes.
+The fixed shares behind mix 0: background 8%, selection 35%, hover 14% of the base colour, looked at in a test copy
+against the light and dark themes (6.2). Above 0 a share moves toward the base colour, at +100 halfway.
 
 ### 3.4 Applied per pane
 
@@ -141,3 +142,37 @@ background.
 ## 4. Open questions
 
 None.
+
+## 6. As built
+
+### 6.1 Built (2026-11-11, branch `plan01-foundation`)
+
+- `ThemeFile.cs`: a `branches` entry is a colour or `{ "base": ..., "bg": ..., ... }` (`PaneColours`); `base` gives
+  `--branch-N`, the others `--branch-N-bg`, `-bg-side`, `-select`, `-hover`. An entry without `base`, with a name that
+  is not a pane colour, or with a value that is not a colour: reported, and the base theme's list used, as a wrong
+  list was before.
+- `look.js paneThemeVars`: per branch place, without DOM, the variables set on the root element: `--branch-N` at its
+  intensity (`color-mix` toward `--bg` below 100%, toward `--fg` above); `--branch-N-bg`, `-bg-side`, `-select`,
+  `-hover` the theme's own or `color-mix(base share%, var(--name))`; `--branch-N-accent` the base colour (the focused
+  row's outline). With `paneThemeFollowsBranch` off these are the window's own (`var(--bg)`, ..., `var(--accent)`).
+  While no theme has arrived, the base colours are read from `app.css`, so the variables are always there.
+- `app.js drawHeads`: on each pane, besides `--branch`, the page's own `--bg`, `--bg-side`, `--select`, `--hover` and
+  `--accent` as `var(--branch-N-...)`; every rule in the pane follows without a change in `app.css`. Defined on the
+  root, those variables refer to the root's `--bg`, so the pane's own `--bg` makes no cycle.
+- `panes.js pathColour`: a root without children gives 0, the first branch. The head menu's colour swatch for such a
+  root: `var(--branch-0)` (it was the accent).
+- Shipped themes: every theme with an accent of its own got a `branches` list: its accent first, then its base's
+  (`light` or `dark`) without the colour nearest to the accent in hue. `light`, `dark` and `black` (no accent of its
+  own) are unchanged: their first branch already fits.
+- Decided during the build: the new hints in `settingrows.js` have no apostrophes (an escaped one was lost on the way
+  and broke the file; `EverySettingsRowNamesASetting` caught it).
+
+### 6.2 How it was tested
+
+- `dotnet test`: Failed 0, Passed 101 (`LookTests`: defaults, mix -100 and +100, intensity 0, 50 and 200, a set colour
+  not mixed, following off; `ThemeFileTests`: an entry as a colour and as an object, three wrong entries reported;
+  `PanesTests`: a root without children in branch 0, a root with children in the colour of its path).
+- A test copy over CDP: the default layout's tree and list tinted in branch 0; a second child of the tree below it in
+  branch 1, the tree in branch 1's colour while that child had the keyboard; dark and light; Light seafoam with its
+  green as branch 0; mix -100 and following off gave the window's own backgrounds, intensity 0 a base colour equal to
+  the background. Screenshots of dark and Light seafoam looked at. Hover was not looked at by hand.

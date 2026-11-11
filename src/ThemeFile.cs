@@ -9,6 +9,8 @@ namespace Foldex;
 /// in themes\ in the data folder (a file with the same name replaces a shipped one). A theme has a name, a description,
 /// optionally a base (any other theme: its colours, through its own base and so on), only the colours that differ
 /// from its base, and optionally the six branch colours (else its base's). Light and Dark set everything: the roots.
+/// A branch entry is a pane theme (docs/plans/executed/13-PLAN-pane-themes.md 3.1): a colour (its base colour), or an object
+/// with "base" and any of the pane's own colours (PaneColours); look.js calculates the colours it does not set.
 /// A colour nothing in the chain sets comes from the mode's block in app.css. The colour names are the CSS variables
 /// of the first block of app.css without the dashes (--bg-side is bgSide). A wrong name or value is reported and
 /// skipped.
@@ -17,6 +19,12 @@ static partial class ThemeFile
 {
     public const string FolderName = "themes";
     public const int BranchCount = 6;
+
+    /// <summary>The colours a pane theme may set besides "base", with the CSS name after "--branch-N-".</summary>
+    public static readonly Dictionary<string, string> PaneColours = new(StringComparer.Ordinal)
+    {
+        ["bg"] = "bg", ["bgSide"] = "bg-side", ["select"] = "select", ["hover"] = "hover",
+    };
 
     static readonly JsonDocumentOptions Options = new() { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true };
 
@@ -47,9 +55,10 @@ static partial class ThemeFile
     [GeneratedRegex(@"^(#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})|(rgb|rgba|hsl|hsla)\([0-9.,%\s/]+\))$", RegexOptions.IgnoreCase)]
     private static partial Regex Colour();
 
-    sealed record Parsed(string Name, string? Description, string? Base, Dictionary<string, string> Colours, string[]? Branches, bool Mine);
+    sealed record Parsed(string Name, string? Description, string? Base, Dictionary<string, string> Colours, Dictionary<string, string>[]? Branches, bool Mine);
 
-    /// <summary>Every theme resolved: { themes: { id: { name, description, mine, vars: { "--bg": ..., "--branch-0": ... } } },
+    /// <summary>Every theme resolved: { themes: { id: { name, description, mine, vars: { "--bg": ..., "--branch-0": ...,
+    /// "--branch-0-select": ... } } },
     /// problems: [...] }. Files: id -> (text, yours).</summary>
     public static JsonObject Resolve(IReadOnlyDictionary<string, (string Text, bool Mine)> files, Dictionary<string, string> names)
     {
@@ -62,7 +71,7 @@ static partial class ThemeFile
         foreach (var (id, theme) in parsed.OrderBy(t => t.Value.Name, StringComparer.CurrentCultureIgnoreCase))
         {
             var vars = new JsonObject();
-            string[]? branches = null;
+            Dictionary<string, string>[]? branches = null;
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             for (var cur = id; cur is not null;)
             {
@@ -81,7 +90,9 @@ static partial class ThemeFile
                 branches ??= t.Branches;
                 cur = t.Base;
             }
-            for (var i = 0; i < (branches?.Length ?? 0); i++) vars[$"--branch-{i}"] = branches![i];
+            for (var i = 0; i < (branches?.Length ?? 0); i++)
+                foreach (var (name, value) in branches![i])
+                    vars[name == "base" ? $"--branch-{i}" : $"--branch-{i}-{PaneColours[name]}"] = value;
             themes[id] = new JsonObject
             {
                 ["name"] = theme.Name, ["description"] = theme.Description, ["mine"] = theme.Mine, ["vars"] = vars,
@@ -119,17 +130,33 @@ static partial class ThemeFile
             else colours[name] = colour;
         }
 
-        string[]? branches = null;
+        Dictionary<string, string>[]? branches = null;
         if (o["branches"] is JsonArray list)
         {
-            var given = list.Select(n => n is JsonValue v && v.TryGetValue<string>(out var s) ? s.Trim() : null).ToList();
-            if (given.Count != BranchCount || given.Any(c => c is null || !Colour().IsMatch(c)))
-                problems.Add($"{source}: \"branches\" needs {BranchCount} colours; its base's are used.");
+            var given = list.Select(PaneTheme).ToList();
+            if (given.Count != BranchCount || given.Any(b => b is null))
+                problems.Add($"{source}: \"branches\" needs {BranchCount} pane themes, each a colour or {{ \"base\": colour, ... }}; its base's are used.");
             else branches = given.ToArray()!;
         }
         else if (o["branches"] is not null) problems.Add($"{source}: \"branches\" needs a list of {BranchCount} colours.");
 
         return new Parsed(Text("name") ?? id, Text("description"), Text("base"), colours, branches, mine);
+    }
+
+    // A branch entry: "#0969da", or { "base": "#0969da", "bg": ..., "select": ... }; null when not right (no base, a
+    // name that is not a pane colour, a value that is not a colour).
+    static Dictionary<string, string>? PaneTheme(JsonNode? node)
+    {
+        string? ColourOf(JsonNode? n) => n is JsonValue v && v.TryGetValue<string>(out var s) && Colour().IsMatch(s.Trim()) ? s.Trim() : null;
+        if (node is JsonValue) return ColourOf(node) is { } only ? new() { ["base"] = only } : null;
+        if (node is not JsonObject o || ColourOf(o["base"]) is null) return null;
+        var theme = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var (name, value) in o)
+        {
+            if (name != "base" && !PaneColours.ContainsKey(name) || ColourOf(value) is not { } colour) return null;
+            theme[name] = colour;
+        }
+        return theme;
     }
 
     /// <summary>The themes for this installation: the shipped ones, then yours in the data folder.</summary>

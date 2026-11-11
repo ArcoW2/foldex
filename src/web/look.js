@@ -13,9 +13,41 @@ function applyLook(settings, themes) {
   root.dataset.theme = dark ? 'dark' : 'light';
   const theme = themes?.[dark ? settings.themeDark : settings.themeLight] ?? themes?.[dark ? 'dark' : 'light'];
   for (const name of lookVars) root.style.removeProperty(name);
-  lookVars = Object.keys(theme?.vars ?? {});
-  for (const name of lookVars) root.style.setProperty(name, theme.vars[name]);
+  // The base colours from app.css while there is no theme yet, so a pane's variables are always there.
+  const themeVars = { ...theme?.vars };
+  for (let n = 0; n < 6; n++)
+    themeVars[`--branch-${n}`] ??= getComputedStyle(root).getPropertyValue(`--branch-${n}`).trim();
+  const vars = { ...themeVars, ...paneThemeVars(settings, themeVars) };
+  lookVars = Object.keys(vars);
+  for (const name of lookVars) root.style.setProperty(name, vars[name]);
   applyFonts(settings);
+}
+
+// Pane themes (docs/plans/executed/13-PLAN-pane-themes.md 3.2, 3.3): per branch place N, from the theme's base colour
+// (--branch-N) and the colours it sets itself (--branch-N-bg, ...), the variables app.js drawHeads puts on a pane:
+// --branch-N the base colour at its intensity; --branch-N-bg, -bg-side, -select, -hover the inside, set or calculated;
+// --branch-N-accent the focused row's outline. No DOM: the tests run it.
+const PaneShares = { 'bg': 8, 'bg-side': 8, 'select': 35, 'hover': 14 };   // % of the base colour at mix 0
+const mixed = (colour, p, other) => p <= 0 ? other : p >= 100 ? colour : `color-mix(in srgb, ${colour} ${p}%, ${other})`;
+const between = (v, min, max, otherwise) => Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : otherwise;
+
+function paneThemeVars(settings, themeVars) {
+  const follow = settings.paneThemeFollowsBranch !== false;
+  const mix = between(settings.paneThemeMix, -100, 100, 0);
+  const intensity = between(settings.paneThemeIntensity, 0, 200, 100);
+  // Mix -100 the window's colour, 0 the share as tuned, +100 halfway from it to the base colour.
+  const share = s => Math.round((mix < 0 ? s * (100 + mix) / 100 : s + (100 - s) * mix / 200) * 10) / 10;
+  const vars = {};
+  for (let n = 0; themeVars[`--branch-${n}`]; n++) {
+    const base = themeVars[`--branch-${n}`];
+    vars[`--branch-${n}`] = intensity <= 100 ? mixed(base, intensity, 'var(--bg)') : mixed(base, 200 - intensity, 'var(--fg)');
+    for (const name of Object.keys(PaneShares)) {
+      const own = themeVars[`--branch-${n}-${name}`];
+      vars[`--branch-${n}-${name}`] = !follow ? `var(--${name})` : own ?? mixed(base, share(PaneShares[name]), `var(--${name})`);
+    }
+    vars[`--branch-${n}-accent`] = follow ? `var(--branch-${n})` : 'var(--accent)';
+  }
+  return vars;
 }
 
 // The fonts (docs/plans/08-PLAN-fonts.md): the window's (appFont, appSize) and the panes' rows (paneFont, paneSize), in

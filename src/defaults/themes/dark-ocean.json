@@ -13,5 +13,7 @@
     "border": "#2e3a50",
     "accent": "#6aa8ff",
     "select": "#2a4a7a"
-  }
+  },
+  // The pane themes (plan 13 3.6): the first the theme's own accent, then its base's without the nearest to it.
+  "branches": ["#6aa8ff", "#ff6b6b", "#4cc76a", "#f0883e", "#b392f0", "#39c5bb"]
 }

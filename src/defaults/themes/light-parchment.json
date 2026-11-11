@@ -14,5 +14,7 @@
     "accent": "#8a5c00",
     "hover": "rgba(0, 0, 0, .06)",
     "select": "#f0dc9a"
-  }
+  },
+  // The pane themes (plan 13 3.6): the first the theme's own accent, then its base's without the nearest to it.
+  "branches": ["#8a5c00", "#0969da", "#cf222e", "#1a7f37", "#8250df", "#0f7b7b"]
 }

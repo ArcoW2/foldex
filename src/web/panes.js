@@ -121,12 +121,13 @@ class Layout {
   }
 
   // The colour a pane is drawn in: that of the end of the path it serves, down the branch each pane shows (not into a
-  // preview), so a parent takes its active descendant's colour; a pane without followers its own (a root: null).
+  // preview), so a parent takes its active descendant's colour; a pane without followers its own (a root: the first
+  // branch, 0).
   pathColour(id) {
     let p = this.pane(id);
     for (;;) {
       const next = this.followers(p.id, this.keyOf(p.id)).find(f => f.kind !== 'preview');
-      if (!next) return p.colour;
+      if (!next) return p.colour ?? 0;   // a root without children: the first branch (plan 13 3.4)
       p = next;
     }
   }

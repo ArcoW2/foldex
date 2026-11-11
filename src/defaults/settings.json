@@ -19,4 +19,7 @@
   "paneBgFocused": 100,           // the background of the pane with the keyboard, in %: 100 the theme's, 0 black, 200 white
   "paneBgBranch": 100,            // the background of the other panes in its branch (its parents, its children), the same way
   "paneBgOther": 100,             // the background of the other panes, the same way
+  "paneThemeFollowsBranch": true, // the inside of a pane (background, selection, hover) in its branch's pane theme
+  "paneThemeMix": 0,              // -100 to 100: the base colour's weight in the calculated colours; -100 the window's
+  "paneThemeIntensity": 100,      // the branch colour of heads, rings, tabs and marks, in %: 0 faint, 200 strong
 }
