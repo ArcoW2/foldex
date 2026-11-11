@@ -3,6 +3,7 @@
 Status: not started; see Status.
 
 - 2026-11-11: draft; the part "View settings per pane" of plan 03 (content and tree or list) moved here.
+- 2026-11-11: revised: Files is greyed out in a tree.
 
 Builds on plan 03 (panes of one kind, following) and plan 12 (the pane header's menu). The number in the file name is
 the priority; rename to reorder.
@@ -17,7 +18,7 @@ pane a list of folders and files, for good. A list ignores `content`, and a tree
 
 The pane header's menu gets two settings. Show: folders, files, or both. Shape: a tree, where a folder can be opened in
 the pane itself, or one folder, which shows only that folder's own items and opens nothing in place. Any pane can have
-any combination, root or child, and keeps it with its layout in the project. A folder in a tree gets an arrow when it
+any combination but a tree of files only, root or child, and keeps it with its layout in the project. A folder in a tree gets an arrow when it
 has something to show under the pane's Show setting: subfolders, or, with files shown, files too.
 
 ## Status
@@ -28,9 +29,9 @@ has something to show under the pane's Show setting: subfolders, or, with files 
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| Show | folders, files, both: in the header's menu; a list and a tree honour it | open question 1 | 3.1; 3.2 |
-| Shape | tree or one folder, in the header's menu; the pane's view switches, its state kept | open question 2 | 3.1; 3.3 |
-| A tree with files | files as rows without an arrow; a click focuses, a double-click opens | open question 3 | 3.2 |
+| Show | folders, files, both: in the header's menu; a list and a tree honour it; Files greyed out in a tree | -- | 3.1; 3.2 |
+| Shape | tree or one folder, in the header's menu; the pane's view switches, its state kept | open question 1 | 3.1; 3.3 |
+| A tree with files | files as rows without an arrow; a click focuses, a double-click opens | open question 2 | 3.2 |
 | Arrows with files shown | the listing also tells whether a folder has files | -- | 3.4 |
 | Saved | `kind` and `content` per pane, as now; a new child copies them, as now | -- | 3.5 |
 
@@ -47,7 +48,8 @@ has something to show under the pane's Show setting: subfolders, or, with files 
 
 - One folder: Folders lists only the subfolders; Files only the files; both, as a list does now.
 - Tree: Folders as the root tree now; Folders and files puts each folder's files under its subfolders, as rows without
-  an arrow. Files only in a tree: open question 1.
+  an arrow. Files is greyed out in a tree's menu: a tree needs folders to open. A pane showing Files that is switched to
+  Tree shows Folders and files.
 - In a tree with files: a click on a file focuses it (its children follow it, as a list's do: a preview shows it);
   a double-click opens it as Windows does, as in a list.
 - The listing asks the host for what is shown (now `foldersOnly`; then folders, files or both), so a pane of folders
@@ -57,7 +59,7 @@ has something to show under the pane's Show setting: subfolders, or, with files 
 
 - **Tree**: folders open and close in the pane (the arrow, Right and Left, a double-click). The top rows: for a pane
   without a parent, the tree's tops as now (your profile folder, This PC, Network, the Recycle Bin); for a child, the
-  folder its parent focuses (open question 2).
+  folder its parent focuses (open question 1).
 - **One folder**: the folder's own items; a double-click on a folder opens it through the parent, or in the pane
   itself without one (plan 03 3.3), as a list does now.
 - Switching keeps the pane's place: from tree to one folder it shows its focused folder; from one folder to tree it
@@ -85,17 +87,15 @@ has something to show under the pane's Show setting: subfolders, or, with files 
 
 - Unit (C#, `ShellListing`): a listing of files only, of folders only; `files` true, `hidden`, false.
 - Unit (Jint, `panes.js`): a new child copies kind and content; switching shape keeps the states per branch.
-- Test copy over CDP: the header's menu shows both submenus with the current choice checked; the root to Folders and
+- Test copy over CDP: the header's menu shows both submenus with the current choice checked, Files greyed out in a
+  tree; a list showing Files switched to Tree: Folders and files; the root to Folders and
   files: files under the folders, a folder with only files has an arrow; a file in the tree focused: the preview
   shows it; the list to Folders: no files; the list to Tree: its folder opened in place, its child still follows; the
   project closed and opened: the panes as they were set.
 
 ## 4. Open questions
 
-1. **Files only in a tree.** A tree needs folders to open. Proposed: the choice is greyed out in a tree (and a tree
-   switched to while showing Files shows Folders and files). Or: the folders stay as the structure and Files only
-   hides nothing?
-2. **The top of a tree child.** Proposed: the folder its parent focuses is not a row of its own; its items are the top
+1. **The top of a tree child.** Proposed: the folder its parent focuses is not a row of its own; its items are the top
    rows, as in a list. Or: that folder as the single top row, opened?
-3. **Columns in a tree with files.** Proposed: names only, as the tree now; size and date columns come with plan 11
+2. **Columns in a tree with files.** Proposed: names only, as the tree now; size and date columns come with plan 11
    (columns). Agreed?
