@@ -87,8 +87,10 @@ follows xplorer2's, as the user gave it, in Foldex's own dialog look.
 
 - Opened empty by an action (New scrap), without searching first.
 - Filled by dragging items onto it from any pane (also from Explorer), by an action Add to scrap on the selection, by
-  pasting, and by searches (3.3). Dropping a folder adds the folder's own path, not its files. Nothing is copied or
-  moved on disk.
+  pasting, and by searches (3.3). Dropping a folder adds the folder's own path, not its files.
+- **A drop onto a scrap never moves or copies anything on disk**, whatever keys are held (Shift, Ctrl) and whatever
+  the drag's source offers: it only adds an entry per dropped item, all of them when several are dropped at once,
+  each placed by the scrap's own order (its sort), not at the drop point. An item already in it is not added twice.
 - Usually short-lived: collecting files for one action on all of them (renaming, moving).
 - Belongs to its project's window and lives while Foldex runs; there is no scrap shared by all projects.
 - After a restart a scrap in the panes is gone. A docked scrap comes back in its dock, empty, with its name and its
@@ -167,7 +169,7 @@ After xplorer2's "Find files or folders", without Special folders and Local sear
 
 - Unit: a folder focused in a scrap followed by its child;
   entries following a move and a rename; an entry removed outside Foldex dropped; a dropped folder added as one
-  entry; results added to an existing scrap without doubles; Delete taking out entries only; Clear; a search on a
+  entry; several items dropped at once added in the scrap's order, nothing moved; results added to an existing scrap without doubles; Delete taking out entries only; Clear; a search on a
   scrap testing only its entries; a docked scrap's name, search and place restored empty from a session.
 - Unit: a regular expression name; a fuzzy match at a few numbers.
 - In the test copy: a scrap's dashed ring and head edge, with and without the keyboard; its name in the head, also
