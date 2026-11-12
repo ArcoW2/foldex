@@ -1,6 +1,6 @@
 # Plan 06: Search and scrap: panes of items from anywhere
 
-Status: draft 2026-11-10, revised 2026-11-12 (twice); not started.
+Status: draft 2026-11-10, revised 2026-11-12 (three times); not started.
 
 - 2026-11-10: draft.
 - 2026-11-12: revised with the user's answers: Delete per pane kind, a scrap per project and not kept across a restart,
@@ -9,6 +9,8 @@ Status: draft 2026-11-10, revised 2026-11-12 (twice); not started.
 - 2026-11-12: revised again: search results always go into a scrap (no search pane of its own); a Find dialog after
   xplorer2's; a scrap keeps its search while it lives, can take more results, be renamed and cleared; a docked scrap
   keeps its name, search and place across a restart, empty. Containing text and additional rules moved to plan 20.
+- 2026-11-12: revised: no archive content for now; Search again goes into the same scrap, with Clear the scrap first
+  on.
 
 Builds on plan 03 (connected panes).
 
@@ -24,7 +26,8 @@ somewhere first.
 A scrap is a pane holding a flat list of files and folders from anywhere. It stands alone (no source, no followers),
 has a name, can be opened empty, filled by dragging and pasting, renamed, cleared and docked anywhere. A search is a
 Find dialog (after xplorer2's) whose results always fill a scrap: a new one, or an existing one chosen at the bottom
-of the dialog. A scrap keeps its search while it lives, to change and run again; a search started on a scrap searches
+of the dialog, which can be cleared first. A scrap keeps its search while it lives, to change and run again into
+the same scrap (cleared first by default); a search started on a scrap searches
 its entries into a new scrap. In a scrap Delete takes the entry out and Alt+Delete also moves the file to the recycle
 bin. A scrap lives as long as Foldex runs; a docked one comes back after a restart empty, with its name, search and
 place.
@@ -41,7 +44,7 @@ Nothing yet.
 |---|---|---|---|
 | Scrap pane | flat entries, the folder column, grouping, watched entries, missing ones dropped; no source or followers; name, rename, clear; docked; lifetime | -- | 3.1, 3.2 |
 | Filling a scrap | New scrap, drag, Add to scrap, paste; a folder as its own path | scrap pane | 3.2 |
-| Find dialog | Look in, subfolders, depth / breadth first, search index, Named, Files, Folders, Predefined and Save, clear, ok, cancel, the target scrap | scrap pane | 3.3 |
+| Find dialog | Look in, subfolders, depth / breadth first, search index, Named, Files, Folders, Predefined and Save, clear, ok, cancel, the target scrap, Clear the scrap first | scrap pane | 3.3 |
 | Running a search | engines, streaming results, Stop, the scrap keeping its search, searching again, a search on a scrap | Find dialog | 3.4 |
 | File actions on a scrap | Delete, Alt+Delete, Alt+Shift+Delete, the scrap's Delete button | scrap pane | 3.5 |
 | Own menu for mixed folders | Foldex's own menu for items from different folders | scrap pane | 3.5 |
@@ -91,10 +94,12 @@ After xplorer2's "Find files or folders", without Special folders:
 | Files, Folders | What to find; both on by default |
 | Predefined, Save | Saved searches by name, kept for all projects |
 | Into | At the bottom: New scrap, or one of the window's scraps by name (the results are added to it) |
+| Clear the scrap first | Next to Into: the chosen scrap emptied before the search. Off by default; on for Search again (3.4) |
 | clear, ok, cancel | Clear empties the fields; ok searches |
 
 - Ctrl+F opens it (reserved for this since plan 10).
-- The fields xplorer2 has for Archived content, Local search and the number next to Named: open question 1.
+- No Archived content (searching inside zip files and the like) for now.
+- The fields xplorer2 has for Local search and the number next to Named: open question 1.
 - Containing text and Additional rules (size, attributes, date ranges): plan 20.
 
 ### 3.4 Running a search
@@ -104,7 +109,8 @@ After xplorer2's "Find files or folders", without Special folders:
   index (Use search index) where Look in is indexed, else Foldex's own walk. A criterion an engine cannot answer is
   tested by Foldex on its candidates. [Which criteria each engine answers: not yet checked.]
 - **The scrap keeps its search** (Look in and every field) while it lives: Search again... opens the dialog with it, to
-  change and run again. Whether that replaces the results or adds to them: open question 2.
+  change and run again. Into is that scrap and Clear the scrap first is on, so by default the new results replace
+  the old; turned off, they are added.
 - **Into an existing scrap**: the results are added to its entries; an entry already in it is not added twice. This
   searches outside the scrap; it is not a search inside its entries.
 - **A search on a scrap** (Look in is a scrap): only the scrap's own entries are tested, files and folders alike, a
@@ -142,7 +148,7 @@ After xplorer2's "Find files or folders", without Special folders:
   entry; results added to an existing scrap without doubles; Delete taking out entries only; Clear; a search on a
   scrap testing only its entries; a docked scrap's name, search and place restored empty from a session.
 - In the test copy: Ctrl+F in a folder pane, Look in filled with its folder, a name searched, a new scrap filled; the
-  same search into that scrap from another folder, results added; Search again with a changed name; a search on the
+  same search into that scrap from another folder, results added; Search again with a changed name (Into that scrap, cleared first), and once with Clear off; a search on the
   scrap into a new scrap; a new empty scrap docked, filled by dragging from three folders, copied into one, conflicts
   asked by Windows; Delete leaves the files on disk; Alt+Delete and the Delete button move them to the recycle bin;
   Delete in a folder pane moves them to the recycle bin; after a restart the docked scrap is back empty, the other
@@ -150,8 +156,5 @@ After xplorer2's "Find files or folders", without Special folders:
 
 ## 4. Open questions
 
-1. **xplorer2's other fields.** Archived content (searching inside zip files and the like), Local search, and the
-   number next to Named (100 in your example): wanted in Foldex, and what is the number for (a limit on the results)?
-2. **Search again.** When a scrap's search is changed and run again: does it replace the scrap's results, or add to
-   them (as a search into an existing scrap does)? And "the search can continue": run again, or also resume a search
-   that was stopped?
+1. **xplorer2's other fields.** Local search, and the number next to Named (100 in your example): wanted in Foldex,
+   and what is the number for (a limit on the results)?
