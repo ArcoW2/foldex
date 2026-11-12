@@ -133,17 +133,24 @@ const listeners = new Map();
 // `tree`: a tree's listing, whose folders say whether they have subfolders and files (their expanders, plan 18 3.4).
 function list(channel, location, foldersOnly, onPart, onDone, elevated = false, tree = false) {
   const req = ++lastReq;
-  listeners.set(channel, { req, onPart, onDone, sent: performance.now() });
+  listeners.set(channel, { req, onPart, onDone, sent: performance.now(), got: 0, total: null });
   post({ op: elevated ? 'listElevated' : 'list', channel, location, foldersOnly, tree, req });
   setTimeout(showProgress, ProgressAfter + 10);
 }
 
-// The progress bar in the status line: while a folder takes longer than ProgressAfter ms to read. How many items a
-// folder holds is known only when it is read, so the bar moves without a measure; the status says how many so far.
+// The progress bar in the status line: while a folder takes longer than ProgressAfter ms to read. It fills up as the
+// items come, against the count the host sends for a folder on disk ("listCount"); without a count (another place) a
+// piece of it runs from left to right.
 const ProgressAfter = 400;
 function showProgress() {
   const now = performance.now();
-  $('progress').hidden = ![...listeners.values()].some(l => now - l.sent > ProgressAfter);
+  const slow = [...listeners.values()].filter(l => now - l.sent > ProgressAfter);
+  $('progress').hidden = !slow.length;
+  if (!slow.length) return;
+  const counted = slow.every(l => l.total);
+  const total = slow.reduce((a, l) => a + (l.total ?? 0), 0), got = slow.reduce((a, l) => a + l.got, 0);
+  $('progress').classList.toggle('counted', counted);
+  $('progress').firstElementChild.style.width = counted ? `${Math.min(100, total ? got / total * 100 : 0)}%` : '';
 }
 
 // A pane's own view settings (plan 03 3.1). Hidden items: its own choice, else the setting showHidden. A filter:
@@ -2744,7 +2751,16 @@ const events = {
   },
   listing(m) {
     const l = listeners.get(m.channel);
-    if (l && l.req === m.req) l.onPart(m.entries);
+    if (!l || l.req !== m.req) return;
+    l.got += m.entries.length;
+    l.onPart(m.entries);
+    showProgress();
+  },
+  listCount(m) {
+    const l = listeners.get(m.channel);
+    if (!l || l.req !== m.req) return;
+    l.total = m.count;
+    showProgress();
   },
   listed(m) {
     const l = listeners.get(m.channel);

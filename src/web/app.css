@@ -1262,12 +1262,13 @@ dialog.ask form {
   color: var(--warning);
 }
 
-/* The progress bar (app.js showProgress): a piece of the accent colour going from left to right. */
+/* The progress bar (app.js showProgress): filling up in the accent colour, or without a count a piece of it going from
+   left to right. */
 #progress {
   flex: none;
   align-self: center;
   position: relative;
-  width: 160px;
+  width: 320px;
   height: 6px;
   overflow: hidden;
   border-radius: 3px;
@@ -1286,6 +1287,12 @@ dialog.ask form {
   border-radius: 3px;
   background: var(--accent);
   animation: progress-run 1.2s ease-in-out infinite;
+}
+
+#progress.counted > div {
+  left: 0;
+  animation: none;
+  transition: width .15s linear;
 }
 
 @keyframes progress-run {

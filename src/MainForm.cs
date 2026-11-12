@@ -472,6 +472,21 @@ sealed class MainForm : Form
         if (listings.Remove(channel, out var before)) before.Cancel();
         var cancel = listings[channel] = new CancellationTokenSource();
         var clock = System.Diagnostics.Stopwatch.StartNew();
+        // A folder on disk counted beside the listing (names only, much quicker than the listing itself), so the page's
+        // progress bar has a measure; a tree's rows are not counted (a level is seldom slow), nor other places.
+        if (!tree && Path.IsPathFullyQualified(location))
+            _ = Task.Run(() =>
+            {
+                try
+                {
+                    var options = new EnumerationOptions { IgnoreInaccessible = true, AttributesToSkip = 0 };
+                    var count = foldersOnly ? Directory.EnumerateDirectories(location, "*", options).Count()
+                        : Directory.EnumerateFileSystemEntries(location, "*", options).Count();
+                    if (!cancel.IsCancellationRequested)
+                        BeginInvoke(() => Post(new JsonObject { ["event"] = "listCount", ["req"] = req, ["channel"] = channel, ["count"] = count }));
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException) { }
+            });
         var r = await StaWorker.Once("listing", () => ShellListing.List(location,
             part => BeginInvoke(() => Post(new JsonObject { ["event"] = "listing", ["req"] = req, ["channel"] = channel, ["entries"] = part })),
             cancel.Token, foldersOnly, tree));
