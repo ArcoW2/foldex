@@ -83,13 +83,25 @@ public class BarsTests : IDisposable
     [Fact]
     public void TheDrivesExample()
     {
-        // 2 drives: its normal 4 (room kept); 10 drives: its max 6 and the >>; a window of 500 px: 30% (150); one of
-        // 100 px: its min, 2 drives and the >>.
+        // 2 drives: its normal 4 (room kept); 10 drives: its max 6 and the >>; a window of 500 px: 30% (150) is less
+        // than its normal, so its normal (154); one of 100 px: the line's 100 (2 drives and the >>), above its min.
         var r = Run("""
             [lineLengths([drivesOf(2)], 2000, 2000).lengths[0], lineLengths([drivesOf(10)], 2000, 2000).lengths[0],
              lineLengths([drivesOf(10)], 500, 500).lengths[0], lineLengths([drivesOf(10)], 100, 100).lengths[0]]
             """);
-        Assert.Equal("[130,214,150,94]", r.GetRawText());
+        Assert.Equal("[130,214,154,100]", r.GetRawText());
+    }
+
+    [Fact]
+    public void ABarReachesItsNormalBeforeABarThatFillsGrows()
+    {
+        // The drives (min 94, normal 154, max 214) and a path that fills (min 120). 250: the path at its min, the drives
+        // get the rest (130); 274: the drives at their normal, the path still at its min; 500: the path grows, the
+        // drives stay at their normal (30% is 150); 1000: the drives at their max (30% is 300).
+        var r = Run("""
+            [250, 274, 500, 1000].map(w => lineLengths([drivesOf(10), { fill: true, normal: 300, min: 120 }], w, w).lengths)
+            """);
+        Assert.Equal("[[130,120],[154,120],[154,346],[214,786]]", r.GetRawText());
     }
 
     [Fact]

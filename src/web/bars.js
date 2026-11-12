@@ -15,15 +15,17 @@ function barPx(bar, { unit = 1, overhead = 0, count = 0, more = 0, buttons = fal
 
 // The length of each bar of a line. Each bar: { normal, min, max, content (px), maxShare (%), fill }. `length`: the
 // line's; `windowLength`: the window's in the line's direction (for maxShare). A bar that does not fill is the larger
-// of its normal size and its content, at most its max (no max above normal: it does not grow) and its share, at least
-// its min. Bars that fill share what the others leave by their normal sizes, each between its min and max. A line too
+// of its normal size and its content, at most its max (no max above normal: it does not grow) and its share (which
+// takes it back to its normal size, not below), at least its min. Bars that fill share what the others leave by their
+// normal sizes, each between its min and max. A line too
 // short: the bars that fill give way first, down to their min, then the others, down to theirs; what still does not
 // fit is hidden from the end (the line's >>). Returns { lengths, hidden: [index] }.
 function lineLengths(bars, length, windowLength) {
   const cap = b => {
     const share = b.maxShare != null ? windowLength * b.maxShare / 100 : Infinity;
-    const grow = b.fill ? (b.max ?? Infinity) : (b.max != null && b.max > b.normal ? b.max : b.normal);
-    return Math.min(grow, share);
+    if (b.fill) return Math.min(b.max ?? Infinity, share);
+    // Below its normal size only a line too short shrinks it (after the bars that fill are at their min).
+    return Math.min(b.max != null && b.max > b.normal ? b.max : b.normal, Math.max(share, b.normal));
   };
   const lo = b => b.min ?? 0;
   const lengths = bars.map(b => b.fill ? 0 : Math.max(lo(b), Math.min(Math.max(b.normal, b.content ?? 0), cap(b))));
@@ -335,9 +337,9 @@ function addBar(kind, side = 'top') {
   saveBars();
 }
 
+// The bar's menu; where it sits is changed by dragging its grip.
 function barMenu(bar, side) {
   const set = changes => { Object.assign(bar, changes); saveBars(); };
-  const moveTo = to => { removeBar(bar); placeBar(bar, to, bars[to].length, null); saveBars(); };
   return [
     { label: 'Size...', run: () => openSizeWindow(bar) },
     { label: 'Fill the rest', checked: !!bar.fill, run: () => set({ fill: !bar.fill }) },
@@ -345,7 +347,6 @@ function barMenu(bar, side) {
       { label: 'A >> button', checked: bar.overflow !== 'scroll', run: () => set({ overflow: 'more' }) },
       { label: 'Scroll', checked: bar.overflow === 'scroll', run: () => set({ overflow: 'scroll' }) } ] },
     ...(bar.kind === 'drives' ? [{ label: 'Free space', checked: bar.freeSpace !== false, run: () => set({ freeSpace: bar.freeSpace === false }) }] : []),
-    { label: 'Side', items: BarSides.map(s => ({ label: s[0].toUpperCase() + s.slice(1), checked: s === side, run: () => moveTo(s) })) },
     '-',
     { label: 'Add a bar', items: Object.entries(BarKinds).map(([kind, title]) => ({ label: title, run: () => addBar(kind, side) })) },
     { label: 'Remove this bar', run: () => { removeBar(bar); saveBars(); } },

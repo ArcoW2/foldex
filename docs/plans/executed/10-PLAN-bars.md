@@ -64,10 +64,13 @@ shows the limits as coloured marks on the bar, and Foldex writes your copy.
   - `maxShare`: the most it takes of the window's width (height for a column), in %;
   - `min`: the least it shrinks to when the window gets small. It wins over the other limits. A fixed length, not a
     share of the window: a bar does not grow with the window beyond what its content needs.
-- **Its length**: the larger of `normal` and what its content needs, at most `max` and `maxShare`, at least `min`.
+- **Its length**: the larger of `normal` and what its content needs, at most `max` and `maxShare` (the share not below
+  `normal`), at least `min`.
   Example, a drives bar with min 2, normal 4, max 6 drives and a share of 30%: with 2 drives it is 4 drives long (room
   kept); with 10 drives it is 6 and the rest overflows; as the window narrows, it keeps 6 until 30% of the width is
-  less, then shrinks with the window down to 2.
+  less, then shrinks with the window down to its normal 4. Below its normal only a line too short shrinks it (after
+  the bars that fill are at their minimum), down to 2; a window growing again gives it back its normal 4 before a bar
+  that fills grows.
   Without `max` above `normal` it does not grow with its content (a fixed bar); without `maxShare` the window does not
   shrink it.
 - **Fill**, a choice per bar instead of growing with its content: the bar takes what the other bars of its line leave.
@@ -105,7 +108,7 @@ shows the limits as coloured marks on the bar, and Foldex writes your copy.
   `{ "kind": "path", "fill": true, "normal": 300, "min": 120 }` or `{ "kind": "path", "normal": 300 }`.
 - In the window: drag a bar by its grip to another place, line or side (the dock marks of plan 01's docking show
   where it lands); drag its end to set its normal size; its right-click menu: Size..., Fill the rest (a check),
-  overflow, the side, remove, add a bar of a kind. Every change is written to your `bars.json` (made from the shipped
+  overflow, remove, add a bar of a kind (its side only by dragging). Every change is written to your `bars.json` (made from the shipped
   one on the first change) and applies in every window.
 - **The Size window** (a small window of the page, by Size...): Minimum, Normal, Maximum and Maximum % of the window,
   each with a colour swatch. While it is open the bar's line shows each limit as a mark in its colour; the % limit at
@@ -154,7 +157,7 @@ None.
   bar (a button per drive, the current one framed, a thin mark of the space used, the name and free space in the
   tooltip, a click takes the active pane's parent there); the path bar (the location box in a row, the folders as
   buttons in a column); `>>` with the rest in a menu, or scrolling by the wheel; the bar's menu (Size..., Fill the rest,
-  Overflow, Free space, Side, Add a bar, Remove this bar); dragging by the grip (the place it lands marked: before or
+  Overflow, Free space, Add a bar, Remove this bar; Side was taken out on 2026-11-12, dragging does it); dragging by the grip (the place it lands marked: before or
   after a bar, or a new line at a side) and by its end (the normal size); the Size window (not modal, so the window can
   be resized while the marks follow).
 - The strip with the name, version and location box is gone: the version is in the window title
@@ -186,3 +189,12 @@ None.
   shipped bars back.
 - Not tried: a USB stick (the device message), a window narrowed by hand until the 30% cuts in (the rule is in the
   tests), dragging with a real mouse.
+
+### 6.3 Changed (2026-11-12)
+
+- The bar menu's Side is gone: a bar's side is set by dragging it.
+- The share of the window takes a bar back to its normal size, not below it; below its normal size only a line too
+  short shrinks it, after the bars that fill are at their minimum. So a growing window gives the drives their normal 4
+  before the path that fills grows. Test (Jint): the drives and a filling path at 250, 274, 500 and 1000 px. Test copy
+  with seven drives given to the page, the window resized from 1400 down to 314 px (the least Windows allows) and up to
+  1600: the drives at 4 down to the smallest, the path taking the change; 5 and 6 above with the 30%.
