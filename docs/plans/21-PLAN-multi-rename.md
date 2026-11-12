@@ -5,6 +5,7 @@ Status: draft 2026-11-12, revised 2026-11-12; not started; see Status.
 - 2026-11-12: draft, at the user's request: F2 with several items selected, an extended renaming of parts of names,
   and files with the same name and another extension renamed along (a setting, on by default).
 - 2026-11-12: revised: the token syntax is a setting, xplorer2's by default.
+- 2026-11-12: revised: companions renamed in place without a question, highlighted while the name is edited.
 
 Builds on the rename in place (F2, `web/rename.js`) and Foldex's file operations (`Shell/FileOps.cs`). The number in
 the file name is the priority; rename to reorder.
@@ -43,7 +44,7 @@ the files beside it with the same name and another extension; a setting turns th
 | Case | lower, upper, first letters | Rename dialog | 3.3 |
 | Parts of names | insert, remove or replace characters at a position, counted from the start or the end | Rename dialog; open question 1 | 3.3 |
 | One operation | all renames through one IFileOperation, undoable in Windows; swaps through a name in between | Rename dialog | 3.4 |
-| Companion files | same name, another extension, renamed along; setting renameCompanions (default on) | open question 2 | 3.5 |
+| Companion files | same name, another extension, renamed along without a question, highlighted during F2; setting renameCompanions (default on) | -- | 3.5 |
 | Tests | see 3.6 | -- | 3.6 |
 
 ## 3. Details
@@ -95,8 +96,9 @@ the files beside it with the same name and another extension; a setting turns th
 - Only a change of the name: a changed extension takes no companions along.
 - A setting, renameCompanions (Settings > Panes), on by default.
 - A companion that would collide (beach.xmp exists already) is not renamed; the rename of the file itself still goes.
-  In the dialog companions are listed under their file, marked as companions. In place: whether they are renamed
-  without a word (the status line names them) or after a question that lists them: open question 2.
+  In the dialog companions are listed under their file, marked as companions.
+- In place (F2): while the name is edited, the companions are highlighted in the pane, so it is clear they go along;
+  they are renamed with the file, without a question, and the status line names them.
 - Folders have no companions.
 
 ### 3.6 Tests
@@ -107,14 +109,14 @@ the files beside it with the same name and another extension; a setting turns th
   collision left out, the setting off.
 - In the test copy: F2 on three selected files, a pattern with a counter, OK, the files renamed, the pane focused on
   the renamed focus; a swap of two names; Esc leaves all as they were; F2 on photo.jpg with photo.xmp beside it, both
-  renamed, and with the setting off only the jpg.
+  renamed, photo.xmp highlighted while the name is edited, and with the setting off only the jpg (nothing
+  highlighted).
 
 ## 4. Open questions
 
-1. **"Extended renaming (partial parts renamed)".** This plan reads it as editing a range of characters (insert,
-   remove, replace at a position from the start or the end) and the tokens for parts of the old name. Is that what
-   you meant, or something else (for instance renaming a selected part of the name, the same part in every file)?
-2. **Companions in place.** When a rename in place takes companions along: silently (the status line names them),
-   or first a question that lists them (Yes: all, No: only the file)?
-3. **Saved renames.** Keep named rename settings to use again, as the Find dialog's Predefined (searches.json), or
+1. **"Extended renaming (partial parts renamed)".** To be answered when this plan is taken up. This plan reads it as
+   editing a range of characters (insert, remove, replace at a position from the start or the end) and the tokens
+   for parts of the old name; or is it something else (for instance renaming a selected part of the name, the same
+   part in every file)?
+2. **Saved renames.** Keep named rename settings to use again, as the Find dialog's Predefined (searches.json), or
    not?
