@@ -31,6 +31,7 @@
         { "action": "pane.next", "label": "Next pane" },
         { "action": "pane.detach", "label": "Detach", "stack": true }, { "action": "pane.pin", "label": "Pin", "stack": true } ] },
       { "name": "Show", "items": [
+        { "action": "view.menu", "size": "large", "label": "Views" },
         { "action": "preview.toggle", "size": "large", "label": "Preview" },
         { "action": "hidden.toggle", "label": "Hidden items" } ] },
       { "name": "Projects", "items": [

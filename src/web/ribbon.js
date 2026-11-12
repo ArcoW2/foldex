@@ -63,7 +63,7 @@ function ribbonButton(item) {
   b.title = withKey(actionTitle(item.action, params), item.action, ...params) + (actionDef(item.action)?.hint ? `: ${actionDef(item.action).hint}` : '');
   // The focus stays in the pane: the action works on what is selected there.
   b.addEventListener('mousedown', e => e.preventDefault());
-  b.addEventListener('click', () => runAction(item.action, params, { from: 'ribbon' }));
+  b.addEventListener('click', () => runAction(item.action, params, { from: 'ribbon', el: b }));
   return b;
 }
 

@@ -129,11 +129,17 @@ function toggleIn(name, list, value) {
   for (const v of views.values()) if (v.thumbsView?.()) v.render();
 }
 
-// The Thumbnails submenu of a pane's View menu: the layout (it shows thumbnails), the size, names, information, icons.
-function thumbsMenu(id) {
+// The Views menu (the ribbon's Views, as xplorer2's; one plain menu): details or icons, the thumbnail layouts, and for
+// thumbnails the size, names, information and icons; a dimmed line heads each group.
+function viewsMenu(id) {
   const pane = layout.pane(id);
   const on = pane.view === 'thumbs';
+  const heading = label => ({ label, enabled: false });
   return [
+    ...[['details', 'Details'], ['icons', 'Icons']]
+      .map(([view, label]) => ({ label, checked: (pane.view ?? 'details') === view, run: () => setPaneView(id, view) })),
+    '-',
+    heading('Thumbnails'),
     ...Object.entries(ThumbLayouts).map(([kind, label]) => ({ label, checked: on && (pane.thumbLayout ?? 'grid-cut') === kind, run: () => {
       pane.thumbLayout = kind;
       if (!on) setPaneView(id, 'thumbs');
@@ -142,6 +148,7 @@ function thumbsMenu(id) {
       tellLayout();
     } })),
     '-',
+    heading('Thumbnail size'),
     { label: 'Larger (Ctrl+wheel)', enabled: on, run: () => thumbZoom(id, 1) },
     { label: 'Smaller (Ctrl+wheel)', enabled: on, run: () => thumbZoom(id, -1) },
     { label: 'Names under the images', enabled: on, checked: pane.thumbNames !== false, run: () => {
@@ -149,9 +156,12 @@ function thumbsMenu(id) {
       views.get(id)?.render();
       tellLayout();
     } },
-    { label: 'Information (details, cards)', items: ThumbInfoChoices.map(([prop, label]) => ({ label, checked: thumbInfo().includes(prop),
-      run: () => toggleIn('thumbInfo', thumbInfo(), prop) })) },
-    { label: 'Icons on images', items: [['gps', 'GPS location'], ['raw', 'RAW']].map(([icon, label]) => ({ label, checked: thumbIcons().includes(icon),
-      run: () => toggleIn('thumbIcons', thumbIcons(), icon) })) },
+    '-',
+    heading('Information (details, cards)'),
+    ...ThumbInfoChoices.map(([prop, label]) => ({ label, checked: thumbInfo().includes(prop), run: () => toggleIn('thumbInfo', thumbInfo(), prop) })),
+    '-',
+    heading('Icons on images'),
+    ...[['gps', 'GPS location'], ['raw', 'RAW']].map(([icon, label]) => ({ label, checked: thumbIcons().includes(icon),
+      run: () => toggleIn('thumbIcons', thumbIcons(), icon) })),
   ];
 }

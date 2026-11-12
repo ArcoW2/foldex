@@ -1955,10 +1955,6 @@ function paneMenu(id) {
         enabled: !(pane.kind === 'tree' && content === 'files'), run: () => setPaneContent(id, content) })) },
     { label: 'Shape', enabled: pane.kind !== 'preview' && !scrap, items: [['tree', 'Tree'], ['list', 'One folder']]
       .map(([kind, label]) => ({ label, checked: pane.kind === kind, run: () => setPaneShape(id, kind) })) },
-    { label: 'View', enabled: pane.kind === 'list', items: [
-      ...[['details', 'Details'], ['icons', 'Icons']]
-        .map(([view, label]) => ({ label, checked: (pane.view ?? 'details') === view, run: () => setPaneView(id, view) })),
-      { label: 'Thumbnails', checked: pane.view === 'thumbs', items: thumbsMenu(id) } ] },
     { label: 'Hidden items', enabled: pane.kind !== 'preview', checked: pane.kind !== 'preview' && showsHidden(id),
       run: () => setPaneHidden(id, !showsHidden(id)) },
     { label: pane.filter ? `Filter: ${pane.filter}...` : 'Filter...', enabled: pane.kind !== 'preview', run: () => askPaneFilter(id) },

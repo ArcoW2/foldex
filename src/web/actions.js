@@ -176,6 +176,17 @@ action('pane.filter', { title: 'Filter...', hint: 'the files the active pane sho
 
 // ---------- Foldex ----------
 
+// Views (as xplorer2's ribbon button): in one plain menu (thumbs.js viewsMenu), the view of the active one-folder pane,
+// or with a tree active, of the first one-folder pane that follows it in its active branch.
+const isFolderList = id => views.get(id) instanceof ListView && !(views.get(id) instanceof ScrapView);
+const viewsPane = () => !activePane ? null : isFolderList(activePane) ? activePane
+  : layout.followers(activePane, layout.keyOf(activePane)).map(f => f.id).find(isFolderList) ?? null;
+action('view.menu', { title: 'Views', hint: 'details, icons or thumbnails, for the active pane (a tree: the pane following it)', group: 'panes',
+  enabled: () => !!viewsPane(), run: (params, ctx) => {
+    const id = viewsPane();
+    const r = (ctx.el ?? views.get(id).body).getBoundingClientRect();
+    openMenu(r.left, ctx.el ? r.bottom : r.top, viewsMenu(id));
+  } });
 action('palette', { title: 'All actions and keys', group: 'app', run: () => openPalette() });
 // Projects (docs/plans/15-PLAN-projects.md 3.6; projectmenu.js).
 action('projects.menu', { title: 'Projects', hint: 'every project and its windows, as at the project in the bottom bar', group: 'projects',
