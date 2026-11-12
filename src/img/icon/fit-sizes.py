@@ -7,7 +7,7 @@
 VERSIONS = {'foldex': '#e04f47'}   # the square's colour
 TAB = '#ecb43c'        # the folder's back and its tab
 PANE = '#f2bf4a'       # the docked pane at its left
-FOLDER = '#f7cf5c'     # the folder's front
+FOLDER = '#ffff00'     # the folder's front: the brightest yellow
 SMALL = [16, 20, 24, 32, 40, 48, 64]
 
 
