@@ -1,9 +1,10 @@
 # Plan 21: Renaming many at once, parts of names, and companion files
 
-Status: not started; see Status.
+Status: draft 2026-11-12, revised 2026-11-12; not started; see Status.
 
 - 2026-11-12: draft, at the user's request: F2 with several items selected, an extended renaming of parts of names,
   and files with the same name and another extension renamed along (a setting, on by default).
+- 2026-11-12: revised: the token syntax is a setting, xplorer2's by default.
 
 Builds on the rename in place (F2, `web/rename.js`) and Foldex's file operations (`Shell/FileOps.cs`). The number in
 the file name is the priority; rename to reorder.
@@ -37,12 +38,12 @@ the files beside it with the same name and another extension; a setting turns th
 |---|---|---|---|
 | Rename dialog | F2 with several selected: the items with their new names, live; conflicts marked; OK, Cancel | -- | 3.1 |
 | What changes | name, extension or both | Rename dialog | 3.2 |
-| Pattern | tokens: the old name and parts of it, the extension, a counter, dates, the folder | Rename dialog; open question 1 | 3.3 |
+| Pattern | tokens: the old name and parts of it, the extension, a counter, dates, the folder; the syntax a setting (xplorer2's by default) | Rename dialog | 3.3 |
 | Find and replace | text or regular expression, case, first or all | Rename dialog | 3.3 |
 | Case | lower, upper, first letters | Rename dialog | 3.3 |
-| Parts of names | insert, remove or replace characters at a position, counted from the start or the end | Rename dialog; open question 2 | 3.3 |
+| Parts of names | insert, remove or replace characters at a position, counted from the start or the end | Rename dialog; open question 1 | 3.3 |
 | One operation | all renames through one IFileOperation, undoable in Windows; swaps through a name in between | Rename dialog | 3.4 |
-| Companion files | same name, another extension, renamed along; setting renameCompanions (default on) | open question 3 | 3.5 |
+| Companion files | same name, another extension, renamed along; setting renameCompanions (default on) | open question 2 | 3.5 |
 | Tests | see 3.6 | -- | 3.6 |
 
 ## 3. Details
@@ -66,12 +67,15 @@ the files beside it with the same name and another extension; a setting turns th
 ### 3.3 How
 
 - **Pattern**: the new name built from tokens: the old name, a part of it (characters from to), the extension, a
-  counter (start, step, digits), the date modified or taken, the folder's name. The token syntax: open question 1.
+  counter (start, step, digits), the date modified or taken, the folder's name.
+- **Token syntax**: a setting, renameTokens (Settings > Panes): xplorer2's (the default) or Total Commander's ([N],
+  [C], [E], [N1-3], [YMD]). Both write the same tokens; only how they are written differs. [xplorer2's syntax: not yet
+  checked; read from its manual before building.]
 - **Find and replace**: a text or a regular expression, case or not, the first or every match; the replacement may
   use the regular expression's groups.
 - **Case**: lower, upper, the first letter of each word.
 - **Parts of names**: at a position counted from the start or from the end: insert a text, remove a number of
-  characters, or replace them. What "partial parts" should cover beyond this: open question 2.
+  characters, or replace them. What "partial parts" should cover beyond this: open question 1.
 - The ways combine in order (for instance find and replace, then the case); the list shows the result.
 
 ### 3.4 Renaming
@@ -92,7 +96,7 @@ the files beside it with the same name and another extension; a setting turns th
 - A setting, renameCompanions (Settings > Panes), on by default.
 - A companion that would collide (beach.xmp exists already) is not renamed; the rename of the file itself still goes.
   In the dialog companions are listed under their file, marked as companions. In place: whether they are renamed
-  without a word (the status line names them) or after a question that lists them: open question 3.
+  without a word (the status line names them) or after a question that lists them: open question 2.
 - Folders have no companions.
 
 ### 3.6 Tests
@@ -107,12 +111,10 @@ the files beside it with the same name and another extension; a setting turns th
 
 ## 4. Open questions
 
-1. **Token syntax.** xplorer2's own (you may know it by heart), Total Commander's ([N], [C], [E], [N1-3], [YMD]), or
-   Foldex's own? Suggestion: Total Commander's, widely known and compact. [xplorer2's syntax: not yet checked.]
-2. **"Extended renaming (partial parts renamed)".** This plan reads it as editing a range of characters (insert,
+1. **"Extended renaming (partial parts renamed)".** This plan reads it as editing a range of characters (insert,
    remove, replace at a position from the start or the end) and the tokens for parts of the old name. Is that what
    you meant, or something else (for instance renaming a selected part of the name, the same part in every file)?
-3. **Companions in place.** When a rename in place takes companions along: silently (the status line names them),
+2. **Companions in place.** When a rename in place takes companions along: silently (the status line names them),
    or first a question that lists them (Yes: all, No: only the file)?
-4. **Saved renames.** Keep named rename settings to use again, as the Find dialog's Predefined (searches.json), or
+3. **Saved renames.** Keep named rename settings to use again, as the Find dialog's Predefined (searches.json), or
    not?
