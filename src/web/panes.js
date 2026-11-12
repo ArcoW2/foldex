@@ -194,7 +194,7 @@ class Layout {
         updates.push({ pane: f.id, show: item ? item.id : null });
       } else if (item && item.folder) {
         const s = this.state(f.id);
-        if (s.location === item.id) continue;
+        if ((s.location ?? '').toLowerCase() === item.id.toLowerCase()) continue;   // the same folder, whatever case Windows gives it
         s.location = item.id;
         s.focus = null;
         s.selection = [];

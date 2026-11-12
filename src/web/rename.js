@@ -147,7 +147,8 @@ function newItem(kind) {
   post({ op: 'fileOp', kind: kind === 'file' ? 'newFile' : 'newFolder', ids: [], target: folder });
 }
 
-// A file operation done: a new item renamed where it was asked for; a renamed item focused under its new name.
+// A file operation done: a new item renamed where it was asked for; a tree focused on a renamed item under its new
+// name (a list keeps its selection and focus itself, ListView.reread).
 function fileOpDone(op) {
   if (op.created && pendingNew && same(folderOf(op.created), pendingNew.folder)) {
     const view = views.get(pendingNew.pane);
@@ -157,14 +158,7 @@ function fileOpDone(op) {
   }
   if (op.kind === 'rename' && op.moved?.length) {
     const [from, to] = op.moved[0];
-    for (const v of views.values()) {
-      if (v instanceof ScrapView) continue;   // it follows the move itself
-      if (v instanceof ListView && same(v.location, folderOf(to)) && same(layout.state(v.id).focus, from)) {
-        layout.state(v.id).focus = to;
-        layout.state(v.id).selection = [to];
-      }
-      if (v instanceof TreeView && v.node(from)) treeShows(v, to, false);
-    }
+    for (const v of views.values()) if (v instanceof TreeView && v.node(from)) treeShows(v, to, false);
   }
 }
 

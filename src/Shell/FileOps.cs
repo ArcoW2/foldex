@@ -25,6 +25,8 @@ sealed class FileOps
         public IReadOnlyList<string> Ids { get; init; } = [];
         /// <summary>The items moved or renamed: [old, new] parsing names, so the entries of a scrap follow them.</summary>
         public List<string[]> Moved { get; } = [];
+        /// <summary>The copies made (their parsing names), so a pane can select what was pasted or dropped.</summary>
+        public List<string> Made { get; } = [];
         /// <summary>A new folder or file: its parsing name, so the page can rename it at once.</summary>
         public string? Created { get; set; }
 
@@ -35,6 +37,7 @@ sealed class FileOps
             ["ids"] = Finished ? new JsonArray(Ids.Select(i => (JsonNode?)i).ToArray()) : null,
             ["moved"] = Finished ? new JsonArray(Moved.Select(m => (JsonNode?)new JsonArray(m[0], m[1])).ToArray()) : null,
             ["created"] = Finished ? Created : null,
+            ["made"] = Finished ? new JsonArray(Made.Select(m => (JsonNode?)m).ToArray()) : null,
         };
     }
 
@@ -155,7 +158,12 @@ sealed class FileOps
             catch (COMException) { }
         }
         public void PreCopyItem(uint dwFlags, IShellItem psiItem, IShellItem psiDestinationFolder, string pszNewName) { }
-        public void PostCopyItem(uint dwFlags, IShellItem psiItem, IShellItem psiDestinationFolder, string pszNewName, int hrCopy, IShellItem psiNewlyCreated) { }
+        public void PostCopyItem(uint dwFlags, IShellItem psiItem, IShellItem psiDestinationFolder, string pszNewName, int hrCopy, IShellItem psiNewlyCreated)
+        {
+            if (hrCopy < 0 || psiNewlyCreated is null) return;
+            try { op.Made.Add(Native.IdOf(psiNewlyCreated)); }
+            catch (COMException) { }
+        }
         public void PreDeleteItem(uint dwFlags, IShellItem psiItem) { }
         public void PostDeleteItem(uint dwFlags, IShellItem psiItem, int hrDelete, IShellItem psiNewlyCreated) { }
         public void PreNewItem(uint dwFlags, IShellItem psiDestinationFolder, string pszNewName) { }

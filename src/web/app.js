@@ -1035,17 +1035,41 @@ class ListView {
   // Show changed: read again where it is.
   reshow() { if (this.location) this.load(this.location); }
 
-  // The folder changed on disk (3.8): read again where it is, the selection and the scroll position kept.
-  reread() {
+  // The folder changed on disk (3.8), or a file operation is done (`op`): read again where it is. The selected items
+  // stay selected (a renamed or moved one under its new name), and the focused item stays where it was on screen (as
+  // near as the list allows). What the operation put here (pasted, dropped, moved in) becomes the selection instead,
+  // the first of it focused and in view.
+  reread(op = null) {
     if (!this.location || this.message) return;
-    const keep = new Set(this.selected), top = this.body.scrollTop;
+    // The folder's watcher may read it again before this is done (and so stop it): the operation waits for that one.
+    op ??= this.opPending ?? null;
+    this.opPending = op;
+    const moved = op?.moved ?? [];
+    const now = id => moved.find(([from]) => same(from, id))?.[1] ?? id;
+    const landed = op && op.kind !== 'rename' ? [...(op.made ?? []), ...moved.map(m => m[1])].filter(id => same(folderOf(id), this.location)) : [];
+    const keep = [...this.selected].map(now), top = this.body.scrollTop;
+    const s = layout.state(this.id), focusBefore = s.focus ? now(s.focus) : null;
+    const at = this.entries.findIndex(x => same(x.id, s.focus));
+    const offset = at >= 0 && !this.iconsView() ? at * RowHeight - top : null;   // the focused row's place on screen
     let first = true;
     this.gitAsked = false;
     list(this.id, this.location, this.content() === 'folders', part => this.take(part, first && !(first = false)), m => {
+      this.opPending = null;
       this.done(m, first);
-      this.selected = new Set([...keep].filter(id => this.entries.some(x => x.id === id)));
-      layout.state(this.id).selection = [...this.selected];
+      const here = id => this.entries.find(x => same(x.id, id));
+      const arrived = landed.map(here).filter(Boolean).sort((a, b) => this.entries.indexOf(a) - this.entries.indexOf(b));
+      // What arrived is the selection now (an action next is meant for it); otherwise the selection as it was.
+      this.selected = new Set((arrived.length ? arrived : keep.map(here)).filter(Boolean).map(x => x.id));
+      s.selection = [...this.selected];
+      const focus = arrived[0] ?? (focusBefore && here(focusBefore));
       this.body.scrollTop = top;
+      if (focus) {
+        s.focus = focus.id;
+        const i = this.entries.indexOf(focus);
+        if (arrived.length || offset === null) this.scrollTo(i);
+        else this.body.scrollTop = i * RowHeight - offset;
+        if (arrived.length) focusItem(this.id, { id: focus.id, folder: focus.folder });   // its children follow it
+      }
       this.render();
     });
   }
@@ -2468,8 +2492,10 @@ function showOps() {
   }));
 }
 
-function reloadLists() {
-  for (const v of views.values()) if (v instanceof ListView && v.location) v.load(v.location);
+// Every list read again after something changed files (a file operation `op`, a verb of Explorer's menu): its
+// selection and focus kept, what the operation put there selected (ListView.reread).
+function reloadLists(op = null) {
+  for (const v of views.values()) if (v instanceof ListView && v.location) v.message ? v.load(v.location) : v.reread(op);
 }
 
 // ---------- Events ----------
@@ -2574,8 +2600,8 @@ const events = {
     ops.set(m.op.id, m.op);
     showOps();
     if (!m.op.finished) return;
-    fileOpDone(m.op);   // a new item renamed, a renamed one focused (rename.js)
-    reloadLists();
+    fileOpDone(m.op);   // a new item renamed (rename.js)
+    reloadLists(m.op);
     // A scrap's entries follow what moved and drop what was deleted (plan 06 3.1).
     for (const v of scrapViews()) {
       if (m.op.moved?.length) v.follow(m.op.moved);
