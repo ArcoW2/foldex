@@ -1478,3 +1478,10 @@ body.docking, body.docking * {
   padding: 1px 2px;
   outline: none;
 }
+
+/* A companion of the file being renamed (rename.js): it is renamed along. */
+.row.companion, .tile.companion {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  outline: 1px dashed var(--accent);
+  outline-offset: -1px;
+}

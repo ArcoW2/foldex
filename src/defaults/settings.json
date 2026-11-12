@@ -28,6 +28,7 @@
   "treeLines": "dotted",          // a tree's lines: "dotted", "solid" or "none"
   "followDelay": 150,              // ms the cursor rests in a pane before its children follow it, 0 to 1000
   "searchDelay": 600,              // ms after typing in a pane before it filters (more than 3 characters) or jumps, 100 to 2000
+  "renameCompanions": true,       // renaming a file renames the files beside it with the same name and another extension; Shift+Enter: the other
   "scrollMargin": 0,               // rows kept in view above and below the cursor, 0 to 10: 1 scrolls on reaching the second last row
   "rowLines": "none",             // rows in a list: "none", "stripes" (every other row shaded) or "lines" (a line under each)
   "rowLinesIntensity": 8,         // 1 to 100: how strong the stripes or lines are, the text colour mixed in at that %

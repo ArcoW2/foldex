@@ -524,7 +524,8 @@ class TreeView {
         noProps.push(n);
       }
       const row = document.createElement('div');
-      row.className = 'row cols' + (same(n.id, focus) ? ' selected focused' : '') + (n.hidden ? ' hidden' : '') + (i % 2 ? ' odd' : '');
+      row.className = 'row cols' + (same(n.id, focus) ? ' selected focused' : '') + (n.hidden ? ' hidden' : '') + (i % 2 ? ' odd' : '')
+        + (isCompanion(this, n.id) ? ' companion' : '');
       row.style.top = `${i * RowHeight}px`;
       row.dataset.index = i;
       cols.forEach((c, k) => {
@@ -1009,7 +1010,8 @@ class ListView {
       const x = this.entries[i];
       if (x.own) { own.push(x.id); x.own = false; }
       const tile = document.createElement('div');
-      tile.className = 'tile' + (this.selected.has(x.id) ? ' selected' : '') + (same(x.id, focus) ? ' focused' : '') + (x.hidden ? ' hidden' : '');
+      tile.className = 'tile' + (this.selected.has(x.id) ? ' selected' : '') + (same(x.id, focus) ? ' focused' : '') + (x.hidden ? ' hidden' : '')
+        + (isCompanion(this, x.id) ? ' companion' : '');
       Object.assign(tile.style, { left: `${(i % perRow) * width}px`, top: `${Math.floor(i / perRow) * height}px`,
         width: `${width}px`, height: `${height}px` });
       tile.dataset.index = i;
@@ -1142,7 +1144,7 @@ class ListView {
       }
       const row = document.createElement('div');
       row.className = 'row cols' + (this.selected.has(x.id) ? ' selected' : '') + (same(x.id, focus) ? ' focused' : '')
-        + (x.hidden ? ' hidden' : '') + (i % 2 ? ' odd' : '');
+        + (x.hidden ? ' hidden' : '') + (i % 2 ? ' odd' : '') + (isCompanion(this, x.id) ? ' companion' : '');
       row.style.top = `${i * RowHeight}px`;
       row.dataset.index = i;
       row.draggable = true;

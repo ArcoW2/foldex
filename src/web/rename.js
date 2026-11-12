@@ -1,10 +1,13 @@
 'use strict';
 // Renaming in place (F2), a new folder (F8) and a new file (F7), and the menu of a pane's empty space. A name is
 // edited in a box over its row: the name selected without its extension, the extension in the box too; Enter or
-// leaving the box renames (a changed extension asks first, as Explorer does), Esc cancels. A new folder or file is
-// made by Windows ("New folder", "New file.txt", numbered when taken), then renamed in place.
+// leaving the box renames (a changed extension asks first, as Explorer does), Esc cancels. A file's companions (the
+// files beside it with the same name and another extension: photo.xmp beside photo.jpg) are renamed along when the
+// name changes, as the setting renameCompanions says; Shift+Enter does the other. While the name is edited the
+// companions that would go along are highlighted (holding Shift shows what Shift+Enter would do). A new folder or file is made
+// by Windows ("New folder", "New file.txt", numbered when taken), then renamed in place.
 
-let renaming = null;   // { view, item, input, asking }
+let renaming = null;   // { view, item, input, asking, companions, shift }
 let pendingNew = null; // a new folder or file asked for: { pane, folder }, renamed once it is there
 
 const diskId = id => /^[A-Za-z]:\\|^\\\\/.test(id ?? '');
@@ -32,22 +35,35 @@ function startRename(view, id) {
     width: `${Math.max(160, cell.right - at.left + 6)}px`, height: `${at.height + 4}px`,
   });
   view.body.append(input);
-  renaming = { view, item, input, asking: false };
+  renaming = { view, item, input, asking: false, companions: companionsOf(view, item), shift: false };
+  view.render();   // the companions highlighted
   selectName(input, item);
   // Its keys are its own: no action, no typing into the pane, no row clicked.
+  const shift = on => {
+    if (renaming?.input !== input || renaming.shift === on) return;
+    renaming.shift = on;
+    view.render();   // the highlight shows what Enter does now
+  };
   input.addEventListener('keydown', e => {
     e.stopPropagation();
+    if (e.key === 'Shift') shift(true);
     if (e.key === 'Enter') {
       e.preventDefault();
+      shift(e.shiftKey);
       commitRename();
     } else if (e.key === 'Escape') {
       e.preventDefault();
       endRename();
     }
   });
+  input.addEventListener('keyup', e => { if (e.key === 'Shift') shift(false); });
   input.addEventListener('mousedown', e => e.stopPropagation());
   input.addEventListener('dblclick', e => e.stopPropagation());
-  input.addEventListener('blur', () => { if (renaming?.input === input && !renaming.asking) commitRename(); });
+  input.addEventListener('blur', () => {
+    if (renaming?.input !== input || renaming.asking) return;
+    renaming.shift = false;   // left with the mouse: as the setting says
+    commitRename();
+  });
 }
 
 // The name selected without its extension (a folder: all of it).
@@ -62,8 +78,26 @@ function endRename() {
   const { view, input } = renaming;
   renaming = null;
   input.remove();
+  view.render();
   if (activePane === view.id) view.body.focus();
 }
+
+// The name without its extension (all of a folder's name), case not counting.
+const baseOf = (item, name = item.name) => (item.folder || name.lastIndexOf('.') <= 0 ? name : name.slice(0, name.lastIndexOf('.'))).toLowerCase();
+
+// A file's companions in the pane: the other files of its folder with the same name before the extension.
+function companionsOf(view, item) {
+  if (item.folder) return [];
+  const items = view.flat ?? view.all ?? view.entries ?? [];
+  return items.filter(x => x !== item && !x.folder && same(folderOf(x.id), folderOf(item.id)) && baseOf(x) === baseOf(item)
+    && x.name.toLowerCase() !== item.name.toLowerCase());
+}
+
+// Whether the companions go along: the setting, the other way round with Shift.
+const companionsAlong = r => (settings.renameCompanions !== false) !== r.shift;
+
+// Whether a row is a companion that goes along with the item being renamed (highlighted, app.css).
+const isCompanion = (view, id) => renaming?.view === view && companionsAlong(renaming) && renaming.companions.some(x => same(x.id, id));
 
 async function commitRename() {
   const r = renaming;
@@ -81,8 +115,28 @@ async function commitRename() {
     if (renaming !== r) return;
     if (!yes) return r.input.focus();   // back to renaming, the text as typed
   }
+  const along = companionsAlong(r);
   endRename();
   post({ op: 'fileOp', kind: 'rename', ids: [r.item.id], target: name, confirmed: true });
+  if (!along) return;
+  // Its companions along, each keeping its own extension, when the name before the extension changed; one whose new
+  // name is taken stays as it is.
+  const stem = n => n.slice(0, n.length - extensionOf(r.item, n).length);
+  const base = stem(name);
+  if (base === stem(r.item.name)) return;
+  const folder = folderOf(r.item.id);
+  const taken = new Set((r.view.flat ?? r.view.all ?? r.view.entries ?? []).filter(x => same(folderOf(x.id), folder)).map(x => x.name.toLowerCase()));
+  const moved = [], left = [];
+  for (const c of r.companions) {
+    const to = base + c.name.slice(c.name.lastIndexOf('.'));
+    if (taken.has(to.toLowerCase()) && to.toLowerCase() !== c.name.toLowerCase()) left.push(c.name);   // a change of case is no clash
+    else {
+      moved.push(c.name);
+      post({ op: 'fileOp', kind: 'rename', ids: [c.id], target: to, confirmed: true });
+    }
+  }
+  if (moved.length || left.length)
+    status(`Renamed along: ${moved.join(', ') || 'none'}${left.length ? `; not renamed (the new name is taken): ${left.join(', ')}` : ''}.`, left.length > 0);
 }
 
 // F8, F7: a new folder or file in the active pane's folder, renamed in place once it is there.

@@ -7,6 +7,8 @@ Status: draft 2026-11-12, revised 2026-11-12; not started; see Status.
 - 2026-11-12: revised: the token syntax is a setting, xplorer2's by default.
 - 2026-11-12: revised: companions renamed in place without a question, highlighted while the name is edited.
 - 2026-11-12: revised: rename settings can be saved by name, for every project.
+- 2026-11-12: revised: companions for the rename in place (F2 on one file) built outside this plan, with Shift+Enter
+  doing the other of the setting; here they remain for the Rename dialog.
 
 Builds on the rename in place (F2, `web/rename.js`) and Foldex's file operations (`Shell/FileOps.cs`). The number in
 the file name is the priority; rename to reorder.
@@ -46,8 +48,12 @@ the files beside it with the same name and another extension; a setting turns th
 | Parts of names | insert, remove or replace characters at a position, counted from the start or the end | Rename dialog; open question 1 | 3.3 |
 | One operation | all renames through one IFileOperation, undoable in Windows; swaps through a name in between | Rename dialog | 3.4 |
 | Saved renames | a rename's settings saved by name and used again, for every project (renames.json) | Rename dialog | 3.3 |
-| Companion files | same name, another extension, renamed along without a question, highlighted during F2; setting renameCompanions (default on) | -- | 3.5 |
+| Companions in the dialog | listed under their file, renamed along as the setting says | Rename dialog | 3.5 |
 | Tests | see 3.6 | -- | 3.6 |
+
+Built outside this plan: companion files for the rename in place (F2 on one file): the setting renameCompanions
+(on by default), Shift+Enter doing the other, the companions that go along highlighted while the name is edited
+(`web/rename.js`).
 
 ## 3. Details
 
@@ -102,8 +108,9 @@ the files beside it with the same name and another extension; a setting turns th
 - A setting, renameCompanions (Settings > Panes), on by default.
 - A companion that would collide (beach.xmp exists already) is not renamed; the rename of the file itself still goes.
   In the dialog companions are listed under their file, marked as companions.
-- In place (F2): while the name is edited, the companions are highlighted in the pane, so it is clear they go along;
-  they are renamed with the file, without a question, and the status line names them.
+- In place (F2; built outside this plan, `web/rename.js`): while the name is edited, the companions that go along are
+  highlighted in the pane; they are renamed with the file, without a question, and the status line names them.
+  Shift+Enter does the other of the setting (holding Shift shows it in the highlight).
 - Folders have no companions.
 
 ### 3.6 Tests
