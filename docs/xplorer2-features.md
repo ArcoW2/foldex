@@ -71,7 +71,7 @@ updated whenever a plan is written, built or closed that touches a feature here.
 |---|---|---|---|---|
 | Everything integration | U | -- | 4 | Scrap containers (the results) |
 | Scrap containers (collect from many folders, save) | P+ | plan 06 | 4 | -- |
-| Mini scrap (docked drop stack) | P+ | -- | 4 | Scrap containers; docking (plan 01) or bars (plan 10) |
+| Mini scrap (docked drop stack) | P+ | plan 06 (a docked scrap) | 4 | Scrap containers; docking (plan 01) or bars (plan 10) |
 | Find files on any property, results as a pane | P+ | plan 06 | 3 | Hyperfilters (the criteria); Scrap containers (the results) |
 | Text in files (IFilters, regex) | P+ | plan 06 [not yet checked how far] | 3 | Find files |
 | Indexed search (Windows search index) | U | -- | 3 | Find files |
