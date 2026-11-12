@@ -105,8 +105,13 @@ action('scrap.stop', { title: 'Stop the search', group: 'scraps', enabled: () =>
 
 // ---------- Folders ----------
 
-action('folder.new', { title: 'New folder', group: 'folders', enabled: () => !!currentFolder(),
-  run: () => post({ op: 'fileOp', kind: 'newFolder', ids: [], target: currentFolder() }) });
+// New folder and file (rename.js): made by Windows, then renamed in place.
+action('folder.new', { title: 'New folder', hint: 'in the folder of the active pane, then its name in place', group: 'folders',
+  enabled: () => !!currentFolder(), run: () => newItem('folder') });
+action('file.new', { title: 'New file', hint: 'New file.txt in the folder of the active pane, then its name in place', group: 'folders',
+  enabled: () => !!currentFolder(), run: () => newItem('file') });
+action('item.rename', { title: 'Rename', hint: "the focused item's name in place; Enter renames, Esc cancels", group: 'items',
+  enabled: () => !!focusedItem() && /^[A-Za-z]:\\|^\\\\/.test(focusedItem().id), run: () => startRename(activeView(), focusedItem().id) });
 action('folder.up', { title: 'Up', hint: 'the folder above, through the parent pane', group: 'folders', enabled: () => !!activeView(),
   run: () => activeView().up() });
 action('refresh', { title: 'Refresh', group: 'folders', enabled: () => !!activeView(), run: () => activeView().refresh() });

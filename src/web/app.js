@@ -341,6 +341,7 @@ class TreeView {
       e.preventDefault();
       const n = this.nodeAt(e.target);
       if (n) post({ op: 'menu', ids: [n.id], x: e.clientX * devicePixelRatio, y: e.clientY * devicePixelRatio, extended: e.shiftKey });
+      else openMenu(e.clientX, e.clientY, emptyMenu());   // its empty space: a new folder or file (rename.js)
     });
     dropTarget(this.body, e => { const n = this.nodeAt(e.target); return n?.folder === false ? n.parent?.id ?? this.root : n?.id ?? this.root; });
     iconUsers.add(this);
@@ -827,7 +828,7 @@ class ListView {
     this.body.addEventListener('contextmenu', e => {
       e.preventDefault();
       const x = this.entryAt(e.target);
-      if (!x) return;
+      if (!x) return openMenu(e.clientX, e.clientY, emptyMenu());   // its empty space: a new folder or file (rename.js)
       if (!this.selected.has(x.id)) this.select(x, e);
       if (this.ownMenu?.(e)) return;
       post({ op: 'menu', ids: this.ids(), x: e.clientX * devicePixelRatio, y: e.clientY * devicePixelRatio, extended: e.shiftKey });
@@ -1096,6 +1097,13 @@ class ListView {
     this.askColumnValues();
     if (this.cols.sort?.id.includes('.')) this.sortEntries();
     if (this.cols.fit) this.fitColumns();
+    // A new folder or file made here (F8, F7; rename.js): focused and renamed in place.
+    const made = this.renameOnLoad && this.entries.find(x => same(x.id, this.renameOnLoad));
+    if (made) {
+      this.renameOnLoad = null;
+      this.select(made, {});
+      startRename(this, made.id);
+    }
     ribbonRefresh();
   }
 
@@ -2539,7 +2547,7 @@ const events = {
   menuDone(m) {
     window.__spike.events.push({ menuDone: m.verb ?? null, error: m.error ?? null });
     if (m.error) status(m.error, true);
-    else if (m.verb === 'rename') status('Rename: not built yet.');
+    else if (m.verb === 'rename') startRename(activeView(), layout.state(activePane).focus);   // Explorer's Rename: in place
     else if (m.verb) setTimeout(() => {
       reloadLists();
       for (const v of scrapViews()) v.verify(v.ids());   // a scrap's own items, deleted from Explorer's menu
@@ -2564,6 +2572,7 @@ const events = {
     ops.set(m.op.id, m.op);
     showOps();
     if (!m.op.finished) return;
+    fileOpDone(m.op);   // a new item renamed, a renamed one focused (rename.js)
     reloadLists();
     // A scrap's entries follow what moved and drop what was deleted (plan 06 3.1).
     for (const v of scrapViews()) {

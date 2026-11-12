@@ -25,6 +25,8 @@ sealed class FileOps
         public IReadOnlyList<string> Ids { get; init; } = [];
         /// <summary>The items moved or renamed: [old, new] parsing names, so the entries of a scrap follow them.</summary>
         public List<string[]> Moved { get; } = [];
+        /// <summary>A new folder or file: its parsing name, so the page can rename it at once.</summary>
+        public string? Created { get; set; }
 
         public JsonObject ToJson() => new()
         {
@@ -32,6 +34,7 @@ sealed class FileOps
             ["finished"] = Finished, ["aborted"] = Aborted, ["error"] = Error,
             ["ids"] = Finished ? new JsonArray(Ids.Select(i => (JsonNode?)i).ToArray()) : null,
             ["moved"] = Finished ? new JsonArray(Moved.Select(m => (JsonNode?)new JsonArray(m[0], m[1])).ToArray()) : null,
+            ["created"] = Finished ? Created : null,
         };
     }
 
@@ -50,8 +53,8 @@ sealed class FileOps
     public IReadOnlyList<Operation> All => operations;
 
     /// <summary>Starts a copy or move of items (parsing names) into a folder, a delete (to the Recycle Bin; `confirmed`:
-    /// Foldex asked already, Windows does not ask again), a permanent delete (deletePermanent), or a new folder in `target` ("New folder", numbered by Windows
-    /// when the name is taken). Returns at once.</summary>
+    /// Foldex asked already, Windows does not ask again), a permanent delete (deletePermanent), a rename of one item (rename: `target` is its new name), or a
+    /// new folder or file in `target` ("New folder", "New file.txt"; numbered by Windows when the name is taken). Returns at once.</summary>
     public Operation Start(string kind, IReadOnlyList<string> ids, string? target, IntPtr owner, bool confirmed)
     {
         var op = new Operation { Id = ++lastId, Kind = kind, Items = ids.Count, Ids = [.. ids] };
@@ -75,13 +78,14 @@ sealed class FileOps
             var flags = Native.FofNoConfirmMkDir | Native.FofAllowUndo;
             if (op.Kind == "delete") flags |= Native.FofxRecycleOnDelete | (confirmed ? Native.FofNoConfirmation : 0);
             if (op.Kind == "deletePermanent") flags = (flags & ~Native.FofAllowUndo) | (confirmed ? Native.FofNoConfirmation : 0);
-            if (op.Kind == "newFolder") flags |= Native.FofRenameOnCollision;
+            if (op.Kind is "newFolder" or "newFile") flags |= Native.FofRenameOnCollision;
             fo.SetOperationFlags(flags);
             if (owner != IntPtr.Zero) fo.SetOwnerWindow(owner);
             var sink = new Sink(this, op);
             fo.Advise(sink, out var cookie);
-            var dest = target is null ? null : Native.Item(target);
+            var dest = target is null || op.Kind == "rename" ? null : Native.Item(target);
             if (op.Kind == "newFolder") fo.NewItem(dest!, Native.FileAttributeDirectory, "New folder", null, IntPtr.Zero);
+            if (op.Kind == "newFile") fo.NewItem(dest!, Native.FileAttributeNormal, "New file.txt", null, IntPtr.Zero);
             foreach (var id in ids)
             {
                 var item = Native.Item(id);
@@ -90,6 +94,7 @@ sealed class FileOps
                     case "copy": fo.CopyItem(item, dest!, null, IntPtr.Zero); break;
                     case "move": fo.MoveItem(item, dest!, null, IntPtr.Zero); break;
                     case "delete" or "deletePermanent": fo.DeleteItem(item, IntPtr.Zero); break;
+                    case "rename": fo.RenameItem(item, target!, IntPtr.Zero); break;
                     default: throw new ArgumentException($"no file operation {op.Kind}");
                 }
             }
@@ -154,7 +159,12 @@ sealed class FileOps
         public void PreDeleteItem(uint dwFlags, IShellItem psiItem) { }
         public void PostDeleteItem(uint dwFlags, IShellItem psiItem, int hrDelete, IShellItem psiNewlyCreated) { }
         public void PreNewItem(uint dwFlags, IShellItem psiDestinationFolder, string pszNewName) { }
-        public void PostNewItem(uint dwFlags, IShellItem psiDestinationFolder, string pszNewName, string pszTemplateName, uint dwFileAttributes, int hrNew, IShellItem psiNewItem) { }
+        public void PostNewItem(uint dwFlags, IShellItem psiDestinationFolder, string pszNewName, string pszTemplateName, uint dwFileAttributes, int hrNew, IShellItem psiNewItem)
+        {
+            if (hrNew < 0 || psiNewItem is null) return;
+            try { op.Created = Native.IdOf(psiNewItem); }
+            catch (COMException) { }
+        }
         public void ResetTimer() { }
         public void PauseTimer() { }
         public void ResumeTimer() { }
