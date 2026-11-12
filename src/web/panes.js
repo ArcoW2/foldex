@@ -314,19 +314,22 @@ class Layout {
 // per level above it, 'pass' (an ancestor's line goes on below), 'mid' (its own joint, more siblings below), 'end' (its
 // own joint, the last child) or '' (an ancestor's line has ended); and down: an open node whose children follow.
 function treeGuides(depths) {
-  // Whether the line of level k (an ancestor at depth k) goes on below row i: a later row at depth k + 1 comes before
-  // one at depth k or less.
-  const goesOn = (i, k) => {
-    for (let j = i + 1; j < depths.length; j++) {
-      if (depths[j] <= k) return false;
-      if (depths[j] === k + 1) return true;
-    }
-    return false;
-  };
-  return depths.map((d, i) => ({
-    levels: Array.from({ length: d }, (_, k) => k === d - 1 ? (goesOn(i, k) ? 'mid' : 'end') : goesOn(i, k) ? 'pass' : ''),
-    down: (depths[i + 1] ?? -1) > d,
-  }));
+  // The line of level k (an ancestor at depth k) goes on below row i when a later row at depth k + 1 comes before one
+  // at depth k or less. One pass from the bottom up keeps that per level for the rows below (a tree of many thousand
+  // rows must not take a look ahead per row and level).
+  const goesOn = [];
+  const guides = new Array(depths.length);
+  for (let i = depths.length - 1; i >= 0; i--) {
+    const d = depths[i];
+    guides[i] = {
+      levels: Array.from({ length: d }, (_, k) => k === d - 1 ? (goesOn[k] ? 'mid' : 'end') : goesOn[k] ? 'pass' : ''),
+      down: (depths[i + 1] ?? -1) > d,
+    };
+    // This row ends the lines of its own level and deeper for the rows above it, and carries on its parent's.
+    goesOn.length = Math.min(goesOn.length, d);
+    if (d > 0) goesOn[d - 1] = true;
+  }
+  return guides;
 }
 
 // The pieces of line of one row (treeGuides) as elements: level k at `x(k)` px, its joint `joint` px long; a row that
