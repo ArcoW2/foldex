@@ -1,11 +1,14 @@
 # Plan 06: Search and scrap: panes of items from anywhere
 
-Status: draft 2026-11-10, revised 2026-11-12; not started.
+Status: draft 2026-11-10, revised 2026-11-12 (twice); not started.
 
 - 2026-11-10: draft.
 - 2026-11-12: revised with the user's answers: Delete per pane kind, a scrap per project and not kept across a restart,
   missing entries dropped, search inside a collection, every engine available, a scrap standing alone (no source, no
   followers), opened empty and docked as any pane.
+- 2026-11-12: revised again: search results always go into a scrap (no search pane of its own); a Find dialog after
+  xplorer2's; a scrap keeps its search while it lives, can take more results, be renamed and cleared; a docked scrap
+  keeps its name, search and place across a restart, empty. Containing text and additional rules moved to plan 20.
 
 Builds on plan 03 (connected panes).
 
@@ -18,12 +21,13 @@ somewhere first.
 
 ## 2. The solution, in brief
 
-A pane can show a collection instead of a folder: a flat list of items from any number of locations. A search pane
-holds what a search found and is connected like any pane. A scrap pane holds what was put in it, stands alone (no
-source, no followers), can be opened empty and docked anywhere as a drop target, and lives only as long as Foldex runs.
-Every file action works on a collection as on a folder, so copying copies items from several locations at once. In a
-folder pane Delete deletes as in Explorer; in a scrap Delete only takes the entry out, and Alt+Delete or the scrap's
-Delete button deletes from disk.
+A scrap is a pane holding a flat list of files and folders from anywhere. It stands alone (no source, no followers),
+has a name, can be opened empty, filled by dragging and pasting, renamed, cleared and docked anywhere. A search is a
+Find dialog (after xplorer2's) whose results always fill a scrap: a new one, or an existing one chosen at the bottom
+of the dialog. A scrap keeps its search while it lives, to change and run again; a search started on a scrap searches
+its entries into a new scrap. In a scrap Delete takes the entry out and Alt+Delete also moves the file to the recycle
+bin. A scrap lives as long as Foldex runs; a docked one comes back after a restart empty, with its name, search and
+place.
 
 ## Status
 
@@ -35,71 +39,93 @@ Nothing yet.
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| Collections | entries by parsing name, flat, the folder column, grouping, watched entries, missing ones dropped | -- | 3.1 |
-| Search pane | criteria, scope, streaming results, every engine available, saved criteria, search inside a collection | collections | 3.2 |
-| Scrap pane | opened empty, filled by drag, action, paste and Add all to scrap; no source or followers; docked; per project, not kept across a restart; more than one | collections | 3.3 |
-| File actions on a collection | Delete, Alt+Delete, Alt+Shift+Delete, the scrap's Delete button | collections | 3.4 |
-| Own menu for mixed folders | Foldex's own menu for items from different folders | collections | 3.4 |
+| Scrap pane | flat entries, the folder column, grouping, watched entries, missing ones dropped; no source or followers; name, rename, clear; docked; lifetime | -- | 3.1, 3.2 |
+| Filling a scrap | New scrap, drag, Add to scrap, paste; a folder as its own path | scrap pane | 3.2 |
+| Find dialog | Look in, subfolders, depth / breadth first, search index, Named, Files, Folders, Predefined and Save, clear, ok, cancel, the target scrap | scrap pane | 3.3 |
+| Running a search | engines, streaming results, Stop, the scrap keeping its search, searching again, a search on a scrap | Find dialog | 3.4 |
+| File actions on a scrap | Delete, Alt+Delete, Alt+Shift+Delete, the scrap's Delete button | scrap pane | 3.5 |
+| Own menu for mixed folders | Foldex's own menu for items from different folders | scrap pane | 3.5 |
+
+Moved to plan 20 (extended search options): Containing text and Additional rules (size, attributes, date ranges).
 
 ## 3. Details
 
-### 3.1 Collections
+LexPen has no file finder of this kind (its `find.js` and `FolderSearch.cs` find text in files); the Find dialog
+follows xplorer2's, as the user gave it, in Foldex's own dialog look.
+
+### 3.1 The scrap pane
 
 - An entry is a shell item's parsing name (the full path for a file or folder on disk, plan 02 3.1); the pane shows its
   name and, as a column, the folder it is in. Grouping by that folder is a view option.
-- A collection is a flat list: a folder in it is one entry, its own path, not its contents, and it has no tree.
-- Entries are watched: renamed or moved by Foldex, the entry follows; removed outside Foldex, the entry is dropped from
-  the collection at once.
-- Branches (plan 03) work unchanged in a search pane: it keeps one selection per branch colour. A scrap has no source,
-  so no branches.
+- A flat list: a folder in it is one entry, its own path, not its contents; there is no tree.
+- Entries are watched: renamed or moved by Foldex, the entry follows; removed outside Foldex, the entry is dropped at
+  once.
+- No source and no followers: it cannot be connected as parent or child, and focusing an item in it drives nothing.
+  So no branches.
+- Every scrap has a name: "Scrap N" for one opened empty, the searched name for one a search made. Rename... and
+  Clear (all entries out, nothing on disk changes) are on its menu.
+- More than one scrap at a time, each with its own name and colour.
 
-### 3.2 Search pane
+### 3.2 Filling a scrap, and its lifetime
 
-- Criteria: name pattern, text in the file, size, dates, attributes, type; combinable.
-- **Scope**: the folder a search pane's source has focused (so it follows like any follower, plan 03 3.3), or a fixed
-  folder when it has no source.
-- **Inside a collection**: only the collection's own entries are tested against the criteria, files and folders
-  alike; a folder entry is not searched inside. How such a search is started, now that a scrap has no followers: open
-  question 1.
-- Results stream in while the search runs; Stop; a change of scope or criteria cancels the running search and starts
-  again (debounced as plan 03 3.3).
-- **Engines**: whatever is available, to make the search fast: Everything when it is installed, the Windows Search
-  index where the scope is indexed, else Foldex's own walk of the folders (LexPen's `FolderSearch.cs` for the text
-  part). A criterion an engine cannot answer is tested by Foldex on that engine's candidates. [Which criteria each
-  engine answers: not yet checked.]
-- A search pane's criteria and scope are saved in the project; its results are not, they are searched again.
-- Add all to scrap: the search pane's current results into a scrap, as a snapshot (later results do not follow).
-
-### 3.3 Scrap pane
-
-- Usually short-lived: collecting files for one action on all of them (renaming, moving).
 - Opened empty by an action (New scrap), without searching first.
 - Filled by dragging items onto it from any pane (also from Explorer), by an action Add to scrap on the selection, by
-  pasting, and by Add all to scrap from a search pane. Dropping a folder adds the folder's own path, not its files.
-  Nothing is copied or moved on disk.
-- No source and no followers: it cannot be connected as parent or child. Focusing an item in it drives nothing.
-- Docked as any pane, so a small scrap can stay somewhere in the window as a drop target.
-- Belongs to its project's window; kept while Foldex runs, not across a restart. Whether an empty docked scrap keeps
-  its place after a restart: open question 2. There is no scrap shared by all projects.
-- More than one scrap pane, each with its own name and colour.
+  pasting, and by searches (3.3). Dropping a folder adds the folder's own path, not its files. Nothing is copied or
+  moved on disk.
+- Usually short-lived: collecting files for one action on all of them (renaming, moving).
+- Belongs to its project's window and lives while Foldex runs; there is no scrap shared by all projects.
+- After a restart a scrap in the panes is gone. A docked scrap comes back in its dock, empty, with its name and its
+  search options (so a mini scrap can stay in the window as a drop target). Saved in the project's session.
 
-### 3.4 File actions on a collection
+### 3.3 The Find dialog
 
-| Action | On a collection |
+After xplorer2's "Find files or folders", without Special folders:
+
+| Field | What |
+|---|---|
+| Look in | The active pane's folder when opened; a list of earlier ones. When the active pane is a scrap: that scrap (3.4) |
+| Search subfolders | On by default |
+| Go depth first / Breadth first | The order of Foldex's own walk |
+| Use search index | The Windows Search index where Look in is indexed |
+| Named | The name pattern; a list of earlier ones |
+| Files, Folders | What to find; both on by default |
+| Predefined, Save | Saved searches by name, kept for all projects |
+| Into | At the bottom: New scrap, or one of the window's scraps by name (the results are added to it) |
+| clear, ok, cancel | Clear empties the fields; ok searches |
+
+- Ctrl+F opens it (reserved for this since plan 10).
+- The fields xplorer2 has for Archived content, Local search and the number next to Named: open question 1.
+- Containing text and Additional rules (size, attributes, date ranges): plan 20.
+
+### 3.4 Running a search
+
+- The results stream into the scrap right after ok; Stop on the scrap.
+- **Engines**: whatever is available, to make the search fast: Everything when it is installed, the Windows Search
+  index (Use search index) where Look in is indexed, else Foldex's own walk. A criterion an engine cannot answer is
+  tested by Foldex on its candidates. [Which criteria each engine answers: not yet checked.]
+- **The scrap keeps its search** (Look in and every field) while it lives: Search again... opens the dialog with it, to
+  change and run again. Whether that replaces the results or adds to them: open question 2.
+- **Into an existing scrap**: the results are added to its entries; an entry already in it is not added twice. This
+  searches outside the scrap; it is not a search inside its entries.
+- **A search on a scrap** (Look in is a scrap): only the scrap's own entries are tested, files and folders alike, a
+  folder entry not searched inside; the results go into a new scrap.
+
+### 3.5 File actions on a scrap
+
+| Action | On a scrap |
 |---|---|
 | Copy, cut | The selected items, from all their folders; pasted in one go into the target folder |
-| Paste into a folder in the collection | As into any folder |
-| Paste onto the collection itself | Search: not possible. Scrap: adds the items as entries; nothing is copied |
+| Paste into a folder in the scrap | As into any folder |
+| Paste onto the scrap itself | Adds the items as entries; nothing is copied |
 | Move | The files move; the entries follow to their new paths |
 | Rename, properties, open | Per item, as in a folder pane |
-| Delete | Scrap: takes the entries out; nothing on disk changes. Search: open question 1 |
-| Alt+Delete | Deletes the items from disk (recycle bin) and takes them out of the pane |
-| Alt+Shift+Delete | Deletes permanently, as Shift+Delete in Explorer, after a question |
+| Delete | Takes the entries out; nothing on disk changes |
+| Alt+Delete | Takes them out and deletes them from disk (recycle bin) |
+| Alt+Shift+Delete | Takes them out and deletes them permanently, as Shift+Delete in Explorer, after a question |
 
 - In a folder pane Delete deletes from disk (recycle bin) as in Explorer, and Shift+Delete permanently; Alt+Delete
   and Alt+Shift+Delete do the same there.
-- A scrap's head has a Delete button that deletes the selected items from disk, as Alt+Delete (xplorer2 has one); the
-  keys stay the main way.
+- A scrap's head has a Delete button that does what Alt+Delete does (xplorer2 has one); the keys stay the main way.
 - Copying or moving all go through `IFileOperation` (plan 05), so two files with the same name from different folders
   get Windows' own conflict dialog.
 - Deleting from disk from several folders: one confirmation listing the folders involved.
@@ -110,23 +136,22 @@ Nothing yet.
 - The keys are in `keys.json` like all keys; Alt+Delete and Alt+Shift+Delete are free in Windows [not yet checked
   against PowerToys and the like on this PC].
 
-### 3.5 Tests
+### 3.6 Tests
 
 - Unit: entries following a move and a rename; an entry removed outside Foldex dropped; a dropped folder added as one
-  entry; Delete in a scrap taking out entries only; a search inside a collection testing only its entries; the search
-  criteria combined; a search cancelled on a scope change.
-- In the test copy: search a folder, focus a result folder, its follower shows it; a new empty scrap docked, filled by
-  dragging from three folders, copied into one, conflicts asked by Windows; Delete in the scrap leaves the files on
-  disk; Alt+Delete and the scrap's Delete button move them to the recycle bin; Delete in a folder pane moves them to
-  the recycle bin; after a restart the scrap's entries are gone.
+  entry; results added to an existing scrap without doubles; Delete taking out entries only; Clear; a search on a
+  scrap testing only its entries; a docked scrap's name, search and place restored empty from a session.
+- In the test copy: Ctrl+F in a folder pane, Look in filled with its folder, a name searched, a new scrap filled; the
+  same search into that scrap from another folder, results added; Search again with a changed name; a search on the
+  scrap into a new scrap; a new empty scrap docked, filled by dragging from three folders, copied into one, conflicts
+  asked by Windows; Delete leaves the files on disk; Alt+Delete and the Delete button move them to the recycle bin;
+  Delete in a folder pane moves them to the recycle bin; after a restart the docked scrap is back empty, the other
+  gone.
 
 ## 4. Open questions
 
-1. **Search results: a search pane or a scrap?** This plan has a search pane of its own, connected (a source sets its
-   scope, its focus drives followers). xplorer2 puts search results in a scrap, and the reserved Ctrl+F "scrap search"
-   points that way too. If results are a scrap, a search has a fixed scope set when it starts, its results drive
-   nothing, Delete there takes entries out, and a search inside a scrap is started from that scrap (its results
-   filling a new scrap). If they stay a search pane: Delete in it takes the entries out (as a scrap) or deletes from
-   disk (as a folder pane), and how is a search inside a scrap started, since a scrap has no followers?
-2. **A docked scrap after a restart.** Its entries are gone. Does the empty pane keep its place in the dock (a mini
-   scrap always there), or does the pane go too?
+1. **xplorer2's other fields.** Archived content (searching inside zip files and the like), Local search, and the
+   number next to Named (100 in your example): wanted in Foldex, and what is the number for (a limit on the results)?
+2. **Search again.** When a scrap's search is changed and run again: does it replace the scrap's results, or add to
+   them (as a search into an existing scrap does)? And "the search can continue": run again, or also resume a search
+   that was stopped?
