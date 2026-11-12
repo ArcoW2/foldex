@@ -213,6 +213,52 @@ sealed class AppHost : ApplicationContext
         foreach (var w in windows) w.Post((JsonObject)message.DeepClone());
     }
 
+    // Quick access and favourite folders (docs/plans/executed/23-PLAN-quick-access-and-favourites.md 3.1), kept here for every
+    // window. Quick access without a file yet starts as Explorer's pinned folders (read once, on an STA thread).
+    List<string> quickAccess = FolderLists.Load(DataDir, FolderLists.QuickAccess) ?? StartQuickAccess();
+    List<string> favouriteFolders = FolderLists.Load(DataDir, FolderLists.Favourites) ?? [];
+
+    static List<string> StartQuickAccess()
+    {
+        var pinned = Shell.StaWorker.Once("quickAccess", FolderLists.ExplorerPinned).GetAwaiter().GetResult();
+        try { return FolderLists.Save(DataDir, FolderLists.QuickAccess, pinned); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return pinned; }
+    }
+
+    public List<string> FolderList(string kind) => kind == FolderLists.QuickAccess ? quickAccess : favouriteFolders;
+
+    /// <summary>Both lists, for the pages ("folderLists" in hello and after every change), with the paths of the known
+    /// folders in them (shell:Personal: where Documents is now), for their names.</summary>
+    public JsonObject FolderListsJson()
+    {
+        var paths = new JsonObject();
+        foreach (var f in quickAccess.Concat(favouriteFolders).Where(f => f.StartsWith("shell:", StringComparison.OrdinalIgnoreCase)).Distinct())
+            paths[f] = FolderLists.Resolve(f);
+        return new()
+        {
+            ["quickAccess"] = new JsonArray(quickAccess.Select(f => (JsonNode)f).ToArray()),
+            ["favourites"] = new JsonArray(favouriteFolders.Select(f => (JsonNode)f).ToArray()),
+            ["paths"] = paths,
+        };
+    }
+
+    /// <summary>A list set (in your order), written, and every window told.</summary>
+    public void SetFolderList(string kind, IEnumerable<string> folders)
+    {
+        var list = FolderLists.Save(DataDir, kind, folders);
+        if (kind == FolderLists.QuickAccess) quickAccess = list; else favouriteFolders = list;
+        var message = FolderListsJson();
+        message["event"] = "folderLists";
+        foreach (var w in windows) w.Post((JsonObject)message.DeepClone());
+    }
+
+    /// <summary>A folder added to a list (at `at`, else at the end; one there already moves) or taken off it.</summary>
+    public void AddToFolderList(string kind, string folder, int at = int.MaxValue) =>
+        SetFolderList(kind, FolderLists.Insert(FolderList(kind), folder, at));
+
+    public void RemoveFromFolderList(string kind, string folder) =>
+        SetFolderList(kind, FolderList(kind).Where(f => !FolderLists.Same(f, folder)));
+
     /// <summary>This run of Foldex: a page that finds another run in its saved layout knows Foldex started again since,
     /// so its scraps go (docs/plans/executed/06-PLAN-search-and-scrap.md 3.2).</summary>
     public static readonly string RunId = Guid.NewGuid().ToString("N");

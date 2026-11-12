@@ -33,7 +33,7 @@ updated whenever a plan is written, built or closed that touches a feature here.
 | Address bar: breadcrumbs, typed path, autocomplete | P+ | part: the path bar (plan 10), typed; breadcrumbs in a column; autocomplete -- | 4 | bars (plan 10) |
 | Back / forward / up | P+ | built (per pane, plan 17; the mouse's buttons too) | 4 | -- |
 | Frequent folders, jump list | P+ | -- | 4 | Back / forward / up (the history) |
-| Bookmarks (keys, icons, dual bookmarks) | P+ | plan 23: quick access in a tree, favourite folders (part: a folder twice in a tree built) | 4 | bars (plan 10), for a bookmark bar |
+| Bookmarks (keys, icons, dual bookmarks) | P+ | built (plan 23): quick access in a tree, favourite folders | 4 | bars (plan 10), for a bookmark bar |
 | Folder tabs (lock, colour, rename, reopen closed) | All / P+ | part: tabs built (plan 12; a tab is a branch); lock, rename, reopen -- | 3 | Detachable, floating, docked panes |
 | Details pane, infobar, multi-part status bar | P+ | -- | 3 | bars (plan 10) |
 | Full screen; clone window | P+ | part: new window (-n) built | 3 | -- |

@@ -394,10 +394,35 @@ class TreeView {
     this.body.addEventListener('contextmenu', e => {
       e.preventDefault();
       const n = this.nodeAt(e.target);
-      if (n) post({ op: 'menu', ids: [n.id], x: e.clientX * devicePixelRatio, y: e.clientY * devicePixelRatio, extended: e.shiftKey });
+      if (n?.qa) return;   // the Quick access head and its hint have no menu
+      // A folder: Windows' menu with Foldex's own items at its top (quick access, favourite folders; plan 23 3.2).
+      if (n) post({ op: 'menu', ids: [n.id], folder: n.folder !== false, x: e.clientX * devicePixelRatio, y: e.clientY * devicePixelRatio, extended: e.shiftKey });
       else openMenu(e.clientX, e.clientY, emptyMenu());   // its empty space: a new folder or file (rename.js)
     });
-    dropTarget(this.body, e => { const n = this.nodeAt(e.target); return n?.folder === false ? n.parent?.id ?? this.root : n?.id ?? this.root; });
+    dropTarget(this.body, e => {
+      const n = this.nodeAt(e.target), at = this.quickAccessDrop(e, n);
+      if (at !== null) return { quickAccessAt: at };
+      return n?.folder === false ? n.parent?.id ?? this.root : n?.qa ? null : n?.id ?? this.root;
+    });
+    // Quick access (plan 23 3.5): where a drop would put a folder, shown by a line; a shortcut dragged is its folder (the
+    // shell's drag, as a list's items), so dropped back between shortcuts it moves there.
+    this.body.addEventListener('dragover', e => {
+      const at = this.quickAccessDrop(e, this.nodeAt(e.target));
+      if (at !== this.qaDropAt) {
+        this.qaDropAt = at;
+        this.render();
+      }
+    });
+    const dropDone = () => { if (this.qaDropAt !== null) { this.qaDropAt = null; this.render(); } };
+    this.body.addEventListener('dragleave', e => { if (!this.body.contains(e.relatedTarget)) dropDone(); });
+    this.body.addEventListener('drop', dropDone);
+    this.body.addEventListener('dragstart', e => {
+      const n = this.nodeAt(e.target);
+      e.preventDefault();
+      if (n?.parent === this.qaHead && this.qaHead) post({ op: 'dragOut', ids: [n.id] });
+    });
+    this.qaHead = null;    // the Quick access area's head row, its shortcuts under it (null: not shown)
+    this.qaDropAt = null;  // where a folder dragged over the area would go
     iconUsers.add(this);
     // Made shorter (the ribbon or the status line coming in, the window resized): the focused folder, in view at the
     // old height, stays in view.
@@ -439,6 +464,7 @@ class TreeView {
       return known;
     }
     const n = { ...entry, parent, children: null, expanded: false, depth: parent ? parent.depth + 1 : this.folder ? 1 : 0 };
+    n.inQa = !!parent && (parent.qa === 'head' || !!parent.inQa);   // in the Quick access area (its own tree colour)
     this.places.set(key, [...places, n]);
     const home = this.nodes.get(key);
     if (!home || !this.isHome(home) && this.isHome(n)) this.nodes.set(key, n);
@@ -466,6 +492,62 @@ class TreeView {
 
   allNodes() { return [...this.places.values()].flat(); }
 
+  // ---------- Quick access (plan 23 3.4): an area at the top of a tree without a parent ----------
+
+  quickAccessShown() {
+    const pane = layout.pane(this.id);
+    return !this.folder && pane?.source === null && settings.quickAccess !== false && pane.quickAccess !== false;
+  }
+
+  // The list changed (or the setting, or the pane's choice): the area made again, its shortcuts kept where they still
+  // are (each a place of its own, so what is open under one stays open).
+  async quickAccessChanged() {
+    if (!this.quickAccessShown()) {
+      if (!this.qaHead) return;
+      for (const c of this.qaHead.children) if (!c.qa) this.forget(c);
+      this.qaHead = null;
+      return this.flatten();
+    }
+    const list = [...folderLists.quickAccess];
+    const entries = await quickAccessEntries(list);
+    if (list.join('|') !== folderLists.quickAccess.join('|') || !this.quickAccessShown()) return;   // changed meanwhile
+    const head = this.qaHead ??= { id: QaHeadId, name: 'Quick access', qa: 'head', folder: true, depth: 0, parent: null, children: [] };
+    head.expanded = !layout.pane(this.id).qaFolded;
+    const old = head.children.filter(c => !c.qa);
+    const next = entries.map(e => Object.assign(this.add(e, head), { missing: !!e.missing }));
+    for (const c of old) if (!next.includes(c)) this.forget(c);
+    head.children = next.length ? next
+      : [{ id: QaHintId, name: 'Right-click a folder: Add to quick access', qa: 'hint', folder: false, depth: 1, parent: head, children: null }];
+    this.flatten();
+  }
+
+  foldQuickAccess(open) {
+    if (!this.qaHead) return;
+    this.qaHead.expanded = open;
+    layout.pane(this.id).qaFolded = !open;
+    const focus = this.focused();
+    if (!open && focus?.inQa) this.select(this.top[0]?.id, false, this.top[0]);   // the focus was in the area: out of it
+    this.flatten();
+    tellLayout();
+  }
+
+  // Where a folder dragged over the area goes: before a shortcut (its upper part), after it (its lower part), first (the
+  // head, the hint); null: not into the list (the middle of a shortcut: a drop into that folder, as anywhere).
+  quickAccessDrop(e, n) {
+    if (!this.qaHead || !n) return null;
+    if (n.qa) return 0;
+    if (n.parent !== this.qaHead) return null;
+    const row = e.target.closest('.row'), r = row.getBoundingClientRect(), y = (e.clientY - r.top) / r.height;
+    const k = this.qaHead.children.indexOf(n);
+    return y < 0.3 ? k : y > 0.7 ? k + 1 : null;
+  }
+
+  // The focused row when it is a shortcut of the area (Del takes it off the list, actions.js).
+  quickAccessShortcut() {
+    const n = this.focused();
+    return n && this.qaHead && n.parent === this.qaHead ? n : null;
+  }
+
   // Ready to show: the tops, or (a child) its folder.
   init() {
     if (this.folder) return this.load(layout.state(this.id).location);
@@ -473,6 +555,7 @@ class TreeView {
       described.set(++lastReq, entries => {
         this.top = entries.map(e => this.add(e, null));
         this.flatten();
+        this.quickAccessChanged();
         done();
       });
       post({ op: 'describe', ids: TreeTop, req: lastReq });
@@ -575,13 +658,14 @@ class TreeView {
     };
     const walk = list => {
       for (const n of list) {
-        if (n.hidden && !hidden && n.depth > 0) continue;
-        if (!filter(n) || paneSearch.has(this.id) && !matches(n)) continue;
+        const shortcut = n.qa || n.parent?.qa === 'head';   // the area's head, hint and shortcuts always show
+        if (!shortcut && n.hidden && !hidden && n.depth > 0) continue;
+        if (!shortcut && (!filter(n) || paneSearch.has(this.id) && !matches(n))) continue;
         this.flat.push(n);
         if (n.expanded && n.children) walk(n.children);
       }
     };
-    walk(this.top);
+    walk(this.qaHead ? [this.qaHead, ...this.top] : this.top);
     const guides = treeGuides(this.flat.map(n => n.depth));
     this.flat.forEach((n, i) => { n.guides = guides[i]; });
     this.render();
@@ -616,7 +700,14 @@ class TreeView {
       }
       const row = document.createElement('div');
       row.className = 'row cols' + (n === focus ? ' selected focused' : '') + (n.hidden ? ' hidden' : '') + (i % 2 ? ' odd' : '')
-        + (isCompanion(this, n.id) ? ' companion' : '');
+        + (isCompanion(this, n.id) ? ' companion' : '') + (n.qa ? ` qa-${n.qa}` : '') + (n.inQa ? ' qa' : '')
+        + (n.missing || n.parent === this.qaHead && this.qaHead && folderMissing(n.id) ? ' missing' : '');
+      if (n.parent === this.qaHead && this.qaHead) {
+        row.draggable = true;
+        const k = this.qaHead.children.indexOf(n);
+        if (this.qaDropAt === k) row.classList.add('qa-drop-before');
+        if (this.qaDropAt === k + 1 && k === this.qaHead.children.length - 1) row.classList.add('qa-drop-after');
+      } else if (n.qa && this.qaDropAt !== null && (n.qa === 'hint' || n.qa === 'head' && !this.qaHead.expanded)) row.classList.add('qa-drop-after');
       row.style.top = `${i * RowHeight}px`;
       row.dataset.index = i;
       cols.forEach((c, k) => {
@@ -624,7 +715,7 @@ class TreeView {
         cell.className = k === 0 ? 'cell first' : 'cell' + (RightAligned.has(c.kind) ? ' right' : '') + (c.id === 'git' && n.git ? ` git-${n.git === '!' ? 'conflict' : n.git}` : '')
           + (c.id === this.cols.sort?.id ? ' sorted' : '');
         cell.style.width = `${c.width}px`;
-        if (k > 0) cell.textContent = columnText(n, c.id);
+        if (k > 0) cell.textContent = n.qa ? '' : columnText(n, c.id);
         else {
           cell.style.paddingLeft = `${8 + n.depth * 14}px`;
           const twisty = document.createElement('span');
@@ -638,7 +729,11 @@ class TreeView {
           const name = document.createElement('span');
           name.className = 'name';
           name.textContent = n.name;
-          cell.append(twisty, iconImage(n, missing), name);
+          if (n.qa) cell.append(twisty, name);   // the area's head and hint: no icon
+          else cell.append(twisty, iconImage(n, missing), name);
+          // Two shortcuts with the same name: the folder each is in, dimmed after it (plan 23 3.4).
+          if (n.parent === this.qaHead && this.qaHead && this.qaHead.children.some(c => c !== n && c.name.toLowerCase() === n.name.toLowerCase()))
+            name.after(Object.assign(document.createElement('span'), { className: 'qa-where', textContent: folderParent(n.id) }));
           if (n.link) {
             const link = document.createElement('span');
             link.className = 'link';
@@ -666,6 +761,10 @@ class TreeView {
     if (e.button !== 0) return;
     const n = this.nodeAt(e.target);
     if (!n) return;
+    // The Quick access head folds the area (kept per pane); its hint does nothing; a shortcut that is gone says so.
+    if (n.qa === 'head') return this.foldQuickAccess(!n.expanded);
+    if (n.qa) return;
+    if (n.parent === this.qaHead && this.qaHead && (n.missing || folderMissing(n.id))) return missingFolder('quickaccess', n.id);
     // A double-click is the second press (its count): each press draws the rows anew, so the browser sends no dblclick.
     if (e.detail === 2 && !e.target.classList.contains('twisty')) return this.open(n);
     if (!e.target.classList.contains('twisty')) return this.select(n.id, false, n);
@@ -723,18 +822,24 @@ class TreeView {
     if (typeInPane(this, e)) return;
     const n = this.focused();
     const i = n ? this.flat.indexOf(n) : -1;
-    const to = k => { if (this.flat[k]) this.select(this.flat[k].id, false, this.flat[k]); e.preventDefault(); };
+    // The Quick access head and hint are passed over (a click folds the area).
+    const to = (k, step = 1) => {
+      while (this.flat[k]?.qa) k += step;
+      if (k < 0 || !this.flat[k]) for (k = i; this.flat[k + step] && this.flat[k + step].qa; k += step);
+      if (this.flat[k] && !this.flat[k].qa) this.select(this.flat[k].id, false, this.flat[k]);
+      e.preventDefault();
+    };
     if (e.key === 'ArrowDown') to(i + 1);
-    else if (e.key === 'ArrowUp') to(Math.max(0, i - 1));
+    else if (e.key === 'ArrowUp') to(Math.max(0, i - 1), -1);
     else if (e.key === 'Home') to(0);
-    else if (e.key === 'End') to(this.flat.length - 1);
+    else if (e.key === 'End') to(this.flat.length - 1, -1);
     // A page down or up moves the cursor as a list's does (not only the view).
     else if (e.key === 'PageDown' || e.key === 'PageUp') {
       const page = Math.max(1, Math.floor(this.body.clientHeight / RowHeight) - 1);
-      to(Math.max(0, Math.min(this.flat.length - 1, (i < 0 ? 0 : i) + (e.key === 'PageDown' ? page : -page))));
+      to(Math.max(0, Math.min(this.flat.length - 1, (i < 0 ? 0 : i) + (e.key === 'PageDown' ? page : -page))), e.key === 'PageDown' ? 1 : -1);
     }
     else if (e.key === 'ArrowRight' && n) { if (!n.expanded) this.expand(n); else if (n.children?.[0]) this.select(n.children[0].id, false, n.children[0]); e.preventDefault(); }
-    else if (e.key === 'ArrowLeft' && n) { if (n.expanded) this.expand(n, false); else if (n.parent) this.select(n.parent.id, false, n.parent); e.preventDefault(); }
+    else if (e.key === 'ArrowLeft' && n) { if (n.expanded) this.expand(n, false); else if (n.parent && !n.parent.qa) this.select(n.parent.id, false, n.parent); e.preventDefault(); }
   }
 
   // Shows an item in the tree: expanded down to it and focused (`quiet`: without its children following). Paths on disk
@@ -935,7 +1040,9 @@ class ListView {
       if (!x) return openMenu(e.clientX, e.clientY, emptyMenu());   // its empty space: a new folder or file (rename.js)
       if (!this.selected.has(x.id)) this.select(x, e);
       if (this.ownMenu?.(e)) return;
-      post({ op: 'menu', ids: this.ids(), x: e.clientX * devicePixelRatio, y: e.clientY * devicePixelRatio, extended: e.shiftKey });
+      // One folder: Windows' menu with Foldex's own items at its top (quick access, favourite folders; plan 23 3.2).
+      const one = this.ids().length === 1 && this.entries.find(y => y.id === this.ids()[0])?.folder === true;
+      post({ op: 'menu', ids: this.ids(), folder: one, x: e.clientX * devicePixelRatio, y: e.clientY * devicePixelRatio, extended: e.shiftKey });
     });
     // Dragging out: the host starts the shell's own drag (plan 02 3.6).
     this.body.addEventListener('dragstart', e => {
@@ -1828,6 +1935,8 @@ function dropTarget(body, targetOf) {
           views.get(target.scrap)?.add(m.entries);
           status(`${m.entries.length} item(s) added to ${views.get(target.scrap)?.tabTitle() ?? 'the scrap'}.`);
         });
+    } else if (target?.quickAccessAt !== undefined) {
+      host.postMessageWithAdditionalObjects({ op: 'drop', quickAccessAt: target.quickAccessAt, types: [...e.dataTransfer.types] }, e.dataTransfer.files);
     } else if (target) host.postMessageWithAdditionalObjects({ op: 'drop', target, types: [...e.dataTransfer.types] }, e.dataTransfer.files);
   });
 }
@@ -2052,7 +2161,9 @@ function paneMenu(id) {
     '-',
     { label: 'Show', enabled: pane.kind !== 'preview', items: [['folders', 'Folders'], ['files', 'Files'], ['both', 'Folders and files']]
       .map(([content, label]) => ({ label, checked: (pane.content ?? 'both') === content,
-        enabled: !(pane.kind === 'tree' && content === 'files'), run: () => setPaneContent(id, content) })) },
+        enabled: !(pane.kind === 'tree' && content === 'files'), run: () => setPaneContent(id, content) }))
+      .concat(pane.kind === 'tree' && pane.source === null ? ['-', { label: 'Quick access', checked: pane.quickAccess !== false,
+        enabled: settings.quickAccess !== false, run: () => setPaneQuickAccess(id, pane.quickAccess === false) }] : []) },
     { label: 'Shape', enabled: pane.kind !== 'preview' && !scrap, items: [['tree', 'Tree'], ['list', 'One folder']]
       .map(([kind, label]) => ({ label, checked: pane.kind === kind, run: () => setPaneShape(id, kind) })) },
     { label: 'Hidden items', enabled: pane.kind !== 'preview', checked: pane.kind !== 'preview' && showsHidden(id),
@@ -2061,6 +2172,13 @@ function paneMenu(id) {
     '-',
     { label: 'Close pane', run: () => closePane(id) },
   ];
+}
+
+// A top tree's Quick access area shown or not (plan 23 3.4), from its pane menu.
+function setPaneQuickAccess(id, on) {
+  layout.pane(id).quickAccess = on ? undefined : false;
+  views.get(id)?.quickAccessChanged();
+  tellLayout();
 }
 
 // The view of a one-folder pane (plan 03 3.1): details (its columns) or icons.
@@ -2670,6 +2788,7 @@ function settingsChanged(before) {
   } else if (before.treeExpanders !== settings.treeExpanders) {
     for (const v of views.values()) if (v instanceof TreeView) v.render();
   }
+  if (before.quickAccess !== settings.quickAccess) for (const v of views.values()) if (v instanceof TreeView) v.quickAccessChanged();
   ribbonRefresh();
 }
 
@@ -2730,7 +2849,9 @@ const events = {
     runId = m.run;
     searches = m.searches;
     renames = m.renames ?? renames;
+    folderLists = { ...folderLists, ...m.folderLists };
     start(m.paths, m.layout);
+    askFolderExists();
   },
   // Bars changed in a window (plan 10 3.3), and the drives there are now (3.2).
   bars(m) { setBars(m.bars); },
@@ -2838,6 +2959,9 @@ const events = {
   searched(m) { views.get(m.channel)?.searched?.(m); },
   entries(m) { columnReply(m); },
   searches(m) { searches = m.searches; },
+  // Quick access or the favourite folders changed (in any window; plan 23 3.1), and answers to plain questions.
+  folderLists(m) { folderListsCame(m); },
+  answer(m) { columnReply(m); },
   renames(m) { renames = m.renames; },
   previewShown(m) {
     window.__spike.events.push({ previewShown: m.path, handler: m.handler, error: m.error });

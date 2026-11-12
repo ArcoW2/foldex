@@ -62,8 +62,13 @@ async function deleteItems(permanent) {
   if (await askYes(question, folders.length > 1 ? ['From these folders:', ...folders] : []))
     post({ op: 'fileOp', kind: permanent ? 'deletePermanent' : 'delete', ids, confirmed: true });
 }
-action('item.delete', { title: 'Delete', hint: 'to the Recycle Bin; in a scrap: out of the scrap, the files stay', group: 'items',
-  enabled: anySelected, run: () => inScrap() ? activeView().takeOut(selectedIds()) : deleteItems(false) });
+action('item.delete', { title: 'Delete', hint: 'to the Recycle Bin; in a scrap: out of the scrap, the files stay; a quick access shortcut: off the list',
+  enabled: anySelected, run: () => {
+    // A shortcut in a tree's Quick access area: off the list, nothing on disk (plan 23 3.4).
+    const shortcut = activeView() instanceof TreeView && activeView().quickAccessShortcut();
+    if (shortcut) return post({ op: 'folderListRemove', kind: 'quickaccess', folder: shortcut.id });
+    return inScrap() ? activeView().takeOut(selectedIds()) : deleteItems(false);
+  } });
 action('item.deleteDisk', { title: 'Delete from disk', hint: 'to the Recycle Bin, also in a scrap (and out of it)', group: 'items',
   enabled: anySelected, run: () => deleteItems(false) });
 action('item.deletePermanent', { title: 'Delete permanently', hint: 'not to the Recycle Bin, after a question; also in a scrap', group: 'items',
@@ -175,6 +180,17 @@ action('pane.filter', { title: 'Filter...', hint: 'the files the active pane sho
   enabled: () => !!activePane && !(views.get(activePane) instanceof PreviewView), run: () => askPaneFilter(activePane) });
 
 // ---------- Foldex ----------
+
+// Favourite folders (plan 23 3.6; folderlists.js): the menu (the ribbon's Favourites), the current folder added or taken
+// off, Manage.
+action('favourites.menu', { title: 'Favourite folders', hint: 'the favourite folders; add the current folder, add one, manage them', group: 'folders',
+  run: (params, ctx) => {
+    const r = (ctx.el ?? views.get(activePane)?.body ?? document.body).getBoundingClientRect();
+    openMenu(r.left, ctx.el ? r.bottom : r.top, favouritesMenu());
+  } });
+action('favourites.add', { title: 'Add the current folder to the favourite folders', group: 'folders', enabled: () => !!currentFolder(),
+  run: () => post({ op: inList('favourites', currentFolder()) ? 'folderListRemove' : 'folderListAdd', kind: 'favourites', folder: currentFolder() }) });
+action('favourites.manage', { title: 'Manage the favourite folders', group: 'folders', run: () => manageFavourites() });
 
 // Views (as xplorer2's ribbon button): in one plain menu (thumbs.js viewsMenu), the view of the active one-folder pane,
 // or with a tree active, of the first one-folder pane that follows it in its active branch.

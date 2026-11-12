@@ -1,12 +1,13 @@
 # Plan 23: Quick access in a tree, favourite folders
 
-Status: partly executed 2026-11-12 (a folder twice in a tree); see Status.
+Status: executed 2026-11-12; see As built.
 
 - 2026-11-12: draft, at the user's request.
 - 2026-11-12: revised: quick access and favourite folders two lists; quick access one list, shown in a top tree
   only; a shortcut expands, its subfolders in another tree colour; drag to add and to reorder; the first list from
   Explorer's pinned folders.
 - 2026-11-12: partly executed: a folder twice in a tree (3.3), the fix of the tree bug with C:\Users\<you>.
+- 2026-11-12: executed.
 
 Favourite folders as LexPen has them (`..\LexPen\docs\plans\executed\PLAN-favourite-folders.md`). The number in the
 file name is the priority; rename to reorder.
@@ -35,18 +36,18 @@ folder's right-click menu. Both lists are kept by the host and shared by all win
 | Part | What | Reference |
 |---|---|---|
 | A folder twice in a tree | each place in a tree a node of its own; the focus on a place; a path to the home place | 3.3; 6 |
+| Lists | quickaccess.json (first filled from Explorer's pinned folders) and favourite-folders.json, kept by the host, shared by all windows | 3.1; 6 |
+| Right-click items | Foldex's own items in Windows' menu for a folder: add to / remove from quick access and favourite folders | 3.2; 6 |
+| Quick access area | the area at the top of a top tree: head, fold, shortcuts that expand, their own tree colour, going there | 3.4; 6 |
+| Dragging | a folder dropped on the area added; a shortcut dragged to another place | 3.5; 6 |
+| Favourites button | the ribbon button with the list, add current, add a folder, manage | 3.6; 6 |
+| Manage | the dialog for favourite folders | 3.7; 6 |
+| Tests | unit and in the app | 3.8; 6 |
 
 ### Not yet built
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| Lists | quickaccess.json (first filled from Explorer's pinned folders) and favourite-folders.json, kept by the host, shared by all windows | -- | 3.1 |
-| Right-click items | Foldex's own items in Windows' menu for a folder: add to / remove from quick access and favourite folders | -- | 3.2 |
-| Quick access area | the area at the top of a top tree: head, fold, shortcuts that expand, their own tree colour, going there | Lists | 3.4 |
-| Dragging | a folder dropped on the area added; a shortcut dragged to another place | Quick access area | 3.5 |
-| Favourites button | the ribbon button with the list, add current, add a folder, manage | Lists | 3.6 |
-| Manage | the dialog for favourite folders | Lists | 3.7 |
-| Tests | unit and in the app | the others | 3.8 |
 
 ## 3. Details
 
@@ -170,3 +171,54 @@ None.
   marked once; a click on .android under the profile focuses that place (the list follows), Down goes to .aspire
   under the profile, Left to the profile; .android by its path goes to the place under C:; every row's tree lines as
   deep as its row. F8 then Esc in a tree as before. 178 unit tests pass.
+
+### The rest (3.1, 3.2, 3.4 - 3.8)
+
+- The lists: FolderLists.cs (load, save whole through a temporary file, each folder once, Insert at a place moving one
+  that is there, Same for a known folder by its shell name and its path). Known folders are kept by their shell names
+  (shell:Desktop, shell:Downloads, shell:Personal, shell:My Pictures, shell:My Music, shell:My Video), their paths
+  asked of Windows (SHGetKnownFolderPath) when compared or shown. AppHost keeps both lists and sends "folderLists" to
+  every window after a change (with the known folders' paths now, for their names).
+- The first quick access list: Explorer's Home folder (shell:::{679f85cb-0220-4080-b29b-5540cc05aab6}) through
+  Shell.Application on an STA thread; an item is pinned when its System.Home.IsPinned is true (checked: Explorer's
+  pinned folders have it, and a pinned file too, which is left out); written to quickaccess.json at once, so it is read
+  from Explorer only once.
+- Right-click: the page sends `folder: true` with a menu for one folder (a tree row, or a list with one folder
+  selected); the host puts "Add to / Remove from quick access" and "Add to / Remove from favourite folders" and a line
+  at the top of Windows' menu (ShellMenu.AddOwn, command ids from 0x8000, after the shell's range) and runs a chosen one
+  itself. menuTexts (the tests' look at the menu) shows them too.
+- The area: the head and the shortcuts are rows of the tree (the head at depth 0, a shortcut at depth 1 with the
+  shortcut as a place of its own, plan 23 3.3), so lines, columns, expanding and the focus work as for any row. Rows in
+  the area have the class qa: their lines and expanders in the accent colour at the tree lines' intensity. The head is
+  not focused: a click folds it, the arrows pass it over (the plan had Enter or Space on the head: not built, the head
+  never has the focus). Folding with the focus inside the area puts the focus on the tree's first top. The name of a
+  shortcut is its folder's own (the known folder's where it is now: OneDrive's Documenten, as Explorer shows); two
+  with the same name show their parent folder dimmed. A folder that is not there: struck through; a click offers to
+  take it off. Del on a shortcut takes it off the list (the Delete action checks for a shortcut first: the keys run
+  before the tree sees them). The setting quickAccess (Contents > Trees) and a top tree's pane menu (Show > Quick
+  access) turn it off.
+- Dragging: a drop on the head, the hint or the upper or lower part of a shortcut row puts the dropped folders there
+  (op "drop" with quickAccessAt; the host takes only folders, asked off its window's thread); the middle of a shortcut
+  is a drop into that folder, as anywhere. A line shows where. A shortcut is dragged as its folder (the shell's drag, as
+  a list's items), so dropped back on the area it moves there.
+- Favourites: the ribbon's Home > Go > Favourites (action favourites.menu), favourites.add and favourites.manage (no
+  default keys); the menu as LexPen's (the folders, a line, Add current folder or Remove current folder, Add a
+  folder..., Manage...). A favourite opens in the active pane when it shows folders, else in the first one-folder pane.
+  Manage: a dialog in the page as LexPen's (Up, Down, Ctrl+Up / Ctrl+Down, Add..., Change... also Enter or a double
+  click, Delete also Del, Close also Esc), every change to the host at once. The folder picker is Windows' (op
+  pickFolder). Whether each folder is there is asked by the host off its window's thread with a time limit per folder
+  (a share that does not answer counts as there, plan 24 3.8).
+- Tested: unit tests (FolderListsTests: each folder once in any case, a known folder by its shell name and its path,
+  Insert at a place and moving, kept, a broken file read as empty); 182 pass. In the test copy (CDP, real keys and
+  mouse where noted): quickaccess.json started from Explorer's pinned folders (Desktop, Downloads, Pictures, Videos,
+  Documents, OneDrive's Documenten); the area above the tree's tops; a click on Downloads (mouse): the file pane shows
+  it; expanded: its subfolders at depth 2 with the class qa, their lines in the accent colour; the head clicked
+  (mouse): folded and open again, kept in the layout; Windows' menu texts for Downloads ("Remove from quick access /
+  Add to favourite folders", a line, then Windows' own) and for D:\temp ("Add to quick access / Remove from favourite
+  folders" once it was a favourite); a folder added, then Del on its shortcut (key): off the list, the folder still on
+  disk; a folder put first (as a drop does); a folder that is not there: struck through, a click asks, Yes takes it
+  off; the pane's Show > Quick access and the setting turn it off and on; the Favourites menu, Add current folder,
+  choosing one; Manage: Ctrl+Down, Del, Esc (keys), the host's list following.
+- Not tested: a real drag onto the area or out of it (the shell's drag cannot be driven from the test), choosing
+  Foldex's item in Windows' menu with the mouse (its texts are checked; adding and removing are the same host calls),
+  the folder picker, a second window following a change.

@@ -215,6 +215,7 @@ sealed class MainForm : Form
                     ["ops"] = new JsonArray(app.FileOps.All.Select(o => (JsonNode)o.ToJson()).ToArray()),
                     ["searches"] = SearchesFile.Load(AppHost.DataDir),
                     ["renames"] = RenamesFile.Load(AppHost.DataDir),
+                    ["folderLists"] = app.FolderListsJson(),
                     ["run"] = AppHost.RunId,
                 });
                 foreach (var queued in queue) web.CoreWebView2.PostWebMessageAsJson(queued);
@@ -263,11 +264,12 @@ sealed class MainForm : Form
                 break;
             }
             case "menu":
-                ShowMenu(ids, ToScreen(msg), msg["extended"]?.GetValue<bool>() == true);
+                ShowMenu(ids, ToScreen(msg), msg["extended"]?.GetValue<bool>() == true, msg["folder"]?.GetValue<bool>() == true);
                 break;
             case "menuTexts":
             {
                 var (menu, error) = ShellMenu.Create(ids, false);
+                if (menu is not null && msg["folder"]?.GetValue<bool>() == true && ids.Count == 1) menu.AddOwn(OwnMenuTexts(ids[0]));
                 using (menu)
                     Post(new JsonObject
                     {
@@ -290,6 +292,15 @@ sealed class MainForm : Form
             {
                 var (effect, error, source) = ShellDrag.Start(this, ids);
                 Post(new JsonObject { ["event"] = "dragDone", ["effect"] = effect, ["error"] = error, ["source"] = source });
+                break;
+            }
+            case "drop" when msg["quickAccessAt"] is not null:
+            {
+                // Onto the Quick access area (plan 23 3.5): the folders dropped put in where they were dropped, in their
+                // order; files left out. Whether each is a folder is asked off this thread (a share may not answer).
+                var place = msg["quickAccessAt"]!.GetValue<int>();
+                var folders = await Task.Run(() => files.Where(f => Directory.Exists(f)).ToList());
+                foreach (var f in folders) app.AddToFolderList(FolderLists.QuickAccess, f, place++);
                 break;
             }
             case "drop" when msg["scrap"]?.GetValue<bool>() == true:
@@ -330,6 +341,37 @@ sealed class MainForm : Form
                 // The Rename dialog (plan 21 3.4): every item to its new name, as one operation.
                 app.FileOps.StartRenames(msg["renames"]!.AsArray().Select(r => (r![0]!.GetValue<string>(), r[1]!.GetValue<string>())).ToList(), Handle);
                 break;
+            // Quick access and favourite folders (plan 23 3.1): added, taken off, set in order; whether each still exists
+            // (asked off this thread, each with a time limit: a share that does not answer counts as there); the folder
+            // picker (Add..., Change...).
+            case "folderListAdd":
+                app.AddToFolderList(msg["kind"]!.GetValue<string>(), msg["folder"]!.GetValue<string>(), msg["at"]?.GetValue<int>() ?? int.MaxValue);
+                break;
+            case "folderListRemove":
+                app.RemoveFromFolderList(msg["kind"]!.GetValue<string>(), msg["folder"]!.GetValue<string>());
+                break;
+            case "folderListSet":
+                app.SetFolderList(msg["kind"]!.GetValue<string>(), msg["folders"]!.AsArray().Select(n => n!.GetValue<string>()));
+                break;
+            case "folderListsExist":
+            {
+                var all = app.FolderList(FolderLists.QuickAccess).Concat(app.FolderList(FolderLists.Favourites)).Distinct().ToList();
+                var exists = new JsonObject();
+                await Task.WhenAll(all.Select(async f =>
+                {
+                    var check = Task.Run(() => Directory.Exists(FolderLists.Resolve(f)));
+                    exists[f] = await Task.WhenAny(check, Task.Delay(1500)) == check ? check.Result : true;
+                }));
+                Post(new JsonObject { ["event"] = "answer", ["req"] = msg["req"]?.DeepClone(), ["exists"] = exists });
+                break;
+            }
+            case "pickFolder":
+            {
+                using var d = new FolderBrowserDialog();
+                if (msg["at"]?.GetValue<string>() is { Length: > 0 } start) d.SelectedPath = FolderLists.Resolve(start);
+                Post(new JsonObject { ["event"] = "answer", ["req"] = msg["req"]?.DeepClone(), ["folder"] = d.ShowDialog(this) == DialogResult.OK ? d.SelectedPath : null });
+                break;
+            }
             case "renamesSave":
                 try { app.SaveRenames(msg["renames"]!); }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -601,7 +643,7 @@ sealed class MainForm : Form
         Post(r);
     }
 
-    void ShowMenu(List<string> ids, Point screen, bool extended)
+    void ShowMenu(List<string> ids, Point screen, bool extended, bool folder)
     {
         var (menu, error) = ShellMenu.Create(ids, extended);
         if (menu is null)
@@ -611,10 +653,26 @@ sealed class MainForm : Form
         }
         using (menu)
         {
-            var verb = menu.Show(this, screen);
+            // One folder: Foldex's own items at the top (plan 23 3.2), quick access and favourite folders.
+            if (folder && ids.Count == 1) menu.AddOwn(OwnMenuTexts(ids[0]));
+            var verb = menu.Show(this, screen, out var own);
+            if (own is { } k)
+            {
+                var kind = OwnMenuLists[k];
+                if (InFolderList(kind, ids[0])) app.RemoveFromFolderList(kind, ids[0]);
+                else app.AddToFolderList(kind, ids[0]);
+            }
             Post(new JsonObject { ["event"] = "menuDone", ["verb"] = verb });
         }
     }
+
+    // Foldex's own items in Windows' menu for one folder, in this order (plan 23 3.2).
+    static readonly string[] OwnMenuLists = [FolderLists.QuickAccess, FolderLists.Favourites];
+
+    bool InFolderList(string kind, string folder) => app.FolderList(kind).Any(f => FolderLists.Same(f, folder));
+
+    List<string> OwnMenuTexts(string folder) => OwnMenuLists.Select(kind => (InFolderList(kind, folder) ? "Remove from " : "Add to ")
+        + (kind == FolderLists.QuickAccess ? "quick access" : "favourite folders")).ToList();
 
     // The page gives positions in its own pixels times devicePixelRatio: the browser's client pixels.
     Point ToScreen(JsonObject msg) =>

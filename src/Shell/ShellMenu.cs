@@ -10,7 +10,7 @@ namespace Foldex.Shell;
 /// </summary>
 sealed class ShellMenu : IDisposable
 {
-    const uint FirstId = 1, LastId = 0x7FFF;
+    const uint FirstId = 1, LastId = 0x7FFF, OwnId = 0x8000;   // Foldex's own items after the shell's range
     const uint MfByPosition = 0x400;
     const int WmInitMenuPopup = 0x117, WmDrawItem = 0x2B, WmMeasureItem = 0x2C, WmMenuChar = 0x120;
 
@@ -75,15 +75,36 @@ sealed class ShellMenu : IDisposable
         return texts;
     }
 
+    /// <summary>Foldex's own items at the top of the menu, then a line (plan 23 3.2); Show tells which was chosen.</summary>
+    public void AddOwn(IReadOnlyList<string> texts)
+    {
+        InsertMenu(hmenu, 0, MfByPosition | MfSeparator, UIntPtr.Zero, null);
+        for (var k = texts.Count - 1; k >= 0; k--) InsertMenu(hmenu, 0, MfByPosition | MfString, (UIntPtr)(OwnId + (uint)k), texts[k]);
+    }
+
+    const uint MfString = 0, MfSeparator = 0x800;
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    static extern bool InsertMenu(IntPtr hMenu, uint uPosition, uint uFlags, UIntPtr uIDNewItem, string? lpNewItem);
+
     /// <summary>Shows the menu at a screen point and runs the chosen command; the command's verb ("delete", "properties",
     /// or "" when it has none), or null when nothing was chosen.</summary>
-    public string? Show(IWin32Window owner, Point screen)
+    public string? Show(IWin32Window owner, Point screen) => Show(owner, screen, out _);
+
+    /// <summary>As Show; `own`: the index of Foldex's own item chosen (AddOwn), which the caller runs.</summary>
+    public string? Show(IWin32Window owner, Point screen, out int? own)
     {
+        own = null;
         Current = this;
         int id;
         try { id = Native.TrackPopupMenuEx(hmenu, Native.TpmReturnCmd | Native.TpmRightButton, screen.X, screen.Y, owner.Handle, IntPtr.Zero); }
         finally { Current = null; }
         if (id <= 0) return null;
+        if (id >= OwnId)
+        {
+            own = id - (int)OwnId;
+            return "foldex";
+        }
         var verb = Verb((uint)id - FirstId);
         Invoke(owner, (IntPtr)(id - (int)FirstId), null, screen);
         return verb;

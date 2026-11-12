@@ -43,6 +43,8 @@ const SETTING_ROWS = [
   { tab: 'Contents', group: 'Trees', name: 'treeLines', kind: 'choice', title: 'Tree lines',
     options: [['dotted', 'Dotted'], ['solid', 'Solid'], ['none', 'None']],
     hint: 'The lines joining each folder to the one above it, in every tree and in the Projects menu.' },
+  { tab: 'Contents', group: 'Trees', name: 'quickAccess', kind: 'toggle', title: 'Quick access',
+    hint: 'An area at the top of a tree without a parent with shortcuts to folders: right-click a folder, Add to quick access. A pane can hide it (Show > Quick access).' },
   { tab: 'Contents', group: 'Trees', name: 'treeLinesIntensity', kind: 'range', range: [1, 100, 1], unit: '%', title: 'Tree lines intensity',
     hint: 'How strong the tree lines are: the dim text colour at that %. On the focused row they take its text colour.' },
   { tab: 'Panes', group: 'Behaviour', name: 'followDelay', kind: 'range', range: [0, 1000, 10], unit: 'ms', title: 'Follow delay',

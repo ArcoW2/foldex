@@ -22,7 +22,8 @@
         { "action": "item.deleteDisk", "label": "Delete from disk", "stack": true } ] },
       { "name": "Go", "items": [
         { "action": "history.back", "label": "Back" }, { "action": "history.forward", "label": "Forward", "stack": true },
-        { "action": "folder.up", "label": "Up", "stack": true }, { "action": "refresh", "label": "Refresh" } ] } ] },
+        { "action": "folder.up", "label": "Up", "stack": true }, { "action": "refresh", "label": "Refresh" },
+        { "action": "favourites.menu", "label": "Favourites", "stack": true } ] } ] },
 
     { "name": "View", "groups": [
       { "name": "Panes", "items": [

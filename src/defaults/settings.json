@@ -26,6 +26,7 @@
   "paneBgOther": 100,             // the background of the other panes, the same way
   "treeExpanders": "chevron",     // a tree's expanders: "plus" (+ and -) or "chevron" (> and v)
   "treeLines": "dotted",          // a tree's lines: "dotted", "solid" or "none"
+  "quickAccess": true,             // the Quick access area at the top of a tree without a parent
   "treeLinesIntensity": 55,       // 1 to 100: how strong the tree lines are, the dim text colour at that %
   "followDelay": 150,              // ms the cursor rests in a pane before its children follow it, 0 to 1000
   "searchDelay": 600,              // ms after typing in a pane before it filters (more than 3 characters) or jumps, 100 to 2000
