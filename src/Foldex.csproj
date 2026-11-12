@@ -9,6 +9,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <!-- Built from img\icon\foldex.svg by img\icon\make-ico.ps1, as LexPen's. -->
+    <ApplicationIcon>img\icon\foldex.ico</ApplicationIcon>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>false</SelfContained>
     <PublishReadyToRun>true</PublishReadyToRun>
