@@ -897,6 +897,9 @@ body[data-focus-away] :is(.row, .tile).selected.focused {
   text-align: center;
 }
 
+/* On the focused row the expander takes the row's text colour, as its tree lines do. */
+.row.focused .twisty { color: inherit; }
+
 /* The chevron expander (treeExpanders "chevron", plan 16): > closed, v open. */
 .twisty.chev::before {
   content: "";
