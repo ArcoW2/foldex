@@ -4,6 +4,7 @@ Status: draft 2026-11-11, revised 2026-11-12; not started; see Status.
 
 - 2026-11-11: draft, taken out of plan 12 (its open question 1).
 - 2026-11-12: revised: wanted, for any pane, a scrap included; connected and coloured as when docked.
+- 2026-11-12: revised: a floating scrap does not come back after a restart, unless it is pinned.
 
 Builds on plan 12 (docking panes) and plan 03 (connected panes). The number in the file name is the priority; rename to
 reorder.
@@ -33,7 +34,7 @@ floating hands over what it shows, so it comes back as it was.
 | The floating window | a form with its own WebView2 showing one pane, in the window's theme | -- | 3.2 |
 | Connections across windows | following, executing, back and forward through the host | -- | 3.3 |
 | Colours across windows | head, ring, branch marks and pane theme as when docked, changing with the window's | Connections across windows | 3.3 |
-| A floating scrap | drops, its search, its dashed ring; what a restart leaves | open question 1 | 3.3 |
+| A floating scrap | drops, its search, its dashed ring; gone after a restart unless pinned | pinning a scrap (open question 1) | 3.3 |
 | Kept | a floating pane's place and size with the window's layout | -- | 3.4 |
 
 ## 3. Details
@@ -59,7 +60,8 @@ floating hands over what it shows, so it comes back as it was.
   colour) works across windows.
 - Coloured as when docked: its head, its ring (a scrap's dashed), its branch marks and its pane theme are what the
   layout gives it, and change when the main window's change (another active pane, another branch, another theme).
-- A floating scrap: still a drop target, its search runs and fills it as when docked.
+- A floating scrap: still a drop target, its search runs and fills it as when docked. After a restart it does not
+  come back, as a scrap in the center; a pinned one does (pinning a scrap: open question 1).
 
 ### 3.4 Kept
 
@@ -74,6 +76,7 @@ floating hands over what it shows, so it comes back as it was.
 
 ## 4. Open questions
 
-1. **A floating scrap after a restart.** A scrap in the center goes at a restart, a docked one comes back empty (plan
-   06 3.2). A floating scrap: back empty in its window, as a docked one (suggestion: it is kept somewhere on purpose,
-   as a mini scrap is), or gone?
+1. **A pinned scrap after a restart.** A pinned scrap survives a restart, wherever it is (center, docked, floating).
+   Does it come back with its items, or empty with its name and search, as a docked one does now? Pinning a scrap is
+   not built yet (a scrap is never a child, so its pin does nothing today); it belongs with plan 06's scraps rather
+   than here.
