@@ -630,6 +630,11 @@ class TreeView {
     else if (e.key === 'ArrowUp') to(Math.max(0, i - 1));
     else if (e.key === 'Home') to(0);
     else if (e.key === 'End') to(this.flat.length - 1);
+    // A page down or up moves the cursor as a list's does (not only the view).
+    else if (e.key === 'PageDown' || e.key === 'PageUp') {
+      const page = Math.max(1, Math.floor(this.body.clientHeight / RowHeight) - 1);
+      to(Math.max(0, Math.min(this.flat.length - 1, (i < 0 ? 0 : i) + (e.key === 'PageDown' ? page : -page))));
+    }
     else if (e.key === 'ArrowRight' && n) { if (!n.expanded) this.expand(n); else if (n.children?.[0]) this.select(n.children[0].id); e.preventDefault(); }
     else if (e.key === 'ArrowLeft' && n) { if (n.expanded) this.expand(n, false); else if (n.parent) this.select(n.parent.id); e.preventDefault(); }
   }
