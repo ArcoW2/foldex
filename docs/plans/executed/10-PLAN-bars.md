@@ -218,11 +218,13 @@ None.
   a box that filters the active pane on what is typed, each pane its own text (a list: its files and folders whose
   name contains it; a tree: its files, its folders stay), the bar showing the active pane's; an X clears it; Esc clears
   it and goes back to the pane, Enter and Down go back; Ctrl+Shift+F (`search.focus`) goes to it (Ctrl+F is kept for
-  the scrap search, plan 06). Typing in a pane fills the box; once typing rests (`searchDelay`, 600 ms, Settings >
-  Panes): more than 3 characters become the filter and the keyboard goes to the box; fewer: the pane goes to the first
-  item starting with them (from the focus on), and the box clears a second later. A list going to another folder loses
-  its text. A list keeps what it read, so filtering does not read the folder again. Without a search bar typing only
-  jumps. Test copy, key events over CDP: "win" jumped to Win32App and cleared a second later; "prog" filtered C:\ to
-  the two Program Files folders with the keyboard in the box (screenshot); typing on narrowed it to one; X showed all
-  again; Esc cleared and went back to the pane; Ctrl+Shift+F went to the box; the list going to D:\ cleared the text
-  and the box; "net" in the tree went to Network.
+  the scrap search, plan 06). Outside the box typing is a go-to, in it a filter: typing in a pane takes it at once, at
+  each key, to the first item starting with what was typed (from the focus on) and shows the text in the box; once
+  typing rests (`searchDelay`, 600 ms, Settings > Panes) with more than 3 characters the text becomes the filter and
+  the keyboard goes to the box; with fewer the box clears a second after the last key. A filter stays until its text
+  changes (emptied too), also when the pane goes to another folder. A list keeps what it read, so filtering does not
+  read the folder again. Without a search bar typing is only the go-to. Test copy, key events over CDP: "w" and "win"
+  went to Win32App at once, no filter after the delay, the box empty a second after the last key; "prog" went to
+  Program Files at once, then filtered C:\ to the two Program Files folders with the keyboard in the box (screenshot);
+  typing on narrowed it to one; X showed all again; Esc cleared and went back to the pane; Ctrl+Shift+F went to the
+  box; "temp" kept filtering when the list went to D:\; "net" in the tree went to Network.

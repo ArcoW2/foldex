@@ -924,7 +924,6 @@ class ListView {
   }
 
   load(location, elevated = false) {
-    if (!same(location, this.location)) setSearch(this.id, '', true);   // another folder: its search text goes (search.js)
     this.location = location;
     this.entries = [];
     this.all = [];
