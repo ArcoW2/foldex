@@ -238,15 +238,35 @@ function pathBox() {
   input.className = 'bar-path';
   input.spellcheck = false;
   input.title = 'The folder of the active pane; Enter goes there';
-  input.value = barLocation;
+  input.value = shownLocation(barLocation);
   input.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && activePane) goTo(activePane, input.value.trim());
+    if (e.key === 'Enter' && activePane) goTo(activePane, typedLocation(input.value.trim()));
   });
+  // Left: the location as it is again (shown by name), not what was typed.
+  input.addEventListener('blur', () => { input.value = shownLocation(barLocation); });
   return input;
+}
+
+// A location as the path shows it: a folder on disk as its path; a shell folder (This PC, Network, the Recycle Bin)
+// by its name as the panes show it, not its parsing name ("::{20D04FE0-...}").
+const onDiskPath = id => /^[A-Za-z]:|^\\\\/.test(id ?? '');
+const ShellNames = () => ({ [ThisPC]: 'This PC', [Network]: 'Network', [RecycleBin]: 'Recycle Bin' });
+function shownLocation(id) {
+  if (!id || onDiskPath(id)) return id ?? '';
+  const name = nameOf(id);
+  return name && name !== id ? name : ShellNames()[id] ?? id;
+}
+
+// What was typed (or left) in the path: the location shown now, or a shell folder's name, means that location.
+function typedLocation(text) {
+  if (text === shownLocation(barLocation)) return barLocation;
+  const known = Object.entries(ShellNames()).find(([, name]) => name.toLowerCase() === text.toLowerCase());
+  return known ? known[0] : text;
 }
 
 // The path in a column: its folders one under the other, each a button to go there.
 function pathSegments() {
+  if (!onDiskPath(barLocation)) return barLocation ? [{ name: shownLocation(barLocation), id: barLocation }] : [];
   const parts = barLocation.split('\\').filter(x => x);
   return parts.map((name, k) => ({ name, id: k === 0 && /^[A-Za-z]:$/.test(name) ? name + '\\' : parts.slice(0, k + 1).join('\\') }));
 }
@@ -264,7 +284,7 @@ function segmentButton(s) {
 // The active pane's folder (app.js): every path bar shows it, the drives bar marks its drive.
 function showLocation(text) {
   barLocation = text ?? '';
-  for (const input of document.querySelectorAll('.bar-path')) if (document.activeElement !== input) input.value = barLocation;
+  for (const input of document.querySelectorAll('.bar-path')) if (document.activeElement !== input) input.value = shownLocation(barLocation);
   let column = false;
   for (const el of document.querySelectorAll('.bar')) {
     if (el.bar.kind === 'path' && !across(el.dataset.side)) {
@@ -351,7 +371,7 @@ function fitBars() {
           ? drives.map(d => ({ label: d.name, run: () => activePane && goTo(activePane, d.id) }))
           : measured[i].el.bar.kind === 'search'
           ? [{ label: 'Filter...', run: async () => { const to = await askText('Filter the active pane on', paneSearch.get(activePane) ?? ''); if (to !== null) setSearch(activePane, to.trim()); } }]
-          : [{ label: 'Go to a folder...', run: async () => { const to = await askText('Go to', barLocation); if (to && activePane) goTo(activePane, to); } }]));
+          : [{ label: 'Go to a folder...', run: async () => { const to = await askText('Go to', shownLocation(barLocation)); if (to && activePane) goTo(activePane, typedLocation(to)); } }]));
       });
       line.append(more);
     }
