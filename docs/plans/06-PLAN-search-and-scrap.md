@@ -1,6 +1,6 @@
 # Plan 06: Search and scrap: panes of items from anywhere
 
-Status: draft 2026-11-10, revised 2026-11-12 (four times); not started.
+Status: draft 2026-11-10, revised 2026-11-12 (five times); not started.
 
 - 2026-11-10: draft.
 - 2026-11-12: revised with the user's answers: Delete per pane kind, a scrap per project and not kept across a restart,
@@ -13,6 +13,7 @@ Status: draft 2026-11-10, revised 2026-11-12 (four times); not started.
   on.
 - 2026-11-12: revised: Named gets a regular expression option and a fuzzy match (nice to have); the keyboard
   starts in Named, with Files and Folders before it and Containing text right after it.
+- 2026-11-12: revised: no Local search.
 
 Builds on plan 03 (connected panes).
 
@@ -84,7 +85,7 @@ follows xplorer2's, as the user gave it, in Foldex's own dialog look.
 
 ### 3.3 The Find dialog
 
-After xplorer2's "Find files or folders", without Special folders:
+After xplorer2's "Find files or folders", without Special folders and Local search:
 
 | Field | What |
 |---|---|
@@ -106,7 +107,6 @@ After xplorer2's "Find files or folders", without Special folders:
 - **Keyboard**: when the dialog opens the keyboard is in Named, its text selected. Files, Folders, Regular expression
   and Fuzzy come before Named in the Tab order (Shift+Tab reaches them); Tab from Named goes straight to Containing
   text (plan 20), and until that is built to the field after it.
-- xplorer2's Local search: open question 1.
 - Containing text and Additional rules (size, attributes, date ranges): plan 20.
 
 ### 3.4 Running a search
@@ -168,4 +168,4 @@ After xplorer2's "Find files or folders", without Special folders:
 
 ## 4. Open questions
 
-1. **Local search.** xplorer2's Local search box: wanted in Foldex? [What xplorer2 does with it: not yet checked.]
+None.
