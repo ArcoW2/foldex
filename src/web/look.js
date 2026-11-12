@@ -24,6 +24,7 @@ function applyLook(settings, themes) {
   applyHeadText(6);
   // The tree lines (docs/plans/16-PLAN-tree-look.md 3.1): app.css draws them solid or dotted, or not at all.
   root.dataset.treeLines = ['solid', 'dotted', 'none'].includes(settings.treeLines) ? settings.treeLines : 'dotted';
+  root.style.setProperty('--tree-line-mix', `${Math.min(100, Math.max(1, Number(settings.treeLinesIntensity) || 55))}%`);
   // Rows with stripes or lines (plan 11 3.5): the text colour mixed in at rowLinesIntensity %.
   root.dataset.rowLines = ['stripes', 'lines'].includes(settings.rowLines) ? settings.rowLines : 'none';
   root.style.setProperty('--row-line-mix', `${Math.min(100, Math.max(1, Number(settings.rowLinesIntensity) || 8))}%`);

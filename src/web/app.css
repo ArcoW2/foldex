@@ -913,14 +913,17 @@ body[data-focus-away] :is(.row, .tile).selected.focused {
 }
 
 /* Tree lines (plan 16 3.2; panes.js treeGuides): the pieces of each row, in the expander column of each level; solid,
-   dotted or none as the setting treeLines says (look.js puts it on the root element). */
+   dotted or none as the setting treeLines says (look.js puts it on the root element), as strong as treeLinesIntensity;
+   on the focused row in its text colour. */
 .guide {
   position: absolute;
   top: 0;
   bottom: 0;
   pointer-events: none;
-  --line: 1px var(--tree-line-style, dotted) color-mix(in srgb, var(--fg-dim) 55%, transparent);
+  --line: 1px var(--tree-line-style, dotted) var(--tree-line-colour, color-mix(in srgb, var(--fg-dim) var(--tree-line-mix, 55%), transparent));
 }
+
+.row.focused .guide { --tree-line-colour: currentColor; }
 
 :root[data-tree-lines="solid"] { --tree-line-style: solid; }
 :root[data-tree-lines="dotted"] { --tree-line-style: dotted; }

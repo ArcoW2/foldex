@@ -14,6 +14,7 @@
   "Ctrl+X": "item.cut",
   "Ctrl+V": "item.paste",
   "Ctrl+Shift+C": "item.copyPath",
+  "Ctrl+Alt+C": "item.copyPathsLine",
   "Ctrl+A": "item.selectAll",
   "F8": "folder.new",
   "Ctrl+Shift+N": "folder.new",

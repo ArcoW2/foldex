@@ -43,6 +43,8 @@ const SETTING_ROWS = [
   { tab: 'Contents', group: 'Trees', name: 'treeLines', kind: 'choice', title: 'Tree lines',
     options: [['dotted', 'Dotted'], ['solid', 'Solid'], ['none', 'None']],
     hint: 'The lines joining each folder to the one above it, in every tree and in the Projects menu.' },
+  { tab: 'Contents', group: 'Trees', name: 'treeLinesIntensity', kind: 'range', range: [1, 100, 1], unit: '%', title: 'Tree lines intensity',
+    hint: 'How strong the tree lines are: the dim text colour at that %. On the focused row they take its text colour.' },
   { tab: 'Panes', group: 'Behaviour', name: 'followDelay', kind: 'range', range: [0, 1000, 10], unit: 'ms', title: 'Follow delay',
     hint: 'How long the cursor rests in a pane before its children follow it: a quick walk with the arrows loads nothing on the way.' },
   { tab: 'Contents', group: 'Thumbnails', name: 'thumbnailCache', kind: 'choice', title: 'Thumbnail cache',
