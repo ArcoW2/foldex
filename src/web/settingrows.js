@@ -9,7 +9,7 @@
 // searching and scraps.
 const SETTING_TABS = [
   ['App', ['Theme', 'Fonts']],
-  ['Panes', ['Colours', 'Behaviour']],
+  ['Panes', ['Colours', 'Behaviour', 'Scrollbars']],
   ['Contents', ['Rows', 'Columns', 'Highlights', 'Trees', 'Items', 'Thumbnails']],
   ['Search and scrap', ['Search bar']],
 ];

@@ -141,6 +141,17 @@ public class ThemeFileTests
         Assert.NotEmpty(names);
         foreach (var name in names) Assert.True(defaults.ContainsKey(name), $"settingrows.js: {name} is not a setting");
     }
+
+    [Fact]
+    public void EverySettingsRowIsInAGroupItsTabShows()
+    {
+        // The settings window shows only the groups SETTING_TABS lists per tab: a row in another group is never seen.
+        var engine = new Jint.Engine();
+        engine.Execute(File.ReadAllText(Path.Combine(Web, "settingrows.js")));
+        var lost = engine.Evaluate("SETTING_ROWS.filter(r => !SETTING_TABS.some(([tab, groups]) => tab === r.tab && groups.includes(r.group)))"
+            + ".map(r => r.name + ' (' + r.tab + ' > ' + r.group + ')').join(', ')").ToString();
+        Assert.True(lost == "", $"settingrows.js: not shown: {lost}");
+    }
 }
 
 // The installed fonts for the font settings (docs/plans/executed/08-PLAN-fonts.md 3.1).
