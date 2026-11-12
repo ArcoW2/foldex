@@ -558,8 +558,17 @@ class TreeView {
     if (e.button !== 0) return;
     const n = this.nodeAt(e.target);
     if (!n) return;
-    if (e.target.classList.contains('twisty')) this.expand(n, !n.expanded);
-    this.select(n.id);
+    if (!e.target.classList.contains('twisty')) return this.select(n.id);
+    // The expander only opens or closes its folder; the focus stays, unless closing hides it: then the folder gets it.
+    const focus = this.node(layout.state(this.id).focus);
+    const inside = n.expanded && focus && focus !== n && this.contains(n, focus);
+    this.expand(n, !n.expanded);
+    if (inside) this.select(n.id);
+  }
+
+  contains(n, m) {
+    for (let p = m.parent; p; p = p.parent) if (p === n) return true;
+    return false;
   }
 
   // A row focused: its children follow it (a folder: they show it; a file: a preview shows it).
