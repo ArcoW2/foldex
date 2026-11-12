@@ -144,7 +144,38 @@ body {
 .bar + .bar { border-left: 1px solid var(--border); }
 #bars-left .bar + .bar, #bars-right .bar + .bar { border-left: none; border-top: 1px solid var(--border); }
 
-/* The grip: dragging it moves the bar. */
+/* The grip: dragging it moves the bar. The grips and the splitters show only in the change mode. */
+body:not(.bars-changing) .bar-grip, body:not(.bars-changing) .bar-end { display: none; }
+
+/* The change mode: the bars marked, their content not responding (a right-click opens the bar's menu). */
+body.bars-changing .bar { outline: 1px dashed var(--accent); outline-offset: -2px; }
+body.bars-changing .bar-body, body.bars-changing .line-more { pointer-events: none; }
+
+.bars-done {
+  position: fixed;
+  z-index: 75;
+  left: 50%;
+  bottom: 34px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 8px 6px 12px;
+  color: var(--fg);
+  background: var(--bg-bar);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
+}
+
+.bars-done button {
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 14px;
+}
+
 .bar-grip {
   flex: none;
   align-self: stretch;
@@ -180,14 +211,20 @@ body {
   scrollbar-width: thin;
 }
 
-/* Its end: dragging it sets the normal size. */
+/* Its end, a splitter: dragging it sets the normal size. */
 .bar-end {
   position: absolute;
   right: 0;
   top: 0;
   bottom: 0;
-  width: 4px;
+  width: 6px;
   cursor: ew-resize;
+  border-right: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.bar-end:hover {
+  border-right-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
 #bars-left .bar-end, #bars-right .bar-end {
@@ -195,8 +232,14 @@ body {
   right: 0;
   top: auto;
   width: auto;
-  height: 4px;
+  height: 6px;
   cursor: ns-resize;
+  border-right: none;
+  border-bottom: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+#bars-left .bar-end:hover, #bars-right .bar-end:hover {
+  border-bottom-color: var(--accent);
 }
 
 .bar-path {

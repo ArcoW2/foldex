@@ -146,6 +146,8 @@ action('columns.manage', { title: 'Manage column sets', hint: 'rename, delete, d
 action('bars.add', { title: 'Add a bar', hint: 'a bar at the top: the path or the drives', group: 'view',
   variants: [['path'], ['drives']], variantTitles: { path: 'Add a path bar', drives: 'Add a drives bar' },
   run: params => addBar(params[0] ?? 'path') });
+action('bars.change', { title: 'Change the bars', hint: 'their change mode: drag a grip to move a bar, the border after it to size it; right-click for its menu; Esc or Done ends it',
+  group: 'view', checked: () => barsChanging, run: () => changeBars(!barsChanging) });
 action('bars.reset', { title: 'Reset the bars', hint: 'the bars as Foldex ships them (your bars.json removed)', group: 'view',
   run: () => askYes('Put the bars back as Foldex ships them?').then(yes => yes && post({ op: 'barsReset' })) });
 // The presets (docs/plans/executed/03-PLAN-connected-panes.md 3.5; app.js applyPreset).

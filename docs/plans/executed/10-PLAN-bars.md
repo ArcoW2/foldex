@@ -106,9 +106,13 @@ shows the limits as coloured marks on the bar, and Foldex writes your copy.
   Per side a list of lines; a line a list of bars; a bar such as
   `{ "kind": "drives", "min": 2, "normal": 4, "max": 6, "maxShare": 30, "overflow": "more" }`,
   `{ "kind": "path", "fill": true, "normal": 300, "min": 120 }` or `{ "kind": "path", "normal": 300 }`.
-- In the window: drag a bar by its grip to another place, line or side (the dock marks of plan 01's docking show
-  where it lands); drag its end to set its normal size; its right-click menu: Size..., Fill the rest (a check),
-  overflow, remove, add a bar of a kind (its side only by dragging). Every change is written to your `bars.json` (made from the shipped
+- In the window, in the bars' change mode (as LexPen's ribbon: Change the bars on a bar's right-click menu, View >
+  Bars on the ribbon, F1; Done or Esc ends it, Ctrl+Z takes the last change back): the grips and splitters show and
+  the bars' content does not respond. Drag a bar by its grip to another place, line or side (the place it lands is
+  marked); drag the splitter after it (the border at its end) to set its normal size: above its maximum the maximum
+  grows with it, below its minimum the minimum follows (the least: 1 button, or 20 px); its right-click menu, anywhere
+  on the bar: Size..., Fill the rest (a check), overflow, remove, add a bar of a kind (its side only by dragging).
+  Outside the mode a right-click on a bar offers Change the bars and Reset the bars; the path box keeps its own menu. Every change is written to your `bars.json` (made from the shipped
   one on the first change) and applies in every window.
 - **The Size window** (a small window of the page, by Size...): Minimum, Normal, Maximum and Maximum % of the window,
   each with a colour swatch. While it is open the bar's line shows each limit as a mark in its colour; the % limit at
@@ -198,3 +202,12 @@ None.
   before the path that fills grows. Test (Jint): the drives and a filling path at 250, 274, 500 and 1000 px. Test copy
   with seven drives given to the page, the window resized from 1400 down to 314 px (the least Windows allows) and up to
   1600: the drives at 4 down to the smallest, the path taking the change; 5 and 6 above with the 30%.
+- The change mode (the user's: the path box filled its bar, so its menu could not be reached, and the end that sets
+  the size could not be seen): `bars.change` (View > Bars: Change bars; F1), a bar's right-click menu outside it
+  (Change the bars, Reset the bars...); in it the bars outlined, the grips and splitters shown (a visible border at a
+  bar's end, 6 px to grab), the content not responding, the bar's menu on a right-click anywhere on it (the path box
+  included), a note at the foot with Done; Esc ends it, Ctrl+Z takes back the last change (each save in the mode keeps
+  the bars before it). Test copy, real mouse and key events over CDP: outside the mode no grips or splitters and the
+  short menu; in it a click on D: left the pane on C:\ (outside: it went to D:\); the path box's right-click gave the
+  bar's menu; the drives' splitter dragged 80 px raised normal and max from 8 to 11; Ctrl+Z back to 8; Esc ended it
+  (screenshot).

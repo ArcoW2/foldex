@@ -44,9 +44,10 @@
         { "action": "columns.fit", "label": "Fit columns" },
         { "action": "columns.manage", "label": "Manage sets", "stack": true } ] },
       { "name": "Bars", "items": [
+        { "action": "bars.change", "label": "Change bars" },
+        { "action": "bars.reset", "label": "Reset bars", "stack": true },
         { "action": "bars.add", "params": ["path"], "label": "Add path bar" },
-        { "action": "bars.add", "params": ["drives"], "label": "Add drives bar", "stack": true },
-        { "action": "bars.reset", "label": "Reset bars", "stack": true } ] },
+        { "action": "bars.add", "params": ["drives"], "label": "Add drives bar", "stack": true } ] },
       { "name": "Foldex", "items": [
         { "action": "settings.open", "size": "large", "label": "Settings" } ] } ] }
   ]

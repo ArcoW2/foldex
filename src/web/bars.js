@@ -2,6 +2,9 @@
 // The bars (docs/plans/executed/10-PLAN-bars.md): strips of one kind each (the path, the drives) docked at the top, bottom, left
 // or right of the panes, in lines. bars.json (BarsFile.cs) holds them per side, a list of lines, a line a list of bars;
 // changing a bar in the window (dragging, its menu, the Size window) writes your copy and every window follows.
+// The bars change only in their change mode (as LexPen's ribbon): their grips (drag: move) and splitters (the border
+// after a bar; drag: its normal size) show, their content does not respond, a right-click anywhere on a bar opens its
+// menu; Done or Esc ends it, Ctrl+Z takes the last change back. Outside it a right-click offers Change the bars.
 
 // ---------- Sizes (3.1): no DOM, so the tests run them under Jint ----------
 
@@ -88,6 +91,9 @@ let bars = { top: [], bottom: [], left: [], right: [] };
 let drives = [];
 let barLocation = '';
 let sizing = null;   // the Size window's bar while it is open: { bar, marks }
+let barsChanging = false;   // the change mode
+let barsUndo = [];          // the bars before each change in the change mode
+let barsBefore = null;      // the bars as last saved, for barsUndo
 
 const across = side => side === 'top' || side === 'bottom';   // a row: the bars' length is their width
 const buttonBar = bar => bar.kind === 'drives';
@@ -100,9 +106,51 @@ function setBars(m) {
 }
 
 function saveBars() {
+  if (barsChanging) {
+    barsUndo.push(barsBefore);
+    barsBefore = structuredClone(bars);
+  }
   post({ op: 'barsSave', bars });
   drawBars();
 }
+
+// The change mode on or off (the action bars.change, Done, Esc).
+function changeBars(on) {
+  if (barsChanging === on) return;
+  barsChanging = on;
+  barsUndo = [];
+  barsBefore = on ? structuredClone(bars) : null;
+  if (!on) closeMenus();
+  document.body.classList.toggle('bars-changing', on);
+  let done = document.querySelector('.bars-done');
+  if (on && !done) {
+    done = document.createElement('div');
+    done.className = 'bars-done';
+    done.innerHTML = '<span>Changing the bars: drag a grip to move a bar, the border after it to size it; right-click a ' +
+      'bar for its menu. Ctrl+Z takes a change back.</span><button>Done</button>';
+    done.querySelector('button').addEventListener('click', () => changeBars(false));
+    document.body.append(done);
+  } else if (!on) done?.remove();
+  ribbonRefresh();
+}
+
+function undoBars() {
+  if (!barsUndo.length) return status('Nothing to take back.');
+  bars = barsUndo.pop();
+  barsBefore = structuredClone(bars);
+  post({ op: 'barsSave', bars });
+  drawBars();
+}
+
+// Esc and Ctrl+Z in the change mode (not while a menu or a dialog has them).
+if (typeof document !== 'undefined') document.addEventListener('keydown', e => {
+  if (!barsChanging || document.querySelector('dialog[open]')) return;
+  if (e.key === 'Escape') changeBars(false);
+  else if (e.ctrlKey && !e.shiftKey && !e.altKey && e.code === 'KeyZ') undoBars();
+  else return;
+  e.preventDefault();
+  e.stopPropagation();
+}, true);
 
 function drawBars() {
   for (const side of BarSides) {
@@ -125,19 +173,22 @@ function drawBar(bar, side, l, b) {
   el.dataset.index = b;
   const grip = document.createElement('span');
   grip.className = 'bar-grip';
-  grip.title = 'Drag to move the bar; right-click for its menu';
+  grip.title = 'Drag to move the bar';
   grip.addEventListener('mousedown', e => { if (e.button === 0) dragBar(e, bar, side); });
   const body = document.createElement('div');
   body.className = 'bar-body';
   const end = document.createElement('span');
   end.className = 'bar-end';
-  end.title = 'Drag to set its normal size';
+  end.title = 'Drag to set its normal size (larger than its maximum: that grows with it; smaller than its minimum: that follows)';
   end.addEventListener('mousedown', e => { if (e.button === 0) resizeBar(e, bar, el, side); });
   el.append(grip, body, end);
   el.addEventListener('contextmenu', e => {
-    if (e.target.closest('input')) return;
+    if (!barsChanging && e.target.closest('input')) return;   // the text box's own menu
     e.preventDefault();
-    openMenu(e.clientX, e.clientY, barMenu(bar, side));
+    openMenu(e.clientX, e.clientY, barsChanging ? barMenu(bar, side) : [
+      { label: 'Change the bars', run: () => changeBars(true) },
+      { label: 'Reset the bars...', run: () => runAction('bars.reset') },
+    ]);
   });
   el.bar = bar;
   fillBar(el, bar, side);
