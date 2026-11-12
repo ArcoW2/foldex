@@ -5,13 +5,27 @@
 }
 
 .st-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   padding: 8px 12px;
-  border-bottom: 1px solid var(--border);
   background: var(--bg-bar);
 }
 
+.st-count { color: var(--fg-dim); white-space: nowrap; }
+
+/* The tabs, as LexPen's: the one shown underlined in the accent colour; while searching, the ones with a match stand
+   out, the others fade. */
+.st-tabs { flex: none; display: flex; flex-wrap: wrap; gap: 2px; padding: 0 12px; background: var(--bg-bar); border-bottom: 1px solid var(--border); }
+.st-tab { padding: 7px 12px 6px; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--fg-dim); font: inherit; cursor: pointer; }
+.st-tab:hover { color: var(--fg); }
+.st-tab.st-on { color: var(--fg); border-bottom-color: var(--accent); }
+.st-searching .st-tab.st-has { color: var(--fg); font-weight: 600; }
+.st-searching .st-tab:not(.st-has) { opacity: .5; }
+
 .st-search {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   box-sizing: border-box;
 }
 

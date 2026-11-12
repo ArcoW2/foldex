@@ -1,12 +1,15 @@
 'use strict';
 // The settings window (View > Foldex > Settings; SettingsForm.cs hosts it), as LexPen's cut down
-// (docs/plans/executed/07-PLAN-themes.md 3.5): a row per setting of SETTING_ROWS (settingrows.js), in groups, filtered by the
-// search box. A change goes to the host at once (setSetting); the host writes your settings.json and tells every
-// window, this one included (settings). Esc empties the search; a second Esc closes the window.
+// (docs/plans/executed/07-PLAN-themes.md 3.5): a row per setting of SETTING_ROWS (settingrows.js), in tabs and their
+// groups (SETTING_TABS; Ctrl+Tab, Ctrl+Shift+Tab, Ctrl+PgDn / PgUp go from tab to tab, as LexPen's), filtered by the
+// search box: a search looks through every tab, the tabs with a match stand out, and while typing the first tab with
+// one is shown when the tab shown has none. A change goes to the host at once (setSetting); the host writes your
+// settings.json and tells every window, this one included (settings). Esc empties the search; a second Esc closes the
+// window.
 
 const host = window.chrome.webview;
 const $ = s => document.querySelector(s);
-const ui = { search: $('.st-search'), problems: $('.st-problems'), list: $('.st-list') };
+const ui = { search: $('.st-search'), count: $('.st-count'), problems: $('.st-problems'), tabs: $('.st-tabs'), list: $('.st-list') };
 let look = null;   // { settings: { values, user, defaults, problems }, themes: { themes, problems } }
 const rows = [];   // { def, el, show }
 const SliderDelay = 200;   // ms a slider rests before the host gets its value
@@ -74,13 +77,41 @@ function control(def) {
   return { el: select, show: v => { fill(); select.value = v; } };
 }
 
+// ---------- Tabs ----------
+
+let tab = null;   // the tab shown; kept for the next time the window opens
+const tabNames = SETTING_TABS.map(([name]) => name);
+
+function showTab(name) {
+  tab = name;
+  try { localStorage.settingsTab = name; } catch { /* no storage: the first tab next time */ }
+  for (const b of ui.tabs.children) b.classList.toggle('st-on', b.dataset.tab === name);
+  filter();
+  ui.list.scrollTop = 0;
+}
+
+// Next / previous tab (Ctrl+Tab, Ctrl+Shift+Tab, Ctrl+PgDn / PgUp).
+function stepTab(dir) {
+  showTab(tabNames[(tabNames.indexOf(tab) + dir + tabNames.length) % tabNames.length]);
+}
+
 function build() {
-  for (const group of SETTING_GROUPS) {
+  let stored = null;
+  try { stored = localStorage.settingsTab; } catch { /* no storage: the first tab */ }
+  tab = tabNames.includes(stored) ? stored : tabNames[0];
+  for (const name of tabNames) {
+    const b = Object.assign(document.createElement('button'), { className: 'st-tab', textContent: name });
+    b.dataset.tab = name;
+    b.addEventListener('click', () => showTab(name));
+    ui.tabs.append(b);
+  }
+  for (const [tabName, groups] of SETTING_TABS) for (const group of groups) {
     const section = document.createElement('section');
     section.className = 'st-group';
+    section.dataset.tab = tabName;
     section.innerHTML = '<h2></h2>';
     section.querySelector('h2').textContent = group;
-    for (const def of SETTING_ROWS.filter(r => r.group === group)) {
+    for (const def of SETTING_ROWS.filter(r => r.tab === tabName && r.group === group)) {
       const el = document.createElement('div');
       el.className = 'st-row';
       el.innerHTML = '<div class="st-text"><div class="st-title"></div><div class="st-hint"></div></div><div class="st-control"></div>' +
@@ -95,6 +126,7 @@ function build() {
     }
     ui.list.append(section);
   }
+  for (const b of ui.tabs.children) b.classList.toggle('st-on', b.dataset.tab === tab);
 }
 
 function show() {
@@ -109,17 +141,37 @@ function show() {
   filter();
 }
 
-function filter() {
+// The rows of the tab shown; with words only those that match. The tabs with a match stand out; while typing
+// (`typing`), when the tab shown has none, the first tab with one is shown.
+function filter(typing = false) {
   const words = ui.search.value.toLowerCase().split(/\s+/).filter(w => w);
+  const matches = r => {
+    const text = `${r.def.title} ${r.def.hint ?? ''} ${r.def.name} ${r.def.group} ${r.def.tab}`.toLowerCase();
+    return words.every(w => text.includes(w));
+  };
+  const found = new Set(rows.filter(matches).map(r => r.def.tab));
+  if (typing && words.length && !found.has(tab) && found.size) {
+    tab = tabNames.find(t => found.has(t));
+    for (const b of ui.tabs.children) b.classList.toggle('st-on', b.dataset.tab === tab);
+  }
+  let shown = 0;
   for (const r of rows) {
-    const text = `${r.def.title} ${r.def.hint ?? ''} ${r.def.name} ${r.def.group}`.toLowerCase();
-    r.el.hidden = !words.every(w => text.includes(w));
+    r.el.hidden = r.def.tab !== tab || !matches(r);
+    if (!r.el.hidden) shown++;
   }
   for (const s of ui.list.querySelectorAll('.st-group')) s.hidden = !s.querySelector('.st-row:not([hidden])');
+  document.body.classList.toggle('st-searching', words.length > 0);
+  for (const b of ui.tabs.children) b.classList.toggle('st-has', words.length > 0 && found.has(b.dataset.tab));
+  const total = rows.filter(matches).length;
+  ui.count.textContent = !words.length ? '' : total === shown ? `${shown} found` : `${shown} here, ${total} in all tabs`;
 }
 
-ui.search.addEventListener('input', filter);
+ui.search.addEventListener('input', () => filter(true));
 document.addEventListener('keydown', e => {
+  if (e.ctrlKey && (e.key === 'Tab' || e.key === 'PageDown' || e.key === 'PageUp')) {
+    e.preventDefault();
+    return stepTab(e.key === 'PageUp' || (e.key === 'Tab' && e.shiftKey) ? -1 : 1);
+  }
   if (e.key !== 'Escape') return;
   if (ui.search.value) {
     ui.search.value = '';
