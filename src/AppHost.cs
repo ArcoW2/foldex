@@ -205,6 +205,14 @@ sealed class AppHost : ApplicationContext
         foreach (var w in windows) w.Post((JsonObject)message.DeepClone());
     }
 
+    /// <summary>The Rename dialog's renames.json written (docs/plans/executed/21-PLAN-multi-rename.md 3.3); every window gets it
+    /// again.</summary>
+    public void SaveRenames(JsonNode renames)
+    {
+        var message = new JsonObject { ["event"] = "renames", ["renames"] = RenamesFile.Save(DataDir, renames) };
+        foreach (var w in windows) w.Post((JsonObject)message.DeepClone());
+    }
+
     /// <summary>This run of Foldex: a page that finds another run in its saved layout knows Foldex started again since,
     /// so its scraps go (docs/plans/executed/06-PLAN-search-and-scrap.md 3.2).</summary>
     public static readonly string RunId = Guid.NewGuid().ToString("N");

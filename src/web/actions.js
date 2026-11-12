@@ -110,8 +110,13 @@ action('folder.new', { title: 'New folder', hint: 'in the folder of the active p
   enabled: () => !!currentFolder(), run: () => newItem('folder') });
 action('file.new', { title: 'New file', hint: 'New file.txt in the folder of the active pane, then its name in place', group: 'folders',
   enabled: () => !!currentFolder(), run: () => newItem('file') });
-action('item.rename', { title: 'Rename', hint: "the focused item's name in place; Enter renames, Esc cancels", group: 'items',
-  enabled: () => !!focusedItem() && /^[A-Za-z]:\\|^\\\\/.test(focusedItem().id), run: () => startRename(activeView(), focusedItem().id) });
+// One item: its name in place (rename.js); more selected: the Rename dialog for them all (renamedialog.js).
+action('item.rename', { title: 'Rename', hint: "the focused item's name in place (Enter renames, Esc cancels); with more selected, the Rename dialog", group: 'items',
+  enabled: () => !!focusedItem() && /^[A-Za-z]:\\|^\\\\/.test(focusedItem().id), run: () => {
+    const ids = selectedIds();
+    if (ids.length > 1 && activeView() instanceof ListView) return openRenameMany(activeView(), ids);
+    startRename(activeView(), focusedItem().id);
+  } });
 action('folder.up', { title: 'Up', hint: 'the folder above, through the parent pane', group: 'folders', enabled: () => !!activeView(),
   run: () => activeView().up() });
 action('refresh', { title: 'Refresh', group: 'folders', enabled: () => !!activeView(), run: () => activeView().refresh() });

@@ -116,6 +116,74 @@ sealed class FileOps
         Report(op);
     }
 
+    /// <summary>Renames items, each to its own new name in its own folder, as one operation (renameMany,
+    /// docs/plans/executed/21-PLAN-multi-rename.md 3.4). Names that take another one's present name (a to b, b to a) first go
+    /// through a name in between, as a step of their own. Returns at once.</summary>
+    public Operation StartRenames(IReadOnlyList<(string Id, string Name)> renames, IntPtr owner)
+    {
+        var op = new Operation { Id = ++lastId, Kind = "renameMany", Items = renames.Count, Ids = [.. renames.Select(r => r.Id)] };
+        operations.Add(op);
+        changed(op);
+        var thread = new Thread(() => RunRenames(op, renames, owner)) { IsBackground = true, Name = $"file operation {op.Id}" };
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        return op;
+    }
+
+    void RunRenames(Operation op, IReadOnlyList<(string Id, string Name)> renames, IntPtr owner)
+    {
+        try
+        {
+            var now = renames.Select(r => r.Id.ToLowerInvariant()).ToHashSet();
+            List<(string Id, string Name)> between = [], last = [];
+            foreach (var (id, name) in renames)
+            {
+                var dir = Path.GetDirectoryName(id.TrimEnd('\\'))!;
+                var to = Path.Combine(dir, name).ToLowerInvariant();
+                if (now.Contains(to) && to != id.ToLowerInvariant())
+                {
+                    var temp = $"~foldex~{Guid.NewGuid():N}~{name}";
+                    between.Add((id, temp));
+                    last.Add((Path.Combine(dir, temp), name));
+                }
+                else last.Add((id, name));
+            }
+            if (between.Count > 0) Rename(op, between, owner);
+            if (!op.Aborted) Rename(op, last, owner);
+            // A chain (a to its name in between, then to its new name) reported as one move.
+            foreach (var m in op.Moved.Where(m => Path.GetFileName(m[1]).StartsWith("~foldex~")).ToList())
+                if (op.Moved.FirstOrDefault(n => string.Equals(n[0], m[1], StringComparison.OrdinalIgnoreCase)) is { } next)
+                {
+                    m[1] = next[1];
+                    op.Moved.Remove(next);
+                }
+        }
+        catch (Exception ex) when (ex is COMException or ArgumentException or IOException or UnauthorizedAccessException)
+        {
+            op.Error = ex.Message;
+        }
+        op.Finished = true;
+        Report(op);
+    }
+
+    void Rename(Operation op, IEnumerable<(string Id, string Name)> renames, IntPtr owner)
+    {
+        var hr = Native.CoCreateInstance(Native.ClsidFileOperation, IntPtr.Zero, Native.ClsctxInprocServer, typeof(IFileOperation).GUID, out var ptr);
+        if (hr < 0) Marshal.ThrowExceptionForHR(hr);
+        var fo = (IFileOperation)Marshal.GetObjectForIUnknown(ptr);
+        Marshal.Release(ptr);
+        fo.SetOperationFlags(Native.FofNoConfirmMkDir | Native.FofAllowUndo);
+        if (owner != IntPtr.Zero) fo.SetOwnerWindow(owner);
+        fo.Advise(new Sink(this, op), out var cookie);
+        foreach (var (id, name) in renames) fo.RenameItem(Native.Item(id), name, IntPtr.Zero);
+        try { fo.PerformOperations(); }
+        catch (COMException ex) when (ex.HResult == unchecked((int)0x80270000)) { }   // COPYENGINE_E_USER_CANCELLED
+        fo.GetAnyOperationsAborted(out var aborted);
+        fo.Unadvise(cookie);
+        Marshal.ReleaseComObject(fo);
+        op.Aborted |= aborted;
+    }
+
     void Report(Operation op) => ui.Post(_ => changed(op), null);
 
     // Windows' progress, passed on to the page.

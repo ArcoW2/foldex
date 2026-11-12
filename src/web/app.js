@@ -1146,7 +1146,7 @@ class ListView {
     this.opPending = op;
     const moved = op?.moved ?? [];
     const now = id => moved.find(([from]) => same(from, id))?.[1] ?? id;
-    const landed = op && op.kind !== 'rename' ? [...(op.made ?? []), ...moved.map(m => m[1])].filter(id => same(folderOf(id), this.location)) : [];
+    const landed = op && op.kind !== 'rename' && op.kind !== 'renameMany' ? [...(op.made ?? []), ...moved.map(m => m[1])].filter(id => same(folderOf(id), this.location)) : [];
     const keep = [...this.selected].map(now), top = this.body.scrollTop;
     const s = layout.state(this.id), focusBefore = s.focus ? now(s.focus) : null;
     const at = this.entries.findIndex(x => same(x.id, s.focus));
@@ -2634,6 +2634,7 @@ const events = {
     showProject(m.project);
     runId = m.run;
     searches = m.searches;
+    renames = m.renames ?? renames;
     start(m.paths, m.layout);
   },
   // Bars changed in a window (plan 10 3.3), and the drives there are now (3.2).
@@ -2732,6 +2733,7 @@ const events = {
   searched(m) { views.get(m.channel)?.searched?.(m); },
   entries(m) { columnReply(m); },
   searches(m) { searches = m.searches; },
+  renames(m) { renames = m.renames; },
   previewShown(m) {
     window.__spike.events.push({ previewShown: m.path, handler: m.handler, error: m.error });
     if (m.error && preview) preview.message(`No Windows preview: ${m.error}`);

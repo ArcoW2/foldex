@@ -214,6 +214,7 @@ sealed class MainForm : Form
                     ["project"] = app.ProjectInfo(this),
                     ["ops"] = new JsonArray(app.FileOps.All.Select(o => (JsonNode)o.ToJson()).ToArray()),
                     ["searches"] = SearchesFile.Load(AppHost.DataDir),
+                    ["renames"] = RenamesFile.Load(AppHost.DataDir),
                     ["run"] = AppHost.RunId,
                 });
                 foreach (var queued in queue) web.CoreWebView2.PostWebMessageAsJson(queued);
@@ -324,6 +325,17 @@ sealed class MainForm : Form
                 break;
             case "searchStop":
                 if (searches.Remove(msg["channel"]?.GetValue<string>() ?? "", out var stopping)) stopping.Cancel();
+                break;
+            case "renameMany":
+                // The Rename dialog (plan 21 3.4): every item to its new name, as one operation.
+                app.FileOps.StartRenames(msg["renames"]!.AsArray().Select(r => (r![0]!.GetValue<string>(), r[1]!.GetValue<string>())).ToList(), Handle);
+                break;
+            case "renamesSave":
+                try { app.SaveRenames(msg["renames"]!); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    Post(new JsonObject { ["event"] = "settingFailed", ["error"] = $"{RenamesFile.Name}: {ex.Message}" });
+                }
                 break;
             case "searchesSave":
                 try { app.SaveSearches(msg["searches"]!); }

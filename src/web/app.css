@@ -1608,3 +1608,28 @@ body.docking, body.docking * {
 }
 
 .thumb.hidden .thumb-pic { opacity: .6; }
+
+/* The Rename dialog (renamedialog.js): its preview, an unchanged name dimmed, one that cannot be marked, a companion
+   in italics. */
+dialog.rename-many { width: min(760px, calc(100vw - 32px)); }
+dialog.rename-many .rn-template { font-family: Consolas, monospace; }
+dialog.rename-many select.rn-tokens { flex: none; width: 10em; }
+.rn-count { color: var(--fg-dim); }
+.rn-list {
+  max-height: 40vh;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg);
+}
+.rn-head, .rn-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 2px 8px;
+}
+.rn-head { position: sticky; top: 0; background: var(--bg-bar); color: var(--fg-dim); }
+.rn-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rn-row.same { color: var(--fg-dim); }
+.rn-row.wrong { color: var(--warning); }
+.rn-row.companion { font-style: italic; }
