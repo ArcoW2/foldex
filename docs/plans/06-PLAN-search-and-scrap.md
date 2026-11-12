@@ -47,7 +47,7 @@ Nothing yet.
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| Scrap pane | flat entries, the folder column, grouping, watched entries, missing ones dropped; no source; the dashed ring; name, rename, clear; docked; lifetime | -- | 3.1, 3.2 |
+| Scrap pane | flat entries, the folder column, grouping, watched entries, missing ones dropped; no source; the dashed ring and head edge; the name in the head; rename, clear; docked; lifetime | -- | 3.1, 3.2 |
 | Scrap as a parent | a folder focused in a scrap shows in its child; built here when small, else moved to a plan of its own | scrap pane | 3.1 |
 | Filling a scrap | New scrap, drag, Add to scrap, paste; a folder as its own path | scrap pane | 3.2 |
 | Find dialog | Look in, subfolders, depth / breadth first, search index, Files, Folders, regular expression, fuzzy (nice to have), Named, Predefined and Save, clear, ok, cancel, the target scrap, Clear the scrap first | scrap pane | 3.3 |
@@ -77,6 +77,8 @@ follows xplorer2's, as the user gave it, in Foldex's own dialog look.
 - **Marked as a scrap**: only the pane with the keyboard has a ring now (`app.css`, `.pane.active::after`: a solid
   2px border in its colour). A scrap always has one, dashed: dimmed while another pane has the keyboard, the full
   2px in its colour while it has it. So a scrap never passes for a folder pane, active or not.
+- **Its head** shows the scrap's name (where a folder pane shows its folder), and the head's bottom edge is dashed as
+  well, in the ring's colour and strength.
 - Every scrap has a name: "Scrap N" for one opened empty, the searched name for one a search made. Rename... and
   Clear (all entries out, nothing on disk changes) are on its menu.
 - More than one scrap at a time, each with its own name and colour.
@@ -168,7 +170,8 @@ After xplorer2's "Find files or folders", without Special folders and Local sear
   entry; results added to an existing scrap without doubles; Delete taking out entries only; Clear; a search on a
   scrap testing only its entries; a docked scrap's name, search and place restored empty from a session.
 - Unit: a regular expression name; a fuzzy match at a few numbers.
-- In the test copy: a scrap's dashed ring, with and without the keyboard; a folder focused in a scrap shown in its
+- In the test copy: a scrap's dashed ring and head edge, with and without the keyboard; its name in the head, also
+  after Rename; a folder focused in a scrap shown in its
   child. Ctrl+F in a folder pane, Look in filled with its folder, the keyboard in Named, Shift+Tab to
   Folders, Tab past Named, a name searched, a new scrap filled; the
   same search into that scrap from another folder, results added; Search again with a changed name (Into that scrap, cleared first), and once with Clear off; a search on the
