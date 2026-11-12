@@ -849,9 +849,9 @@ body.connecting, body.connecting * {
   color: var(--text-hover, inherit);
 }
 
-/* Hover also as a thin line around the item, in the text colour (light in dark mode, dark in light mode), so it shows
-   on a selected item too, as xplorer2's. */
-.row:hover, .tile:hover {
+/* Hover on a selected item: a thin line around it in the text colour (light in dark mode, dark in light mode), so
+   hover shows there too, as xplorer2's; other items show hover by their colour only. */
+.row.selected:hover, .tile.selected:hover {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fg) 80%, transparent);
 }
 
