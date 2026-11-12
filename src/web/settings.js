@@ -182,6 +182,15 @@ document.querySelector('[data-open=settings]').addEventListener('click', () => p
 darkQuery.addEventListener('change', () => look && show());
 
 host.addEventListener('message', e => {
+  // What the folder cache holds now (plan 24 3.5): under its slider's hint, every few seconds.
+  if (e.data.event === 'cacheInfo') {
+    const row = rows.find(r => r.def.name === 'folderCacheMB');
+    if (!row) return;
+    let now = row.el.querySelector('.st-now');
+    if (!now) row.el.querySelector('.st-text').append(now = Object.assign(document.createElement('div'), { className: 'st-hint st-now' }));
+    now.textContent = `In use now: ${(e.data.bytes / 1048576).toFixed(1)} MB, ${e.data.folders} folder(s); read ahead so far: ${e.data.readAhead}.`;
+    return;
+  }
   if (e.data.event === 'fonts') {
     fonts = e.data.fonts;
     if (look) show();

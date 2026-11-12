@@ -8,7 +8,7 @@
 // The tabs of the settings window, each with its groups in order: the app itself, the panes, what is in them, and
 // searching and scraps.
 const SETTING_TABS = [
-  ['App', ['Theme', 'Fonts']],
+  ['App', ['Theme', 'Fonts', 'Memory']],
   ['Panes', ['Colours', 'Behaviour', 'Scrollbars']],
   ['Contents', ['Rows', 'Columns', 'Highlights', 'Trees', 'Items', 'Thumbnails']],
   ['Search and scrap', ['Search bar']],
@@ -23,6 +23,10 @@ const SETTING_ROWS = [
     hint: 'The colours of the window, the branch colours included. Your own themes go in themes\\ in the data folder.' },
   { tab: 'App', group: 'Theme', name: 'themeDark', kind: 'theme', title: 'Theme in dark mode',
     hint: 'The colours of the window in dark mode.' },
+  { tab: 'App', group: 'Memory', name: 'folderCacheMB', kind: 'range', range: [16, 4096, 16], unit: ' MB', title: 'Folder cache',
+    hint: 'How much memory the folders read may keep, for all windows: a folder read once is shown again at once, and folders you use often are read ahead. When Windows runs short of memory, the cache lets go anyway.' },
+  { tab: 'App', group: 'Memory', name: 'cacheNetwork', kind: 'toggle', title: 'Cache network shares',
+    hint: 'On: folders on network shares are kept too, and checked again when shown. Off: they are read every time.' },
   { tab: 'App', group: 'Fonts', name: 'appFont', kind: 'font', title: 'Window font',
     hint: 'The ribbon, the pane heads, the location box, the status line and this window.' },
   { tab: 'App', group: 'Fonts', name: 'appSize', kind: 'size', title: 'Window font size', hint: 'In points, 4 to 36.' },

@@ -57,7 +57,7 @@ static class ShellListing
 
     // Collects entries and hands them over in batches, by time, so a fast folder goes in one piece and a slow one
     // shows as it comes.
-    sealed class Batcher(Action<JsonArray>? batch)
+    internal sealed class Batcher(Action<JsonArray>? batch)
     {
         const int EveryMs = 250;
         readonly Stopwatch since = Stopwatch.StartNew();
@@ -197,7 +197,7 @@ static class ShellListing
     /// hidden ones) or false, read in one pass that stops once both are settled. A link that refuses its own listing
     /// (C:\Documents and Settings) answers for the folder it opens (its target); otherwise unknown (no access) counts as
     /// true, so the folder can still be opened and show why not.</summary>
-    static (JsonNode Subs, JsonNode? Files) Contents(string path, bool files)
+    internal static (JsonNode Subs, JsonNode? Files) Contents(string path, bool files)
     {
         try
         {

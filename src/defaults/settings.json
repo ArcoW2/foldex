@@ -26,6 +26,8 @@
   "paneBgOther": 100,             // the background of the other panes, the same way
   "treeExpanders": "chevron",     // a tree's expanders: "plus" (+ and -) or "chevron" (> and v)
   "treeLines": "dotted",          // a tree's lines: "dotted", "solid" or "none"
+  "folderCacheMB": 256,            // MB the folder cache may keep (16 to 4096): folders read once, and read ahead
+  "cacheNetwork": true,            // folders on network shares cached too (checked again when shown)
   "quickAccess": true,             // the Quick access area at the top of a tree without a parent
   "treeLinesIntensity": 55,       // 1 to 100: how strong the tree lines are, the dim text colour at that %
   "followDelay": 150,              // ms the cursor rests in a pane before its children follow it, 0 to 1000

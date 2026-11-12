@@ -1421,6 +1421,8 @@ class ListView {
     this.render();
     window.__spike.lists.push({ location: m.location, count: this.entries.length, enumMs: m.enumMs });
     if (m.error) status(`${m.name}: ${m.error}`, true);
+    // A share that does not answer: what the cache had, said not to be current (plan 24 3.8).
+    else if (m.offline) status(`${m.name}: ${this.entries.length} items as last read; not current: ${m.offline}`, true);
     else status(`${m.name}${m.elevated ? ' (as administrator)' : ''}: ${this.entries.length} items`);
     drawTabs();   // the tab shows the folder's name
     // The focus of this branch, as it was left, comes back when it is still there.

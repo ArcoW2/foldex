@@ -94,6 +94,37 @@ sealed class AppHost : ApplicationContext
     /// <summary>Shell work off the UI thread (listing, icons).</summary>
     public Shell.StaWorker ShellWork { get; } = new("shell");
 
+    // One read per folder (docs/plans/24-PLAN-folder-cache.md): the folder cache for every window, the folders you use
+    // (for read-ahead), read-ahead itself; Windows' low-memory notice checked now and then.
+    public Shell.FolderCache Cache { get; }
+    public Shell.FolderUse Use { get; } = new(DataFolder.StatePath(DataDir, Shell.FolderUse.Name));
+    Shell.ReadAhead? readAhead;
+    readonly System.Windows.Forms.Timer cacheTimer = new() { Interval = 5000 };
+    readonly IntPtr lowMemory = CreateMemoryResourceNotification(0);   // LowMemoryResourceNotification
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll")]
+    static extern IntPtr CreateMemoryResourceNotification(int type);
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll")]
+    static extern bool QueryMemoryResourceNotification(IntPtr handle, out bool state);
+
+    /// <summary>The cache's budget and whether shares are cached, as the settings say now.</summary>
+    void ConfigureCache()
+    {
+        var values = SettingsFile.Load(DataDir)["values"];
+        var mb = values?["folderCacheMB"]?.GetValue<double>() ?? 256;
+        Cache.BudgetBytes = (long)(Math.Clamp(mb, 16, 4096) * 1024 * 1024);
+        Cache.CacheNetwork = values?["cacheNetwork"]?.GetValue<bool>() != false;
+        Cache.Trim(false);
+    }
+
+    /// <summary>What the cache holds now (the settings window shows it by its slider).</summary>
+    public JsonObject CacheInfo()
+    {
+        var (bytes, count) = Cache.Info();
+        return new JsonObject { ["event"] = "cacheInfo", ["bytes"] = bytes, ["folders"] = count, ["readAhead"] = readAhead?.Done ?? 0, ["reads"] = Cache.Reads };
+    }
+
     /// <summary>The file operations of every window; each window is told of every change.</summary>
     public Shell.FileOps FileOps { get; }
 
@@ -103,6 +134,30 @@ sealed class AppHost : ApplicationContext
         {
             foreach (var w in windows) w.Post(new JsonObject { ["event"] = "fileOp", ["op"] = op.ToJson() });
         });
+        // A folder changed by a check of the cache (a share shown again): every window reads it again if it shows it.
+        Cache = new Shell.FolderCache(folder =>
+        {
+            foreach (var w in windows.ToList())
+                if (w.IsHandleCreated) w.BeginInvoke(() => w.Post(new JsonObject { ["event"] = "folderChanged", ["folder"] = folder }));
+        });
+        ConfigureCache();
+        // Now and then: the folder use written, and Windows asked whether memory is short (then the cache lets go of
+        // every folder no window shows).
+        cacheTimer.Tick += (_, _) =>
+        {
+            Use.Save();
+            if (lowMemory != IntPtr.Zero && QueryMemoryResourceNotification(lowMemory, out var low) && low) Cache.Trim(true);
+            settingsForm?.Post(CacheInfo());
+        };
+        cacheTimer.Start();
+    }
+
+    /// <summary>Read-ahead starts once the first window has shown its folders.</summary>
+    public void StartReadAhead()
+    {
+        if (readAhead is not null) return;
+        readAhead = new Shell.ReadAhead(Cache, Use);
+        readAhead.Start();
     }
 
     /// <summary>The browser environment every window shares: its own data folder in State\ (so its processes are
@@ -278,6 +333,7 @@ sealed class AppHost : ApplicationContext
     /// <summary>Tells every page the settings and themes as they are now.</summary>
     public void Broadcast()
     {
+        ConfigureCache();
         var message = Look();
         message["event"] = "settings";
         foreach (var w in windows) w.Post((JsonObject)message.DeepClone());
@@ -437,6 +493,7 @@ sealed class AppHost : ApplicationContext
     void Closed(MainForm w, CloseReason reason)
     {
         Folders?.Forget(w);
+        Cache.Forget(w);
         windows.Remove(w);
         recent.Remove(w);
         // Closed by hand, the last window too: its project closes (ProjectStore.CloseByHand) and comes back when Foldex

@@ -29,11 +29,30 @@ sealed class FolderWatch(Action<string, IEnumerable<object>> changed) : IDisposa
         {
             if (!folders.TryGetValue(path, out var w))
             {
+                if (NetworkGuard.IsNetwork(path)) { StartLater(window, path); continue; }
                 if (Start(path) is not { } watcher) continue;
                 folders[path] = w = new Watched { Watcher = watcher };
             }
             w.Windows.Add(window);
         }
+    }
+
+    // A share's watcher: started on a worker once the share answers (plan 24 3.8: starting one on a share that does not
+    // answer waits for Windows' time-out), then added here on the window's thread, if the folder is still wanted.
+    void StartLater(object window, string path)
+    {
+        Task.Run(async () =>
+        {
+            if (!await NetworkGuard.Reachable(path)) return;
+            var watcher = Start(path);
+            if (watcher is null) return;
+            ui.Post(_ =>
+            {
+                if (folders.TryGetValue(path, out var w)) { watcher.Dispose(); w.Windows.Add(window); return; }
+                folders[path] = w = new Watched { Watcher = watcher };
+                w.Windows.Add(window);
+            }, null);
+        });
     }
 
     /// <summary>A window gone: its folders no longer watched for it.</summary>

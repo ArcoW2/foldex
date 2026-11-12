@@ -237,7 +237,12 @@ sealed class MainForm : Form
                 break;
             }
             case "execute":
-                // A file opened as a double-click in Explorer opens it (plan 03 3.3).
+                // A file opened as a double-click in Explorer opens it (plan 03 3.3); a share checked first (plan 24 3.8).
+                if (!await NetworkGuard.Reachable(ids))
+                {
+                    Post(new JsonObject { ["event"] = "executeFailed", ["error"] = "the network location is not reachable" });
+                    break;
+                }
                 if (ShellMenu.ExecuteDefault(this, ids) is string failed)
                     Post(new JsonObject { ["event"] = "executeFailed", ["error"] = failed });
                 break;
@@ -264,6 +269,12 @@ sealed class MainForm : Form
                 break;
             }
             case "menu":
+                // Windows' menu is made on this thread: a share checked first (plan 24 3.8).
+                if (!await NetworkGuard.Reachable(ids))
+                {
+                    Post(new JsonObject { ["event"] = "menuDone", ["error"] = "the network location is not reachable" });
+                    break;
+                }
                 ShowMenu(ids, ToScreen(msg), msg["extended"]?.GetValue<bool>() == true, msg["folder"]?.GetValue<bool>() == true);
                 break;
             case "menuTexts":
@@ -353,6 +364,14 @@ sealed class MainForm : Form
             case "folderListSet":
                 app.SetFolderList(msg["kind"]!.GetValue<string>(), msg["folders"]!.AsArray().Select(n => n!.GetValue<string>()));
                 break;
+            case "cacheInfo":   // what the folder cache holds (plan 24; the tests ask)
+            {
+                var info = app.CacheInfo();
+                info["event"] = "answer";
+                info["req"] = msg["req"]?.DeepClone();
+                Post(info);
+                break;
+            }
             case "folderListsExist":
             {
                 var all = app.FolderList(FolderLists.QuickAccess).Concat(app.FolderList(FolderLists.Favourites)).Distinct().ToList();
@@ -420,7 +439,9 @@ sealed class MainForm : Form
             case "git":
             {
                 var folder = msg["folder"]!.GetValue<string>();
-                var status = Path.IsPathFullyQualified(folder) && Directory.Exists(folder) ? await Task.Run(() => GitStatus.Of(folder)) : null;
+                // Off this thread, a share checked first (plan 24 3.8).
+                var status = Path.IsPathFullyQualified(folder) && await NetworkGuard.Reachable(folder)
+                    ? await Task.Run(() => Directory.Exists(folder) ? GitStatus.Of(folder) : null) : null;
                 Post(new JsonObject { ["event"] = "git", ["req"] = msg["req"]?.DeepClone(), ["folder"] = folder, ["status"] = status });
                 break;
             }
@@ -468,7 +489,9 @@ sealed class MainForm : Form
                 app.OpenProjects(this);
                 break;
             case "watch":
-                app.Folders?.Set(this, msg["folders"]?.AsArray().Select(n => n!.GetValue<string>()) ?? []);
+                var shown = msg["folders"]?.AsArray().Select(n => n!.GetValue<string>()).ToList() ?? [];
+                app.Folders?.Set(this, shown);
+                app.Cache.Shown(this, shown);   // never let go of while shown (plan 24 3.5)
                 break;
             case "openSettings":
                 app.OpenSettings(this);
@@ -514,25 +537,48 @@ sealed class MainForm : Form
         if (listings.Remove(channel, out var before)) before.Cancel();
         var cancel = listings[channel] = new CancellationTokenSource();
         var clock = System.Diagnostics.Stopwatch.StartNew();
-        // A folder on disk counted beside the listing (names only, much quicker than the listing itself), so the page's
-        // progress bar has a measure; other places are not counted.
-        if (Path.IsPathFullyQualified(location))
+        // The count of what is read, for the page's progress bar (the cache's bare read has it: one per folder).
+        void Count(int count)
+        {
+            if (!cancel.IsCancellationRequested)
+                BeginInvoke(() => Post(new JsonObject { ["event"] = "listCount", ["req"] = req, ["channel"] = channel, ["count"] = count }));
+        }
+        // A share is checked first, off this thread with a time limit (plan 24 3.8); when it does not answer, what the
+        // cache has of the folder, marked as not current, or at once that it is not reachable.
+        if (NetworkGuard.IsNetwork(location) && !await NetworkGuard.Reachable(location))
+        {
+            if (listings.GetValueOrDefault(channel) == cancel) listings.Remove(channel);
+            if (cancel.IsCancellationRequested) return;
+            var since = NetworkGuard.DownSince(location)?.ToLocalTime().ToString("HH:mm:ss");
+            var cached = app.Cache.Cached(location, foldersOnly, tree);
+            Post(new JsonObject
+            {
+                ["event"] = "listed", ["req"] = req, ["channel"] = channel, ["location"] = location,
+                ["name"] = Path.GetFileName(location.TrimEnd('\\')) is { Length: > 0 } last ? last : location, ["kind"] = "disk",
+                ["entries"] = cached?.Entries ?? [], ["offline"] = $"{NetworkGuard.Server(location)} is not reachable (since {since})",
+                ["error"] = cached is null ? $"{NetworkGuard.Server(location)} is not reachable (since {since}); nothing of it is cached" : null,
+            });
+            return;
+        }
+        // A folder opened in a pane: noted for read-ahead (plan 24 3.6).
+        if (!tree && Path.IsPathFullyQualified(location)) app.Use.Opened(location);
+        // Not cached (a share, when shares are not cached): counted beside the listing, names only.
+        if (Path.IsPathFullyQualified(location) && !app.Cache.Caches(location))
             _ = Task.Run(() =>
             {
                 try
                 {
                     var options = new EnumerationOptions { IgnoreInaccessible = true, AttributesToSkip = 0 };
-                    var count = foldersOnly ? Directory.EnumerateDirectories(location, "*", options).Count()
-                        : Directory.EnumerateFileSystemEntries(location, "*", options).Count();
-                    if (!cancel.IsCancellationRequested)
-                        BeginInvoke(() => Post(new JsonObject { ["event"] = "listCount", ["req"] = req, ["channel"] = channel, ["count"] = count }));
+                    Count(foldersOnly ? Directory.EnumerateDirectories(location, "*", options).Count()
+                        : Directory.EnumerateFileSystemEntries(location, "*", options).Count());
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException) { }
             });
-        var r = await StaWorker.Once("listing", () => ShellListing.List(location,
+        var r = await StaWorker.Once("listing", () => app.Cache.List(location,
             part => BeginInvoke(() => Post(new JsonObject { ["event"] = "listing", ["req"] = req, ["channel"] = channel, ["entries"] = part })),
-            cancel.Token, foldersOnly, tree));
+            cancel.Token, foldersOnly, tree, Count));
         if (listings.GetValueOrDefault(channel) == cancel) listings.Remove(channel);
+        app.StartReadAhead();
         if (r.Cancelled) return;
         var name = await StaWorker.Once("name", () => ShellListing.NameOf(location));
         var answer = new JsonObject
