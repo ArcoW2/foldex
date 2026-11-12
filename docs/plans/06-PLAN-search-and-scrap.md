@@ -106,7 +106,7 @@ After xplorer2's "Find files or folders", without Special folders and Local sear
 | Look in | The active pane's folder when opened; a list of earlier ones. When the active pane is a scrap: that scrap (3.4) |
 | Search subfolders | On by default |
 | Go depth first / Breadth first | The order of Foldex's own walk |
-| Use search index | The Windows Search index where Look in is indexed |
+| Use search index | On by default: any index that can answer is used (Everything, the Windows Search index, ...). Off: only Foldex's own walk (3.4) |
 | Files, Folders | What to find; both on by default |
 | Regular expression | Named is a regular expression instead of a pattern with `*` and `?` |
 | Fuzzy | A number up to 100 next to Named: how closely a name must match; 100 is an exact match (the default). Nice to have, only if simple (3.4); off while Regular expression is on |
@@ -128,8 +128,9 @@ After xplorer2's "Find files or folders", without Special folders and Local sear
 - Ctrl+F from any pane opens only the dialog; no scrap opens yet. The scrap opens when ok starts the search (cancel:
   no scrap at all), and it becomes the active pane. Into an existing scrap: that scrap becomes the active pane.
 - The results stream into the scrap right after ok; Stop on the scrap.
-- **Engines**: whatever is available, to make the search fast: Everything when it is installed, the Windows Search
-  index (Use search index) where Look in is indexed, else Foldex's own walk. A criterion an engine cannot answer is
+- **Engines**: with Use search index on (the default), whatever index is available, to make the search fast:
+  Everything when it is installed, the Windows Search index where Look in is indexed, and others that may come; where
+  none can answer, and with Use search index off, Foldex's own walk. A criterion an engine cannot answer is
   tested by Foldex on its candidates. [Which criteria each engine answers: not yet checked.]
 - **The scrap keeps its search** (Look in and every field) while it lives: Search again... opens the dialog with it, to
   change and run again. Into is that scrap and Clear the scrap first is on, so by default the new results replace

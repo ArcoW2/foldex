@@ -74,7 +74,7 @@ updated whenever a plan is written, built or closed that touches a feature here.
 | Mini scrap (docked drop stack) | P+ | plan 06 (a docked scrap) | 4 | Scrap containers; docking (plan 01) or bars (plan 10) |
 | Find files on any property, results as a pane | P+ | plan 06 (name, into a scrap); plan 20 (size, attributes, dates) | 3 | Hyperfilters (the criteria); Scrap containers (the results) |
 | Text in files (IFilters, regex) | P+ | plan 20 (regex; IFilters [not yet checked]) | 3 | Find files |
-| Indexed search (Windows search index) | U | plan 06 (Use search index) | 3 | Find files |
+| Indexed search (Windows search index) | U | plan 06 (Use search index, with Everything) | 3 | Find files |
 | MFT name search | U | -- | 3 | Find files; the elevated helper (plan 05) |
 | Saved searches | P+ | -- | 2 | Find files |
 
