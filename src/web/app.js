@@ -176,14 +176,19 @@ function paneElement(id, kind, title) {
   el.dataset.pane = id;
   // A child's own round (the pin) left of the name; at the right only the marks of the branches it feeds.
   el.innerHTML = '<div class="head"><span class="connector" title="Drag onto another pane to follow it"></span>' +
-    '<button class="pin" title="Pin: stop following the parent"></button><span class="title"></span><span class="marks"></span></div>' +
+    '<button class="pin" title="Pin: stop following the parent"></button><span class="title"></span>' +
+    '<button class="filtered" hidden><svg viewBox="0 0 16 16"><path d="M2 3h12l-4.5 5.5V13l-3 1.5V8.5z"/></svg></button>' +
+    '<span class="marks"></span></div>' +
     '<div class="body" tabindex="0"><div class="rows"></div></div>';
   el.querySelector('.title').textContent = title;
   el.querySelector('.connector').addEventListener('mousedown', e => { activate(id); dragConnector(id, e); });
   el.querySelector('.pin').addEventListener('click', () => togglePin(id));
-  // The head dragged: the pane moves to another dock place (not from the connector, the pin or the branch marks).
+  // Filtered by the search bar (search.js): this pane active and the keyboard in the bar.
+  el.querySelector('.filtered').addEventListener('click', () => { activate(id); focusSearch(); });
+  // The head dragged: the pane moves to another dock place (not from the connector, the pin, the filter mark or the
+  // branch marks).
   el.querySelector('.head').addEventListener('mousedown', e => {
-    if (!e.target.closest('.connector, .pin, .marks span')) dragToDock(id, e);
+    if (!e.target.closest('.connector, .pin, .filtered, .marks span')) dragToDock(id, e);
   });
   el.querySelector('.head').addEventListener('contextmenu', e => openPaneMenu(id, e));
   el.addEventListener('mousedown', e => { if (e.button < 3) activate(id); }, true);   // not the mouse's back and forward
@@ -468,10 +473,17 @@ class TreeView {
   flatten() {
     this.flat = [];
     const hidden = showsHidden(this.id), filter = filterTest(layout.pane(this.id).filter), search = searchTest(this.id);
+    // The search text (search.js): the folders and files that match, and the folders leading to them (of what the
+    // tree has read).
+    const leads = new Map();
+    const matches = n => {
+      if (!leads.has(n)) leads.set(n, search(n) || !!n.children?.some(matches));
+      return leads.get(n);
+    };
     const walk = list => {
       for (const n of list) {
         if (n.hidden && !hidden && n.depth > 0) continue;
-        if (!filter(n) || n.folder === false && !search(n)) continue;   // the search text: its files (search.js)
+        if (!filter(n) || paneSearch.has(this.id) && !matches(n)) continue;
         this.flat.push(n);
         if (n.expanded && n.children) walk(n.children);
       }

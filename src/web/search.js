@@ -1,6 +1,6 @@
 'use strict';
 // The search bar (a bar of bars.js) and typing in a pane. A pane's search text filters what it shows: in a list the
-// files and folders whose name contains it, in a tree its files (its folders stay, they hold the rest). Each pane has
+// files and folders whose name contains it, in a tree those and the folders leading to them. Each pane has
 // its own, kept until the text changes (emptied too); the bar shows the active pane's.
 // Typing in a pane is a go-to: each key at once takes the pane to the first item starting with what was typed, and the
 // bar shows the text. Once typing rests (the setting searchDelay) with more than 3 characters, the text becomes the
@@ -31,7 +31,17 @@ function setSearch(id, text) {
   if (text) paneSearch.set(id, text);
   else paneSearch.delete(id);
   views.get(id)?.searchChanged?.();
+  markFiltered(id);
   if (id === activePane) showSearch(text);
+}
+
+// The pane's head shows a filter mark while it is filtered (a click: the pane active, the keyboard in the bar).
+function markFiltered(id) {
+  const mark = views.get(id)?.el.querySelector('.head .filtered');
+  if (!mark) return;
+  const text = paneSearch.get(id);
+  mark.hidden = !text;
+  mark.title = text ? `Filtered on "${text}": click to change the filter` : '';
 }
 
 // The bars show the active pane's text (a box being typed in keeps its own).
@@ -95,6 +105,7 @@ function searchBox() {
   // Focused it is the filter, as is every change.
   input.addEventListener('focus', () => { clearTimeout(typedClear); setSearch(activePane, input.value); });
   input.addEventListener('input', () => setSearch(activePane, input.value));
+  input.addEventListener('blur', () => showSearch());   // the keyboard elsewhere: the active pane's text again
   input.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       input.value = '';

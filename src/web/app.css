@@ -700,6 +700,30 @@ body[data-focus-away] .pane.active > .head {
   cursor: grab;
 }
 
+/* The filter mark (search.js): the pane is filtered by the search bar. */
+.pane > .head .filtered {
+  flex: none;
+  display: flex;
+  align-items: center;
+  padding: 0 3px;
+  margin-left: 4px;
+  background: none;
+  border: 0;
+  border-radius: 3px;
+  color: inherit;
+  cursor: pointer;
+}
+
+.pane > .head .filtered[hidden] { display: none; }
+
+.pane > .head .filtered svg {
+  width: 13px;
+  height: 13px;
+  fill: currentColor;
+}
+
+.pane > .head .filtered:hover { background: var(--hover); }
+
 .pane > .head .pin {
   display: none;
   width: 11px;

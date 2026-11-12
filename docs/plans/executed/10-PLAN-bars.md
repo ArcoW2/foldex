@@ -216,7 +216,9 @@ None.
   its border, starting after the last drive; the menu ending in Done.
 - A third kind, the search bar (`search`; in the shipped bars after the path; Add a bar; View > Bars), `web/search.js`:
   a box that filters the active pane on what is typed, each pane its own text (a list: its files and folders whose
-  name contains it; a tree: its files, its folders stay), the bar showing the active pane's; an X clears it; Esc clears
+  name contains it; a tree: those and the folders leading to them, of what it has read), the bar showing the active
+  pane's; a filtered pane has a filter mark at the right of its head (a click: that pane active, the keyboard in the
+  box); an X clears it; Esc clears
   it and goes back to the pane, Enter and Down go back; Ctrl+Shift+F (`search.focus`) goes to it (Ctrl+F is kept for
   the scrap search, plan 06). Outside the box typing is a go-to, in it a filter: typing in a pane takes it at once, at
   each key, to the first item starting with what was typed (from the focus on) and shows the text in the box; once
@@ -228,3 +230,8 @@ None.
   Program Files at once, then filtered C:\ to the two Program Files folders with the keyboard in the box (screenshot);
   typing on narrowed it to one; X showed all again; Esc cleared and went back to the pane; Ctrl+Shift+F went to the
   box; "temp" kept filtering when the list went to D:\; "net" in the tree went to Network.
+- The tree filtered only its files at first, so a tree of folders did not change: it now filters folders and files,
+  keeping the folders that lead to a match. The filter mark on a pane's head; the box shows the active pane's text
+  again once the keyboard leaves it. Test copy: "prog" in the tree (C:\ read) left This PC, Local Disk (C:), Program
+  Files and Program Files (x86); a filtered list with the tree active: the mark on the list's head only, the box
+  empty; a click on the mark made the list active with the keyboard in the box; X took the mark away.
