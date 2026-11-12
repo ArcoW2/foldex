@@ -69,12 +69,12 @@ updated whenever a plan is written, built or closed that touches a feature here.
 
 | Feature | Edition | Foldex | Prio | Depends on |
 |---|---|---|---|---|
-| Everything integration | U | plan 06 (an engine) | 4 | Scrap containers (the results) |
-| Scrap containers (collect from many folders, save) | P+ | plan 06 | 4 | -- |
-| Mini scrap (docked drop stack) | P+ | plan 06 (a docked scrap) | 4 | Scrap containers; docking (plan 01) or bars (plan 10) |
-| Find files on any property, results as a pane | P+ | plan 06 (name, into a scrap); plan 20 (size, attributes, dates) | 3 | Hyperfilters (the criteria); Scrap containers (the results) |
+| Everything integration | U | built (an engine of Find, plan 06) | 4 | Scrap containers (the results) |
+| Scrap containers (collect from many folders, save) | P+ | built (kept while Foldex runs, plan 06) | 4 | -- |
+| Mini scrap (docked drop stack) | P+ | built (a docked scrap, plan 06) | 4 | Scrap containers; docking (plan 01) or bars (plan 10) |
+| Find files on any property, results as a pane | P+ | part: by name into a scrap built (plan 06); size, attributes, dates: plan 20 | 3 | Hyperfilters (the criteria); Scrap containers (the results) |
 | Text in files (IFilters, regex) | P+ | plan 20 (regex; IFilters [not yet checked]) | 3 | Find files |
-| Indexed search (Windows search index) | U | plan 06 (Use search index, with Everything) | 3 | Find files |
+| Indexed search (Windows search index) | U | built (Use search index, with Everything, plan 06) | 3 | Find files |
 | MFT name search | U | -- | 3 | Find files; the elevated helper (plan 05) |
 | Saved searches | P+ | -- | 2 | Find files |
 

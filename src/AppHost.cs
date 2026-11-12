@@ -197,6 +197,18 @@ sealed class AppHost : ApplicationContext
         foreach (var w in windows) w.Post((JsonObject)message.DeepClone());
     }
 
+    /// <summary>The Find dialog's searches.json written (docs/plans/executed/06-PLAN-search-and-scrap.md 3.3); every window gets it
+    /// again.</summary>
+    public void SaveSearches(JsonNode searches)
+    {
+        var message = new JsonObject { ["event"] = "searches", ["searches"] = SearchesFile.Save(DataDir, searches) };
+        foreach (var w in windows) w.Post((JsonObject)message.DeepClone());
+    }
+
+    /// <summary>This run of Foldex: a page that finds another run in its saved layout knows Foldex started again since,
+    /// so its scraps go (docs/plans/executed/06-PLAN-search-and-scrap.md 3.2).</summary>
+    public static readonly string RunId = Guid.NewGuid().ToString("N");
+
     /// <summary>The column sets and the folders' choices (docs/plans/executed/11-PLAN-columns.md 3.3), shipped and yours.</summary>
     public static JsonObject ColumnSets() => ColumnSetsFile.Load(DataDir, Path.Combine(DefaultsDir, ColumnSetsFile.SetsName));
 

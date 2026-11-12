@@ -161,10 +161,11 @@ function columnText(x, id) {
 const columnReplies = new Map();
 let columnReq = 0;
 
-function askHost(message) {
+// `send`: how it goes to the host (a drop onto a scrap: with the dropped files).
+function askHost(message, send = post) {
   return new Promise(done => {
     columnReplies.set(++columnReq, done);
-    post({ ...message, req: columnReq });
+    send({ ...message, req: columnReq });
   });
 }
 

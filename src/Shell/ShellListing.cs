@@ -100,30 +100,61 @@ static class ShellListing
         {
             if (cancel.IsCancellationRequested) return;
             var folder = (info.Attributes & FileAttributes.Directory) != 0;
-            icons.Start();
-            var icon = ShellIcons.Of(info.FullName, folder);
-            icons.Stop();
-            var entry = new JsonObject
-            {
-                ["id"] = info.FullName,
-                ["name"] = info.Name,
-                ["folder"] = folder,
-                ["size"] = folder ? null : ((FileInfo)info).Length,
-                ["modified"] = new DateTimeOffset(info.LastWriteTimeUtc).ToUnixTimeMilliseconds(),
-                ["icon"] = icon,
-                ["hidden"] = (info.Attributes & FileAttributes.Hidden) != 0,
-                ["own"] = !folder && ShellIcons.HasOwn(info.FullName),
-                ["link"] = (info.Attributes & FileAttributes.ReparsePoint) != 0,
-            };
+            var entry = DiskEntry(info, icons);
             if (folder && (foldersOnly || tree))
             {
                 var (subs, files) = Contents(info.FullName, tree && !foldersOnly);
                 entry["subs"] = subs;
                 if (tree && !foldersOnly) entry["files"] = files;
             }
-            OwnColumns(entry, info, folder);
             batcher.Add(entry);
         }
+    }
+
+    /// <summary>A file or folder on disk as a listing gives it, with the own columns.</summary>
+    internal static JsonObject DiskEntry(FileSystemInfo info, Stopwatch? icons = null)
+    {
+        var folder = (info.Attributes & FileAttributes.Directory) != 0;
+        icons?.Start();
+        var icon = ShellIcons.Of(info.FullName, folder);
+        icons?.Stop();
+        var entry = new JsonObject
+        {
+            ["id"] = info.FullName,
+            ["name"] = info.Name,
+            ["folder"] = folder,
+            ["size"] = folder ? null : ((FileInfo)info).Length,
+            ["modified"] = new DateTimeOffset(info.LastWriteTimeUtc).ToUnixTimeMilliseconds(),
+            ["icon"] = icon,
+            ["hidden"] = (info.Attributes & FileAttributes.Hidden) != 0,
+            ["own"] = !folder && ShellIcons.HasOwn(info.FullName),
+            ["link"] = (info.Attributes & FileAttributes.ReparsePoint) != 0,
+        };
+        OwnColumns(entry, info, folder);
+        return entry;
+    }
+
+    /// <summary>Entries for items named by their parsing names (a scrap, docs/plans/executed/06-PLAN-search-and-scrap.md 3.1): a
+    /// file or folder on disk as a listing gives it, another item as Describe does; an item that is not there (any
+    /// more) is left out.</summary>
+    public static JsonArray Entries(IEnumerable<string> ids)
+    {
+        var entries = new JsonArray();
+        foreach (var id in ids)
+        {
+            if (!Path.IsPathFullyQualified(id))
+            {
+                foreach (var e in Describe([id])) entries.Add(e!.DeepClone());
+                continue;
+            }
+            try
+            {
+                FileSystemInfo info = Directory.Exists(id) ? new DirectoryInfo(id) : new FileInfo(id);
+                if (info.Exists) entries.Add(DiskEntry(info));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException) { }
+        }
+        return entries;
     }
 
     /// <summary>The own columns of plan 11 3.1 that the listing reads anyway: created, accessed, the attributes as

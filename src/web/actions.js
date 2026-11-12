@@ -6,7 +6,7 @@
 
 const PASS = Symbol('pass');   // returned by an action that does not apply here: the key keeps its own meaning
 
-const ACTION_GROUPS = [['items', 'Items'], ['folders', 'Folders'], ['panes', 'Panes'], ['view', 'View'], ['projects', 'Projects'],
+const ACTION_GROUPS = [['items', 'Items'], ['scraps', 'Scraps and searching'], ['folders', 'Folders'], ['panes', 'Panes'], ['view', 'View'], ['projects', 'Projects'],
   ['app', 'Foldex']];
 
 const actions = new Map();
@@ -49,19 +49,59 @@ action('item.execute', { title: 'Execute', hint: 'as a double-click: a file star
   enabled: () => !!focusedItem(), run: () => execute(activePane, focusedItem()) });
 action('item.properties', { title: 'Properties', group: 'items', enabled: anySelected,
   run: () => post({ op: 'invokeVerb', ids: selectedIds(), verb: 'properties' }) });
-action('item.delete', { title: 'Delete to the Recycle Bin', group: 'items', enabled: anySelected, run: () => {
+// Delete (docs/plans/executed/06-PLAN-search-and-scrap.md 3.5): in a scrap it takes the items out, nothing on disk changes;
+// elsewhere, and with Alt in a scrap, to the Recycle Bin; with Shift (and Alt+Shift), permanently. One question, with
+// the folders the items are in when there are more.
+const inScrap = () => activeView() instanceof ScrapView;
+async function deleteItems(permanent) {
   const ids = selectedIds();
-  if (confirm(`Move ${ids.length === 1 ? nameOf(ids[0]) : `these ${ids.length} items`} to the Recycle Bin?`))
-    post({ op: 'fileOp', kind: 'delete', ids, confirmed: true });
-} });
+  if (!ids.length) return;
+  const what = ids.length === 1 ? nameOf(ids[0]) : `these ${ids.length} items`;
+  const folders = [...new Set(ids.map(folderOf))];
+  const question = permanent ? `Delete ${what} permanently? This cannot be undone.` : `Move ${what} to the Recycle Bin?`;
+  if (await askYes(question, folders.length > 1 ? ['From these folders:', ...folders] : []))
+    post({ op: 'fileOp', kind: permanent ? 'deletePermanent' : 'delete', ids, confirmed: true });
+}
+action('item.delete', { title: 'Delete', hint: 'to the Recycle Bin; in a scrap: out of the scrap, the files stay', group: 'items',
+  enabled: anySelected, run: () => inScrap() ? activeView().takeOut(selectedIds()) : deleteItems(false) });
+action('item.deleteDisk', { title: 'Delete from disk', hint: 'to the Recycle Bin, also in a scrap (and out of it)', group: 'items',
+  enabled: anySelected, run: () => deleteItems(false) });
+action('item.deletePermanent', { title: 'Delete permanently', hint: 'not to the Recycle Bin, after a question; also in a scrap', group: 'items',
+  enabled: anySelected, run: () => deleteItems(true) });
 action('item.copy', { title: 'Copy', group: 'items', enabled: onDisk, run: () => post({ op: 'clipboard', kind: 'copy', ids: selectedIds() }) });
 action('item.cut', { title: 'Cut', group: 'items', enabled: onDisk, run: () => post({ op: 'clipboard', kind: 'cut', ids: selectedIds() }) });
-action('item.paste', { title: 'Paste', group: 'items', enabled: () => !!currentFolder(),
-  run: () => post({ op: 'paste', target: currentFolder() }) });
+// Onto a scrap: the files on the clipboard become its entries, nothing is copied (plan 06 3.5).
+action('item.paste', { title: 'Paste', group: 'items', enabled: () => !!currentFolder() || inScrap(), run: () => {
+  if (!inScrap()) return post({ op: 'paste', target: currentFolder() });
+  const scrap = activeView();
+  askHost({ op: 'scrapPaste' }).then(m => {
+    scrap.add(m.entries);
+    status(`${m.entries.length} item(s) added to ${scrap.tabTitle()}.`);
+  });
+} });
 action('item.copyPath', { title: 'Copy path', group: 'items', enabled: onDisk,
   run: () => post({ op: 'copyText', text: selectedIds().join('\r\n') }) });
 action('item.selectAll', { title: 'Select all', group: 'items', enabled: () => activeView() instanceof ListView,
   run: () => activeView().selectAll() });
+
+// ---------- Scraps and searching (docs/plans/executed/06-PLAN-search-and-scrap.md) ----------
+
+action('find', { title: 'Find files or folders', hint: 'a search whose results fill a scrap; in a scrap: a search in its items', group: 'scraps',
+  run: () => openFind() });
+action('scrap.new', { title: 'New scrap', hint: 'an empty scrap, docked at the right: drop files and folders on it', group: 'scraps',
+  run: () => newScrap() });
+action('scrap.add', { title: 'Add to scrap', hint: 'the selected items into a scrap (the files stay where they are)', group: 'scraps',
+  enabled: () => anySelected() && !inScrap(), run: () => {
+    const r = activeView().el.querySelector('.head').getBoundingClientRect();
+    addToScrap(selectedIds(), r.left + 20, r.bottom);
+  } });
+action('scrap.rename', { title: 'Rename scrap', group: 'scraps', enabled: inScrap, run: () => renameScrap(activeView()) });
+action('scrap.clear', { title: 'Clear scrap', hint: 'every item out of the scrap; the files stay', group: 'scraps',
+  enabled: () => inScrap() && activeView().all.length > 0, run: () => activeView().clear() });
+action('scrap.searchAgain', { title: 'Search again', hint: "the scrap's search in the Find dialog, to change and run again", group: 'scraps',
+  enabled: () => inScrap() && !!layout.pane(activePane).search, run: () => openFind({ again: activeView() }) });
+action('scrap.stop', { title: 'Stop the search', group: 'scraps', enabled: () => inScrap() && activeView().searching,
+  run: () => activeView().stop() });
 
 // ---------- Folders ----------
 

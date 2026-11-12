@@ -1,6 +1,6 @@
 # Plan 06: Search and scrap: panes of items from anywhere
 
-Status: draft 2026-11-10, revised 2026-11-12 (six times); not started.
+Status: executed (2026-11-12); see As built.
 
 - 2026-11-10: draft.
 - 2026-11-12: revised with the user's answers: Delete per pane kind, a scrap per project and not kept across a restart,
@@ -16,6 +16,7 @@ Status: draft 2026-11-10, revised 2026-11-12 (six times); not started.
 - 2026-11-12: revised: no Local search.
 - 2026-11-12: revised: a scrap can be a parent (a folder focused in it shows in its child), built in this plan when
   small; a scrap's pane is marked by a dashed ring instead of a solid one.
+- 2026-11-12: executed.
 
 Builds on plan 03 (connected panes).
 
@@ -41,19 +42,20 @@ place.
 
 ### Built
 
-Nothing yet.
+| Part | What | Reference |
+|---|---|---|
+| Scrap pane | flat entries, the folder column, watched entries, missing ones dropped; no source; the dashed ring and head edge; the name in the head; rename, clear; docked; lifetime | 3.1, 3.2; 6 |
+| Scrap as a parent | a folder focused in a scrap shows in its child; the child goes its own way | 3.1; 6 |
+| Filling a scrap | New scrap, drop, Add to scrap, paste; a folder as its own path | 3.2; 6 |
+| Find dialog | Look in, subfolders, depth / breadth first, search index, Files, Folders, regular expression, fuzzy, Named, Predefined and Save, clear, ok, cancel, Into, Clear the scrap first | 3.3; 6 |
+| Running a search | Everything, the Windows Search index, Foldex's walk; streaming results, Stop, the scrap keeping its search, searching again, a search on a scrap | 3.4; 6 |
+| File actions on a scrap | Delete, Alt+Delete, Alt+Shift+Delete (and Shift+Delete), the scrap's Delete button | 3.5; 6 |
+| Own menu for mixed folders | Foldex's own menu for items from different folders | 3.5; 6 |
 
 ### Not yet built
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| Scrap pane | flat entries, the folder column, grouping, watched entries, missing ones dropped; no source; the dashed ring and head edge; the name in the head; rename, clear; docked; lifetime | -- | 3.1, 3.2 |
-| Scrap as a parent | a folder focused in a scrap shows in its child; built here when small, else moved to a plan of its own | scrap pane | 3.1 |
-| Filling a scrap | New scrap, drag, Add to scrap, paste; a folder as its own path | scrap pane | 3.2 |
-| Find dialog | Look in, subfolders, depth / breadth first, search index, Files, Folders, regular expression, fuzzy (nice to have), Named, Predefined and Save, clear, ok, cancel, the target scrap, Clear the scrap first | scrap pane | 3.3 |
-| Running a search | engines, streaming results, Stop, the scrap keeping its search, searching again, a search on a scrap | Find dialog | 3.4 |
-| File actions on a scrap | Delete, Alt+Delete, Alt+Shift+Delete, the scrap's Delete button | scrap pane | 3.5 |
-| Own menu for mixed folders | Foldex's own menu for items from different folders | scrap pane | 3.5 |
 
 Moved to plan 20 (extended search options): Containing text and Additional rules (size, attributes, date ranges).
 
@@ -189,3 +191,84 @@ After xplorer2's "Find files or folders", without Special folders and Local sear
 ## 4. Open questions
 
 None.
+
+## 6. As built
+
+**Where.** The page: `web/scraps.js` (what a scrap holds and keeps, no DOM: merging, following a move, names, one
+folder or more, what a restart leaves), `web/find.js` (the Find dialog, running a search, renaming a scrap),
+`web/app.js` (`ScrapView`, a `ListView` of its own entries; `newScrap`, `addToScrap`, the menu for mixed folders),
+`web/panes.js` (`ownWay`; a scrap is never connected as a child), `web/actions.js` (the actions below). The host:
+`Shell/FileSearch.cs` (the name test, the walk, the engines in turn), `Shell/Everything.cs`, `Shell/WindowsSearch.cs`,
+`SearchesFile.cs` (searches.json), `ShellListing.Entries` (entries for given paths), `FileOps` (a permanent delete,
+the ids of a finished operation and the [old, new] paths of what it moved), `MainForm` (the ops `entries`, `drop` onto
+a scrap, `scrapPaste`, `search`, `searchStop`, `searchesSave`), `AppHost.RunId`. The package System.Data.OleDb
+(10.0.0) for the Windows Search index.
+
+**Decided while building.**
+
+- Docked means in a side area (left, right, top, bottom); "in the panes" is the center area.
+- "Lives while Foldex runs": a scrap's ids go with the window's layout, with the run they were made in
+  (`AppHost.RunId`). A layout of another run is a restart: the scraps in the center go, a docked one comes back empty
+  with its name and search. Closing a project's window and opening it again in the same run keeps its scraps, as does
+  a new page after the page failed.
+- New scrap: docked in the right area. A search's new scrap: at the right of the active pane when that is in the
+  center, else of the center's first pane shown. Its name: what was searched, made unique ("bru (2)"). Its colour: a
+  branch colour as for a new branch. It has the Folder column after the name.
+- Grouping by folder: sorting on the Folder column (the column header's sort); no grouping view of its own.
+- Named: text without wildcards is found anywhere in the name; with * or ? it is the whole name; ";" separates
+  patterns. A regular expression (.NET) is found anywhere in the name. Case never counts.
+- Fuzzy: 100 minus the share of the pattern that the fewest edits take to make it a part of the name (an edit
+  distance with a free start and end in the name), rounded so that one edit in three letters gives 66. It applies to
+  patterns without wildcards; below 100 the search always walks the folders.
+- Engines, with Use search index on: Everything (its window messages, the IPC of Everything 1.4) when it runs, the
+  search includes subfolders and it has anything below Look in; else the Windows Search index (OLE DB) when it has
+  anything below Look in and the name is no regular expression; else the walk. Every candidate of an index is tested
+  again by Foldex's own name test and looked up on disk, so each engine finds the same. The status line says which
+  engine answered.
+- Look in a scrap shows as "Scrap: its name"; the search then tests its entries only (a folder not looked into) and
+  fills a new scrap.
+- Tab order: Look in, Search subfolders, the walk order, Use search index, Files, Folders, Regular expression, Fuzzy,
+  Named, Predefined, Save, Into, Clear the scrap first, Clear, OK, Cancel. Until plan 20, Tab from Named goes to
+  Predefined.
+- searches.json in the data folder holds Predefined and the lists of earlier folders and names, each list the
+  SearchListMax (20, chosen, not measured) used last; every window gets it again when it changes.
+- A double-click or Enter on a folder in a scrap: the keyboard to its child (which shows it), or a new child at its
+  right when it has none. A child of a scrap goes its own way (`ownWay`): it opens folders in itself and keeps its own
+  history, as a pane without a parent.
+- Delete: in a scrap Del takes the items out; Alt+Del deletes from disk (Recycle Bin) in any pane; Shift+Del and
+  Alt+Shift+Del delete permanently. Each asks first in Foldex's own question box (it was the browser's confirm),
+  listing the folders when the items are in more than one. A scrap drops what was deleted once the operation is done.
+- Items of more than one folder in a scrap get Foldex's menu: Open, Copy, Cut, Copy path, Take out of the scrap,
+  Delete (Recycle Bin), Delete permanently, Properties (per item); items of one folder on disk keep Explorer's.
+- Watched: the folders of a window's scrap entries, up to ScrapWatchMax (100 folders, chosen, not measured; a watcher
+  each); a change there checks the entries in it. Beyond that, F5 and Foldex's own file operations check them. A
+  move or rename by Foldex reports the old path (taken before the move: afterwards the old item has none) and the
+  new one, and the entries follow.
+- The ribbon's Home tab has a Find group: Find, New scrap, Add to scrap, Delete from disk. Keys: Ctrl+F Find, Alt+Del,
+  Shift+Del, Alt+Shift+Del.
+
+**Tests.** Unit (`ScrapTests`): the name test (contained, wildcards, ";", a regular expression, a bad one), fuzzy at
+a few numbers, the walk depth and breadth first, a search by name, folders only, without subfolders, in a scrap's
+items only, a folder that is not there; entries for paths there and gone; searches.json kept, and a broken one;
+merging without doubles in order, following a move of an item and of a folder above it, unique names, one folder or
+more, what a restart leaves, a scrap as a parent and never a child, its child going its own way.
+
+In the test copy, over the debugging port with real key events: a new scrap docked at the right, its dashed ring and
+head edge with and without the keyboard, its name in the head and after a rename; Ctrl+F in a folder pane (Look in
+its folder, the keyboard in Named, Shift+Tab to Fuzzy and on to Files, Tab from Named to Predefined, Esc: no scrap); a
+search answered by Everything into a new, active scrap in the center; one with fuzzy 60 and one with a regular
+expression without the index (walked); a search into the existing scrap from another folder (added, that scrap
+active); Search again (Into that scrap, Clear the scrap first on) replacing the results; a search in a scrap into a
+new one; a drop of files from three folders and a folder onto a scrap with Shift held (added, nothing moved); Del
+(out, the file stays), Alt+Del (a question, then the Recycle Bin and out), Shift+Del on items of two folders (the
+folders listed), Del in a folder pane (a question); the menu for mixed folders; a child pane of a scrap on its
+folder; Add to scrap, Ctrl+V onto a scrap, a move by Foldex followed, a file deleted outside Foldex dropped; a restart
+(the center scrap gone, the docked one back empty with its name). The Windows Search engine was run directly
+(Everything answers first on this PC): it gave items of the Documents folder, and nothing for a folder that is not
+indexed.
+
+**Not tested.** A drag with the real mouse from a Foldex pane onto a scrap, and out of a scrap with items of more
+than one folder: the host's drag reads the physical mouse button, which the debugging port does not press (the drop
+itself was tested with the browser's own drag events). Copying scrap items into one folder with Windows' conflict
+dialog. Clicking the head's Delete button (it runs the action Alt+Del runs). Whether Alt+Del and Alt+Shift+Del are
+taken by PowerToys or the like on this PC [not yet checked].

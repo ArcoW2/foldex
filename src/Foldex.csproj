@@ -35,6 +35,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4258.31" />
+    <PackageReference Include="System.Data.OleDb" Version="10.0.0" />
   </ItemGroup>
 
   <!-- The build number is the git commit count, so each commit gets its own version: 1.0.1, 1.0.2, ...

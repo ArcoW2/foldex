@@ -16,6 +16,10 @@
       { "name": "Open", "items": [
         { "action": "item.open", "size": "large", "label": "Open" },
         { "action": "item.properties", "label": "Properties" }, { "action": "item.selectAll", "label": "Select all", "stack": true } ] },
+      { "name": "Find", "items": [
+        { "action": "find", "size": "large", "label": "Find" },
+        { "action": "scrap.new", "label": "New scrap" }, { "action": "scrap.add", "label": "Add to scrap", "stack": true },
+        { "action": "item.deleteDisk", "label": "Delete from disk", "stack": true } ] },
       { "name": "Go", "items": [
         { "action": "history.back", "label": "Back" }, { "action": "history.forward", "label": "Forward", "stack": true },
         { "action": "folder.up", "label": "Up", "stack": true }, { "action": "refresh", "label": "Refresh" } ] } ] },

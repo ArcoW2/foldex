@@ -83,18 +83,19 @@ function askText(title, value = '', placeholder = '') {
   return ask(title, { value, placeholder });
 }
 
-// True for OK.
-async function askYes(title) {
-  return (await ask(title, null)) !== null;
+// True for OK. `lines`: shown under the question (the folders of a delete, plan 06 3.5).
+async function askYes(title, lines = []) {
+  return (await ask(title, null, lines)) !== null;
 }
 
-function ask(title, input) {
+function ask(title, input, lines = []) {
   const dialog = document.createElement('dialog');
   dialog.className = 'ask';
   const form = document.createElement('form');
   form.method = 'dialog';
   const label = Object.assign(document.createElement('label'), { textContent: title });
   form.append(label);
+  for (const line of lines) form.append(Object.assign(document.createElement('div'), { className: 'ask-line', textContent: line }));
   let box = null;
   if (input) {
     box = Object.assign(document.createElement('input'), { value: input.value, placeholder: input.placeholder, spellcheck: false });

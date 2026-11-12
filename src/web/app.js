@@ -128,7 +128,7 @@ function filterTest(pattern) {
 // The view of a pane as its kind says: a tree, a list or a preview.
 function makeView(id) {
   const kind = layout.pane(id).kind;
-  return kind === 'tree' ? new TreeView(id) : kind === 'preview' ? new PreviewView(id) : new ListView(id);
+  return kind === 'tree' ? new TreeView(id) : kind === 'preview' ? new PreviewView(id) : kind === 'scrap' ? new ScrapView(id) : new ListView(id);
 }
 
 // ---------- Rows in view only ----------
@@ -188,7 +188,7 @@ function paneElement(id, kind, title) {
   // The head dragged: the pane moves to another dock place (not from the connector, the pin, the filter mark or the
   // branch marks).
   el.querySelector('.head').addEventListener('mousedown', e => {
-    if (!e.target.closest('.connector, .pin, .filtered, .marks span')) dragToDock(id, e);
+    if (!e.target.closest('.connector, .pin, .filtered, .marks span, .scrap-button')) dragToDock(id, e);
   });
   el.querySelector('.head').addEventListener('contextmenu', e => openPaneMenu(id, e));
   el.addEventListener('mousedown', e => { if (e.button < 3) activate(id); }, true);   // not the mouse's back and forward
@@ -272,6 +272,7 @@ function apply(updates) {
 // Executing an item (3.3): a file opens as Windows opens it; a folder is opened by the pane's source, or expands in
 // place in a pane without one.
 function execute(paneId, item) {
+  if (item.folder && views.get(paneId) instanceof ScrapView) return openFromScrap(paneId, item);
   const r = layout.execute(paneId, item);
   if (r.open) post({ op: 'execute', ids: [r.open] });
   if (r.expand) views.get(r.expand.pane)?.toggle?.(r.expand.item);
@@ -282,8 +283,7 @@ function execute(paneId, item) {
 // A path typed, or Backspace in a follower: its source goes there and the follower follows (open question 7,
 // suggestion); the root shows it in its tree.
 function goTo(paneId, path) {
-  const pane = layout.pane(paneId);
-  const opener = pane.source ?? paneId;
+  const opener = layout.ownWay(paneId) ? paneId : layout.pane(paneId).source;
   views.get(opener)?.reveal?.(path);
   if (opener !== paneId) apply(layout.focus(opener, { id: path, folder: true }));
 }
@@ -812,6 +812,7 @@ class ListView {
       const x = this.entryAt(e.target);
       if (!x) return;
       if (!this.selected.has(x.id)) this.select(x, e);
+      if (this.ownMenu?.(e)) return;
       post({ op: 'menu', ids: this.ids(), x: e.clientX * devicePixelRatio, y: e.clientY * devicePixelRatio, extended: e.shiftKey });
     });
     // Dragging out: the host starts the shell's own drag (plan 02 3.6).
@@ -821,10 +822,7 @@ class ListView {
       if (x && !this.selected.has(x.id)) this.select(x, e);
       post({ op: 'dragOut', ids: this.ids() });
     });
-    dropTarget(this.body, e => {
-      const x = this.entryAt(e.target);
-      return x?.folder ? x.id : this.location;
-    });
+    dropTarget(this.body, e => this.dropAt(e));
     new ResizeObserver(() => {
       this.render();
       if (this.cols.fit && this.entries.length) this.fitColumns();
@@ -833,6 +831,12 @@ class ListView {
   }
 
   ids() { return this.entries.filter(x => this.selected.has(x.id)).map(x => x.id); }
+
+  // Where a drop lands: the folder dropped on, else the list's own.
+  dropAt(e) {
+    const x = this.entryAt(e.target);
+    return x?.folder ? x.id : this.location;
+  }
 
   // ---------- Columns (plan 11) ----------
 
@@ -1250,6 +1254,229 @@ class ListView {
   tabTitle() { return this.name ?? (this.location ?? '').split('\\').filter(x => x).pop() ?? 'Files'; }
 }
 
+// ---------- A scrap (docs/plans/executed/06-PLAN-search-and-scrap.md): files and folders from anywhere ----------
+
+// A list of its own entries instead of a folder's (3.1): never a child, but a parent (a folder focused in it shows in
+// its children); filled by drops, Add to scrap, pasting and searches (3.2). Its entries' ids, its name and its search
+// go with the layout (scraps.js decides what is left of them after a restart). Its ring and the edge under its head
+// are dashed (app.css), its head has Stop (while it searches) and Delete (from disk, as Alt+Delete).
+class ScrapView extends ListView {
+  constructor(id) {
+    super(id);
+    this.el.classList.add('scrap');
+    this.searching = false;
+    const button = (cls, html, title, run) => {
+      const b = Object.assign(document.createElement('button'), { className: `scrap-button ${cls}`, innerHTML: html, title });
+      b.addEventListener('click', run);
+      return b;
+    };
+    this.stopButton = button('scrap-stop', 'Stop', 'Stop the search', () => this.stop());
+    this.stopButton.hidden = true;
+    const bin = '<svg viewBox="0 0 16 16"><path d="M6 2h4l1 1h3v1.5H2V3h3zM3.5 5.5h9l-.8 9h-7.4z"/></svg>';
+    const del = button('scrap-delete', bin, 'Delete the selected items from disk: to the Recycle Bin (Alt+Del)', () => {
+      activate(id);
+      runAction('item.deleteDisk');
+    });
+    this.el.querySelector('.marks').before(this.stopButton, del);
+    this.showName();
+  }
+
+  tabTitle() { return layout.pane(this.id).name ?? 'Scrap'; }
+
+  showName() {
+    this.el.querySelector('.title').textContent = this.tabTitle();
+    drawTabs();
+  }
+
+  // The path bar: the focused item, while it is in the scrap.
+  locationText() {
+    const focus = layout.state(this.id).focus;
+    return this.all.some(x => same(x.id, focus)) ? focus : '';
+  }
+
+  // A scrap has no folder: nothing to load, read again, go up from or open in itself.
+  load() { }
+  reveal() { }
+  up() { }
+
+  // Show, hidden items, the filter or the search bar changed: what it shows, from what it holds.
+  reshow() { this.searchChanged(); }
+
+  searchChanged() {
+    this.entries = this.all.filter(this.passes()).sort(this.comparer());
+    this.selected = new Set([...this.selected].filter(id => this.entries.some(x => x.id === id)));
+    layout.state(this.id).selection = [...this.selected];
+    this.render();
+    tellWatched();
+    if (activePane === this.id) this.tellCount();
+  }
+
+  tellCount() {
+    const shown = this.entries.length, all = this.all.length;
+    status(`${this.tabTitle()}: ${shown === all ? `${all} items` : `${shown} of ${all} items`}${this.searching ? ', searching...' : ''}`);
+  }
+
+  // Its ids kept with the layout (they come back as long as Foldex runs).
+  keep() {
+    layout.pane(this.id).items = this.all.map(x => x.id);
+    tellLayout();
+  }
+
+  // Entries added: each item once, in its own order; nothing on disk changes (3.2).
+  add(entries) {
+    this.all = scrapMerge(this.all, entries);
+    this.searchChanged();
+    this.keep();
+  }
+
+  // Items asked from the host by their ids (a restart of the page, a paste, Add to scrap), then added.
+  async addIds(ids) {
+    if (!ids.length) return;
+    this.add((await askHost({ op: 'entries', ids })).entries);
+  }
+
+  // Taken out (Delete, 3.5): nothing on disk changes.
+  takeOut(ids) {
+    const out = new Set(ids.map(id => id.toLowerCase()));
+    this.all = this.all.filter(x => !out.has(x.id.toLowerCase()));
+    this.searchChanged();
+    this.keep();
+  }
+
+  clear() {
+    this.all = [];
+    this.searchChanged();
+    this.keep();
+  }
+
+  // Checked again (F5, a folder of its entries changed, a file operation done): an item that is gone is dropped (3.1),
+  // the rest read fresh.
+  async verify(ids = this.all.map(x => x.id)) {
+    if (!ids.length) return;
+    const m = await askHost({ op: 'entries', ids });
+    const fresh = new Map(m.entries.map(x => [x.id.toLowerCase(), x]));
+    const asked = new Set(ids.map(id => id.toLowerCase()));
+    this.all = this.all.flatMap(x => {
+      const k = x.id.toLowerCase();
+      return !asked.has(k) ? [x] : fresh.has(k) ? [fresh.get(k)] : [];
+    });
+    this.searchChanged();
+    this.keep();
+  }
+
+  // Items moved or renamed by Foldex ([old, new]): their entries follow (3.1).
+  follow(moved) {
+    const before = this.all.map(x => x.id), after = scrapFollow(before, moved);
+    const changed = before.filter((id, k) => id !== after[k]);
+    if (!changed.length) return;
+    this.takeOut(changed);
+    this.addIds(after.filter((id, k) => id !== before[k]));
+  }
+
+  refresh() { this.verify(); }
+  reread() { this.verify(); }
+
+  restore() {
+    this.selected = new Set(layout.state(this.id).selection);
+    this.render();
+  }
+
+  // A drop onto a scrap adds what is dropped (3.2).
+  dropAt() { return { scrap: this.id }; }
+
+  // Items of more than one folder have no Explorer menu (3.5): Foldex's own.
+  ownMenu(e) {
+    const ids = this.ids();
+    if (oneFolder(ids) && ids.every(id => /^[A-Za-z]:\\|^\\\\/.test(id))) return false;
+    openMenu(e.clientX, e.clientY, scrapItemMenu(this, ids));
+    return true;
+  }
+
+  // ---------- Its search (3.4) ----------
+
+  search(options) {
+    const { within, ...kept } = options;   // its items, for a search in a scrap: not kept
+    layout.pane(this.id).search = kept;
+    tellLayout();
+    this.searching = true;
+    this.stopButton.hidden = false;
+    if (activePane === this.id) this.tellCount();
+    post({ op: 'search', channel: this.id, ...options });
+  }
+
+  stop() { post({ op: 'searchStop', channel: this.id }); }
+
+  searched(m) {
+    this.searching = false;
+    this.stopButton.hidden = true;
+    if (m.error) return status(`${this.tabTitle()}: ${m.error}`, true);
+    const engine = { walk: 'Foldex walked the folders', everything: 'from Everything', windows: 'from the Windows Search index',
+      scrap: 'in the scrap' }[m.engine] ?? m.engine;
+    status(`${this.tabTitle()}: ${m.count} found${m.stopped ? ' (stopped)' : ''}, ${engine}, ${(m.ms / 1000).toFixed(1)} s; ${this.all.length} items in it.`);
+  }
+}
+
+// A folder opened (double-click, Enter) in a scrap: the keyboard to its child, which shows it; without a child, a new
+// one at its right (a scrap cannot open a folder in itself).
+function openFromScrap(id, item) {
+  const child = layout.followers(id, layout.keyOf(id)).find(f => f.kind !== 'preview');
+  if (child) {
+    apply(layout.focus(id, item));
+    return focusPane(child.id);
+  }
+  newChildPane(id, 'right');
+}
+
+const scrapViews = () => [...views.values()].filter(v => v instanceof ScrapView);
+
+// A new scrap (3.2): empty, docked at the right (New scrap), or for a search beside the active pane; with its own
+// colour and the folder column after the name.
+function newScrap(name = null, place = { area: 'right' }) {
+  const taken = scrapViews().map(v => v.tabTitle());
+  const id = layout.add({ kind: 'scrap' });
+  const pane = layout.pane(id);
+  pane.colour = layout.newColour();
+  pane.name = name ? scrapName(name, taken) : newScrapName(taken);
+  pane.items = [];
+  const cols = genericColumns();
+  if (!cols.columns.some(c => c.id === 'path')) cols.columns.splice(1, 0, { id: 'path', width: columnInfo('path').width });
+  pane.columns = cols;
+  const view = placeView(new ScrapView(id), place);
+  activate(id);
+  drawHeads();
+  view.body.focus();
+  return view;
+}
+
+// Add to scrap (3.2): the selection of the active pane into a scrap: the only one, or the one chosen; with none, a
+// new one.
+function addToScrap(ids, x, y) {
+  const scraps = scrapViews().filter(v => v.id !== activePane);
+  const into = v => v.addIds(ids).then(() => status(`${ids.length} item(s) added to ${v.tabTitle()}.`));
+  if (!scraps.length) return into(newScrap());
+  if (scraps.length === 1) return into(scraps[0]);
+  openMenu(x, y, [...scraps.map(v => ({ label: v.tabTitle(), run: () => into(v) })), '-',
+    { label: 'New scrap', run: () => into(newScrap()) }]);
+}
+
+// The menu of items of more than one folder in a scrap (3.5).
+function scrapItemMenu(view, ids) {
+  const each = (op, extra = {}) => { for (const id of ids) post({ op, ids: [id], ...extra }); };
+  return [
+    { label: 'Open', run: () => each('execute') },
+    '-',
+    { label: 'Copy', run: () => runAction('item.copy') },
+    { label: 'Cut', run: () => runAction('item.cut') },
+    { label: 'Copy path', run: () => runAction('item.copyPath') },
+    '-',
+    { label: 'Take out of the scrap', run: () => view.takeOut(ids) },
+    { label: 'Delete (Recycle Bin)', run: () => runAction('item.deleteDisk') },
+    { label: 'Delete permanently...', run: () => runAction('item.deletePermanent') },
+    '-',
+    { label: 'Properties', run: () => each('invokeVerb', { verb: 'properties' }) },
+  ];
+}
+
 // ---------- A preview (plan 04): Windows' preview handler in the host, over this pane's area ----------
 
 class PreviewView {
@@ -1317,12 +1544,24 @@ class PreviewView {
 
 // ---------- Dropping files from Explorer onto a pane ----------
 
+// A target of { scrap } is a scrap: what is dropped becomes its entries, nothing is copied or moved (plan 06 3.2), so
+// the drag is told it is a link, whatever keys are held.
 function dropTarget(body, targetOf) {
-  body.addEventListener('dragover', e => e.preventDefault());
+  body.addEventListener('dragover', e => {
+    e.preventDefault();
+    if (targetOf(e)?.scrap) e.dataTransfer.dropEffect = 'link';
+  });
   body.addEventListener('drop', e => {
     e.preventDefault();
     const target = targetOf(e);
-    if (target) host.postMessageWithAdditionalObjects({ op: 'drop', target, types: [...e.dataTransfer.types] }, e.dataTransfer.files);
+    if (target?.scrap) {
+      const files = e.dataTransfer.files;
+      askHost({ op: 'drop', scrap: true, types: [...e.dataTransfer.types] }, m => host.postMessageWithAdditionalObjects(m, files))
+        .then(m => {
+          views.get(target.scrap)?.add(m.entries);
+          status(`${m.entries.length} item(s) added to ${views.get(target.scrap)?.tabTitle() ?? 'the scrap'}.`);
+        });
+    } else if (target) host.postMessageWithAdditionalObjects({ op: 'drop', target, types: [...e.dataTransfer.types] }, e.dataTransfer.files);
   });
 }
 
@@ -1491,6 +1730,7 @@ function newTab(id) {
   const pane = layout.pane(id), view = views.get(id);
   if (!pane || view instanceof PreviewView) return;
   const place = { pane: id, side: 'tab' };
+  if (view instanceof ScrapView) return newScrap(null, place);   // a scrap's tab: a new, empty scrap
   if (pane.source !== null) {
     const tab = layout.add({ source: pane.source, colour: layout.newColour(), kind: pane.kind, content: pane.content, columns: pane.columns });
     placeView(makeView(tab), place);
@@ -1520,7 +1760,16 @@ function paneMenu(id) {
   const below = p => { for (let q = p; q !== null; q = layout.pane(q).source) if (q === id) return true; return false; };
   const parents = docks.panes().filter(p => views.get(p) && !below(p) && layout.pane(p).kind !== 'preview' && p !== pane.source);
   const free = Branches.filter(b => !layout.followers(pane.source ?? '').some(f => f.colour === b && f.id !== id));
+  const scrap = views.get(id) instanceof ScrapView ? views.get(id) : null;
+  // A scrap's own (plan 06 3.1, 3.4): rename, clear, its search again or stopped.
+  const scrapItems = scrap ? [
+    { label: 'Rename scrap...', run: () => renameScrap(scrap) },
+    { label: 'Clear scrap', enabled: scrap.all.length > 0, run: () => scrap.clear() },
+    { label: 'Search again...', enabled: !!pane.search, run: () => openFind({ again: scrap }) },
+    { label: 'Stop the search', enabled: scrap.searching, run: () => scrap.stop() },
+    '-' ] : [];
   return [
+    ...scrapItems,
     { label: 'New child pane', enabled: !(views.get(id) instanceof PreviewView), items: [
       { label: 'At the right', run: () => newChildPane(id, 'right') },
       { label: 'Below', run: () => newChildPane(id, 'below') } ] },
@@ -1528,7 +1777,7 @@ function paneMenu(id) {
     '-',
     { label: 'Branch', items: [
       { label: 'Detach from parent', enabled: child, run: () => detachPane(id) },
-      { label: 'Attach to', enabled: parents.length > 0, items: parents.map(p => ({ label: title(p), swatch: colourOf(p), run: () => attachPane(id, p) })) },
+      { label: 'Attach to', enabled: parents.length > 0 && !scrap, items: parents.map(p => ({ label: title(p), swatch: colourOf(p), run: () => attachPane(id, p) })) },
       { label: 'Branch colour', enabled: child, items: Branches.map(b => ({
         label: `Branch ${b + 1}${free.includes(b) ? '' : ' (with a sibling)'}`, swatch: `var(--branch-${b})`, checked: pane.colour === b,
         run: () => setBranchColour(id, b) })) } ] },
@@ -1537,7 +1786,7 @@ function paneMenu(id) {
     { label: 'Show', enabled: pane.kind !== 'preview', items: [['folders', 'Folders'], ['files', 'Files'], ['both', 'Folders and files']]
       .map(([content, label]) => ({ label, checked: (pane.content ?? 'both') === content,
         enabled: !(pane.kind === 'tree' && content === 'files'), run: () => setPaneContent(id, content) })) },
-    { label: 'Shape', enabled: pane.kind !== 'preview', items: [['tree', 'Tree'], ['list', 'One folder']]
+    { label: 'Shape', enabled: pane.kind !== 'preview' && !scrap, items: [['tree', 'Tree'], ['list', 'One folder']]
       .map(([kind, label]) => ({ label, checked: pane.kind === kind, run: () => setPaneShape(id, kind) })) },
     { label: 'View', enabled: pane.kind === 'list', items: [['details', 'Details'], ['icons', 'Icons']]
       .map(([view, label]) => ({ label, checked: (pane.view ?? 'details') === view, run: () => setPaneView(id, view) })) },
@@ -1695,7 +1944,8 @@ async function start(paths, saved) {
 
 let layoutTimer = 0;
 // With each pane's name as its head and tab show it (tabTitle), for the Projects menu (plan 15 3.6).
-const windowLayout = () => JSON.parse(JSON.stringify({ panes: layout.toJSON(), docks: docks.toJSON(), active: activePane,
+let runId = '';   // this run of Foldex (AppHost.RunId): kept with the layout, for its scraps (plan 06 3.2)
+const windowLayout = () => JSON.parse(JSON.stringify({ panes: layout.toJSON(), docks: docks.toJSON(), active: activePane, run: runId,
   names: Object.fromEntries([...views].map(([id, v]) => [id, v.tabTitle()])) }));
 function tellLayout() {
   clearTimeout(layoutTimer);
@@ -1718,6 +1968,15 @@ function restoreLayout(saved, path) {
   try {
     const panes = Layout.fromJSON(saved.panes);
     const placed = Docks.fromJSON(saved.docks);
+    // Foldex started again since (plan 06 3.2): its scraps in the panes go, a docked one comes back empty.
+    if (saved.run !== runId) {
+      const after = scrapsAfterRestart([...panes.panes.values()], id => placed.areaOf(id));
+      for (const id of after.remove) {
+        panes.remove(id);
+        placed.remove(id);
+      }
+      for (const id of after.empty) panes.pane(id).items = [];
+    }
     const ids = placed.panes().filter(id => panes.pane(id));
     if (!ids.length) return false;
     Object.assign(layout, { panes: panes.panes, root: panes.root, next: panes.next });
@@ -1737,7 +1996,8 @@ function restoreLayout(saved, path) {
         const focus = firstTree === null ? path : layout.state(id).focus;
         firstTree = true;
         view.ready = view.init().then(() => focus ? view.reveal(focus) : view.select(ThisPC));
-      } else if (view instanceof ListView) {
+      } else if (view instanceof ScrapView) view.addIds(layout.pane(id).items ?? []);
+      else if (view instanceof ListView) {
         const s = layout.state(id);
         if (s.location) view.load(s.location);
       }
@@ -1876,14 +2136,24 @@ function cyclePane(step) {
 
 // ---------- Folders shown are watched (3.8) ----------
 
-// The host is told which folders this window shows (every list's folder, the folders open in a tree), once that rests.
+// The host is told which folders this window shows (every list's folder, the folders open in a tree, the folders of a
+// scrap's entries), once that rests.
 let watchTimer = 0, watchedNow = '';
+const ScrapWatchMax = 100;   // folders watched for all scraps of a window: a watcher each (chosen, not measured)
 function tellWatched() {
   clearTimeout(watchTimer);
   watchTimer = setTimeout(() => {
     const folders = new Set();
+    let scrapFolders = 0;
     for (const v of views.values()) {
       if (v instanceof ListView && v.location) folders.add(v.location);
+      // A scrap: the folders its entries are in, up to ScrapWatchMax of them (plan 06 3.1); the rest are checked on F5
+      // and after Foldex's own file operations.
+      if (v instanceof ScrapView) for (const x of v.all) {
+        if (scrapFolders >= ScrapWatchMax) break;
+        if (!folders.has(folderOf(x.id))) scrapFolders++;
+        folders.add(folderOf(x.id));
+      }
       if (v instanceof TreeView) {
         if (v.folder && v.root) folders.add(v.root);
         for (const n of v.flat) if (n.expanded) folders.add(n.id);
@@ -1899,6 +2169,10 @@ function tellWatched() {
 // A folder shown changed on disk: the lists showing it read it again where they are, a tree its subfolders.
 function folderChanged(folder) {
   for (const v of views.values()) {
+    if (v instanceof ScrapView) {
+      const there = v.all.filter(x => same(folderOf(x.id), folder)).map(x => x.id);
+      if (there.length) v.verify(there);
+    }
     if (v instanceof ListView && same(v.location, folder)) v.reread();
     if (v instanceof TreeView) {
       if (v.folder && same(v.root, folder)) v.reread(null);
@@ -1988,6 +2262,7 @@ function detachPane(id) {
 // A pane follows another from now on, and shows what that one focuses when it is a folder.
 function attachPane(id, target) {
   if (id === target) return;
+  if (views.get(id) instanceof ScrapView) return status('A scrap follows no other pane.', true);
   if (!layout.attach(id, target)) return status('That would connect the pane to itself, through its children.', true);
   activePane = null;
   activate(id);
@@ -2180,6 +2455,8 @@ const events = {
     showOps();
     settingsProblems(m);
     showProject(m.project);
+    runId = m.run;
+    searches = m.searches;
     start(m.paths, m.layout);
   },
   // Bars changed in a window (plan 10 3.3), and the drives there are now (3.2).
@@ -2239,7 +2516,10 @@ const events = {
     window.__spike.events.push({ menuDone: m.verb ?? null, error: m.error ?? null });
     if (m.error) status(m.error, true);
     else if (m.verb === 'rename') status('Rename: not built yet.');
-    else if (m.verb) setTimeout(reloadLists, 300);
+    else if (m.verb) setTimeout(() => {
+      reloadLists();
+      for (const v of scrapViews()) v.verify(v.ids());   // a scrap's own items, deleted from Explorer's menu
+    }, 300);
   },
   menuTexts(m) { window.__spike.events.push({ menuTexts: m.texts, error: m.error }); },
   verbDone(m) { window.__spike.events.push({ verbDone: m.ok, error: m.error }); setTimeout(reloadLists, 300); },
@@ -2259,8 +2539,19 @@ const events = {
   fileOp(m) {
     ops.set(m.op.id, m.op);
     showOps();
-    if (m.op.finished) reloadLists();
+    if (!m.op.finished) return;
+    reloadLists();
+    // A scrap's entries follow what moved and drop what was deleted (plan 06 3.1).
+    for (const v of scrapViews()) {
+      if (m.op.moved?.length) v.follow(m.op.moved);
+      if (m.op.ids?.length) v.verify(v.all.map(x => x.id).filter(id => m.op.ids.some(o => same(o, id))));
+    }
   },
+  // A search for a scrap (plan 06 3.4): what it found so far, and its end.
+  found(m) { views.get(m.channel)?.add?.(m.entries); },
+  searched(m) { views.get(m.channel)?.searched?.(m); },
+  entries(m) { columnReply(m); },
+  searches(m) { searches = m.searches; },
   previewShown(m) {
     window.__spike.events.push({ previewShown: m.path, handler: m.handler, error: m.error });
     if (m.error && preview) preview.message(`No Windows preview: ${m.error}`);

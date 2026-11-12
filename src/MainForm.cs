@@ -213,6 +213,8 @@ sealed class MainForm : Form
                     ["layout"] = freshLayout ? null : pageLayout?.DeepClone() ?? app.LayoutFor(this),
                     ["project"] = app.ProjectInfo(this),
                     ["ops"] = new JsonArray(app.FileOps.All.Select(o => (JsonNode)o.ToJson()).ToArray()),
+                    ["searches"] = SearchesFile.Load(AppHost.DataDir),
+                    ["run"] = AppHost.RunId,
                 });
                 foreach (var queued in queue) web.CoreWebView2.PostWebMessageAsJson(queued);
                 queue.Clear();
@@ -289,6 +291,10 @@ sealed class MainForm : Form
                 Post(new JsonObject { ["event"] = "dragDone", ["effect"] = effect, ["error"] = error, ["source"] = source });
                 break;
             }
+            case "drop" when msg["scrap"]?.GetValue<bool>() == true:
+                // Onto a scrap (plan 06 3.2): nothing copied or moved, the items become its entries.
+                await Entries(files, msg["req"]);
+                break;
             case "drop":
                 // Files from Explorer onto a folder of the page: copied there (the spike's rule; plan 03 decides more).
                 Post(new JsonObject
@@ -302,6 +308,26 @@ sealed class MainForm : Form
             case "clipboard":
                 // Copy and cut as Explorer puts them on the clipboard: the files, and whether a paste moves them.
                 Post(new JsonObject { ["event"] = "clipboardDone", ["error"] = ShellClipboard.Put(ids, msg["kind"]!.GetValue<string>() == "cut") });
+                break;
+            case "entries":
+                await Entries(ids, msg["req"]);
+                break;
+            case "scrapPaste":
+                // Pasted onto a scrap (plan 06 3.5): the files on the clipboard become entries; nothing is copied.
+                await Entries(ShellClipboard.Take().Files, msg["req"]);
+                break;
+            case "search":
+                await Search(msg);
+                break;
+            case "searchStop":
+                if (searches.Remove(msg["channel"]?.GetValue<string>() ?? "", out var stopping)) stopping.Cancel();
+                break;
+            case "searchesSave":
+                try { app.SaveSearches(msg["searches"]!); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    Post(new JsonObject { ["event"] = "settingFailed", ["error"] = $"{SearchesFile.Name}: {ex.Message}" });
+                }
                 break;
             case "paste":
             {
@@ -445,6 +471,42 @@ sealed class MainForm : Form
         };
         answer["hostMs"] = clock.ElapsedMilliseconds;
         Post(answer);
+    }
+
+    // Entries for items by their parsing names (a scrap, plan 06 3.1), answered to the page's request.
+    async Task Entries(IReadOnlyList<string> ids, JsonNode? req)
+    {
+        var list = ids.ToList();
+        var entries = await StaWorker.Once("entries", () => ShellListing.Entries(list));
+        Post(new JsonObject { ["event"] = "entries", ["req"] = req?.DeepClone(), ["entries"] = entries });
+    }
+
+    // The search running per scrap (its channel); a new one on the same scrap or Stop ends it.
+    readonly Dictionary<string, CancellationTokenSource> searches = [];
+
+    // A search for a scrap (plan 06 3.4): what it finds in batches ("found"), then "searched" with the engine used.
+    async Task Search(JsonObject msg)
+    {
+        var channel = msg["channel"]?.GetValue<string>() ?? "";
+        if (searches.Remove(channel, out var before)) before.Cancel();
+        var cancel = searches[channel] = new CancellationTokenSource();
+        var options = FileSearch.Options.From(msg);
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        string? error = null;
+        var (engine, count) = ("", 0);
+        try
+        {
+            (engine, count) = await StaWorker.Once("search", () => FileSearch.Run(options,
+                part => BeginInvoke(() => Post(new JsonObject { ["event"] = "found", ["channel"] = channel, ["entries"] = part })),
+                cancel.Token));
+        }
+        catch (ArgumentException ex) { error = ex.Message; }
+        if (searches.GetValueOrDefault(channel) == cancel) searches.Remove(channel);
+        BeginInvoke(() => Post(new JsonObject
+        {
+            ["event"] = "searched", ["channel"] = channel, ["engine"] = engine, ["count"] = count, ["error"] = error,
+            ["stopped"] = cancel.IsCancellationRequested, ["ms"] = clock.ElapsedMilliseconds,
+        }));
     }
 
     // A folder the user cannot read, listed by the elevated helper (UAC asks); its icons are this process's own.

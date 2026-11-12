@@ -40,7 +40,7 @@ class Layout {
   // first child continues its branch; a root's first child and a further child start a new branch, in the colour used
   // least in the window (so the children of two roots differ).
   connect(id, source, colour = null) {
-    if (!this.panes.has(source)) return false;
+    if (!this.panes.has(source) || this.pane(id).kind === 'scrap') return false;   // a scrap is never a child (plan 06 3.1)
     for (let p = source; p !== null; p = this.pane(p).source) if (p === id) return false;
     const pane = this.pane(id);
     const siblings = this.followers(source).filter(f => f.id !== id);
@@ -213,6 +213,13 @@ class Layout {
     return updates;
   }
 
+  // Whether a pane goes its own way: without a parent, pinned, or a child of a scrap, which has no folder to open one
+  // in (docs/plans/executed/06-PLAN-search-and-scrap.md 3.1).
+  ownWay(id) {
+    const pane = this.pane(id);
+    return pane.source === null || pane.pinned || this.pane(pane.source)?.kind === 'scrap';
+  }
+
   // Executing an item (double-click, Enter; 3.3). A file: { open }. A folder in a pane with a source: opened by that
   // source, which focuses it and shows it in its tree ({ reveal }), and the followers follow. A folder in a tree without
   // a source (or pinned): expanded in place ({ expand }) and focused; in a list without one: opened in that list
@@ -220,7 +227,7 @@ class Layout {
   execute(id, item) {
     if (!item.folder) return { open: item.id, updates: [] };
     const pane = this.pane(id);
-    if (pane.source === null || pane.pinned) {
+    if (this.ownWay(id)) {
       if (pane.kind === 'tree') return { expand: { pane: id, item: item.id }, updates: this.focus(id, item) };
       return { reveal: { pane: id, item: item.id }, updates: [] };
     }
@@ -257,11 +264,11 @@ class Layout {
     return true;
   }
 
-  // Whose history Back and Forward use from a pane: its own without a parent or while pinned; in a child that
-  // follows, its parent's, up to the first pane without one.
+  // Whose history Back and Forward use from a pane: its own without a parent, while pinned or below a scrap (ownWay);
+  // in a child that follows, its parent's, up to the first pane that goes its own way.
   historyPane(id) {
     let p = id;
-    while (this.pane(p).source !== null && !this.pane(p).pinned) p = this.pane(p).source;
+    while (!this.ownWay(p)) p = this.pane(p).source;
     return p;
   }
 

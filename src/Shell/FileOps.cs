@@ -21,11 +21,17 @@ sealed class FileOps
         public bool Finished { get; set; }
         public bool Aborted { get; set; }
         public string? Error { get; set; }
+        /// <summary>The items it was given; told once it is finished, so a scrap can check them (plan 06 3.1).</summary>
+        public IReadOnlyList<string> Ids { get; init; } = [];
+        /// <summary>The items moved or renamed: [old, new] parsing names, so the entries of a scrap follow them.</summary>
+        public List<string[]> Moved { get; } = [];
 
         public JsonObject ToJson() => new()
         {
             ["id"] = Id, ["kind"] = Kind, ["items"] = Items, ["total"] = Total, ["done"] = Done,
             ["finished"] = Finished, ["aborted"] = Aborted, ["error"] = Error,
+            ["ids"] = Finished ? new JsonArray(Ids.Select(i => (JsonNode?)i).ToArray()) : null,
+            ["moved"] = Finished ? new JsonArray(Moved.Select(m => (JsonNode?)new JsonArray(m[0], m[1])).ToArray()) : null,
         };
     }
 
@@ -44,11 +50,11 @@ sealed class FileOps
     public IReadOnlyList<Operation> All => operations;
 
     /// <summary>Starts a copy or move of items (parsing names) into a folder, a delete (to the Recycle Bin; `confirmed`:
-    /// Foldex asked already, Windows does not ask again), or a new folder in `target` ("New folder", numbered by Windows
+    /// Foldex asked already, Windows does not ask again), a permanent delete (deletePermanent), or a new folder in `target` ("New folder", numbered by Windows
     /// when the name is taken). Returns at once.</summary>
     public Operation Start(string kind, IReadOnlyList<string> ids, string? target, IntPtr owner, bool confirmed)
     {
-        var op = new Operation { Id = ++lastId, Kind = kind, Items = ids.Count };
+        var op = new Operation { Id = ++lastId, Kind = kind, Items = ids.Count, Ids = [.. ids] };
         operations.Add(op);
         changed(op);
         var thread = new Thread(() => Run(op, ids, target, owner, confirmed)) { IsBackground = true, Name = $"file operation {op.Id}" };
@@ -68,6 +74,7 @@ sealed class FileOps
             Marshal.Release(ptr);
             var flags = Native.FofNoConfirmMkDir | Native.FofAllowUndo;
             if (op.Kind == "delete") flags |= Native.FofxRecycleOnDelete | (confirmed ? Native.FofNoConfirmation : 0);
+            if (op.Kind == "deletePermanent") flags = (flags & ~Native.FofAllowUndo) | (confirmed ? Native.FofNoConfirmation : 0);
             if (op.Kind == "newFolder") flags |= Native.FofRenameOnCollision;
             fo.SetOperationFlags(flags);
             if (owner != IntPtr.Zero) fo.SetOwnerWindow(owner);
@@ -82,7 +89,7 @@ sealed class FileOps
                 {
                     case "copy": fo.CopyItem(item, dest!, null, IntPtr.Zero); break;
                     case "move": fo.MoveItem(item, dest!, null, IntPtr.Zero); break;
-                    case "delete": fo.DeleteItem(item, IntPtr.Zero); break;
+                    case "delete" or "deletePermanent": fo.DeleteItem(item, IntPtr.Zero); break;
                     default: throw new ArgumentException($"no file operation {op.Kind}");
                 }
             }
@@ -120,10 +127,28 @@ sealed class FileOps
 
         public void StartOperations() { }
         public void FinishOperations(int hrResult) { }
-        public void PreRenameItem(uint dwFlags, IShellItem psiItem, string pszNewName) { }
-        public void PostRenameItem(uint dwFlags, IShellItem psiItem, string pszNewName, int hrRename, IShellItem psiNewlyCreated) { }
-        public void PreMoveItem(uint dwFlags, IShellItem psiItem, IShellItem psiDestinationFolder, string pszNewName) { }
-        public void PostMoveItem(uint dwFlags, IShellItem psiItem, IShellItem psiDestinationFolder, string pszNewName, int hrMove, IShellItem psiNewlyCreated) { }
+        // A moved or renamed item's path, taken before: afterwards the old item no longer has one.
+        string? before;
+
+        public void PreRenameItem(uint dwFlags, IShellItem psiItem, string pszNewName) => Before(psiItem);
+        public void PostRenameItem(uint dwFlags, IShellItem psiItem, string pszNewName, int hrRename, IShellItem psiNewlyCreated) =>
+            Moved(hrRename, psiNewlyCreated);
+        public void PreMoveItem(uint dwFlags, IShellItem psiItem, IShellItem psiDestinationFolder, string pszNewName) => Before(psiItem);
+        public void PostMoveItem(uint dwFlags, IShellItem psiItem, IShellItem psiDestinationFolder, string pszNewName, int hrMove, IShellItem psiNewlyCreated) =>
+            Moved(hrMove, psiNewlyCreated);
+
+        void Before(IShellItem item)
+        {
+            try { before = Native.IdOf(item); }
+            catch (COMException) { before = null; }
+        }
+
+        void Moved(int hr, IShellItem? to)
+        {
+            if (hr < 0 || to is null || before is null) return;
+            try { op.Moved.Add([before, Native.IdOf(to)]); }
+            catch (COMException) { }
+        }
         public void PreCopyItem(uint dwFlags, IShellItem psiItem, IShellItem psiDestinationFolder, string pszNewName) { }
         public void PostCopyItem(uint dwFlags, IShellItem psiItem, IShellItem psiDestinationFolder, string pszNewName, int hrCopy, IShellItem psiNewlyCreated) { }
         public void PreDeleteItem(uint dwFlags, IShellItem psiItem) { }
