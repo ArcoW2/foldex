@@ -40,6 +40,8 @@
   "thumbIcons": ["gps", "raw"],   // the icons on thumbnails: "gps" (a GPS location), "raw" (a camera RAW file)
   "renameTokens": "xplorer2",     // the Rename dialog's tokens: "xplorer2" ($B, $1, ${Date taken}) or "totalcommander" ([N], [C], [=Date taken])
   "renameCompanions": true,       // renaming a file renames the files beside it with the same name and another extension; Shift+Enter: the other
+  "scrollbarWidth": 12,             // px, 4 to 30: the vertical scrollbars' width
+  "scrollbarHeight": 12,            // px, 4 to 30: the horizontal scrollbars' height
   "scrollMargin": 0,               // rows kept in view above and below the cursor, 0 to 10: 1 scrolls on reaching the second last row
   "rowLines": "none",             // rows in a list: "none", "stripes" (every other row shaded) or "lines" (a line under each)
   "rowLinesIntensity": 8,         // 1 to 100: how strong the stripes or lines are, the text colour mixed in at that %

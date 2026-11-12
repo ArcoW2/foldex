@@ -1639,3 +1639,20 @@ dialog.rename-many select.rn-tokens { flex: none; width: 10em; }
 .rn-row.same { color: var(--fg-dim); }
 .rn-row.wrong { color: var(--warning); }
 .rn-row.companion { font-style: italic; }
+
+/* Scrollbars of Foldex's own look (as LexPen's), every one in the colours of where it is: inside a pane its pane
+   theme (--bg, --branch); the handle rounded, inset from the track's edges; the vertical bar's width and the
+   horizontal bar's height are settings (look.js puts them on the root). */
+::-webkit-scrollbar { width: var(--scrollbar-w, 12px); height: var(--scrollbar-h, 12px); }
+::-webkit-scrollbar-button { display: none; }
+::-webkit-scrollbar-track { background: color-mix(in srgb, var(--fg) 6%, var(--bg)); }
+::-webkit-scrollbar-thumb {
+  min-width: 24px;
+  min-height: 24px;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--branch, var(--fg-dim)) 70%, transparent) padding-box;
+}
+::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--branch, var(--fg-dim)) 85%, var(--fg)) padding-box; }
+::-webkit-scrollbar-thumb:active { background: color-mix(in srgb, var(--branch, var(--fg-dim)) 70%, var(--fg)) padding-box; }
+::-webkit-scrollbar-corner { background: color-mix(in srgb, var(--fg) 6%, var(--bg)); }
