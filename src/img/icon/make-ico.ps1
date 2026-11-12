@@ -17,7 +17,13 @@ try {
     # All sizes side by side on one transparent sheet.
     $x = 0; $html = '<html><body style="margin:0;background:transparent">'
     $svgUrl = 'file:///' + ($Svg -replace '\\', '/')
-    foreach ($s in $Sizes) { $html += "<img src=`"$svgUrl`" style=`"position:absolute;left:${x}px;top:0`" width=$s height=$s>"; $x += $s + 8 }
+    # A size with its own drawing (foldex-16.svg: the shapes on whole pixels of that size, so the small icons are
+    # sharp) uses it; the others are drawn from the SVG itself.
+    foreach ($s in $Sizes) {
+        $own = "$base-$s.svg"
+        $url = if (Test-Path $own) { 'file:///' + ((Resolve-Path $own).Path -replace '\\', '/') } else { $svgUrl }
+        $html += "<img src=`"$url`" style=`"position:absolute;left:${x}px;top:0`" width=$s height=$s>"; $x += $s + 8
+    }
     Set-Content "$work\sheet.html" ($html + '</body></html>') -Encoding ascii
     $height = ($Sizes | Measure-Object -Maximum).Maximum
     & $edge --headless=new --disable-gpu --hide-scrollbars --force-device-scale-factor=1 --default-background-color=00000000 `
