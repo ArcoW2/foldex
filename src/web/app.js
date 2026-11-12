@@ -115,6 +115,15 @@ function list(channel, location, foldersOnly, onPart, onDone, elevated = false, 
   const req = ++lastReq;
   listeners.set(channel, { req, onPart, onDone, sent: performance.now() });
   post({ op: elevated ? 'listElevated' : 'list', channel, location, foldersOnly, tree, req });
+  setTimeout(showProgress, ProgressAfter + 10);
+}
+
+// The progress bar in the status line: while a folder takes longer than ProgressAfter ms to read. How many items a
+// folder holds is known only when it is read, so the bar moves without a measure; the status says how many so far.
+const ProgressAfter = 400;
+function showProgress() {
+  const now = performance.now();
+  $('progress').hidden = ![...listeners.values()].some(l => now - l.sent > ProgressAfter);
 }
 
 // A pane's own view settings (plan 03 3.1). Hidden items: its own choice, else the setting showHidden. A filter:
@@ -2722,6 +2731,7 @@ const events = {
     if (!l || l.req !== m.req) return;   // an answer for a location left already
     listeners.delete(m.channel);
     l.onDone(m);
+    showProgress();
   },
   described(m) {
     described.get(m.req)?.(m.entries);

@@ -1262,6 +1262,37 @@ dialog.ask form {
   color: var(--warning);
 }
 
+/* The progress bar (app.js showProgress): a piece of the accent colour going from left to right. */
+#progress {
+  flex: none;
+  align-self: center;
+  position: relative;
+  width: 160px;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--fg) 12%, transparent);
+}
+
+#progress[hidden] {
+  display: none;
+}
+
+#progress > div {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 35%;
+  border-radius: 3px;
+  background: var(--accent);
+  animation: progress-run 1.2s ease-in-out infinite;
+}
+
+@keyframes progress-run {
+  from { left: -35%; }
+  to { left: 100%; }
+}
+
 .ask-line {
   color: var(--fg-dim);
   padding-left: 8px;
