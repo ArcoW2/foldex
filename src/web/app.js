@@ -1146,7 +1146,7 @@ class ListView {
     this.opPending = op;
     const moved = op?.moved ?? [];
     const now = id => moved.find(([from]) => same(from, id))?.[1] ?? id;
-    const landed = op && op.kind !== 'rename' && op.kind !== 'renameMany' ? [...(op.made ?? []), ...moved.map(m => m[1])].filter(id => same(folderOf(id), this.location)) : [];
+    const landed = op && op.kind !== 'rename' && op.kind !== 'renameMany' ? [...(op.made ?? []), ...moved.map(m => m[1]), ...(op.created ? [op.created] : [])].filter(id => same(folderOf(id), this.location)) : [];
     const keep = [...this.selected].map(now), top = this.body.scrollTop;
     const s = layout.state(this.id), focusBefore = s.focus ? now(s.focus) : null;
     const at = this.entries.findIndex(x => same(x.id, s.focus));
