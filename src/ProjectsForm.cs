@@ -50,6 +50,7 @@ sealed class ProjectsForm : Form
         core.Settings.AreDevToolsEnabled = false;
 #endif
         core.Settings.IsZoomControlEnabled = false;
+        core.Settings.AreBrowserAcceleratorKeysEnabled = false;
         WebFiles.Serve(core);
         core.ContextMenuRequested += (_, m) => WebFiles.BrowserMenu(m);
         core.WebMessageReceived += (_, m) =>

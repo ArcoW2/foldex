@@ -401,6 +401,8 @@ function barMenu(bar, side) {
     '-',
     { label: 'Add a bar', items: Object.entries(BarKinds).map(([kind, title]) => ({ label: title, run: () => addBar(kind, side) })) },
     { label: 'Remove this bar', run: () => { removeBar(bar); saveBars(); } },
+    '-',
+    { label: 'Done', run: () => changeBars(false) },   // as LexPen's change mode menu
   ];
 }
 

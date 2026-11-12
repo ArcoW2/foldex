@@ -148,6 +148,9 @@ sealed class MainForm : Form
         core.Settings.AreDevToolsEnabled = false;
 #endif
         core.Settings.IsZoomControlEnabled = false;
+        // The browser's own keys (Ctrl+F find, Ctrl+P print, F5 reload, ...) are not Foldex's: keys.json's go to the page;
+        // copy, paste and undo in a text box stay.
+        core.Settings.AreBrowserAcceleratorKeysEnabled = false;
         WebFiles.Serve(core);
         core.ContextMenuRequested += (_, m) => WebFiles.BrowserMenu(m);
         // Not inside a WebView2 event handler: dialogs and long work must not run there.

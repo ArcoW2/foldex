@@ -211,3 +211,6 @@ None.
   short menu; in it a click on D: left the pane on C:\ (outside: it went to D:\); the path box's right-click gave the
   bar's menu; the drives' splitter dragged 80 px raised normal and max from 8 to 11; Ctrl+Z back to 8; Esc ended it
   (screenshot).
+- The splitter made wider (12 px, a tinted band; the bar keeps room for it in the mode, so it covers no button), and
+  Done at the end of the bar's menu in the mode, as LexPen's change mode menu. Test copy: the splitter 14 px wide with
+  its border, starting after the last drive; the menu ending in Done.
