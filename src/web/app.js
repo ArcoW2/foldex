@@ -232,7 +232,7 @@ function drawHeads() {
     const key = layout.pathColour(v.id);
     v.el.style.setProperty('--branch', key !== null ? `var(--branch-${key})` : '');
     // Its pane theme inside it (plan 13 3.4): the page's own variables, so every rule in the pane follows.
-    for (const name of ['bg', 'bg-side', 'select', 'hover', 'accent', 'text'])
+    for (const name of ['bg', 'bg-side', 'select', 'hover', 'accent', 'text', 'text-selected', 'text-focused', 'text-hover'])
       v.el.style.setProperty(name === 'text' ? '--branch-text' : `--${name}`, key !== null ? `var(--branch-${key}-${name})` : '');
     v.el.classList.toggle('child', pane.source !== null);
     v.el.classList.toggle('pinned', pane.pinned);

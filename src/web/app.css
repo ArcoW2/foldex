@@ -841,23 +841,39 @@ body.connecting, body.connecting * {
   cursor: default;
 }
 
-.row:hover {
-  background: var(--hover);
+/* The highlights (look.js applyHighlights): hover, the selected items, and the focused one stronger, each the accent
+   by --X-up into its colour by --X-keep into the pane's background; the text inverted where it would not stand out
+   (--text-X). */
+.row:hover, .tile:hover {
+  background: color-mix(in srgb, var(--accent) var(--hover-up, 0%), color-mix(in srgb, var(--hover) var(--hover-keep, 100%), var(--pane-bg, var(--bg))));
+  color: var(--text-hover, inherit);
 }
 
-.row.selected {
-  background: var(--select);
+.row.selected, .tile.selected {
+  background: color-mix(in srgb, var(--accent) var(--selected-up, 0%), color-mix(in srgb, var(--select) var(--selected-keep, 40%), var(--pane-bg, var(--bg))));
+  color: var(--text-selected, inherit);
 }
 
-/* Selected in a pane without the keyboard, or in any pane while another window has the focus (which pane gets the
-   keys back is not known then): a little less strong. */
-.pane:not(.active) .row.selected,
-body[data-focus-away] .row.selected {
-  background: color-mix(in srgb, var(--select) 55%, var(--pane-bg, var(--bg)));
+.row.selected.focused, .tile.selected.focused {
+  background: color-mix(in srgb, var(--accent) var(--focused-up, 30%), color-mix(in srgb, var(--select) var(--focused-keep, 100%), var(--pane-bg, var(--bg))));
+  color: var(--text-focused, inherit);
+}
+
+/* In a pane without the keyboard, or in any pane while another window has the focus (which pane gets the keys back is
+   not known then): a little less strong, the focused one still apart, the text its own colour. */
+.pane:not(.active) :is(.row, .tile).selected,
+body[data-focus-away] :is(.row, .tile).selected {
+  background: color-mix(in srgb, color-mix(in srgb, var(--accent) var(--selected-up, 0%), color-mix(in srgb, var(--select) var(--selected-keep, 40%), var(--pane-bg, var(--bg)))) 70%, var(--pane-bg, var(--bg)));
+  color: inherit;
+}
+
+.pane:not(.active) :is(.row, .tile).selected.focused,
+body[data-focus-away] :is(.row, .tile).selected.focused {
+  background: color-mix(in srgb, color-mix(in srgb, var(--accent) var(--focused-up, 30%), color-mix(in srgb, var(--select) var(--focused-keep, 100%), var(--pane-bg, var(--bg)))) 70%, var(--pane-bg, var(--bg)));
 }
 
 .body:focus .row.focused {
-  outline: 1px dotted var(--accent);
+  outline: 1px solid var(--accent);
   outline-offset: -1px;
 }
 
@@ -1086,20 +1102,13 @@ body[data-focus-away] .row.selected {
   line-height: 1.3;
 }
 
-.tile:hover {
-  background: var(--hover);
-}
-
-.tile.selected {
-  background: var(--select);
-}
 
 .tile.hidden .name {
   opacity: 0.6;
 }
 
 .body:focus .tile.focused {
-  outline: 1px dotted var(--accent);
+  outline: 1px solid var(--accent);
   outline-offset: -1px;
 }
 

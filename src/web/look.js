@@ -20,6 +20,7 @@ function applyLook(settings, themes) {
   const vars = { ...themeVars, ...paneThemeVars(settings, themeVars) };
   lookVars = Object.keys(vars);
   for (const name of lookVars) root.style.setProperty(name, vars[name]);
+  applyHighlights(settings);
   applyHeadText(6);
   // The tree lines (docs/plans/16-PLAN-tree-look.md 3.1): app.css draws them solid or dotted, or not at all.
   root.dataset.treeLines = ['solid', 'dotted', 'none'].includes(settings.treeLines) ? settings.treeLines : 'dotted';
@@ -78,11 +79,49 @@ function applyHeadText(count) {
     .reduce((sum, c, i) => sum + c * [.2126, .7152, .0722][i], 0);
   const contrast = (a, b) => (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
   const fg = lum(rgb('var(--fg)')), bg = lum(rgb('var(--bg)'));
+  const text = colour => contrast(colour, fg) >= contrast(colour, bg) ? 'var(--fg)' : 'var(--bg)';
   for (let n = 0; n < count; n++) {
     const head = lum(rgb(`color-mix(in srgb, var(--branch-${n}) calc(100% * var(--head-mix)), var(--bg-bar))`));
-    root.style.setProperty(`--branch-${n}-text`, contrast(head, fg) >= contrast(head, bg) ? 'var(--fg)' : 'var(--bg)');
+    root.style.setProperty(`--branch-${n}-text`, text(head));
+    // The highlights as app.css draws them in a pane of this branch (applyHighlights): the text keeps its colour until
+    // it no longer stands out (below HighlightContrast), then the background colour where that stands out more.
+    for (const kind of Object.keys(Highlights)) {
+      const colour = Highlights[kind][3];
+      const drawn = lum(rgb(`color-mix(in srgb, var(--branch-${n}-accent) var(--${kind}-up), color-mix(in srgb, var(--branch-${n}-${colour}) var(--${kind}-keep), var(--branch-${n}-bg)))`));
+      const turn = contrast(drawn, fg) < HighlightContrast && contrast(drawn, bg) > contrast(drawn, fg);
+      root.style.setProperty(`--branch-${n}-text-${kind}`, turn ? 'var(--bg)' : 'var(--fg)');
+    }
   }
   probe.remove();
+}
+
+// The highlights in the panes (focusIntensity, selectIntensity, hoverIntensity), 0 to 200 %: 100 the theme's colour
+// (the focused item the selection colour with a little of the accent, the other selected items fainter, hover the
+// hover colour), lower toward the pane's background, higher toward the accent colour. app.css mixes them: the accent by
+// --X-up into the colour by --X-keep into the pane's background. Where a highlight gets so strong that the text no
+// longer stands out from it, the text takes the background colour instead (--branch-N-text-X, as the heads' text).
+// Per kind: the setting, the share of its colour at 100 (keep), the share of the accent at 100 (up), the colour.
+const HighlightContrast = 2.5;   // the contrast ratio below which a highlight's text turns over (chosen, not measured)
+const Highlights = {
+  focused: ['focusIntensity', 100, 30, 'select'], selected: ['selectIntensity', 40, 0, 'select'], hover: ['hoverIntensity', 100, 0, 'hover'],
+};
+
+function highlightShares(settings) {
+  const shares = {};
+  for (const [kind, [name, keep, up]] of Object.entries(Highlights)) {
+    const p = between(Number(settings[name]), 0, 200, 100);
+    shares[kind] = p <= 100 ? { keep: tenth(keep * p / 100), up: tenth(up * p / 100) }
+      : { keep, up: tenth(up + (100 - up) * (p - 100) / 100) };
+  }
+  return shares;
+}
+
+function applyHighlights(settings) {
+  const root = document.documentElement.style;
+  for (const [kind, { keep, up }] of Object.entries(highlightShares(settings))) {
+    root.setProperty(`--${kind}-keep`, `${keep}%`);
+    root.setProperty(`--${kind}-up`, `${up}%`);
+  }
 }
 
 // The fonts (docs/plans/executed/08-PLAN-fonts.md): the window's (appFont, appSize) and the panes' rows (paneFont, paneSize), in
