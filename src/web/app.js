@@ -768,8 +768,8 @@ class TreeView {
 
   askProps(items, names) { return ListView.prototype.askProps.call(this, items, names); }
 
-  // Fit columns (Ctrl+R): as a list's, the name column counting each row's indent and expander.
-  fitColumns(whole = false) {
+  // Fit columns: as a list's, the name column counting each row's indent and expander.
+  fitColumns(nameOnly = false) {
     const measure = document.createElement('canvas').getContext('2d');
     const style = getComputedStyle(this.body);
     measure.font = `${style.fontSize} ${style.fontFamily}`;
@@ -782,8 +782,8 @@ class TreeView {
         : measure.measureText(columnText(n, col.id)).width);
       return widest + pad;
     });
-    const widths = whole ? needs.map(x => Math.ceil(x)) : fitWidths(needs, this.body.clientWidth - 2, NameMinEm * fontPx);
-    this.cols.columns.forEach((col, k) => { col.width = Math.round(widths[k] / fontPx * 10) / 10; });
+    const widths = nameOnly ? [Math.ceil(needs[0])] : fitWidths(needs, this.body.clientWidth - 2, NameMinEm * fontPx);
+    this.cols.columns.forEach((col, k) => { if (k < widths.length) col.width = Math.round(widths[k] / fontPx * 10) / 10; });
     this.drawHeader();
     this.render();
     tellLayout();
@@ -943,9 +943,9 @@ class ListView {
     return Promise.all(batches);
   }
 
-  // Fit columns (3.4, Ctrl+R): each column as wide as its widest value here (`whole`: Ctrl+R, the pane scrolling
-  // sideways when they are wider than it); fitting by themselves, too wide, the name gives way first.
-  fitColumns(whole = false) {
+  // Fit columns (3.4): each column as wide as its widest value here; too wide, the name gives way first. `nameOnly`
+  // (Ctrl+R): only the name column, its whole width (the pane scrolling sideways when it is wider than the pane).
+  fitColumns(nameOnly = false) {
     const measure = document.createElement('canvas').getContext('2d');
     const style = getComputedStyle(this.body);
     measure.font = `${style.fontSize} ${style.fontFamily}`;
@@ -956,8 +956,8 @@ class ListView {
       for (const x of entries) widest = Math.max(widest, measure.measureText(k === 0 ? x.name : columnText(x, col.id)).width);
       return widest + pad + (k === 0 ? iconSize + 14 + measure.measureText(' link').width : 0);
     });
-    const widths = whole ? needs.map(x => Math.ceil(x)) : fitWidths(needs, this.body.clientWidth - 2, NameMinEm * fontPx);
-    this.cols.columns.forEach((col, k) => { col.width = Math.round(widths[k] / fontPx * 10) / 10; });
+    const widths = nameOnly ? [Math.ceil(needs[0])] : fitWidths(needs, this.body.clientWidth - 2, NameMinEm * fontPx);
+    this.cols.columns.forEach((col, k) => { if (k < widths.length) col.width = Math.round(widths[k] / fontPx * 10) / 10; });
     this.drawHeader();
     this.render();
     if (!this.cols.set) tellLayout();

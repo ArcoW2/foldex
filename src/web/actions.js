@@ -205,6 +205,8 @@ action('layout.resetDefault', { title: 'Reset layout to default', group: 'projec
 // Columns (docs/plans/executed/11-PLAN-columns.md 3.4): fitted to their content; the column sets.
 const activeColumns = () => { const v = views.get(activePane); return v?.fitColumns ? v : null; };   // a list or a tree
 action('columns.fit', { title: 'Fit columns', hint: 'every column as wide as its widest value here; the name gives way first',
+  group: 'view', enabled: () => !!activeColumns(), run: () => activeColumns().fitColumns() });
+action('columns.fitName', { title: 'Fit the name column', hint: 'the name column as wide as its widest name here, the other columns as they are',
   group: 'view', enabled: () => !!activeColumns(), run: () => activeColumns().fitColumns(true) });
 action('columns.manage', { title: 'Manage column sets', hint: 'rename, delete, duplicate and edit the column sets; which folders use them',
   group: 'view', run: () => openManageSets() });

@@ -299,7 +299,7 @@ function columnHeaderMenu(view) {
       saveMine([...columnSets.mine.filter(m => m.name.toLowerCase() !== cols.set.toLowerCase()), { name: cols.set, ...copyColumns(cols) }]) },
     { label: 'Manage sets...', run: () => openManageSets() },
     '-',
-    { label: 'Fit columns', run: () => view.fitColumns(true) },
+    { label: 'Fit columns', run: () => view.fitColumns() },
     { label: 'Fit by themselves', checked: !!cols.fit, run: () => { cols.fit = !cols.fit; view.columnsChanged(); if (cols.fit) view.fitColumns(); } },
   ];
 }
