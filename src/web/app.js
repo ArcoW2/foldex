@@ -316,7 +316,12 @@ function parentOf(path) {
 class TreeView {
   constructor(id) {
     this.id = id;
-    this.nodes = new Map();   // lower-case id -> node
+    // A folder can be in the tree in more than one place (your profile at the top and under This PC > C: > Users): each
+    // place is a node of its own, with its own children, depth and parent. `nodes` has per id its home place (the one
+    // under its own folder, where a path leads), `places` every place, and `focusNode` the place the focus is on.
+    this.nodes = new Map();   // lower-case id -> its home node
+    this.places = new Map();  // lower-case id -> every node of it
+    this.focusNode = null;
     this.top = [];
     this.flat = [];
     this.folder = layout.pane(id).source !== null;   // a child: its parent's folder
@@ -356,7 +361,7 @@ class TreeView {
       height = this.body.clientHeight;
       if (this.cols.fit && this.flat.length) this.fitColumns();
       if (height >= before) return;
-      const i = this.flat.findIndex(x => same(x.id, layout.state(this.id).focus));
+      const i = this.flat.indexOf(this.focused());
       const top = i * RowHeight - this.body.scrollTop;
       if (i >= 0 && top >= 0 && top + RowHeight <= before) scrollIntoView(this.body, i);
     }).observe(this.body);
@@ -365,18 +370,55 @@ class TreeView {
   // Files shown (plan 18 3.2): Folders and files; Files alone is not for a tree.
   showsFiles() { return layout.pane(this.id).content !== 'folders'; }
 
+  // An item's home place (see the constructor).
   node(id) { return id == null ? undefined : this.nodes.get(id.toLowerCase()); }
 
+  // Every place of an item.
+  placesOf(id) { return id == null ? [] : this.places.get(id.toLowerCase()) ?? []; }
+
+  // An item's place for an action by its id: the focused place when the focus is on it, else its home place.
+  place(id) { return this.focusNode && same(this.focusNode.id, id) && this.placesOf(id).includes(this.focusNode) ? this.focusNode : this.node(id); }
+
+  // The focused node: the place the focus is on.
+  focused() { return this.place(layout.state(this.id).focus); }
+
+  // A place under its own folder (a top has none above it).
+  isHome(n) { return !n.parent || same(n.parent.id, folderOf(n.id)); }
+
   add(entry, parent) {
-    const known = this.node(entry.id);
+    const key = entry.id.toLowerCase(), places = this.places.get(key) ?? [];
+    const known = places.find(n => n.parent === parent);
     if (known) {
       if (!known.children) Object.assign(known, { subs: entry.subs, files: entry.files });   // it may have got or lost some
       return known;
     }
     const n = { ...entry, parent, children: null, expanded: false, depth: parent ? parent.depth + 1 : this.folder ? 1 : 0 };
-    this.nodes.set(entry.id.toLowerCase(), n);
+    this.places.set(key, [...places, n]);
+    const home = this.nodes.get(key);
+    if (!home || !this.isHome(home) && this.isHome(n)) this.nodes.set(key, n);
     return n;
   }
+
+  // A node gone (and the ones under it): out of the places, another place its item's home when it was.
+  forget(n) {
+    for (const c of n.children ?? []) this.forget(c);
+    const key = n.id.toLowerCase(), rest = (this.places.get(key) ?? []).filter(m => m !== n);
+    if (rest.length) this.places.set(key, rest);
+    else this.places.delete(key);
+    if (this.nodes.get(key) === n) {
+      if (rest.length) this.nodes.set(key, rest.find(m => this.isHome(m)) ?? rest[0]);
+      else this.nodes.delete(key);
+    }
+    if (this.focusNode === n) this.focusNode = null;
+  }
+
+  clear() {
+    this.nodes.clear();
+    this.places.clear();
+    this.focusNode = null;
+  }
+
+  allNodes() { return [...this.places.values()].flat(); }
 
   // Ready to show: the tops, or (a child) its folder.
   init() {
@@ -395,7 +437,7 @@ class TreeView {
   // when it is there.
   load(location) {
     this.root = location;
-    this.nodes.clear();
+    this.clear();
     this.top = [];
     this.flatten();
     this.el.querySelector('.title').textContent = location ?? '';
@@ -449,9 +491,9 @@ class TreeView {
       const shown = n ? n.children : this.top;
       const next = kids.concat(m.entries).sort(this.comparer()).map(e => this.add(e, parent));
       if (shown && next.length === shown.length && next.every((c, k) => c === shown[k])) return;
-      const focus = this.node(layout.state(this.id).focus);
+      const focus = this.focused();
       const offset = focus ? this.flat.indexOf(focus) * RowHeight - this.body.scrollTop : 0;
-      for (const gone of shown ?? []) if (!next.includes(gone)) this.nodes.delete(gone.id.toLowerCase());
+      for (const gone of shown ?? []) if (!next.includes(gone)) this.forget(gone);
       if (n) n.children = next;
       else this.top = next;
       this.flatten();
@@ -471,7 +513,7 @@ class TreeView {
   }
 
   toggle(id) {
-    const n = this.node(id);
+    const n = this.place(id);
     if (n) this.expand(n, !n.expanded);
   }
 
@@ -517,7 +559,7 @@ class TreeView {
     this.rows.style.height = `${this.flat.length * RowHeight}px`;
     this.rows.style.width = `${cols.reduce((a, c) => a + c.width, 0)}px`;
     const [first, last] = visibleRange(this.body, this.flat.length);
-    const focus = layout.state(this.id).focus;
+    const focus = this.focused();
     const missing = [], nodes = [], noProps = [];
     const propNames = cols.filter(c => c.id.includes('.')).map(c => c.id);
     for (let i = first; i < last; i++) {
@@ -527,7 +569,7 @@ class TreeView {
         noProps.push(n);
       }
       const row = document.createElement('div');
-      row.className = 'row cols' + (same(n.id, focus) ? ' selected focused' : '') + (n.hidden ? ' hidden' : '') + (i % 2 ? ' odd' : '')
+      row.className = 'row cols' + (n === focus ? ' selected focused' : '') + (n.hidden ? ' hidden' : '') + (i % 2 ? ' odd' : '')
         + (isCompanion(this, n.id) ? ' companion' : '');
       row.style.top = `${i * RowHeight}px`;
       row.dataset.index = i;
@@ -580,12 +622,12 @@ class TreeView {
     if (!n) return;
     // A double-click is the second press (its count): each press draws the rows anew, so the browser sends no dblclick.
     if (e.detail === 2 && !e.target.classList.contains('twisty')) return this.open(n);
-    if (!e.target.classList.contains('twisty')) return this.select(n.id);
+    if (!e.target.classList.contains('twisty')) return this.select(n.id, false, n);
     // The expander only opens or closes its folder; the focus stays, unless closing hides it: then the folder gets it.
-    const focus = this.node(layout.state(this.id).focus);
+    const focus = this.focused();
     const inside = n.expanded && focus && focus !== n && this.contains(n, focus);
     this.expand(n, !n.expanded);
-    if (inside) this.select(n.id);
+    if (inside) this.select(n.id, false, n);
   }
 
   // A double-click: a file opens; a folder opens (or closes) in the tree itself as well as in its children; a child
@@ -602,10 +644,12 @@ class TreeView {
     return false;
   }
 
-  // A row focused: its children follow it (a folder: they show it; a file: a preview shows it).
-  select(id, quiet = false) {
-    const n = this.node(id);
+  // A row focused: its children follow it (a folder: they show it; a file: a preview shows it). `at`: the place (a row
+  // clicked or walked to); without it the focused place when the focus is on that item, else its home place.
+  select(id, quiet = false, at = null) {
+    const n = at ?? this.place(id);
     if (!n) return;
+    this.focusNode = n;
     if (quiet) layout.state(this.id).focus = n.id;
     else {
       focusItem(this.id, { id: n.id, folder: n.folder !== false });
@@ -623,17 +667,17 @@ class TreeView {
 
   // Typed (search.js): the first row from the focus on (then from the top) whose name passes the test.
   goToMatch(test) {
-    const at = Math.max(0, this.flat.indexOf(this.node(layout.state(this.id).focus)));
+    const at = Math.max(0, this.flat.indexOf(this.focused()));
     const rows = [...this.flat.slice(at), ...this.flat.slice(0, at)];
     const n = rows.find(x => test(x.name));
-    if (n) this.select(n.id);
+    if (n) this.select(n.id, false, n);
   }
 
   key(e) {
     if (typeInPane(this, e)) return;
-    const n = this.node(layout.state(this.id).focus);
+    const n = this.focused();
     const i = n ? this.flat.indexOf(n) : -1;
-    const to = k => { if (this.flat[k]) this.select(this.flat[k].id); e.preventDefault(); };
+    const to = k => { if (this.flat[k]) this.select(this.flat[k].id, false, this.flat[k]); e.preventDefault(); };
     if (e.key === 'ArrowDown') to(i + 1);
     else if (e.key === 'ArrowUp') to(Math.max(0, i - 1));
     else if (e.key === 'Home') to(0);
@@ -643,15 +687,22 @@ class TreeView {
       const page = Math.max(1, Math.floor(this.body.clientHeight / RowHeight) - 1);
       to(Math.max(0, Math.min(this.flat.length - 1, (i < 0 ? 0 : i) + (e.key === 'PageDown' ? page : -page))));
     }
-    else if (e.key === 'ArrowRight' && n) { if (!n.expanded) this.expand(n); else if (n.children?.[0]) this.select(n.children[0].id); e.preventDefault(); }
-    else if (e.key === 'ArrowLeft' && n) { if (n.expanded) this.expand(n, false); else if (n.parent) this.select(n.parent.id); e.preventDefault(); }
+    else if (e.key === 'ArrowRight' && n) { if (!n.expanded) this.expand(n); else if (n.children?.[0]) this.select(n.children[0].id, false, n.children[0]); e.preventDefault(); }
+    else if (e.key === 'ArrowLeft' && n) { if (n.expanded) this.expand(n, false); else if (n.parent) this.select(n.parent.id, false, n.parent); e.preventDefault(); }
   }
 
   // Shows an item in the tree: expanded down to it and focused (`quiet`: without its children following). Paths on disk
-  // are found from This PC down (a child tree: from its folder down); other places only when the tree has them already.
+  // are found from This PC down (a child tree: from its folder down), so they come to their home place (the focused
+  // place when the focus is on that item already); other places only when the tree has them already.
   async reveal(path, quiet = false) {
     const base = this.root?.replace(/\\+$/, '');
-    if (!this.node(path) && this.folder && base && path.toLowerCase().startsWith(base.toLowerCase() + '\\')) {
+    const known = this.node(path), home = known && this.isHome(known) ? known : null;
+    if (this.focusNode && same(this.focusNode.id, path) && this.placesOf(path).includes(this.focusNode)) {
+      for (let p = this.focusNode.parent; p; p = p.parent) p.expanded = true;
+      this.flatten();
+      return this.select(path, quiet, this.focusNode);
+    }
+    if (!home && this.folder && base && path.toLowerCase().startsWith(base.toLowerCase() + '\\')) {
       const parts = path.slice(base.length + 1).split('\\');
       for (let k = 0, at = base; k < parts.length - 1; k++) {
         at += '\\' + parts[k];
@@ -659,22 +710,24 @@ class TreeView {
         if (!here) break;
         await this.expand(here);
       }
-    } else if (!this.node(path) && !this.folder && /^[A-Za-z]:\\/.test(path)) {
+    } else if (!home && !this.folder && /^[A-Za-z]:\\/.test(path)) {
+      // Down from the drive, each step in the place just opened (not another place of the same folder).
       const pc = this.node(ThisPC);
       if (pc) {
         await this.expand(pc);
         const parts = path.replace(/\\+$/, '').split('\\');
-        let here = this.node(parts[0] + '\\');
+        let here = pc.children?.find(c => same(c.id, parts[0] + '\\')) ?? this.node(parts[0] + '\\');
         for (let k = 1; here && k < parts.length; k++) {
           await this.expand(here);
-          here = this.node(parts.slice(0, k + 1).join('\\')) ?? here.children?.find(c => same(c.id, parts.slice(0, k + 1).join('\\')));
+          here = here.children?.find(c => same(c.id, parts.slice(0, k + 1).join('\\')));
         }
+        if (here) return this.select(path, quiet, here);
       }
-    } else if (this.node(path)?.parent) {
-      for (let p = this.node(path).parent; p; p = p.parent) p.expanded = true;
+    } else if ((home ?? known)?.parent) {
+      for (let p = (home ?? known).parent; p; p = p.parent) p.expanded = true;
       this.flatten();
     }
-    this.select(path, quiet);
+    this.select(path, quiet, home ?? known ?? null);
   }
 
   // Back on this pane's state for the branch now active (plan 03 3.1); from history (`back`, plan 17): its folder (a
@@ -688,14 +741,14 @@ class TreeView {
   }
 
   up() {
-    const n = this.node(layout.state(this.id).focus);
-    if (n?.parent) this.select(n.parent.id);
+    const n = this.focused();
+    if (n?.parent) this.select(n.parent.id, false, n.parent);
     else if (this.folder && this.root) goTo(this.id, parentOf(this.root));
   }
 
   // The focused folder's items read again (a child tree on nothing focused: its folder).
   refresh() {
-    const n = this.node(layout.state(this.id).focus);
+    const n = this.focused();
     if (!n || n.folder === false) {
       if (this.folder) this.load(this.root);
       return;
@@ -708,7 +761,7 @@ class TreeView {
   reshow() {
     const focus = layout.state(this.id).focus;
     if (this.folder) return this.load(this.root);
-    this.nodes.clear();
+    this.clear();
     this.top = [];
     this.ready = this.init().then(() => focus ? this.reveal(focus, true) : null);
   }
@@ -741,12 +794,12 @@ class TreeView {
   async sortEntries() {
     const sort = this.cols.sort;
     if (sort?.id.includes('.')) {
-      const missing = [...this.nodes.values()].filter(n => !(n.props && sort.id in n.props) && /^[A-Za-z]:\\|^\\\\/.test(n.id));
+      const missing = this.allNodes().filter(n => !(n.props && sort.id in n.props) && /^[A-Za-z]:\\|^\\\\/.test(n.id));
       if (missing.length) await this.askProps(missing, [sort.id]);
     }
     const compare = this.comparer();
     if (this.folder) this.top.sort(compare);
-    for (const n of this.nodes.values()) n.children?.sort(compare);
+    for (const n of this.allNodes()) n.children?.sort(compare);
     this.flatten();
   }
 
@@ -754,7 +807,7 @@ class TreeView {
   askColumnValues() {
     if (!this.cols.columns.some(c => c.id === 'git')) return;
     const top = this.folder && this.root && this.gitRootAsked !== this.root ? [{ id: this.root, top: true }] : [];
-    for (const f of [...top, ...[...this.nodes.values()].filter(n => n.children)]) {
+    for (const f of [...top, ...this.allNodes().filter(n => n.children)]) {
       if (f.gitAsked || !/^[A-Za-z]:\\|^\\\\/.test(f.id)) continue;
       f.gitAsked = true;
       if (f.top) this.gitRootAsked = this.root;
@@ -2342,8 +2395,7 @@ function folderChanged(folder) {
     if (v instanceof ListView && same(v.location, folder)) v.reread();
     if (v instanceof TreeView) {
       if (v.folder && same(v.root, folder)) v.reread(null);
-      const n = v.node(folder);
-      if (n?.children) v.reread(n);
+      for (const n of v.placesOf(folder)) if (n.children) v.reread(n);
     }
   }
 }
@@ -2521,14 +2573,14 @@ function treeFor(paneId) {
 
 // Open, the switch (actions.js): a folder is open when its tree has it expanded.
 function folderOpen(item) {
-  return !!item?.folder && !!treeFor(activePane)?.node(item.id)?.expanded;
+  return !!item?.folder && !!treeFor(activePane)?.place(item.id)?.expanded;
 }
 
 async function toggleFolder(item) {
   if (!item?.folder) return;
   const tree = treeFor(activePane);
   if (!tree) return execute(activePane, item);   // no tree to open it in: as a double-click
-  const node = tree.node(item.id);
+  const node = tree.place(item.id);
   if (node?.expanded) await tree.expand(node, false);
   else {
     // In a child the parent opens it, and the child follows (3.3).
@@ -2536,7 +2588,7 @@ async function toggleFolder(item) {
       await tree.reveal(item.id);
       apply(layout.focus(tree.id, item));
     }
-    if (tree.node(item.id)) await tree.expand(tree.node(item.id));
+    if (tree.place(item.id)) await tree.expand(tree.place(item.id));
   }
   ribbonRefresh();
 }

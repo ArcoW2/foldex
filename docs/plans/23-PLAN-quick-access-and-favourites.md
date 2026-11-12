@@ -1,11 +1,12 @@
 # Plan 23: Quick access in a tree, favourite folders
 
-Status: draft 2026-11-12; not started.
+Status: partly executed 2026-11-12 (a folder twice in a tree); see Status.
 
 - 2026-11-12: draft, at the user's request.
 - 2026-11-12: revised: quick access and favourite folders two lists; quick access one list, shown in a top tree
   only; a shortcut expands, its subfolders in another tree colour; drag to add and to reorder; the first list from
   Explorer's pinned folders.
+- 2026-11-12: partly executed: a folder twice in a tree (3.3), the fix of the tree bug with C:\Users\<you>.
 
 Favourite folders as LexPen has them (`..\LexPen\docs\plans\executed\PLAN-favourite-folders.md`). The number in the
 file name is the priority; rename to reorder.
@@ -33,6 +34,7 @@ folder's right-click menu. Both lists are kept by the host and shared by all win
 
 | Part | What | Reference |
 |---|---|---|
+| A folder twice in a tree | each place in a tree a node of its own; the focus on a place; a path to the home place | 3.3; 6 |
 
 ### Not yet built
 
@@ -40,8 +42,7 @@ folder's right-click menu. Both lists are kept by the host and shared by all win
 |---|---|---|---|
 | Lists | quickaccess.json (first filled from Explorer's pinned folders) and favourite-folders.json, kept by the host, shared by all windows | -- | 3.1 |
 | Right-click items | Foldex's own items in Windows' menu for a folder: add to / remove from quick access and favourite folders | -- | 3.2 |
-| A folder twice in a tree | a tree that shows one folder in two places (a shortcut's subfolders, This PC and the user folder) keeps each place apart | -- | 3.3 |
-| Quick access area | the area at the top of a top tree: head, fold, shortcuts that expand, their own tree colour, going there | Lists; A folder twice in a tree | 3.4 |
+| Quick access area | the area at the top of a top tree: head, fold, shortcuts that expand, their own tree colour, going there | Lists | 3.4 |
 | Dragging | a folder dropped on the area added; a shortcut dragged to another place | Quick access area | 3.5 |
 | Favourites button | the ribbon button with the list, add current, add a folder, manage | Lists | 3.6 |
 | Manage | the dialog for favourite folders | Lists | 3.7 |
@@ -151,3 +152,21 @@ folder's right-click menu. Both lists are kept by the host and shared by all win
 ## 4. Open questions
 
 None.
+
+## 6. As built
+
+### A folder twice in a tree (3.3)
+
+- TreeView (app.js) keeps `places` (every node of an id), `nodes` (per id its home place: the node under its own
+  folder, `isHome`; a top is home) and `focusNode` (the place the focus is on). `add` reuses a node only under the
+  same parent; `forget` takes a node and the ones under it out, another place becoming the home when it was.
+- `place(id)`: the focused place when the focus is on that id, else the home place; `focused()` the focused node.
+  Clicks, the arrows, Right / Left, typing to find, Up and the expander select the row's own node. The focused row is
+  the focused node (the other place of the same folder is not marked).
+- `reveal(path)`: the focused place when the focus is on that path already; else down from This PC, each step in the
+  place just opened, so a path comes to its home place; a folder changed on disk is read again in every place.
+- Tested in the test copy (CDP): the profile at the top opened, then C:\Users\acw by its path and opened: .android in
+  two places, depth 1 under the profile and depth 4 under C:\Users\acw (the home), each its own row; the focus
+  marked once; a click on .android under the profile focuses that place (the list follows), Down goes to .aspire
+  under the profile, Left to the profile; .android by its path goes to the place under C:; every row's tree lines as
+  deep as its row. F8 then Esc in a tree as before. 178 unit tests pass.
