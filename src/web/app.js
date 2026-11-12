@@ -236,7 +236,9 @@ function drawHeads() {
       v.el.style.setProperty(name === 'text' ? '--branch-text' : `--${name}`, key !== null ? `var(--branch-${key}-${name})` : '');
     v.el.classList.toggle('child', pane.source !== null);
     v.el.classList.toggle('pinned', pane.pinned);
-    v.el.querySelector('.pin').title = pane.pinned ? 'Pinned: click to follow the parent again' : 'Pin: stop following the parent';
+    v.el.querySelector('.pin').title = pane.kind === 'scrap'
+      ? pane.pinned ? 'Pinned: comes back (empty) after a restart; click to unpin' : 'Pin: keep this scrap after a restart (it comes back empty)'
+      : pane.pinned ? 'Pinned: click to follow the parent again' : 'Pin: stop following the parent';
     const marks = v.el.querySelector('.marks');
     const colours = [...new Set(layout.followers(v.id).map(f => f.colour))];
     marks.replaceChildren(...colours.map(c => {
@@ -1797,7 +1799,7 @@ function paneMenu(id) {
       { label: 'Branch colour', enabled: child, items: Branches.map(b => ({
         label: `Branch ${b + 1}${free.includes(b) ? '' : ' (with a sibling)'}`, swatch: `var(--branch-${b})`, checked: pane.colour === b,
         run: () => setBranchColour(id, b) })) } ] },
-    { label: 'Pin', enabled: child, checked: pane.pinned, run: () => togglePin(id) },
+    { label: 'Pin', enabled: child || !!scrap, checked: pane.pinned, run: () => togglePin(id) },
     '-',
     { label: 'Show', enabled: pane.kind !== 'preview', items: [['folders', 'Folders'], ['files', 'Files'], ['both', 'Folders and files']]
       .map(([content, label]) => ({ label, checked: (pane.content ?? 'both') === content,
@@ -2300,8 +2302,14 @@ function setBranchColour(id, colour) {
   ribbonRefresh();
 }
 
+// A child stops following its parent; a scrap (never a child) is kept after a restart (plan 06 3.2).
 function togglePin(id) {
   const pane = layout.pane(id);
+  if (pane?.kind === 'scrap') {
+    pane.pinned = !pane.pinned;
+    drawHeads();
+    return ribbonRefresh();
+  }
   if (!pane?.source) return;
   pane.pinned = !pane.pinned;
   // Unpinned: it catches up with what its parent focuses.

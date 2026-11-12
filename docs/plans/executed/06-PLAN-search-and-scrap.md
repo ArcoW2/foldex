@@ -17,6 +17,7 @@ Status: executed (2026-11-12); see As built.
 - 2026-11-12: revised: a scrap can be a parent (a folder focused in it shows in its child), built in this plan when
   small; a scrap's pane is marked by a dashed ring instead of a solid one.
 - 2026-11-12: executed.
+- 2026-11-12: revised and built: a pinned scrap comes back after a restart (empty), wherever it is.
 
 Builds on plan 03 (connected panes).
 
@@ -97,7 +98,8 @@ follows xplorer2's, as the user gave it, in Foldex's own dialog look.
 - Usually short-lived: collecting files for one action on all of them (renaming, moving).
 - Belongs to its project's window and lives while Foldex runs; there is no scrap shared by all projects.
 - After a restart a scrap in the panes is gone. A docked scrap comes back in its dock, empty, with its name and its
-  search options (so a mini scrap can stay in the window as a drop target). Saved in the project's session.
+  search options (so a mini scrap can stay in the window as a drop target), and so does a pinned scrap wherever it is
+  (the pin in its head, or Pin in its menu). Saved in the project's session.
 
 ### 3.3 The Find dialog
 
@@ -209,7 +211,8 @@ a scrap, `scrapPaste`, `search`, `searchStop`, `searchesSave`), `AppHost.RunId`.
 - Docked means in a side area (left, right, top, bottom); "in the panes" is the center area.
 - "Lives while Foldex runs": a scrap's ids go with the window's layout, with the run they were made in
   (`AppHost.RunId`). A layout of another run is a restart: the scraps in the center go, a docked one comes back empty
-  with its name and search. Closing a project's window and opening it again in the same run keeps its scraps, as does
+  with its name and search, as does a pinned one in the center (a scrap's pin keeps it; it is never a child, so the
+  pin has no other meaning there). Closing a project's window and opening it again in the same run keeps its scraps, as does
   a new page after the page failed.
 - New scrap: docked in the right area. A search's new scrap: at the right of the active pane when that is in the
   center, else of the center's first pane shown. Its name: what was searched, made unique ("bru (2)"). Its colour: a
@@ -263,7 +266,8 @@ new one; a drop of files from three folders and a folder onto a scrap with Shift
 (out, the file stays), Alt+Del (a question, then the Recycle Bin and out), Shift+Del on items of two folders (the
 folders listed), Del in a folder pane (a question); the menu for mixed folders; a child pane of a scrap on its
 folder; Add to scrap, Ctrl+V onto a scrap, a move by Foldex followed, a file deleted outside Foldex dropped; a restart
-(the center scrap gone, the docked one back empty with its name). The Windows Search engine was run directly
+(the center scrap gone, the docked one back empty with its name); a center scrap pinned by a click on its pin back
+empty after a restart, the unpinned one gone. The Windows Search engine was run directly
 (Everything answers first on this PC): it gave items of the Documents folder, and nothing for a folder that is not
 indexed.
 

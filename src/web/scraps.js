@@ -56,12 +56,13 @@ function oneFolder(ids) {
 }
 
 // A saved layout opened by another run of Foldex (it started again since, 3.2): the scraps in the panes go, a docked
-// one stays, empty. `panes`: the layout's panes; `areaOf(id)`: where the docks have a pane.
+// or pinned one stays, empty. `panes`: the layout's panes; `areaOf(id)`: where the docks have a pane.
 function scrapsAfterRestart(panes, areaOf) {
   const scraps = panes.filter(p => p.kind === 'scrap');
+  const stays = p => p.pinned || ScrapSides.includes(areaOf(p.id));
   return {
-    remove: scraps.filter(p => !ScrapSides.includes(areaOf(p.id))).map(p => p.id),
-    empty: scraps.filter(p => ScrapSides.includes(areaOf(p.id))).map(p => p.id),
+    remove: scraps.filter(p => !stays(p)).map(p => p.id),
+    empty: scraps.filter(stays).map(p => p.id),
   };
 }
 

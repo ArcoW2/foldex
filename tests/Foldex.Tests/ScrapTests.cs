@@ -144,17 +144,18 @@ public class ScrapTests : IDisposable
     }
 
     [Fact]
-    public void AfterARestartAScrapInThePanesGoesADockedOneStays()
+    public void AfterARestartAScrapInThePanesGoesADockedOrPinnedOneStays()
     {
         var r = Js("""
             (() => {
               const l = new Layout(), d = new Docks();
-              const tree = l.add({ kind: 'tree' }), mini = l.add({ kind: 'scrap' }), found = l.add({ kind: 'scrap' });
-              d.add(tree, { area: 'left' }); d.add(mini, { area: 'right' }); d.add(found, { area: 'center' });
+              const tree = l.add({ kind: 'tree' }), mini = l.add({ kind: 'scrap' }), found = l.add({ kind: 'scrap' }), kept = l.add({ kind: 'scrap' });
+              l.pane(kept).pinned = true;
+              d.add(tree, { area: 'left' }); d.add(mini, { area: 'right' }); d.add(found, { area: 'center' }); d.add(kept, { area: 'center' });
               return scrapsAfterRestart([...l.panes.values()], id => d.areaOf(id));
             })()
             """);
-        Assert.Equal("""{"remove":["p3"],"empty":["p2"]}""", r.GetRawText());
+        Assert.Equal("""{"remove":["p3"],"empty":["p2","p4"]}""", r.GetRawText());
     }
 
     [Fact]

@@ -124,8 +124,8 @@ action('pane.close', { title: 'Close pane', group: 'panes', enabled: () => !!act
 const isChild = () => layout.pane(activePane)?.source != null;
 action('pane.detach', { title: 'Detach from parent', hint: 'the pane stops following and goes its own way', group: 'panes',
   enabled: isChild, run: () => detachPane(activePane) });
-action('pane.pin', { title: 'Pin', hint: 'a child stops following its parent until unpinned', group: 'panes',
-  enabled: isChild, checked: () => !!layout.pane(activePane)?.pinned, run: () => togglePin(activePane) });
+action('pane.pin', { title: 'Pin', hint: 'a child stops following its parent until unpinned; a scrap comes back (empty) after a restart', group: 'panes',
+  enabled: () => isChild() || inScrap(), checked: () => !!layout.pane(activePane)?.pinned, run: () => togglePin(activePane) });
 action('branch.colour', { title: 'Branch colour', hint: 'a free colour: a branch of its own; a sibling\'s: that branch',
   group: 'panes', enabled: isChild, checked: params => layout.pane(activePane)?.colour === Number(params[0]) - 1,
   variants: Branches.map(b => [String(b + 1)]),

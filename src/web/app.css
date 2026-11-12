@@ -738,7 +738,7 @@ body[data-focus-away] .pane.active > .head {
   cursor: pointer;
 }
 
-.pane.child > .head .pin {
+.pane.child > .head .pin, .pane.scrap > .head .pin {
   display: inline-block;
 }
 
