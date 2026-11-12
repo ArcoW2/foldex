@@ -849,6 +849,12 @@ body.connecting, body.connecting * {
   color: var(--text-hover, inherit);
 }
 
+/* Hover also as a thin line around the item, in the text colour (light in dark mode, dark in light mode), so it shows
+   on a selected item too, as xplorer2's. */
+.row:hover, .tile:hover {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fg) 80%, transparent);
+}
+
 .row.selected, .tile.selected {
   background: color-mix(in srgb, var(--accent) var(--selected-up, 0%), color-mix(in srgb, var(--select) var(--selected-keep, 40%), var(--pane-bg, var(--bg))));
   color: var(--text-selected, inherit);

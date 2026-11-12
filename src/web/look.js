@@ -68,12 +68,18 @@ function applyHeadText(count) {
   const probe = document.createElement('div');
   probe.style.display = 'none';
   root.appendChild(probe);
-  const rgb = css => {
+  // A colour as drawn: one with transparency (a theme's hover) laid over the background first.
+  const rgb = (css, under = null) => {
     probe.style.color = '';
     probe.style.color = css;
-    const nums = getComputedStyle(probe).color.match(/[\d.]+/g)?.map(Number) ?? [0, 0, 0];
-    // "color(srgb r g b)" in 0..1, "rgb(r, g, b)" in 0..255.
-    return getComputedStyle(probe).color.startsWith('color(') ? nums.slice(0, 3) : nums.slice(0, 3).map(v => v / 255);
+    const text = getComputedStyle(probe).color;
+    const nums = text.match(/[\d.]+/g)?.map(Number) ?? [0, 0, 0];
+    // "color(srgb r g b / a)" in 0..1, "rgb(r, g, b)" and "rgba(r, g, b, a)" in 0..255.
+    const colour = text.startsWith('color(') ? nums.slice(0, 3) : nums.slice(0, 3).map(v => v / 255);
+    const alpha = nums.length > 3 ? nums[3] : 1;
+    if (alpha >= 1) return colour;
+    const base = under ?? rgb('var(--bg)');
+    return colour.map((c, i) => c * alpha + base[i] * (1 - alpha));
   };
   const lum = ([r, g, b]) => [r, g, b].map(c => c <= .03928 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4)
     .reduce((sum, c, i) => sum + c * [.2126, .7152, .0722][i], 0);
@@ -87,7 +93,8 @@ function applyHeadText(count) {
     // it no longer stands out (below HighlightContrast), then the background colour where that stands out more.
     for (const kind of Object.keys(Highlights)) {
       const colour = Highlights[kind][3];
-      const drawn = lum(rgb(`color-mix(in srgb, var(--branch-${n}-accent) var(--${kind}-up), color-mix(in srgb, var(--branch-${n}-${colour}) var(--${kind}-keep), var(--branch-${n}-bg)))`));
+      const drawn = lum(rgb(`color-mix(in srgb, var(--branch-${n}-accent) var(--${kind}-up), color-mix(in srgb, var(--branch-${n}-${colour}) var(--${kind}-keep), var(--branch-${n}-bg)))`,
+        rgb(`var(--branch-${n}-bg)`)));
       const turn = contrast(drawn, fg) < HighlightContrast && contrast(drawn, bg) > contrast(drawn, fg);
       root.style.setProperty(`--branch-${n}-text-${kind}`, turn ? 'var(--bg)' : 'var(--fg)');
     }
