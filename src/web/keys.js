@@ -74,7 +74,8 @@ document.addEventListener('keydown', e => {
   if (e.isComposing || ['Control', 'Shift', 'Alt', 'Meta', 'AltGraph'].includes(e.key)) return;
   // A modal window (F1) handles its own keys.
   if (e.defaultPrevented || document.querySelector('dialog[open]')) return;
-  if (!keys.pending && altGrText(e)) return;
+  // AltGr types its character (US-International: AltGr+C is (c)), unless keys.json binds that key (Ctrl+Alt+C).
+  if (!keys.pending && altGrText(e) && !keys.bindings.has(strokeOf(e))) return;
   const stroke = strokeOf(e);
   if (keys.pending) {
     const first = keys.pending;
