@@ -1,10 +1,10 @@
 # Writes the icon's SVGs: foldex.svg (256 px) and a drawing per small size (foldex-16.svg ...), the same shapes with
-# every edge on a whole pixel of that size, so the small icons are sharp; and the same in the green version
-# (foldex-green.svg ...). Then make-ico.ps1 makes the .ico and .png of each:
+# every edge on a whole pixel of that size, so the small icons are sharp. Then make-ico.ps1 makes foldex.ico and
+# foldex.png:
 #   python fit-sizes.py
-#   .\make-ico.ps1; .\make-ico.ps1 -Svg foldex-green.svg
+#   .\make-ico.ps1
 
-VERSIONS = {'foldex': '#e04f47', 'foldex-green': '#2e8b47'}   # the square's colour: red, the one used; green kept
+VERSIONS = {'foldex': '#e04f47'}   # the square's colour
 TAB = '#ecb43c'        # the folder's back and its tab
 PANE = '#f2bf4a'       # the docked pane at its left
 FOLDER = '#f7cf5c'     # the folder's front
