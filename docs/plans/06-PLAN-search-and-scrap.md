@@ -86,6 +86,7 @@ follows xplorer2's, as the user gave it, in Foldex's own dialog look.
 ### 3.2 Filling a scrap, and its lifetime
 
 - Opened empty by an action (New scrap), without searching first.
+- Opened by a search only when the search starts (3.4), not when the Find dialog opens.
 - Filled by dragging items onto it from any pane (also from Explorer), by an action Add to scrap on the selection, by
   pasting, and by searches (3.3). Dropping a folder adds the folder's own path, not its files.
 - **A drop onto a scrap never moves or copies anything on disk**, whatever keys are held (Shift, Ctrl) and whatever
@@ -124,6 +125,8 @@ After xplorer2's "Find files or folders", without Special folders and Local sear
 
 ### 3.4 Running a search
 
+- Ctrl+F from any pane opens only the dialog; no scrap opens yet. The scrap opens when ok starts the search (cancel:
+  no scrap at all), and it becomes the active pane. Into an existing scrap: that scrap becomes the active pane.
 - The results stream into the scrap right after ok; Stop on the scrap.
 - **Engines**: whatever is available, to make the search fast: Everything when it is installed, the Windows Search
   index (Use search index) where Look in is indexed, else Foldex's own walk. A criterion an engine cannot answer is
@@ -175,8 +178,8 @@ After xplorer2's "Find files or folders", without Special folders and Local sear
 - In the test copy: a scrap's dashed ring and head edge, with and without the keyboard; its name in the head, also
   after Rename; a folder focused in a scrap shown in its
   child. Ctrl+F in a folder pane, Look in filled with its folder, the keyboard in Named, Shift+Tab to
-  Folders, Tab past Named, a name searched, a new scrap filled; the
-  same search into that scrap from another folder, results added; Search again with a changed name (Into that scrap, cleared first), and once with Clear off; a search on the
+  Folders, Tab past Named, no scrap yet while the dialog is open, cancel leaving none; a name searched, a new scrap opened as the active pane and filled; the
+  same search into that scrap from another folder, results added and that scrap the active pane; Search again with a changed name (Into that scrap, cleared first), and once with Clear off; a search on the
   scrap into a new scrap; a new empty scrap docked, filled by dragging from three folders, copied into one, conflicts
   asked by Windows; Delete leaves the files on disk; Alt+Delete and the Delete button move them to the recycle bin;
   Delete in a folder pane moves them to the recycle bin; after a restart the docked scrap is back empty, the other
