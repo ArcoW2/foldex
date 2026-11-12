@@ -3,7 +3,7 @@ using Foldex.Shell;
 
 namespace Foldex.Tests;
 
-// One read per folder (docs/plans/24-PLAN-folder-cache.md): the cache, the folder use, the network guard.
+// One read per folder (docs/plans/executed/24-PLAN-folder-cache.md): the cache, the folder use, the network guard.
 public class FolderCacheTests : IDisposable
 {
     readonly string dir = Path.Combine(Path.GetTempPath(), "foldex-cache-" + Guid.NewGuid().ToString("N"));
@@ -29,14 +29,14 @@ public class FolderCacheTests : IDisposable
     {
         using var cache = new FolderCache(_ => { });
         int? count = null;
-        var tree = cache.List(dir, null, default, foldersOnly: true, tree: true, c => count = c);
+        var tree = cache.List(dir, null, default, foldersOnly: true, tree: true, (c, _) => count = c);
         Assert.Equal(["empty", "sub"], Names(tree));
         Assert.Equal(2, count);
         Assert.True(cache.Has(dir));
         var sub = tree.Entries.First(e => e!["name"]!.GetValue<string>() == "sub")!;
         Assert.True(sub["subs"]!.GetValue<bool>());
         Assert.False(tree.Entries.First(e => e!["name"]!.GetValue<string>() == "empty")!["subs"]!.GetValue<bool>());
-        var all = cache.List(dir, null, default, foldersOnly: false, tree: false, c => count = c);
+        var all = cache.List(dir, null, default, foldersOnly: false, tree: false, (c, _) => count = c);
         Assert.Equal(["a.txt", "b.txt", "empty", "sub"], Names(all));
         Assert.Equal(4, count);
         Assert.Null(all.Entries.First(e => e!["name"]!.GetValue<string>() == "a.txt")!["subs"]);

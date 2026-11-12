@@ -121,7 +121,7 @@ updated whenever a plan is written, built or closed that touches a feature here.
 | Total Commander plugins (WLX, WDX, WCX) | P+ / U | -- | 3 | -- |
 | Enter archive (7z, RAR via plugins) | U | -- | 3 | Total Commander plugins (WCX) |
 | Replace Explorer (Win+E, folder opening) | P+ | -- | 3 | -- |
-| UNC paths, map network drive | P+ | part: UNC listed; Network shows nothing here [not yet checked why] | 3 | -- |
+| UNC paths, map network drive | P+ | part: UNC listed, cached, a share that does not answer not waited for (plan 24); Network shows nothing here [not yet checked why] | 3 | -- |
 | Peek preview (large popup) | P+ | -- | 2 | Own viewers |
 
 ## Customisation and automation

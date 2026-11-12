@@ -1,11 +1,12 @@
 # Plan 24: One read per folder: a folder cache with read-ahead
 
-Status: draft 2026-11-12; not started.
+Status: executed 2026-11-12; see As built.
 
 - 2026-11-12: draft, at the user's request.
 - 2026-11-12: revised: the cache kept until memory gets tight, with a memory setting; read-ahead of the folders you use
   most, and deeper when there is memory to spare; network shares cached with a check when shown again, a setting;
   nothing may wait on a network share that is down (3.8, a part of its own).
+- 2026-11-12: executed.
 
 Builds on the listing (src/Shell/ShellListing.cs, MainForm.List), the folder watchers (src/Shell/FolderWatch.cs,
 plan 03 3.8) and the progress bar of the status line. The number in the file name is the priority; rename to reorder.
@@ -38,21 +39,21 @@ limit, and a share found unreachable is not tried again for a while; meanwhile i
 
 | Part | What | Reference |
 |---|---|---|
+| No waiting on the network | every touch of a share off the window's thread, with a limit; a share found down not tried again for a while | 3.8; 6 |
+| The cache | per folder the bare read, the extras per kind, shared by all windows and requests | 3.1; 3.2; 6 |
+| Shared reads | a request joining a read under way; per-request stop | 3.3; 6 |
+| Kept current | the watch on every cached folder, changes put in, lost changes read again | 3.4; 6 |
+| Memory | the cache up to the setting, giving way when Windows runs short, the least recently used first | 3.5; 6 |
+| Folder use | which folders you open, how often, how lately | 3.6; 6 |
+| Read-ahead | the folders you use most, deeper with memory to spare | 3.6; 6 |
+| Network shares | cached with a check when shown again, a setting | 3.7; 6 |
+| The progress bar | one count per folder | 3.9; 6 |
+| Tests | unit and in the app | 3.10; 6 |
 
 ### Not yet built
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| No waiting on the network | every touch of a share off the window's thread, with a limit; a share found down not tried again for a while | -- | 3.8 |
-| The cache | per folder the bare read, the extras per kind, shared by all windows and requests | -- | 3.1; 3.2 |
-| Shared reads | a request joining a read under way; per-request stop | The cache | 3.3 |
-| Kept current | the watch on every cached folder, changes put in, lost changes read again | The cache | 3.4 |
-| Memory | the cache up to the setting, giving way when Windows runs short, the least recently used first | The cache | 3.5 |
-| Folder use | which folders you open, how often, how lately | -- | 3.6 |
-| Read-ahead | the folders you use most, deeper with memory to spare | Kept current; Memory; Folder use | 3.6 |
-| Network shares | cached with a check when shown again, a setting | Kept current; No waiting on the network | 3.7 |
-| The progress bar | one count per folder | Shared reads | 3.9 |
-| Tests | unit and in the app | the others | 3.10 |
 
 ## 3. Details
 
@@ -184,3 +185,61 @@ limit, and a share found unreachable is not tried again for a while; meanwhile i
 ## 4. Open questions
 
 None.
+
+## 6. As built
+
+- The cache: src/Shell/FolderCache.cs, for all windows (AppHost.Cache). A folder's bare read is its DirectoryInfo items,
+  kept per name; an item's entry (ShellListing.DiskEntry: icon, own columns) and a tree's extras (ShellListing.Contents:
+  whether it has folders, and files) are worked out when a request first needs them and kept; each request gets a copy
+  (a JSON node has one parent). A request while the folder is being read waits for that read (the bare read only, no
+  icons, so the wait is short) and then goes on with the items as they are; two requests at once share the entries
+  each works out. A link that refuses its own listing (C:\Documents and Settings) reads its target, as before. Shell
+  places (not a path on disk) are listed as before, not cached. MainForm.List asks the cache; the count for the
+  progress bar comes from its bare read (one per folder), marked when the folder came from the cache.
+- Kept current: one watcher per cached folder (FileSystemWatcher, 64 KB buffer), started before the folder is read;
+  changes reported during the read are put in after it; created, changed (read again), deleted, renamed; a folder made
+  or gone in it makes its parent's tree extras be worked out again; a lost change (the watcher's error) marks the
+  folder to be read again. The cache tells the windows of a change itself, once the folder is quiet for 300 ms (as
+  FolderWatch did); FolderWatch now watches only what the cache does not keep (a share, with shares not cached).
+  A folder Windows refuses to watch is read again on every request. One watcher per drive (3.4) was not built: one per
+  cached folder, the plan's fallback; whether one per drive is cheaper on a busy drive: [not yet calculated].
+- Memory: the setting folderCacheMB (Settings > App > Memory, 16 to 4096 MB, default 256); over it the folders used
+  longest ago go, never a shown one (the folders a window shows: its lists and the folders open in its trees, told by
+  the page as before). Windows' low-memory notice (CreateMemoryResourceNotification) is checked every 5 s: then every
+  folder no window shows goes. The settings window shows under the slider what the cache uses, how many folders and how
+  many were read ahead, every 5 s. The size of an item is counted as 600 bytes for its bare read and 1400 more once
+  its entry is worked out; measured (managed memory after a full collection, before and after letting D:\temp go):
+  1865 bytes per item for 50404 items with entries and tree extras, so the count is on the safe side. 256 MB holds
+  about 140000 such items.
+- Folder use and read-ahead: src/Shell/FolderUse.cs. A folder a pane opens (a listing that is not a tree's level) is
+  noted; the score adds one per opening, half of it fading in 14 days; at most 500 folders; State\folderuse.json,
+  written every 5 s when changed. Read-ahead: a thread at the lowest priority, started after the first listing; while
+  no request was answered in the last 1.5 s and the cache has room: the best scored folders not cached, then (with less
+  than half the budget used) the folders in those, up to four levels deeper; each read means the bare read and the
+  tree extras of its folders, no icons; it stops between items when a request comes. Local folders, and shares when
+  cached and answering.
+- Network shares: cached as the setting cacheNetwork says (on by default). A share's folder answered from the cache is
+  read again in the background (the bare read), the changes put in and the windows told.
+- No waiting on the network: src/Shell/NetworkGuard.cs. A path is on a share when it is a UNC path or its drive is a
+  network drive (GetDriveType, which touches no network). Before a listing, Windows' menu, opening an item and the Git
+  column, the share's root is checked on a worker with a limit; one that does not answer is marked down for its server
+  and answered at once for 30 s, then tried again. A listing of a share that is down gets what the cache has, with the
+  status "N items as last read; not current: \\server is not reachable (since hh:mm:ss)", or that it is not reachable
+  and nothing is cached. FolderWatch starts a watcher on a share on a worker once the share answers. The limit is
+  2000 ms: a share that answers took 17 ms here (165 ms the first time by its IP address), but that was the loopback
+  (\\localhost\C$); no real network share was measured. A share that does not answer (192.0.2.1) kept Windows
+  waiting 21.6 s the first time. Not checked for network paths: the full list of other places that touch the disk on
+  the window's thread ([not yet checked], as the plan said); file operations (Windows' IFileOperation) are not held.
+- Tested: unit tests (FolderCacheTests): folders only then everything (one read, the tree's extras, the counts); a
+  change on disk in the cache without reading again (made, deleted, renamed); two requests at once sharing the read;
+  the budget letting go of the folder used longest ago, never a shown one, and all but the shown on low memory; the
+  folder use score kept; a share that does not answer not waited for (false within the limit, then at once); 188 pass.
+  In the test copy (CDP): D:\temp (50250 items) in the tree and the list at once: no read beyond the one already made;
+  back to D:\temp from another folder: no read, no progress bar, shown after 670 ms (copying and sending 50250
+  entries); a file made in a shown folder from outside: in the list 338 ms later; \\192.0.2.1\share opened: answered
+  after 2175 ms (the limit) with the page never stalled more than 1 ms, the status saying it is not reachable; after a
+  restart the folders used most (f8t, D:\temp, C:\Windows) came from the cache, read ahead; the settings window's line
+  under the slider.
+- Not tested: a real network share (cached, checked when shown again, going down while shown, coming back), Windows'
+  low-memory notice, a lost change (buffer overflow), read-ahead stopping for a request (only that the folders were
+  there).

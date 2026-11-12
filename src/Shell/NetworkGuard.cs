@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 namespace Foldex.Shell;
 
 /// <summary>
-/// Nothing in Foldex waits on a network share (docs/plans/24-PLAN-folder-cache.md 3.8). A path on a share (a UNC path or
+/// Nothing in Foldex waits on a network share (docs/plans/executed/24-PLAN-folder-cache.md 3.8). A path on a share (a UNC path or
 /// a mapped drive; telling that touches no network) is checked before the window's thread does anything with it: the
 /// check runs on a worker with a time limit. A share that does not answer within it is marked unreachable (per server)
 /// and is not tried again for a while; then one quick check, on a worker, tells whether it is back.

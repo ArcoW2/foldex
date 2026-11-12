@@ -144,7 +144,7 @@ const progressRun = { listings: new Set(), shown: 0 };   // the listings of this
 function showProgress() {
   const now = performance.now();
   const open = new Set(listeners.values());
-  const slow = [...open].filter(l => now - l.sent > ProgressAfter);
+  const slow = [...open].filter(l => now - l.sent > ProgressAfter && !l.cached);
   $('progress').hidden = !slow.length;
   if (!slow.length) {
     progressRun.listings.clear();
@@ -2893,6 +2893,7 @@ const events = {
     const l = listeners.get(m.channel);
     if (!l || l.req !== m.req) return;
     l.total = m.count;
+    l.cached = !!m.cached;   // from the folder cache: no progress bar (plan 24 3.9)
     showProgress();
   },
   listed(m) {

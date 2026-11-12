@@ -94,7 +94,7 @@ sealed class AppHost : ApplicationContext
     /// <summary>Shell work off the UI thread (listing, icons).</summary>
     public Shell.StaWorker ShellWork { get; } = new("shell");
 
-    // One read per folder (docs/plans/24-PLAN-folder-cache.md): the folder cache for every window, the folders you use
+    // One read per folder (docs/plans/executed/24-PLAN-folder-cache.md): the folder cache for every window, the folders you use
     // (for read-ahead), read-ahead itself; Windows' low-memory notice checked now and then.
     public Shell.FolderCache Cache { get; }
     public Shell.FolderUse Use { get; } = new(DataFolder.StatePath(DataDir, Shell.FolderUse.Name));

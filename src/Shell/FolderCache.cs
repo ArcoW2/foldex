@@ -4,7 +4,7 @@ using System.Text.Json.Nodes;
 namespace Foldex.Shell;
 
 /// <summary>
-/// One read per folder (docs/plans/24-PLAN-folder-cache.md): the folders on disk (and on shares, as the setting says)
+/// One read per folder (docs/plans/executed/24-PLAN-folder-cache.md): the folders on disk (and on shares, as the setting says)
 /// that any window asked for, for all windows. A folder's bare read (its items as Windows' folder read gives them) is
 /// made once and kept; the extras of an item (its entry with icon and own columns, for a tree whether a folder has
 /// folders and files in it) are worked out when a request first needs them and kept with it. Every cached folder is
@@ -51,9 +51,32 @@ sealed class FolderCache : IDisposable
     /// <summary>Bare reads made so far (the host's log of reads, for the tests and the settings window).</summary>
     public int Reads;
 
-    /// <summary>`changed`: a folder's items changed by a check of the cache (a network folder shown again), for the
-    /// windows to read it again from the cache.</summary>
-    public FolderCache(Action<string> changed) => this.changed = changed;
+    /// <summary>`changed`: a folder's items changed (reported by its watch, or found by a check of a share shown
+    /// again), for the windows to read it again from the cache; told once the folder has been quiet for QuietMs.</summary>
+    public FolderCache(Action<string> changed)
+    {
+        this.changed = changed;
+        quiet = new System.Threading.Timer(_ => TellChanged());
+    }
+
+    // The windows told of changes once things have been quiet for a moment (a file being written does not make its
+    // folder read again and again), as FolderWatch did.
+    const int QuietMs = 300;
+    readonly System.Threading.Timer quiet;
+    readonly HashSet<string> toTell = new(StringComparer.OrdinalIgnoreCase);
+
+    void Tell(string path)
+    {
+        lock (toTell) toTell.Add(path);
+        quiet.Change(QuietMs, Timeout.Infinite);
+    }
+
+    void TellChanged()
+    {
+        List<string> paths;
+        lock (toTell) { paths = [.. toTell]; toTell.Clear(); }
+        foreach (var p in paths) changed(p);
+    }
 
     /// <summary>The memory the cache may take (folderCacheMB) and whether shares are cached (cacheNetwork).</summary>
     public long BudgetBytes { get; set; } = 256L * 1024 * 1024;
@@ -98,7 +121,7 @@ sealed class FolderCache : IDisposable
     /// request's extras, in batches. `count`: the number of items it will give, as soon as it is known. Not a
     /// cached place, or a folder that cannot be read: listed as before (with its error).</summary>
     public ShellListing.Result List(string location, Action<JsonArray>? batch, CancellationToken cancel, bool foldersOnly, bool tree,
-        Action<int>? count = null)
+        Action<int, bool>? count = null)
     {
         if (!Caches(location)) return ShellListing.List(location, batch, cancel, foldersOnly, tree);
         Interlocked.Increment(ref busy);
@@ -113,7 +136,7 @@ sealed class FolderCache : IDisposable
                 f.LastUsed = DateTime.UtcNow;
                 items = f.Items.Values.Where(i => !foldersOnly || i.Folder).ToList();
             }
-            count?.Invoke(items.Count);
+            count?.Invoke(items.Count, fromCache);
             var batcher = new ShellListing.Batcher(batch);
             var icons = new Stopwatch();
             foreach (var item in items)
@@ -267,7 +290,7 @@ sealed class FolderCache : IDisposable
             w.Changed += (_, e) => Changed(f, WatcherChangeTypes.Changed, e.FullPath, null);
             w.Deleted += (_, e) => Changed(f, WatcherChangeTypes.Deleted, e.FullPath, null);
             w.Renamed += (_, e) => Changed(f, WatcherChangeTypes.Renamed, e.FullPath, e.OldFullPath);
-            w.Error += (_, _) => { lock (gate) f.Stale = true; };   // changes lost: read again when next asked
+            w.Error += (_, _) => { lock (gate) f.Stale = true; Tell(f.Path); };   // changes lost: read again
             w.EnableRaisingEvents = true;
             return w;
         }
@@ -284,6 +307,7 @@ sealed class FolderCache : IDisposable
             if (!f.Complete) f.Pending.Add((kind, path, old));   // reported during the read: put in after it
             else Apply(f, kind, path, old);
         }
+        Tell(f.Path);
     }
 
     // One change into a folder's items (under the gate). A folder made or gone in it changes what its own folder's tree
@@ -337,7 +361,7 @@ sealed class FolderCache : IDisposable
                 differs = true;
             }
         }
-        if (differs) changed(location);
+        if (differs) Tell(location);
     }
 
     // ---------- Memory (3.5) ----------
@@ -407,8 +431,20 @@ sealed class FolderCache : IDisposable
                 : [];
     }
 
+    /// <summary>For the tests: the managed memory now (after a full collection), then again after letting go of every
+    /// folder no window shows; what those folders took, and how many items they had.</summary>
+    public (long Before, long After, int Items) Measure()
+    {
+        int items;
+        lock (gate) items = folders.Values.Where(f => !IsShown(Key(f.Path))).Sum(f => f.Items.Count);
+        var before = GC.GetTotalMemory(true);
+        Trim(true);
+        return (before, GC.GetTotalMemory(true), items);
+    }
+
     public void Dispose()
     {
+        quiet.Dispose();
         lock (gate)
         {
             foreach (var f in folders.Values) f.Watcher?.Dispose();

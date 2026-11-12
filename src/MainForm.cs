@@ -367,6 +367,11 @@ sealed class MainForm : Form
             case "cacheInfo":   // what the folder cache holds (plan 24; the tests ask)
             {
                 var info = app.CacheInfo();
+                if (msg["measure"]?.GetValue<bool>() == true)
+                {
+                    var (before, after, items) = await Task.Run(app.Cache.Measure);
+                    info["measured"] = new JsonObject { ["before"] = before, ["after"] = after, ["items"] = items };
+                }
                 info["event"] = "answer";
                 info["req"] = msg["req"]?.DeepClone();
                 Post(info);
@@ -490,7 +495,9 @@ sealed class MainForm : Form
                 break;
             case "watch":
                 var shown = msg["folders"]?.AsArray().Select(n => n!.GetValue<string>()).ToList() ?? [];
-                app.Folders?.Set(this, shown);
+                // The cache watches the folders it keeps and tells of their changes itself (plan 24 3.4); the others (a
+                // share when shares are not cached) are watched here as before.
+                app.Folders?.Set(this, shown.Where(f => !app.Cache.Caches(f)));
                 app.Cache.Shown(this, shown);   // never let go of while shown (plan 24 3.5)
                 break;
             case "openSettings":
@@ -538,10 +545,10 @@ sealed class MainForm : Form
         var cancel = listings[channel] = new CancellationTokenSource();
         var clock = System.Diagnostics.Stopwatch.StartNew();
         // The count of what is read, for the page's progress bar (the cache's bare read has it: one per folder).
-        void Count(int count)
+        void Count(int count, bool cached)
         {
             if (!cancel.IsCancellationRequested)
-                BeginInvoke(() => Post(new JsonObject { ["event"] = "listCount", ["req"] = req, ["channel"] = channel, ["count"] = count }));
+                BeginInvoke(() => Post(new JsonObject { ["event"] = "listCount", ["req"] = req, ["channel"] = channel, ["count"] = count, ["cached"] = cached }));
         }
         // A share is checked first, off this thread with a time limit (plan 24 3.8); when it does not answer, what the
         // cache has of the folder, marked as not current, or at once that it is not reachable.
@@ -570,7 +577,7 @@ sealed class MainForm : Form
                 {
                     var options = new EnumerationOptions { IgnoreInaccessible = true, AttributesToSkip = 0 };
                     Count(foldersOnly ? Directory.EnumerateDirectories(location, "*", options).Count()
-                        : Directory.EnumerateFileSystemEntries(location, "*", options).Count());
+                        : Directory.EnumerateFileSystemEntries(location, "*", options).Count(), false);
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException) { }
             });

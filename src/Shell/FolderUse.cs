@@ -4,7 +4,7 @@ using System.Text.Json.Nodes;
 namespace Foldex.Shell;
 
 /// <summary>
-/// Which folders you open, how often and how lately (docs/plans/24-PLAN-folder-cache.md 3.6): one score per folder, each
+/// Which folders you open, how often and how lately (docs/plans/executed/24-PLAN-folder-cache.md 3.6): one score per folder, each
 /// opening adding one and old use fading (half of it gone after HalfLifeDays). Kept in State\folderuse.json for all
 /// projects and windows; the folders scoring lowest drop out beyond MaxFolders. Read-ahead reads the best first.
 /// </summary>
