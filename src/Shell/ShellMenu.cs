@@ -35,7 +35,7 @@ sealed class ShellMenu : IDisposable
         if (ids.Count == 0) return (null, "no items");
         IntPtr[] pidls;
         try { pidls = Native.IdLists(ids); }
-        catch (Exception ex) when (ex is COMException or ArgumentException) { return (null, ex.Message); }
+        catch (Exception ex) when (ex is COMException or ArgumentException or IOException or UnauthorizedAccessException) { return (null, ex.Message); }
         try
         {
             Native.SHCreateShellItemArrayFromIDLists((uint)pidls.Length, pidls, out var array);

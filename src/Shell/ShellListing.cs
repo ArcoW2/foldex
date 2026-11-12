@@ -313,7 +313,7 @@ static class ShellListing
                 });
                 Marshal.ReleaseComObject(item);
             }
-            catch (Exception ex) when (ex is COMException or ArgumentException) { }   // not on this PC
+            catch (Exception ex) when (ex is COMException or ArgumentException or IOException or UnauthorizedAccessException) { }   // not on this PC
         return entries;
     }
 
@@ -321,6 +321,6 @@ static class ShellListing
     public static string NameOf(string location)
     {
         try { return Native.DisplayName(Native.Item(location), Sigdn.NormalDisplay); }
-        catch (Exception ex) when (ex is COMException or ArgumentException) { return location; }
+        catch (Exception ex) when (ex is COMException or ArgumentException or IOException or UnauthorizedAccessException) { return location; }
     }
 }

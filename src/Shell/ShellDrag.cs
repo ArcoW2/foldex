@@ -16,7 +16,7 @@ static class ShellDrag
         if (!DropSource.ButtonDown()) return (0, "the mouse button was released before the drag started", "");
         IntPtr[] pidls;
         try { pidls = Native.IdLists(ids); }
-        catch (Exception ex) when (ex is COMException or ArgumentException) { return (0, ex.Message, ""); }
+        catch (Exception ex) when (ex is COMException or ArgumentException or IOException or UnauthorizedAccessException) { return (0, ex.Message, ""); }
         try
         {
             var (data, source) = DataObject(pidls);
