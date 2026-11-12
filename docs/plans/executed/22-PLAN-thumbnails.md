@@ -1,6 +1,6 @@
 # Plan 22: Thumbnail views: grid, mosaic, river, details, cards
 
-Status: draft 2026-11-12, revised 2026-11-12; not started; see Status.
+Status: executed (2026-11-12); see As built.
 
 - 2026-11-12: draft, at the user's request: a pane shows its images as thumbnails, in a grid (cropped or fitted), a
   mosaic, a river, details or cards; the text shown can be set; small icons on an image (a map pin for a GPS
@@ -10,6 +10,7 @@ Status: draft 2026-11-12, revised 2026-11-12; not started; see Status.
   pane; a RAW icon; by default the date taken, the author or copyright, and the description.
 - 2026-11-12: revised: the cache in Foldex's data folder by default; its size a setting, the oldest thumbnails going
   first.
+- 2026-11-12: executed.
 
 Builds on plan 03 (a pane's view: details or icons) and plan 11 (Windows' properties for columns). The number in the
 file name is the priority; rename to reorder.
@@ -38,24 +39,24 @@ RAW mark) are one choice for every pane; the thumbnail size follows Ctrl+mouse w
 
 | Part | What | Reference |
 |---|---|---|
+| Thumbnail cache | Foldex's own, from Windows' thumbnail handlers, kept by path, size, date and thumbnail size; trimmed to its size, the oldest first | 3.1; 6 |
+| Making in the background | per pane, what is in view first, the rest of the folder after; a new request or another folder replaces it | 3.1; 6 |
+| Where the cache is | thumbnailCache: Foldex's data folder (default) or a hidden .foldex-thumbs folder next to the images | 3.1; 6 |
+| The view | Thumbnails in the View menu beside Details and Icons; layout and size per pane, kept with the layout | 3.2; 6 |
+| Grid | cut to fill or fitted | 3.3 |
+| Mosaic | columns, the shortest first, nothing cut | 3.3 |
+| River | rows of equal height filling the width, the last as it is | 3.3 |
+| Details | the image at the left, the name and information at the right | 3.3 |
+| Cards | a card of a fixed width, as many side by side as fit | 3.3 |
+| Information | one choice for every pane (thumbInfo), chosen in the menu | 3.4; 6 |
+| Icons on images | GPS and RAW, one choice for every pane (thumbIcons) | 3.5 |
+| Size | Ctrl+mouse wheel and Larger / Smaller, per pane | 3.2 |
+| Tests | unit and test copy | 3.7; 6 |
 
 ### Not yet built
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| Thumbnail cache | Foldex's own: thumbnails made once (from Windows' thumbnail handlers), kept by path, size and date, made again when the file changes; its size a setting, the oldest going first | -- | 3.1 |
-| Making in the background | a folder's thumbnails made ahead of scrolling, off the UI thread, what is in view first | Thumbnail cache | 3.1 |
-| Where the cache is | a setting: Foldex's data folder (the default), or next to the images in each folder | Thumbnail cache | 3.1 |
-| The view | Thumbnails as a pane's view beside Details and Icons; its layout and size per pane, kept with the layout | -- | 3.2 |
-| Grid | equal cells: cut to fill, or fitted | The view | 3.3 |
-| Mosaic | columns, each image at its own proportions, nothing cut | The view | 3.3 |
-| River | rows of equal height filling the width, each image at its own proportions | The view | 3.3 |
-| Details | the image at the left, its information at the right, one per line | The view; Information | 3.3 |
-| Cards | image and text as a card of a fixed width, as many side by side as fit | The view; Information | 3.3 |
-| Information | which properties details and cards show, one choice for every pane; by default date taken, author or copyright, description | The view | 3.4 |
-| Icons on images | small icons at an image's bottom: a map pin for a GPS location, RAW; one choice for every pane | The view | 3.5 |
-| Size | the thumbnail size per pane: Ctrl+mouse wheel, and in the view's menu | The view | 3.2 |
-| Tests | see 3.7 | -- | 3.7 |
 
 ## 3. Details
 
@@ -145,3 +146,52 @@ RAW mark) are one choice for every pane; the thumbnail size follows Ctrl+mouse w
 ## 4. Open questions
 
 None.
+
+## 6. As built
+
+**Where.** `Shell/Thumbnails.cs` (the cache: `Get` makes or finds a thumbnail, `Trim` keeps the cache under its size),
+`MainForm` (the op `thumbs`: per pane a job on a thread of its own, in the order asked, batches of thumbnails to the
+page as event `thumbs`; a new request for the pane, or the pane going to another folder, replaces it),
+`web/thumbs.js` (the layouts as pure functions, the arrows' neighbour, the RAW extensions; the page's store of
+thumbnails, Ctrl+wheel zoom, the Thumbnails menu), `web/app.js` (`ListView.renderThumbs`, `askThumbs`, the keyboard),
+`web/app.css` (the thumbnails and their highlights, as rows').
+
+**Decided while building.**
+
+- Thumbnails are made at three sizes, 96, 192 and 384 px (the longer side); the page asks the smallest not smaller than
+  it draws (times the screen's scale) and the browser scales it. A JPEG at quality 85, a PNG when it has transparency.
+- A thumbnail's key is a hash of its path, its length, its date changed and its size: a changed file has a new key, so
+  a stale thumbnail is never shown; the old one goes when the cache is trimmed. A hit sets the file's date, so the ones
+  used longest ago go first. Trimmed every 200 thumbnails made, down to nine tenths of the size.
+- Next to the images the cache is a hidden folder `.foldex-thumbs` of thumbnails (one hidden database file would need
+  a database library; a folder needs nothing).
+- **Measured size**: 26 thumbnails at 192 px, 24 made-up images and 2 photos, took 257 KB in the cache, about 10 KB
+  each. thumbnailCacheMB is 64 by default: room for some 6,000 thumbnails of that size. "A few MB" would hold a few
+  hundred, less than one large photo folder; the setting goes down to 8 MB.
+- An item Windows has no thumbnail for (a text file, a RAW without a codec) shows its 48 px icon; asked once.
+- The proportions come with the thumbnail (Windows keeps them when it scales); until it is there an image counts as
+  square, and the mosaic and the river place it again when it comes.
+- The information shown (thumbInfo) and the icons (thumbIcons) are settings (lists), chosen in the pane head's View >
+  Thumbnails menu from a list: date taken, author, copyright, description (title), comments, dimensions, camera,
+  rating, size, date modified. By default date taken, author, copyright and description (title). A value that is
+  empty leaves its line empty.
+- The GPS mark is a small red "GPS" label (its tooltip the latitude), RAW a dark "RAW" label, at the image's bottom
+  left.
+- The keyboard: Left and Right the item before and after; Up and Down the nearest one above or below by the boxes'
+  middles (thumbs.js `thumbNeighbour`); PgUp and PgDn a screen; Home and End.
+- Ctrl+wheel over a pane in Thumbnails changes its thumbnail size (48 to 512 px, a step of 15 %), not the font.
+- The cache's place and size are in Settings > Contents > Thumbnails.
+
+**Tests.** Unit (`ThumbnailTests`): the grid's cells, the mosaic's columns, the river's full and last rows, details
+and cards, the arrows' neighbours, RAW by extension; a thumbnail made, found again without being made anew, made anew
+after the file changed, nothing next to the images; the cache next to the images a hidden folder; none for a text
+file; trimming the ones used longest ago. In the test copy, with a folder of 24 made-up images in eight proportions, 2
+photos with a GPS location, a fake RAW file and a text file: each layout drawn (screenshots), 26 thumbnails shown,
+the GPS and RAW marks; the cache made in Foldex's data folder (26 files) and, with the setting, in a hidden folder next
+to the images; the arrows in a mosaic (down to the image under it, up to the nearest above); Ctrl+wheel changing the
+size and not the font; after a restart the pane back in Mosaic at its size, every thumbnail from the cache, none made
+again.
+
+**Not tested.** A folder of a few thousand images while its thumbnails are being made (the drawing is the rows' way,
+only what is in view); a RAW file with a codec installed (none here); videos and PDFs (they take Windows' thumbnail
+handlers, as images do).

@@ -1504,3 +1504,107 @@ body.docking, body.docking * {
   outline: 1px dashed var(--accent);
   outline-offset: -1px;
 }
+
+/* The Thumbnails view (thumbs.js, app.js renderThumbs): each item placed by its layout; the image cut to fill its cell
+   (Grid (cut)) or whole in it; the highlights as for rows and tiles. */
+.thumb {
+  position: absolute;
+  box-sizing: border-box;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.thumb-pic, .thumb-text {
+  position: absolute;
+  box-sizing: border-box;
+}
+
+.thumb-pic {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.thumb-grid-cut .thumb-img, .thumb-mosaic .thumb-img, .thumb-river .thumb-img {
+  object-fit: cover;
+}
+
+.thumb-icon {
+  width: 48px;
+  height: 48px;
+}
+
+.thumb-text {
+  padding: 0 4px;
+  overflow: hidden;
+}
+
+.thumb-name, .thumb-info {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.45;
+}
+
+.thumb-grid-cut .thumb-name, .thumb-grid-fit .thumb-name, .thumb-mosaic .thumb-name, .thumb-river .thumb-name {
+  text-align: center;
+}
+
+.thumb-details .thumb-name, .thumb-cards .thumb-name {
+  font-weight: 600;
+}
+
+.thumb-info {
+  color: var(--column-text, var(--fg-dim));
+}
+
+.thumb-marks {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  display: flex;
+  gap: 3px;
+}
+
+.thumb-mark {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 0 4px;
+  border-radius: 3px;
+  color: #fff;
+  background: rgba(0, 0, 0, .6);
+}
+
+.thumb-mark.gps { background: rgba(200, 40, 40, .8); }
+
+.thumb:hover {
+  background: color-mix(in srgb, var(--accent) var(--hover-up, 0%), color-mix(in srgb, var(--hover) var(--hover-keep, 100%), var(--pane-bg, var(--bg))));
+}
+
+.thumb.selected {
+  background: color-mix(in srgb, var(--accent) var(--selected-up, 0%), color-mix(in srgb, var(--select) var(--selected-keep, 40%), var(--pane-bg, var(--bg))));
+  color: var(--text-selected, inherit);
+}
+
+.thumb.selected.focused {
+  background: color-mix(in srgb, var(--accent) var(--focused-up, 30%), color-mix(in srgb, var(--select) var(--focused-keep, 100%), var(--pane-bg, var(--bg))));
+  color: var(--text-focused, inherit);
+}
+
+.thumb.selected:hover {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fg) 80%, transparent);
+}
+
+.body:focus .thumb.focused {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.thumb.hidden .thumb-pic { opacity: .6; }

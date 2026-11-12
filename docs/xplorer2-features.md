@@ -55,7 +55,7 @@ updated whenever a plan is written, built or closed that touches a feature here.
 | Hyperfilters (rules, saved) | P+ | -- | 4 | Wildcard filter; Columns (rules on properties) |
 | Colour coding by rule | P+ | -- | 4 | Hyperfilters (the rules) |
 | Colour tags on files | All | -- | 4 | -- |
-| Views: details, list, thumbnails, Ctrl+wheel thumbnail zoom | All | part: details with columns (plan 11), icons (plan 03); Ctrl+wheel font size and icons that grow built (plan 08); thumbnails: plan 22 | 3 (mostly detail now) | Columns |
+| Views: details, list, thumbnails, Ctrl+wheel thumbnail zoom | All | built: details with columns (plan 11), icons (plan 03); Ctrl+wheel font size and icons that grow built (plan 08); thumbnails built (plan 22: grid, mosaic, river, details, cards; Ctrl+wheel) | 3 (mostly detail now) | Columns |
 | Grouping, custom groups | P+ | -- | 3 | Columns; Sorting |
 | Select by mask, invert, by content, by rule | P+ | part: select all | 3 | Wildcard filter; Hyperfilters (by rule) |
 | Selection clipboard, sticky selection, checkboxes | P+ | -- | 3 | -- |

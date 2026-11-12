@@ -33,6 +33,10 @@
   "focusIntensity": 100,          // the focused item's highlight, 0 to 200 %: 100 the theme's, lower fainter, higher stronger
   "selectIntensity": 100,         // the other selected items' highlight, the same way
   "hoverIntensity": 100,          // the highlight under the mouse, the same way
+  "thumbnailCache": "foldex",      // where thumbnails are kept: "foldex" (Foldex's data folder) or "folder" (hidden, next to the images)
+  "thumbnailCacheMB": 64,         // the thumbnail cache in Foldex's data folder at most, in MB; the ones used longest ago go first
+  "thumbInfo": ["System.Photo.DateTaken", "System.Author", "System.Copyright", "System.Title"],   // shown by thumbnails in details and cards
+  "thumbIcons": ["gps", "raw"],   // the icons on thumbnails: "gps" (a GPS location), "raw" (a camera RAW file)
   "renameCompanions": true,       // renaming a file renames the files beside it with the same name and another extension; Shift+Enter: the other
   "scrollMargin": 0,               // rows kept in view above and below the cursor, 0 to 10: 1 scrolls on reaching the second last row
   "rowLines": "none",             // rows in a list: "none", "stripes" (every other row shaded) or "lines" (a line under each)

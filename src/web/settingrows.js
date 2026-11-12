@@ -10,7 +10,7 @@
 const SETTING_TABS = [
   ['App', ['Theme', 'Fonts']],
   ['Panes', ['Colours', 'Behaviour']],
-  ['Contents', ['Rows', 'Columns', 'Highlights', 'Trees', 'Items']],
+  ['Contents', ['Rows', 'Columns', 'Highlights', 'Trees', 'Items', 'Thumbnails']],
   ['Search and scrap', ['Search bar']],
 ];
 
@@ -45,6 +45,11 @@ const SETTING_ROWS = [
     hint: 'The lines joining each folder to the one above it, in every tree and in the Projects menu.' },
   { tab: 'Panes', group: 'Behaviour', name: 'followDelay', kind: 'range', range: [0, 1000, 10], unit: 'ms', title: 'Follow delay',
     hint: 'How long the cursor rests in a pane before its children follow it: a quick walk with the arrows loads nothing on the way.' },
+  { tab: 'Contents', group: 'Thumbnails', name: 'thumbnailCache', kind: 'choice', title: 'Thumbnail cache',
+    options: [['foldex', "In Foldex's data folder"], ['folder', 'Next to the images (hidden)']],
+    hint: 'Where thumbnails are kept once made: one cache in Foldex\u0027s data folder, or a hidden .foldex-thumbs folder in each folder of images (it goes along when the folder is copied).' },
+  { tab: 'Contents', group: 'Thumbnails', name: 'thumbnailCacheMB', kind: 'range', range: [8, 1024, 8], unit: ' MB', title: 'Thumbnail cache size',
+    hint: "The cache in Foldex's data folder at most; above it the thumbnails used longest ago go first." },
   { tab: 'Search and scrap', group: 'Search bar', name: 'searchDelay', kind: 'range', range: [100, 2000, 50], unit: 'ms', title: 'Typing delay',
     hint: 'How long after typing in a pane it acts: more than 3 characters filter the pane (in the search bar), fewer go to the first item starting with them.' },
   { tab: 'Contents', group: 'Columns', name: 'sortColumnIntensity', kind: 'range', range: [0, 200, 5], unit: '%', title: 'Sort column',

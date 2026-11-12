@@ -53,6 +53,9 @@ let paneSizeTimer = 0;
 document.addEventListener('wheel', e => {
   if (!e.ctrlKey || !e.target.closest?.('.pane.tree, .pane.list')) return;
   e.preventDefault();
+  // A pane in Thumbnails: its thumbnail size (docs/plans/executed/22-PLAN-thumbnails.md 3.2), not the font.
+  const thumbPane = e.target.closest('.pane.list')?.dataset.pane;
+  if (thumbPane && layout.pane(thumbPane)?.view === 'thumbs') return thumbZoom(thumbPane, e.deltaY < 0 ? 1 : -1);
   const now = pointSize(settings.paneSize);
   const next = Math.min(PaneSizes.max, Math.max(PaneSizes.min, now + (e.deltaY < 0 ? 1 : -1)));
   if (next === now) return;
@@ -812,7 +815,7 @@ class ListView {
     });
     this.cols = paneColumns(id);
     this.drawHeader();
-    this.colhead.hidden = this.iconsView();
+    this.colhead.hidden = this.iconsView() || this.thumbsView();
     this.body.addEventListener('scroll', () => {
       this.colhead.firstChild?.style.setProperty('transform', `translateX(${-this.body.scrollLeft}px)`);
       this.render();
@@ -960,6 +963,11 @@ class ListView {
   }
 
   load(location, elevated = false) {
+    // Thumbnails still being made for the folder left: no longer (docs/plans/executed/22-PLAN-thumbnails.md 3.1).
+    if (this.thumbsAsked) {
+      post({ op: 'thumbs', channel: this.id, ids: [] });
+      this.thumbsAsked = null;
+    }
     this.location = location;
     this.entries = [];
     this.all = [];
@@ -984,6 +992,9 @@ class ListView {
   // The view (plan 03 3.1): details (the columns) or icons (tiles of large icons, in rows as wide as the pane).
   iconsView() { return layout.pane(this.id).view === 'icons'; }
 
+  // The Thumbnails view (docs/plans/executed/22-PLAN-thumbnails.md): its layout (thumbs.js) and size per pane.
+  thumbsView() { return layout.pane(this.id).view === 'thumbs'; }
+
   tile() {
     const fontPx = this.fontPx();
     const width = Math.max(80, Math.round(fontPx * 7.5));
@@ -992,6 +1003,13 @@ class ListView {
 
   // An item in view: its row of tiles, or its row.
   scrollTo(index) {
+    if (this.thumbsView()) {
+      const b = this.thumbBoxes?.[index];
+      if (!b) return;
+      if (b.y < this.body.scrollTop) this.body.scrollTop = b.y;
+      else if (b.y + b.h > this.body.scrollTop + this.body.clientHeight) this.body.scrollTop = b.y + b.h - this.body.clientHeight;
+      return;
+    }
     if (!this.iconsView()) return scrollIntoView(this.body, index);
     const { height, perRow } = this.tile(), margin = scrollMargin(Math.floor(this.body.clientHeight / height));
     const row = Math.floor(index / perRow), top = (row - margin) * height, bottom = (row + 1 + margin) * height;
@@ -1028,6 +1046,87 @@ class ListView {
     askIcons(missing, own, 48);
   }
 
+  // The Thumbnails view (docs/plans/executed/22-PLAN-thumbnails.md 3.3): every item placed by its layout (thumbs.js), only the
+  // ones in view drawn; each its thumbnail when there (else its icon, large), its name or information, its icons.
+  renderThumbs() {
+    const pane = layout.pane(this.id), kind = pane.thumbLayout ?? 'grid-cut', size = pane.thumbSize ?? 160;
+    const line = Math.round(this.fontPx() * 1.45), info = thumbInfo();
+    const { boxes, height } = thumbLayout(kind, this.entries.map(x => thumbRatios.get(x.id.toLowerCase()) ?? 1),
+      Math.max(60, this.body.clientWidth - 4), size, { line, names: pane.thumbNames !== false, info: 1 + info.length, card: 240 });
+    this.thumbBoxes = boxes;
+    this.rows.style.height = `${height}px`;
+    this.rows.style.width = '';
+    const top = this.body.scrollTop - size, bottom = this.body.scrollTop + this.body.clientHeight + size;
+    const focus = layout.state(this.id).focus, bucket = thumbBucket(size, devicePixelRatio);
+    const icons = thumbIcons(), missing = [], nodes = [], noProps = [], shown = [];
+    const wanted = [...info, ...(icons.includes('gps') ? ['System.GPS.Latitude'] : [])].filter(n => n.includes('.'));
+    boxes.forEach((b, i) => {
+      if (b.y + b.h < top || b.y > bottom) return;
+      const x = this.entries[i];
+      shown.push(x);
+      if (wanted.length && wanted.some(n => !(x.props && n in x.props)) && !x.propsAsked && !x.folder) {
+        x.propsAsked = true;
+        noProps.push(x);
+      }
+      const el = document.createElement('div');
+      el.className = `thumb thumb-${kind}` + (this.selected.has(x.id) ? ' selected' : '') + (same(x.id, focus) ? ' focused' : '') + (x.hidden ? ' hidden' : '');
+      Object.assign(el.style, { left: `${b.x}px`, top: `${b.y}px`, width: `${b.w}px`, height: `${b.h}px` });
+      el.dataset.index = i;
+      el.draggable = true;
+      el.title = x.name;
+      const pic = document.createElement('div');
+      pic.className = 'thumb-pic';
+      Object.assign(pic.style, { left: `${b.ix}px`, top: `${b.iy}px`, width: `${b.iw}px`, height: `${b.ih}px` });
+      const t = thumbStore.get(`${bucket}:${x.id.toLowerCase()}`);
+      if (t?.url) pic.append(Object.assign(document.createElement('img'), { src: t.url, className: 'thumb-img', draggable: false }));
+      else pic.append(Object.assign(iconImage(x, missing, 48), { className: 'thumb-icon', draggable: false }));
+      // Its icons (3.5): a map pin for a GPS location, RAW.
+      const marks = [];
+      if (icons.includes('gps') && x.props?.['System.GPS.Latitude']?.[0]) marks.push(['gps', 'GPS', `A GPS location: ${x.props['System.GPS.Latitude'][0]}`]);
+      if (icons.includes('raw') && !x.folder && isRaw(x.name)) marks.push(['raw', 'RAW', 'A camera RAW file']);
+      if (marks.length) {
+        const bar = document.createElement('div');
+        bar.className = 'thumb-marks';
+        for (const [cls, text, title] of marks) bar.append(Object.assign(document.createElement('span'), { className: `thumb-mark ${cls}`, textContent: text, title }));
+        pic.append(bar);
+      }
+      el.append(pic);
+      if (b.th > 0) {
+        const text = document.createElement('div');
+        text.className = 'thumb-text';
+        Object.assign(text.style, { left: `${b.tx}px`, top: `${b.ty}px`, width: `${b.tw}px`, height: `${b.th}px` });
+        text.append(Object.assign(document.createElement('div'), { className: 'thumb-name', textContent: x.name }));
+        if (kind === 'details' || kind === 'cards')
+          for (const n of info) {
+            const v = columnText(x, n);
+            text.append(Object.assign(document.createElement('div'), { className: 'thumb-info', textContent: v ? `${columnInfo(n).title}: ${v}` : '' }));
+          }
+        el.append(text);
+      }
+      nodes.push(el);
+    });
+    this.rows.replaceChildren(...nodes);
+    askIcons(missing, [], 48);
+    if (noProps.length) this.askProps(noProps, wanted);
+    this.askThumbs(shown, bucket);
+  }
+
+  // Thumbnails asked for: what is in view first, then the rest of the folder, in the background (the host replaces
+  // what it still had to do for this pane). Asked again when items in view are not on their way yet.
+  askThumbs(shown, bucket) {
+    const lacks = x => !x.folder && !thumbStore.has(`${bucket}:${x.id.toLowerCase()}`);
+    const first = shown.filter(lacks);
+    if (!first.length || (first.every(x => this.thumbsAsked?.has(x.id)) && this.thumbsBucket === bucket)) return;
+    clearTimeout(this.thumbTimer);
+    this.thumbTimer = setTimeout(() => {
+      const rest = this.entries.filter(x => lacks(x) && !first.includes(x));
+      this.thumbsAsked = new Set([...first, ...rest].map(x => x.id));
+      this.thumbsBucket = bucket;
+      post({ op: 'thumbs', channel: this.id, size: bucket, ids: [...first, ...rest].map(x => x.id),
+        place: settings.thumbnailCache === 'folder' ? 'folder' : 'foldex', limitMB: Number(settings.thumbnailCacheMB) || 64 });
+    }, 120);
+  }
+
   shows(x) {
     const content = this.content();
     return content === 'files' ? !x.folder : content === 'folders' ? x.folder : true;
@@ -1051,7 +1150,7 @@ class ListView {
     const keep = [...this.selected].map(now), top = this.body.scrollTop;
     const s = layout.state(this.id), focusBefore = s.focus ? now(s.focus) : null;
     const at = this.entries.findIndex(x => same(x.id, s.focus));
-    const offset = at >= 0 && !this.iconsView() ? at * RowHeight - top : null;   // the focused row's place on screen
+    const offset = at >= 0 && !this.iconsView() && !this.thumbsView() ? at * RowHeight - top : null;   // the focused row's place on screen
     let first = true;
     this.gitAsked = false;
     list(this.id, this.location, this.content() === 'folders', part => this.take(part, first && !(first = false)), m => {
@@ -1135,6 +1234,7 @@ class ListView {
   }
 
   render() {
+    if (this.thumbsView() && !(this.message && !this.entries.length)) return this.renderThumbs();
     if (this.iconsView() && !(this.message && !this.entries.length)) return this.renderIcons();
     if (this.message && !this.entries.length) {
       const msg = document.createElement('div');
@@ -1200,7 +1300,7 @@ class ListView {
   }
 
   entryAt(target) {
-    const row = target.closest('.row, .tile');
+    const row = target.closest('.row, .tile, .thumb');
     return row ? this.entries[Number(row.dataset.index)] : null;
   }
 
@@ -1234,6 +1334,19 @@ class ListView {
     const focus = layout.state(this.id).focus;
     const i = this.entries.findIndex(x => same(x.id, focus));
     const to = k => { const x = this.entries[Math.max(0, Math.min(this.entries.length - 1, k))]; if (x) this.select(x, e); e.preventDefault(); };
+    if (this.thumbsView()) {
+      // Thumbnails: left and right one, up and down to the nearest below or above (thumbs.js), a page a screen.
+      const at = i < 0 ? 0 : i;
+      if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) to(thumbNeighbour(this.thumbBoxes ?? [], at, e.key));
+      else if (e.key === 'PageDown' || e.key === 'PageUp') {
+        const b = this.thumbBoxes?.[at], y = b ? b.y + (e.key === 'PageDown' ? 1 : -1) * this.body.clientHeight : 0;
+        const k = (this.thumbBoxes ?? []).findIndex(c => c.y + c.h > y);
+        to(k < 0 ? this.entries.length - 1 : k);
+      }
+      else if (e.key === 'Home') to(0);
+      else if (e.key === 'End') to(this.entries.length - 1);
+      return;
+    }
     if (this.iconsView()) {
       // Tiles: left and right one, up and down a row of them.
       const { height, perRow } = this.tile();
@@ -1842,8 +1955,10 @@ function paneMenu(id) {
         enabled: !(pane.kind === 'tree' && content === 'files'), run: () => setPaneContent(id, content) })) },
     { label: 'Shape', enabled: pane.kind !== 'preview' && !scrap, items: [['tree', 'Tree'], ['list', 'One folder']]
       .map(([kind, label]) => ({ label, checked: pane.kind === kind, run: () => setPaneShape(id, kind) })) },
-    { label: 'View', enabled: pane.kind === 'list', items: [['details', 'Details'], ['icons', 'Icons']]
-      .map(([view, label]) => ({ label, checked: (pane.view ?? 'details') === view, run: () => setPaneView(id, view) })) },
+    { label: 'View', enabled: pane.kind === 'list', items: [
+      ...[['details', 'Details'], ['icons', 'Icons']]
+        .map(([view, label]) => ({ label, checked: (pane.view ?? 'details') === view, run: () => setPaneView(id, view) })),
+      { label: 'Thumbnails', checked: pane.view === 'thumbs', items: thumbsMenu(id) } ] },
     { label: 'Hidden items', enabled: pane.kind !== 'preview', checked: pane.kind !== 'preview' && showsHidden(id),
       run: () => setPaneHidden(id, !showsHidden(id)) },
     { label: pane.filter ? `Filter: ${pane.filter}...` : 'Filter...', enabled: pane.kind !== 'preview', run: () => askPaneFilter(id) },
@@ -1856,8 +1971,8 @@ function paneMenu(id) {
 function setPaneView(id, view) {
   const pane = layout.pane(id), v = views.get(id);
   if (!pane || !(v instanceof ListView)) return;
-  pane.view = view === 'icons' ? 'icons' : undefined;
-  v.colhead.hidden = v.iconsView();
+  pane.view = view === 'icons' || view === 'thumbs' ? view : undefined;
+  v.colhead.hidden = v.iconsView() || v.thumbsView();
   v.body.scrollTop = 0;
   v.render();
   const i = v.entries.findIndex(x => same(x.id, layout.state(id).focus));
@@ -2610,6 +2725,8 @@ const events = {
       if (m.op.ids?.length) v.verify(v.all.map(x => x.id).filter(id => m.op.ids.some(o => same(o, id))));
     }
   },
+  // Thumbnails made (docs/plans/executed/22-PLAN-thumbnails.md 3.1).
+  thumbs(m) { thumbsCame(m); },
   // A search for a scrap (plan 06 3.4): what it found so far, and its end.
   found(m) { views.get(m.channel)?.add?.(m.entries); },
   searched(m) { views.get(m.channel)?.searched?.(m); },

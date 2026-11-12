@@ -319,6 +319,9 @@ sealed class MainForm : Form
             case "search":
                 await Search(msg);
                 break;
+            case "thumbs":
+                Thumbs(msg, ids);
+                break;
             case "searchStop":
                 if (searches.Remove(msg["channel"]?.GetValue<string>() ?? "", out var stopping)) stopping.Cancel();
                 break;
@@ -479,6 +482,46 @@ sealed class MainForm : Form
         var list = ids.ToList();
         var entries = await StaWorker.Once("entries", () => ShellListing.Entries(list));
         Post(new JsonObject { ["event"] = "entries", ["req"] = req?.DeepClone(), ["entries"] = entries });
+    }
+
+    // Thumbnails being made per pane (its channel, docs/plans/executed/22-PLAN-thumbnails.md 3.1): in the background, in the
+    // order asked (what is in view first); a new request for the pane replaces what is left of the old one. They come
+    // to the page in small batches; now and then the cache is trimmed back under its size.
+    readonly Dictionary<string, CancellationTokenSource> thumbing = [];
+    static int thumbsMade;
+
+    void Thumbs(JsonObject msg, List<string> ids)
+    {
+        var channel = msg["channel"]?.GetValue<string>() ?? "";
+        if (thumbing.Remove(channel, out var before)) before.Cancel();
+        if (ids.Count == 0) return;
+        var cancel = thumbing[channel] = new CancellationTokenSource();
+        var size = msg["size"]?.GetValue<int>() is int s && Shell.Thumbnails.Sizes.Contains(s) ? s : Shell.Thumbnails.Sizes[1];
+        var inFolder = msg["place"]?.GetValue<string>() == "folder";
+        var limit = (long)Math.Max(1, msg["limitMB"]?.GetValue<double>() ?? 64) * 1024 * 1024;
+        _ = StaWorker.Once("thumbnails", () =>
+        {
+            var batch = new JsonArray();
+            var since = System.Diagnostics.Stopwatch.StartNew();
+            void Send()
+            {
+                if (batch.Count == 0) return;
+                var part = batch;
+                batch = [];
+                BeginInvoke(() => Post(new JsonObject { ["event"] = "thumbs", ["channel"] = channel, ["size"] = size, ["items"] = part }));
+                since.Restart();
+            }
+            foreach (var id in ids)
+            {
+                if (cancel.IsCancellationRequested) break;
+                var t = Shell.Thumbnails.Get(id, size, AppHost.DataDir, inFolder);
+                batch.Add(new JsonObject { ["id"] = id, ["url"] = t.Url, ["width"] = t.Width, ["height"] = t.Height });
+                if (batch.Count >= 8 || since.ElapsedMilliseconds > 150) Send();
+                if (Interlocked.Increment(ref thumbsMade) % 200 == 0 && !inFolder) Shell.Thumbnails.Trim(AppHost.DataDir, limit);
+            }
+            Send();
+            return 0;
+        });
     }
 
     // The search running per scrap (its channel); a new one on the same scrap or Stop ends it.
