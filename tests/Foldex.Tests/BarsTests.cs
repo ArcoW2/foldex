@@ -16,13 +16,13 @@ public class BarsTests : IDisposable
     static string Shipped => Path.Combine(AppHost.FindProjectFolder(AppContext.BaseDirectory, "defaults")!, BarsFile.Name);
 
     [Fact]
-    public void TheShippedBarsAreDrivesAndAPathAtTheTop()
+    public void TheShippedBarsAreDrivesAPathAndASearchAtTheTop()
     {
         var r = BarsFile.Load(dir, Shipped);
         Assert.False(r["user"]!.GetValue<bool>());
         Assert.Empty(r["problems"]!.AsArray());
         var line = r["bars"]!["top"]![0]!.AsArray();
-        Assert.Equal(["drives", "path"], line.Select(b => b!["kind"]!.GetValue<string>()));
+        Assert.Equal(["drives", "path", "search"], line.Select(b => b!["kind"]!.GetValue<string>()));
         Assert.True(line[1]!["fill"]!.GetValue<bool>());
         Assert.Equal(30, line[0]!["maxShare"]!.GetValue<double>());
     }

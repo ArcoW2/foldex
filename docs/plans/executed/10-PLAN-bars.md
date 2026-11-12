@@ -214,3 +214,15 @@ None.
 - The splitter made wider (12 px, a tinted band; the bar keeps room for it in the mode, so it covers no button), and
   Done at the end of the bar's menu in the mode, as LexPen's change mode menu. Test copy: the splitter 14 px wide with
   its border, starting after the last drive; the menu ending in Done.
+- A third kind, the search bar (`search`; in the shipped bars after the path; Add a bar; View > Bars), `web/search.js`:
+  a box that filters the active pane on what is typed, each pane its own text (a list: its files and folders whose
+  name contains it; a tree: its files, its folders stay), the bar showing the active pane's; an X clears it; Esc clears
+  it and goes back to the pane, Enter and Down go back; Ctrl+Shift+F (`search.focus`) goes to it (Ctrl+F is kept for
+  the scrap search, plan 06). Typing in a pane fills the box; once typing rests (`searchDelay`, 600 ms, Settings >
+  Panes): more than 3 characters become the filter and the keyboard goes to the box; fewer: the pane goes to the first
+  item starting with them (from the focus on), and the box clears a second later. A list going to another folder loses
+  its text. A list keeps what it read, so filtering does not read the folder again. Without a search bar typing only
+  jumps. Test copy, key events over CDP: "win" jumped to Win32App and cleared a second later; "prog" filtered C:\ to
+  the two Program Files folders with the keyboard in the box (screenshot); typing on narrowed it to one; X showed all
+  again; Esc cleared and went back to the pane; Ctrl+Shift+F went to the box; the list going to D:\ cleared the text
+  and the box; "net" in the tree went to Network.

@@ -83,8 +83,8 @@ function fitItems(count, unit, room, more) {
 // ---------- The bars in the window ----------
 
 const BarSides = ['top', 'bottom', 'left', 'right'];
-const BarKinds = { path: 'Path', drives: 'Drives' };
-const BarDefaults = { path: { normal: 300, min: 120 }, drives: { normal: 4, min: 2 } };
+const BarKinds = { path: 'Path', drives: 'Drives', search: 'Search' };
+const BarDefaults = { path: { normal: 300, min: 120 }, drives: { normal: 4, min: 2 }, search: { normal: 200, min: 120 } };
 const MoreLength = 24;   // the >> button
 
 let bars = { top: [], bottom: [], left: [], right: [] };
@@ -163,6 +163,7 @@ function drawBars() {
     }));
   }
   fitBars();
+  showSearch();   // the search bars: the active pane's text and their X (search.js)
 }
 
 function drawBar(bar, side, l, b) {
@@ -198,7 +199,7 @@ function drawBar(bar, side, l, b) {
 // The content of a bar, all of it; fitBars then hides what does not fit behind >> (or lets it scroll).
 function fillBar(el, bar, side) {
   const body = el.querySelector('.bar-body');
-  const items = bar.kind === 'drives' ? drives.map(d => driveButton(d, bar))
+  const items = bar.kind === 'drives' ? drives.map(d => driveButton(d, bar)) : bar.kind === 'search' ? [searchBox()]
     : across(side) ? [pathBox()] : pathSegments().map(s => segmentButton(s));
   body.replaceChildren(...items);
   if (bar.overflow === 'scroll') {
@@ -348,6 +349,8 @@ function fitBars() {
         const r = more.getBoundingClientRect();
         openMenu(r.left, r.bottom, hidden.flatMap(i => measured[i].el.bar.kind === 'drives'
           ? drives.map(d => ({ label: d.name, run: () => activePane && goTo(activePane, d.id) }))
+          : measured[i].el.bar.kind === 'search'
+          ? [{ label: 'Filter...', run: async () => { const to = await askText('Filter the active pane on', paneSearch.get(activePane) ?? ''); if (to !== null) setSearch(activePane, to.trim()); } }]
           : [{ label: 'Go to a folder...', run: async () => { const to = await askText('Go to', barLocation); if (to && activePane) goTo(activePane, to); } }]));
       });
       line.append(more);
@@ -382,7 +385,7 @@ function placeBar(bar, side, l, b) {
 }
 
 function addBar(kind, side = 'top') {
-  const bar = { kind, ...BarDefaults[kind], ...(kind === 'path' ? { fill: true } : { overflow: 'more', freeSpace: true }) };
+  const bar = { kind, ...BarDefaults[kind], ...(kind === 'path' ? { fill: true } : kind === 'drives' ? { overflow: 'more', freeSpace: true } : {}) };
   if (bars[side].length) bars[side][0].push(bar);
   else bars[side].push([bar]);
   saveBars();

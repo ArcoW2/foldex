@@ -24,6 +24,7 @@
   "F5": "refresh",
   "Ctrl+R": "columns.fit",
   "Ctrl+H": "hidden.toggle",
+  "Ctrl+Shift+F": "search.focus",
   "Alt+P": "preview.toggle",
   "Ctrl+Alt+N": ["pane.newChild", "right"],
   "Ctrl+Alt+Shift+N": "pane.new",

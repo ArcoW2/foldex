@@ -14,7 +14,7 @@ static class BarsFile
 {
     public const string Name = "bars.json";
     public static readonly string[] Sides = ["top", "bottom", "left", "right"];
-    public static readonly string[] Kinds = ["path", "drives"];
+    public static readonly string[] Kinds = ["path", "drives", "search"];
 
     static readonly JsonDocumentOptions Options = new() { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true };
 

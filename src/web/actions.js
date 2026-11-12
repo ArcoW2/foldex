@@ -144,8 +144,10 @@ action('columns.manage', { title: 'Manage column sets', hint: 'rename, delete, d
   group: 'view', run: () => openManageSets() });
 // Bars (docs/plans/executed/10-PLAN-bars.md 3.3; bars.js): added from here too, so a window without bars can get one back.
 action('bars.add', { title: 'Add a bar', hint: 'a bar at the top: the path or the drives', group: 'view',
-  variants: [['path'], ['drives']], variantTitles: { path: 'Add a path bar', drives: 'Add a drives bar' },
+  variants: [['path'], ['drives'], ['search']], variantTitles: { path: 'Add a path bar', drives: 'Add a drives bar', search: 'Add a search bar' },
   run: params => addBar(params[0] ?? 'path') });
+action('search.focus', { title: 'Search bar', hint: 'the keyboard to the search bar, which filters the active pane on what you type',
+  group: 'view', run: () => focusSearch() });
 action('bars.change', { title: 'Change the bars', hint: 'their change mode: drag a grip to move a bar, the border after it to size it; right-click for its menu; Esc or Done ends it',
   group: 'view', checked: () => barsChanging, run: () => changeBars(!barsChanging) });
 action('bars.reset', { title: 'Reset the bars', hint: 'the bars as Foldex ships them (your bars.json removed)', group: 'view',

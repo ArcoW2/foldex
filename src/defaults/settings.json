@@ -27,6 +27,7 @@
   "treeExpanders": "chevron",     // a tree's expanders: "plus" (+ and -) or "chevron" (> and v)
   "treeLines": "dotted",          // a tree's lines: "dotted", "solid" or "none"
   "followDelay": 150,              // ms the cursor rests in a pane before its children follow it, 0 to 1000
+  "searchDelay": 600,              // ms after typing in a pane before it filters (more than 3 characters) or jumps, 100 to 2000
   "rowLines": "none",             // rows in a list: "none", "stripes" (every other row shaded) or "lines" (a line under each)
   "rowLinesIntensity": 8,         // 1 to 100: how strong the stripes or lines are, the text colour mixed in at that %
   "rowHeight": 170,               // the row height in % of the pane font size, 100 to 300 (the icons follow it)

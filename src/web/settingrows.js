@@ -38,6 +38,8 @@ const SETTING_ROWS = [
     hint: 'The lines joining each folder to the one above it, in every tree and in the Projects menu.' },
   { group: 'Panes', name: 'followDelay', kind: 'range', range: [0, 1000, 10], unit: 'ms', title: 'Follow delay',
     hint: 'How long the cursor rests in a pane before its children follow it: a quick walk with the arrows loads nothing on the way.' },
+  { group: 'Panes', name: 'searchDelay', kind: 'range', range: [100, 2000, 50], unit: 'ms', title: 'Typing delay',
+    hint: 'How long after typing in a pane it acts: more than 3 characters filter the pane (in the search bar), fewer go to the first item starting with them.' },
   { group: 'Panes', name: 'rowLines', kind: 'choice', title: 'Row lines',
     options: [['none', 'None'], ['stripes', 'Stripes'], ['lines', 'Lines']],
     hint: 'Every other row shaded, or a line under each row, in every list; to follow a row across the columns.' },

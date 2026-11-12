@@ -249,6 +249,38 @@ body.bars-changing .bar-body, body.bars-changing .line-more { pointer-events: no
   min-width: 40px;
 }
 
+/* The search bar's box (search.js) and its X, which shows while there is a text. */
+.bar-search-box {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  min-width: 40px;
+  position: relative;
+}
+
+.bar-search-box input {
+  flex: 1;
+  min-width: 0;
+  padding-right: 22px;
+}
+
+.bar-search-clear {
+  position: absolute;
+  right: 3px;
+  display: none;
+  font: inherit;
+  font-size: .85em;
+  color: var(--fg-dim);
+  background: none;
+  border: 0;
+  border-radius: 3px;
+  padding: 0 4px;
+  cursor: pointer;
+}
+
+.bar-search.has-text .bar-search-clear { display: block; }
+.bar-search-clear:hover { color: var(--fg); background: var(--hover); }
+
 .bar-item, .bar-more, .line-more {
   flex: none;
   position: relative;

@@ -200,6 +200,7 @@ function activate(id) {
   if (activePane === id) return;
   activePane = id;
   queueMicrotask(ribbonRefresh);
+  showSearch();   // the search bar shows this pane's text
   for (const changed of layout.activate(id)) views.get(changed)?.restore();
   for (const v of views.values()) v.el.classList.toggle('active', v.id === id);
   drawHeads();   // and the tabs (drawTabs): the active pane's tab is the bright one
@@ -466,11 +467,11 @@ class TreeView {
 
   flatten() {
     this.flat = [];
-    const hidden = showsHidden(this.id), filter = filterTest(layout.pane(this.id).filter);
+    const hidden = showsHidden(this.id), filter = filterTest(layout.pane(this.id).filter), search = searchTest(this.id);
     const walk = list => {
       for (const n of list) {
         if (n.hidden && !hidden && n.depth > 0) continue;
-        if (!filter(n)) continue;
+        if (!filter(n) || n.folder === false && !search(n)) continue;   // the search text: its files (search.js)
         this.flat.push(n);
         if (n.expanded && n.children) walk(n.children);
       }
@@ -587,7 +588,19 @@ class TreeView {
     ribbonRefresh();
   }
 
+  // The search text changed (search.js): its files again.
+  searchChanged() { this.flatten(); }
+
+  // Typed (search.js): the first row from the focus on (then from the top) starting with it.
+  goToStart(text) {
+    const at = Math.max(0, this.flat.indexOf(this.node(layout.state(this.id).focus)));
+    const rows = [...this.flat.slice(at), ...this.flat.slice(0, at)];
+    const n = rows.find(x => x.name.toLowerCase().startsWith(text));
+    if (n) this.select(n.id);
+  }
+
   key(e) {
+    if (typeInPane(this, e)) return;
     const n = this.node(layout.state(this.id).focus);
     const i = n ? this.flat.indexOf(n) : -1;
     const to = k => { if (this.flat[k]) this.select(this.flat[k].id); e.preventDefault(); };
@@ -750,6 +763,7 @@ class ListView {
   constructor(id) {
     this.id = id;
     this.entries = [];
+    this.all = [];   // what it read, before hidden items, Show, the filter and the search text
     this.selected = new Set();
     this.anchor = null;
     this.location = null;
@@ -910,8 +924,10 @@ class ListView {
   }
 
   load(location, elevated = false) {
+    if (!same(location, this.location)) setSearch(this.id, '', true);   // another folder: its search text goes (search.js)
     this.location = location;
     this.entries = [];
+    this.all = [];
     this.selected = new Set();
     this.anchor = null;
     this.message = null;
@@ -999,11 +1015,33 @@ class ListView {
   }
 
   take(entries, reset) {
-    if (reset) this.entries = [];
-    const hidden = showsHidden(this.id), filter = filterTest(layout.pane(this.id).filter);
-    this.entries = this.entries.concat(entries.filter(x => (hidden || !x.hidden) && this.shows(x) && filter(x))).sort(this.comparer());
+    if (reset) this.entries = this.all = [];
+    this.all = this.all.concat(entries);
+    this.entries = this.entries.concat(entries.filter(this.passes())).sort(this.comparer());
     this.render();
     status(`${this.entries.length} items so far...`);
+  }
+
+  // What it shows of what it read: hidden items, Show, the filter and the search text (search.js).
+  passes() {
+    const hidden = showsHidden(this.id), filter = filterTest(layout.pane(this.id).filter), search = searchTest(this.id);
+    return x => (hidden || !x.hidden) && this.shows(x) && filter(x) && search(x);
+  }
+
+  // The search text changed: filtered again from what it read, without reading the folder again.
+  searchChanged() {
+    this.entries = this.all.filter(this.passes()).sort(this.comparer());
+    this.selected = new Set([...this.selected].filter(id => this.entries.some(x => x.id === id)));
+    this.render();
+    if (paneSearch.has(this.id)) status(`${this.entries.length} of ${this.all.length} items`);
+  }
+
+  // Typed (search.js): the first item from the focus on (then from the top) starting with it.
+  goToStart(text) {
+    const at = Math.max(0, this.entries.findIndex(x => same(x.id, layout.state(this.id).focus)));
+    const rows = [...this.entries.slice(at), ...this.entries.slice(0, at)];
+    const x = rows.find(y => y.name.toLowerCase().startsWith(text));
+    if (x) this.select(x, { shiftKey: false, ctrlKey: false });
   }
 
   done(m, first) {
@@ -1123,6 +1161,7 @@ class ListView {
   }
 
   key(e) {
+    if (typeInPane(this, e)) return;
     const focus = layout.state(this.id).focus;
     const i = this.entries.findIndex(x => same(x.id, focus));
     const to = k => { const x = this.entries[Math.max(0, Math.min(this.entries.length - 1, k))]; if (x) this.select(x, e); e.preventDefault(); };
