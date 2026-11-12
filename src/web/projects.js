@@ -240,6 +240,10 @@ function ask(title, value, lines) {
   input.hidden = value === null;
   input.value = value ?? '';
   dialog.returnValue = '';
+  // A question is answered Yes or No (y, n: buttons.js), a name OK or Cancel.
+  const [ok, cancel] = dialog.querySelectorAll('.ask-buttons button');
+  ok.dataset.text = value === null ? 'Yes' : 'OK';
+  cancel.dataset.text = value === null ? 'No' : 'Cancel';
   dialog.showModal();
   if (value === null) dialog.querySelector('button[value=ok]').focus(); else input.select();
   return new Promise(resolve => dialog.addEventListener('close', () => {

@@ -103,8 +103,9 @@ function ask(title, input, lines = []) {
   }
   const buttons = document.createElement('div');
   buttons.className = 'ask-buttons';
-  buttons.append(Object.assign(document.createElement('button'), { value: 'ok', textContent: 'OK' }),
-    Object.assign(document.createElement('button'), { value: 'cancel', textContent: 'Cancel', formNoValidate: true }));
+  // A question is answered Yes or No (y, n: buttons.js), a text OK or Cancel.
+  buttons.append(Object.assign(document.createElement('button'), { value: 'ok', textContent: input ? 'OK' : 'Yes' }),
+    Object.assign(document.createElement('button'), { value: 'cancel', textContent: input ? 'Cancel' : 'No', formNoValidate: true }));
   form.append(buttons);
   dialog.append(form);
   document.body.append(dialog);
