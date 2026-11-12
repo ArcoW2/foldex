@@ -139,6 +139,19 @@ sealed class ProjectStore
         return w;
     }
 
+    /// <summary>A new project with a copy of another's windows (their layouts, places and sizes), closed.</summary>
+    public Project Clone(Project from, string name)
+    {
+        var p = NewProject(name);
+        foreach (var w in from.Windows)
+            p.Windows.Add(new Window
+            {
+                Key = nextWindow++, Open = false, Session = w.Session?.DeepClone(), Bounds = w.Bounds?.ToArray(),
+                Maximized = w.Maximized, Desktop = w.Desktop, Used = p.Used,
+            });
+        return p;
+    }
+
     public Project? ProjectOf(int key) => Projects.FirstOrDefault(p => p.Windows.Any(w => w.Key == key));
     public Window? WindowOf(int key) => Projects.SelectMany(p => p.Windows).FirstOrDefault(w => w.Key == key);
     public Project? Get(int id) => Projects.FirstOrDefault(p => p.Id == id);

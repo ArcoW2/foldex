@@ -17,10 +17,13 @@
 .pv-head .pv-sort.pv-on::after { content: " \25B2"; font-size: .8em; }
 .pv-head .pv-sort.pv-on.pv-desc::after { content: " \25BC"; }
 .pv-list { flex: 1; overflow: auto; outline: none; }
-.pv-row { border-left: 3px solid transparent; cursor: default; }
+.pv-row { cursor: default; }
 .pv-row:hover { background: var(--hover); }
 .pv-row.pv-checked { background: var(--select); }
-.pv-list:focus .pv-row.pv-focus { border-left-color: var(--accent); }
+/* The row with the focus, with its panes when unfolded: one background; a little less strong without the keyboard. */
+.pv-focus { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.pv-list:focus .pv-focus { background: color-mix(in srgb, var(--accent) 24%, transparent); }
+.pv-row.pv-checked.pv-focus { background: color-mix(in srgb, var(--accent) 24%, var(--select)); }
 .pv-fold { font: inherit; color: var(--fg-dim); background: none; border: 0; padding: 0; width: 18px; cursor: pointer; }
 .pv-fold::before { content: "\25B8"; }
 .pv-row.pv-unfolded .pv-fold::before { content: "\25BE"; }

@@ -108,6 +108,9 @@ sealed class ProjectsForm : Form
             case "rename":
                 app.ProjectCommand(null, "rename", new JsonObject { ["project"] = msg["project"]!.GetValue<int>(), ["name"] = msg["name"]?.GetValue<string>() ?? "" });
                 return true;
+            case "clone":
+                app.ProjectCommand(null, "clone", new JsonObject { ["project"] = msg["project"]!.GetValue<int>(), ["name"] = msg["name"]?.GetValue<string>() ?? "" });
+                return true;
             case "close":
                 app.CloseProjects(Ids(msg));
                 return true;

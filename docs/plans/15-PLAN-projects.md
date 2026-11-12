@@ -15,6 +15,8 @@ Status: partly executed; see Status and 6. As built.
   tree drawn with lines (plan 16).
 - 2026-11-12: checked in the test copy: Delete, the name dialog, a Shift launch, the ribbon group; several virtual
   desktops left for a check by hand.
+- 2026-11-12: Open project first in a project's submenu; Manage: Clone..., Delete... and Clone... buttons, the names
+  in the Delete question, a focus background.
 
 Builds on plan 12 (docking panes) and plan 03 (connected panes). As LexPen's projects
 (LexPen `docs/plans/executed/PLAN-window-sessions.md` and `PLAN-manage-projects.md`), with one window per project.
@@ -128,15 +130,17 @@ Projects
     Project 7                      >        Preview
   -----------------------------           LexPen
   New project...                        Folders
-  Rename this project...                ------------------------------------
-  -----------------------------         Open project / Show project
-  Manage projects...                    Delete project...                  (closed projects)
+  Rename this project...                Open project / Show project
+  -----------------------------         ------------------------------------
+  Manage projects...                    (its panes, as above)
+                                        ------------------------------------
+                                        Delete project...                  (closed projects)
 ```
 
 (`v`: the menu's check mark: an open project.)
 
 - The projects: open ones checked, this window's project first and marked, then the most recently used first.
-- A project's submenu: its window's panes as a tree: each root pane, then the panes that follow it a step in, down
+- A project's submenu: Open project (or Show project) first, then its window's panes as a tree: each root pane, then the panes that follow it a step in, down
   to the end, each by its name as its head and tab show it (a tree "Folders", a list its folder's name, "Preview").
   The page keeps those names with its layout; the tree has lines as the trees do (plan 16). A click on a pane opens
   the project (or brings it to the front) and puts the focus on that pane. Open project opens a closed project; Show
@@ -155,21 +159,23 @@ Projects
 ### 3.7 Manage projects
 
 A window of its own, as LexPen's (`ProjectsForm.cs`, `web/projects.html`, `projects.js`), one for the app, its place
-kept. From top to bottom: a menu bar, a search box, the list, two buttons.
+kept. From top to bottom: a menu bar, a search box, the list, the buttons.
 
 - The list: a row per project with a checkbox, its name ("Project n" dimmed when unnamed), open or closed, its
   panes' folders, created, last used. A row unfolds to show its panes as the tree of 3.6. Double-click a row: open
-  the project. Space checks, Enter opens the checked ones (or the row with the focus), F2 renames, Del deletes.
+  the project. The row with the focus has a background, its unfolded panes included. Space checks, Enter opens the checked ones (or the row with the focus), F2 renames, Del deletes.
 - Sort by name, created or last used, from the View menu or the column headers; a second click reverses. Default:
   last used, newest first; kept in the setting `projectsSort`.
 - Select: Shift+click a range (from the last clicked), All (Ctrl+A), None, Invert, Not used since (a week, a month,
   three months, half a year, a year).
 - Search: filters the rows on name and folders; the actions work only on the checked rows shown.
-- Project menu: New project..., Open, Close, Rename (F2), Delete... (Del).
+- Project menu: New project..., Open, Close, Rename (F2), Clone..., Delete... (Del).
   - Close: closes their windows, as by hand. Nothing is unsaved in Foldex, so it does not ask.
-  - Delete: asks first ("Delete 3 projects? An open one closes; folders and files are not touched.").
+  - Clone: one project (the one checked, or with none checked the one with the focus): asks a name ("<name>
+    (copy)" filled in) and makes a closed project with a copy of its windows (layouts, places, sizes).
+  - Delete: asks first ("Delete 3 projects?", the names, "An open one closes; folders and files are not touched.").
 - View menu: Sort by name / created / last used, Reverse order, Unfold all / selected, Fold all / selected.
-- Buttons: Open selected, Close selected.
+- Buttons: Open selected, Close selected, Clone..., Delete....
 - The list follows changes made elsewhere while it is open.
 
 ### 3.8 `state.json`
@@ -280,3 +286,14 @@ None.
 - Delete from Manage on the open project Probeer: Windows' question "Delete 'Probeer'?" came (found by its title,
   answered OK through `WM_COMMAND`); the window closed and the project left the list.
 - Left: several virtual desktops (making one changes the Windows session of whoever runs the test); a check by hand.
+
+### 6.5 The menu and Manage (2026-11-12)
+
+- The Projects menu: Open project (or Show project) first in a project's submenu.
+- Manage: Clone... (Project menu and a button; `ProjectStore.Clone`, host request `clone`), a Delete... button, the
+  names in the Delete question for more than one project, a focus background over the row and its unfolded panes
+  (instead of a line at the left).
+- Tested: `dotnet test` Failed 0, Passed 142 (a clone's windows: closed, new keys, their own copy of the layout).
+  Test copy over CDP: the submenu's items in order; the buttons (screenshot of the focus background on an unfolded
+  row); Clone of the focused row with the name filled in, and with a name typed; Clone off with two checked; Delete
+  of the clones: the question listed their names (read with `WM_GETTEXT`), OK removed them.

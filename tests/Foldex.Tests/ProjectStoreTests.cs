@@ -62,6 +62,24 @@ public class ProjectStoreTests : IDisposable
     }
 
     [Fact]
+    public void ACloneCopiesTheWindowsClosed()
+    {
+        var s = Empty();
+        var p = s.NewProject("Klanten");
+        var w = s.AddWindow(p);
+        (w.Session, w.Bounds) = (Layout("p1"), [1, 2, 300, 400]);
+        var c = s.Clone(p, "Klanten 2");
+        var cw = Assert.Single(c.Windows);
+        Assert.Equal("Klanten 2", c.Name);
+        Assert.NotEqual(w.Key, cw.Key);
+        Assert.False(cw.Open);
+        Assert.Equal("p1", s.LayoutOf(cw.Key)!["active"]!.GetValue<string>());
+        cw.Session!["active"] = "p2";   // its own copy
+        Assert.Equal("p1", w.Session!["active"]!.GetValue<string>());
+        Assert.Equal([1, 2, 300, 400], cw.Bounds!);
+    }
+
+    [Fact]
     public void ThePanesAreATreeOfRootsAndTheirChildren()
     {
         // Two roots, A (a tree) and E; A drives B and D, B drives C (a preview). Each pane by its branch's state; B by

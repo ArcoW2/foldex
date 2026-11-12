@@ -551,6 +551,9 @@ sealed class AppHost : ApplicationContext
             case "delete":
                 if (projects.Get(Id()) is { } gone) projects.Delete(gone);
                 break;
+            case "clone":   // a copy of its windows, closed
+                if (projects.Get(Id()) is { } source) projects.Clone(source, Name());
+                break;
         }
         ProjectsChanged();
     }
@@ -592,7 +595,9 @@ sealed class AppHost : ApplicationContext
         var list = ids.Select(projects.Get).OfType<ProjectStore.Project>().ToList();
         if (list.Count == 0) return;
         var what = list.Count == 1 ? $"'{ProjectStore.Display(list[0])}'" : $"{list.Count} projects";
-        if (MessageBox.Show(owner, "An open one closes; folders and files are not touched.", $"Delete {what}?",
+        var names = list.Count == 1 ? "" : string.Join(Environment.NewLine, list.Select(p => "    " + ProjectStore.Display(p)))
+            + Environment.NewLine + Environment.NewLine;
+        if (MessageBox.Show(owner, names + "An open one closes; folders and files are not touched.", $"Delete {what}?",
                 MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
             return;
         CloseProjects(ids);

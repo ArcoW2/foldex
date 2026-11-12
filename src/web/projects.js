@@ -108,7 +108,7 @@ function rowHtml(p, ws) {
     `<span class="pv-date">${dateText(p.used, true)}</span></div>`;
   if (unfolded) {
     // Its window's panes as a tree: a root, then its children a step in.
-    html += `<div class="pv-details" data-id="${p.id}">` + (p.panes.length ? p.panes.map(pane =>
+    html += `<div class="pv-details${view.focus === p.id ? ' pv-focus' : ''}" data-id="${p.id}">` + (p.panes.length ? p.panes.map(pane =>
       `<div class="pv-pane" style="padding-left: ${pane.depth * 1.5}em">${escapeHtml(pane.name)}</div>`).join('') : '(no panes)') + '</div>';
   }
   return html;
@@ -133,6 +133,8 @@ function draw() {
     (sel.length ? `, ${sel.length} checked` : '');
   $('.pv-open').disabled = view.busy || !targets().length;
   $('.pv-close').disabled = view.busy || !targets().some(id => byId(id)?.open);
+  $('.pv-delete').disabled = view.busy || !targets().length;
+  $('.pv-clone').disabled = view.busy || targets().length !== 1;
   const input = view.el.querySelector('.pv-rename');
   if (input) { input.focus(); input.select(); }
 }
@@ -191,6 +193,14 @@ async function newProject() {
   const name = await askName('Name of the new project');
   if (name !== null) host('new', { name });
 }
+// A copy of one project (the one checked, or with none checked the one with the focus): its windows, closed.
+async function cloneProject() {
+  const ids = targets();
+  if (ids.length !== 1) return;
+  const p = byId(ids[0]);
+  const name = await askName(`Name of the copy of "${p.display}"`, `${p.display} (copy)`);
+  if (name !== null) busy(() => host('clone', { project: p.id, name }));
+}
 function startRename() {
   const id = view.focus ?? selected()[0];
   if (id === undefined || id === null) return;
@@ -207,13 +217,13 @@ function endRename(keep) {
 }
 
 // A name, or null for Cancel / Esc.
-function askName(title) {
+function askName(title, value = '') {
   const dialog = $('.pv-dialog'), input = $('.pv-dialog-input');
   $('.pv-dialog-label').textContent = title;
-  input.value = '';
+  input.value = value;
   dialog.returnValue = '';
   dialog.showModal();
-  input.focus();
+  input.select();
   return new Promise(resolve => dialog.addEventListener('close', () => {
     resolve(dialog.returnValue === 'ok' ? input.value.trim() : null);
     view.el.focus();
@@ -229,6 +239,7 @@ const MENUS = [
       { label: 'Open (Enter)', run: openProjects, enabled: targets().length > 0 },
       { label: 'Close', run: closeProjects, enabled: targets().some(id => byId(id)?.open) },
       { label: 'Rename (F2)', run: startRename, enabled: view.focus !== null || sel.length > 0 },
+      { label: 'Clone...', run: cloneProject, enabled: targets().length === 1 },
       '-',
       { label: 'Delete... (Del)', run: deleteProjects, enabled: targets().length > 0 },
     ];
@@ -303,6 +314,8 @@ for (const b of document.querySelectorAll('.pv-sort'))
 $('.pv-all').addEventListener('change', e => checkAll(e.target.checked));
 $('.pv-open').addEventListener('click', openProjects);
 $('.pv-close').addEventListener('click', closeProjects);
+$('.pv-delete').addEventListener('click', deleteProjects);
+$('.pv-clone').addEventListener('click', cloneProject);
 view.search.addEventListener('input', () => draw());
 
 // ---------- Keys ----------
