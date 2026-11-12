@@ -326,15 +326,6 @@ class TreeView {
       this.render();
     });
     this.body.addEventListener('mousedown', e => this.click(e));
-    this.body.addEventListener('dblclick', e => {
-      const n = this.nodeAt(e.target);
-      if (!n || e.target.classList.contains('twisty')) return;
-      if (n.folder === false) return execute(this.id, { id: n.id, folder: false });   // a file opens
-      // Opened in the tree itself as well as in its children; a child tree opens it only in itself (its parent stays).
-      if (this.folder) return this.expand(n, !n.expanded);
-      if (!n.expanded) this.expand(n);
-      execute(this.id, { id: n.id, folder: true });
-    });
     this.body.addEventListener('keydown', e => this.key(e));
     this.body.addEventListener('contextmenu', e => {
       e.preventDefault();
@@ -571,12 +562,23 @@ class TreeView {
     if (e.button !== 0) return;
     const n = this.nodeAt(e.target);
     if (!n) return;
+    // A double-click is the second press (its count): each press draws the rows anew, so the browser sends no dblclick.
+    if (e.detail === 2 && !e.target.classList.contains('twisty')) return this.open(n);
     if (!e.target.classList.contains('twisty')) return this.select(n.id);
     // The expander only opens or closes its folder; the focus stays, unless closing hides it: then the folder gets it.
     const focus = this.node(layout.state(this.id).focus);
     const inside = n.expanded && focus && focus !== n && this.contains(n, focus);
     this.expand(n, !n.expanded);
     if (inside) this.select(n.id);
+  }
+
+  // A double-click: a file opens; a folder opens (or closes) in the tree itself as well as in its children; a child
+  // tree opens it only in itself (its parent stays).
+  open(n) {
+    if (n.folder === false) return execute(this.id, { id: n.id, folder: false });
+    if (this.folder) return this.expand(n, !n.expanded);
+    if (!n.expanded) this.expand(n);
+    execute(this.id, { id: n.id, folder: true });
   }
 
   contains(n, m) {
