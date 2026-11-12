@@ -84,7 +84,7 @@ updated whenever a plan is written, built or closed that touches a feature here.
 |---|---|---|---|---|
 | Copy, move, delete, clipboard, drag and drop | All | built (IFileOperation, Explorer's formats) | 5 | -- |
 | Robust copy (queue, filters, overwrite rules, log) | P+ | -- | 4 | Wildcard filter; Hyperfilters (copy filters) |
-| Mass rename (regex, tokens, preview) | P+ | plan 01 3.3 (later) | 4 | -- |
+| Mass rename (regex, tokens, preview) | P+ | plan 21 | 4 | -- |
 | Split and merge files | P+ | -- | 4 | -- |
 | Comments and descdriptions | P+ | -- | 4 | Columns (to see them) |
 | Paths over 260 characters | P+ | [not yet checked] | 4 | -- |
