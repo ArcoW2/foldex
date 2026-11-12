@@ -1,6 +1,6 @@
 # Plan 06: Search and scrap: panes of items from anywhere
 
-Status: draft 2026-11-10, revised 2026-11-12 (three times); not started.
+Status: draft 2026-11-10, revised 2026-11-12 (four times); not started.
 
 - 2026-11-10: draft.
 - 2026-11-12: revised with the user's answers: Delete per pane kind, a scrap per project and not kept across a restart,
@@ -11,6 +11,8 @@ Status: draft 2026-11-10, revised 2026-11-12 (three times); not started.
   keeps its name, search and place across a restart, empty. Containing text and additional rules moved to plan 20.
 - 2026-11-12: revised: no archive content for now; Search again goes into the same scrap, with Clear the scrap first
   on.
+- 2026-11-12: revised: Named gets a regular expression option and a fuzzy match (nice to have); the keyboard
+  starts in Named, with Files and Folders before it and Containing text right after it.
 
 Builds on plan 03 (connected panes).
 
@@ -44,7 +46,7 @@ Nothing yet.
 |---|---|---|---|
 | Scrap pane | flat entries, the folder column, grouping, watched entries, missing ones dropped; no source or followers; name, rename, clear; docked; lifetime | -- | 3.1, 3.2 |
 | Filling a scrap | New scrap, drag, Add to scrap, paste; a folder as its own path | scrap pane | 3.2 |
-| Find dialog | Look in, subfolders, depth / breadth first, search index, Named, Files, Folders, Predefined and Save, clear, ok, cancel, the target scrap, Clear the scrap first | scrap pane | 3.3 |
+| Find dialog | Look in, subfolders, depth / breadth first, search index, Files, Folders, regular expression, fuzzy (nice to have), Named, Predefined and Save, clear, ok, cancel, the target scrap, Clear the scrap first | scrap pane | 3.3 |
 | Running a search | engines, streaming results, Stop, the scrap keeping its search, searching again, a search on a scrap | Find dialog | 3.4 |
 | File actions on a scrap | Delete, Alt+Delete, Alt+Shift+Delete, the scrap's Delete button | scrap pane | 3.5 |
 | Own menu for mixed folders | Foldex's own menu for items from different folders | scrap pane | 3.5 |
@@ -90,8 +92,10 @@ After xplorer2's "Find files or folders", without Special folders:
 | Search subfolders | On by default |
 | Go depth first / Breadth first | The order of Foldex's own walk |
 | Use search index | The Windows Search index where Look in is indexed |
-| Named | The name pattern; a list of earlier ones |
 | Files, Folders | What to find; both on by default |
+| Regular expression | Named is a regular expression instead of a pattern with `*` and `?` |
+| Fuzzy | A number up to 100 next to Named: how closely a name must match; 100 is an exact match (the default). Nice to have, only if simple (3.4); off while Regular expression is on |
+| Named | The name pattern; a list of earlier ones |
 | Predefined, Save | Saved searches by name, kept for all projects |
 | Into | At the bottom: New scrap, or one of the window's scraps by name (the results are added to it) |
 | Clear the scrap first | Next to Into: the chosen scrap emptied before the search. Off by default; on for Search again (3.4) |
@@ -99,7 +103,10 @@ After xplorer2's "Find files or folders", without Special folders:
 
 - Ctrl+F opens it (reserved for this since plan 10).
 - No Archived content (searching inside zip files and the like) for now.
-- The fields xplorer2 has for Local search and the number next to Named: open question 1.
+- **Keyboard**: when the dialog opens the keyboard is in Named, its text selected. Files, Folders, Regular expression
+  and Fuzzy come before Named in the Tab order (Shift+Tab reaches them); Tab from Named goes straight to Containing
+  text (plan 20), and until that is built to the field after it.
+- xplorer2's Local search: open question 1.
 - Containing text and Additional rules (size, attributes, date ranges): plan 20.
 
 ### 3.4 Running a search
@@ -111,6 +118,9 @@ After xplorer2's "Find files or folders", without Special folders:
 - **The scrap keeps its search** (Look in and every field) while it lives: Search again... opens the dialog with it, to
   change and run again. Into is that scrap and Clear the scrap first is on, so by default the new results replace
   the old; turned off, they are added.
+- **Fuzzy match**: a name passes when its similarity to Named is at least the number. Only Foldex's own test can do
+  that, so a fuzzy search gives up the engines' speed for the name. [The measure (edit distance or other) and
+  whether it stays simple: not yet checked; dropped from this plan if not.]
 - **Into an existing scrap**: the results are added to its entries; an entry already in it is not added twice. This
   searches outside the scrap; it is not a search inside its entries.
 - **A search on a scrap** (Look in is a scrap): only the scrap's own entries are tested, files and folders alike, a
@@ -147,7 +157,9 @@ After xplorer2's "Find files or folders", without Special folders:
 - Unit: entries following a move and a rename; an entry removed outside Foldex dropped; a dropped folder added as one
   entry; results added to an existing scrap without doubles; Delete taking out entries only; Clear; a search on a
   scrap testing only its entries; a docked scrap's name, search and place restored empty from a session.
-- In the test copy: Ctrl+F in a folder pane, Look in filled with its folder, a name searched, a new scrap filled; the
+- Unit: a regular expression name; a fuzzy match at a few numbers.
+- In the test copy: Ctrl+F in a folder pane, Look in filled with its folder, the keyboard in Named, Shift+Tab to
+  Folders, Tab past Named, a name searched, a new scrap filled; the
   same search into that scrap from another folder, results added; Search again with a changed name (Into that scrap, cleared first), and once with Clear off; a search on the
   scrap into a new scrap; a new empty scrap docked, filled by dragging from three folders, copied into one, conflicts
   asked by Windows; Delete leaves the files on disk; Alt+Delete and the Delete button move them to the recycle bin;
@@ -156,5 +168,4 @@ After xplorer2's "Find files or folders", without Special folders:
 
 ## 4. Open questions
 
-1. **xplorer2's other fields.** Local search, and the number next to Named (100 in your example): wanted in Foldex,
-   and what is the number for (a limit on the results)?
+1. **Local search.** xplorer2's Local search box: wanted in Foldex? [What xplorer2 does with it: not yet checked.]

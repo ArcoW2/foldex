@@ -36,6 +36,7 @@ Nothing yet.
 
 ### 3.1 Containing text
 
+- In the Tab order right after Named (plan 06 3.3), before its own options.
 - The text, with a list of earlier ones; Case sensitive, Whole words, a regular expression (xplorer2's "RE").
 - Searched by LexPen's `FolderSearch.cs` (its text check, skipping binary files and files over its size limit), on the
   files that pass the name and the rules; folders never match a text.
