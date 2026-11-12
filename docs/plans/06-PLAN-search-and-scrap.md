@@ -1,6 +1,6 @@
 # Plan 06: Search and scrap: panes of items from anywhere
 
-Status: draft 2026-11-10, revised 2026-11-12 (five times); not started.
+Status: draft 2026-11-10, revised 2026-11-12 (six times); not started.
 
 - 2026-11-10: draft.
 - 2026-11-12: revised with the user's answers: Delete per pane kind, a scrap per project and not kept across a restart,
@@ -14,6 +14,8 @@ Status: draft 2026-11-10, revised 2026-11-12 (five times); not started.
 - 2026-11-12: revised: Named gets a regular expression option and a fuzzy match (nice to have); the keyboard
   starts in Named, with Files and Folders before it and Containing text right after it.
 - 2026-11-12: revised: no Local search.
+- 2026-11-12: revised: a scrap can be a parent (a folder focused in it shows in its child), built in this plan when
+  small; a scrap's pane is marked by a dashed ring instead of a solid one.
 
 Builds on plan 03 (connected panes).
 
@@ -26,8 +28,8 @@ somewhere first.
 
 ## 2. The solution, in brief
 
-A scrap is a pane holding a flat list of files and folders from anywhere. It stands alone (no source, no followers),
-has a name, can be opened empty, filled by dragging and pasting, renamed, cleared and docked anywhere. A search is a
+A scrap is a pane holding a flat list of files and folders from anywhere. It has no source, but can be a parent: a
+folder focused in it shows in its child pane. Its ring is dashed, so it never passes for a folder pane. It has a name, can be opened empty, filled by dragging and pasting, renamed, cleared and docked anywhere. A search is a
 Find dialog (after xplorer2's) whose results always fill a scrap: a new one, or an existing one chosen at the bottom
 of the dialog, which can be cleared first. A scrap keeps its search while it lives, to change and run again into
 the same scrap (cleared first by default); a search started on a scrap searches
@@ -45,7 +47,8 @@ Nothing yet.
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| Scrap pane | flat entries, the folder column, grouping, watched entries, missing ones dropped; no source or followers; name, rename, clear; docked; lifetime | -- | 3.1, 3.2 |
+| Scrap pane | flat entries, the folder column, grouping, watched entries, missing ones dropped; no source; the dashed ring; name, rename, clear; docked; lifetime | -- | 3.1, 3.2 |
+| Scrap as a parent | a folder focused in a scrap shows in its child; built here when small, else moved to a plan of its own | scrap pane | 3.1 |
 | Filling a scrap | New scrap, drag, Add to scrap, paste; a folder as its own path | scrap pane | 3.2 |
 | Find dialog | Look in, subfolders, depth / breadth first, search index, Files, Folders, regular expression, fuzzy (nice to have), Named, Predefined and Save, clear, ok, cancel, the target scrap, Clear the scrap first | scrap pane | 3.3 |
 | Running a search | engines, streaming results, Stop, the scrap keeping its search, searching again, a search on a scrap | Find dialog | 3.4 |
@@ -66,8 +69,14 @@ follows xplorer2's, as the user gave it, in Foldex's own dialog look.
 - A flat list: a folder in it is one entry, its own path, not its contents; there is no tree.
 - Entries are watched: renamed or moved by Foldex, the entry follows; removed outside Foldex, the entry is dropped at
   once.
-- No source and no followers: it cannot be connected as parent or child, and focusing an item in it drives nothing.
-  So no branches.
+- No source: a scrap is never a child.
+- **A parent**: a scrap can have followers as any parent (plan 03): a folder focused in it shows its contents in a
+  child pane, with branches as any parent. Following goes through `layout.follow` with the focused path and whether
+  it is a folder (`app.js`), which a scrap entry has too, so this looks small [not yet checked by building it]. Built
+  in this plan when it is; else it moves to a plan of its own and the scrap stays without followers until then.
+- **Marked as a scrap**: only the pane with the keyboard has a ring now (`app.css`, `.pane.active::after`: a solid
+  2px border in its colour). A scrap always has one, dashed: dimmed while another pane has the keyboard, the full
+  2px in its colour while it has it. So a scrap never passes for a folder pane, active or not.
 - Every scrap has a name: "Scrap N" for one opened empty, the searched name for one a search made. Rename... and
   Clear (all entries out, nothing on disk changes) are on its menu.
 - More than one scrap at a time, each with its own name and colour.
@@ -154,11 +163,13 @@ After xplorer2's "Find files or folders", without Special folders and Local sear
 
 ### 3.6 Tests
 
-- Unit: entries following a move and a rename; an entry removed outside Foldex dropped; a dropped folder added as one
+- Unit: a folder focused in a scrap followed by its child;
+  entries following a move and a rename; an entry removed outside Foldex dropped; a dropped folder added as one
   entry; results added to an existing scrap without doubles; Delete taking out entries only; Clear; a search on a
   scrap testing only its entries; a docked scrap's name, search and place restored empty from a session.
 - Unit: a regular expression name; a fuzzy match at a few numbers.
-- In the test copy: Ctrl+F in a folder pane, Look in filled with its folder, the keyboard in Named, Shift+Tab to
+- In the test copy: a scrap's dashed ring, with and without the keyboard; a folder focused in a scrap shown in its
+  child. Ctrl+F in a folder pane, Look in filled with its folder, the keyboard in Named, Shift+Tab to
   Folders, Tab past Named, a name searched, a new scrap filled; the
   same search into that scrap from another folder, results added; Search again with a changed name (Into that scrap, cleared first), and once with Clear off; a search on the
   scrap into a new scrap; a new empty scrap docked, filled by dragging from three folders, copied into one, conflicts
