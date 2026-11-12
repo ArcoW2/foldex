@@ -589,17 +589,11 @@ sealed class AppHost : ApplicationContext
                 w.Close();
     }
 
-    /// <summary>Deletes the projects after asking; their open windows close first.</summary>
-    public void DeleteProjects(IWin32Window owner, List<int> ids)
+    /// <summary>Deletes the projects (the page asked first); their open windows close first.</summary>
+    public void DeleteProjects(List<int> ids)
     {
         var list = ids.Select(projects.Get).OfType<ProjectStore.Project>().ToList();
         if (list.Count == 0) return;
-        var what = list.Count == 1 ? $"'{ProjectStore.Display(list[0])}'" : $"{list.Count} projects";
-        var names = list.Count == 1 ? "" : string.Join(Environment.NewLine, list.Select(p => "    " + ProjectStore.Display(p)))
-            + Environment.NewLine + Environment.NewLine;
-        if (MessageBox.Show(owner, names + "An open one closes; folders and files are not touched.", $"Delete {what}?",
-                MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
-            return;
         CloseProjects(ids);
         foreach (var p in list)
             if (projects.Get(p.Id) is { } still) projects.Delete(still);

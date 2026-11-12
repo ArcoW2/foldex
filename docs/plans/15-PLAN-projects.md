@@ -173,7 +173,8 @@ kept. From top to bottom: a menu bar, a search box, the list, the buttons.
   - Close: closes their windows, as by hand. Nothing is unsaved in Foldex, so it does not ask.
   - Clone: one project (the one checked, or with none checked the one with the focus): asks a name ("<name>
     (copy)" filled in) and makes a closed project with a copy of its windows (layouts, places, sizes).
-  - Delete: asks first ("Delete 3 projects?", the names, "An open one closes; folders and files are not touched.").
+  - Delete: asks first, in the window's own dialog ("Delete 3 projects?", the names, "An open one closes; folders and
+    files are not touched.").
 - View menu: Sort by name / created / last used, Reverse order, Unfold all / selected, Fold all / selected.
 - Buttons: Open selected, Close selected, Clone..., Delete....
 - The list follows changes made elsewhere while it is open.
@@ -297,3 +298,6 @@ None.
   Test copy over CDP: the submenu's items in order; the buttons (screenshot of the focus background on an unfolded
   row); Clone of the focused row with the name filled in, and with a name typed; Clone off with two checked; Delete
   of the clones: the question listed their names (read with `WM_GETTEXT`), OK removed them.
+- The Delete question then moved from a Windows message box into the page's own dialog (the one that asks names), the
+  host deleting without asking. Test copy: "Delete 2 projects?" with both names and the line under them, no text box
+  (screenshot); OK removed them.

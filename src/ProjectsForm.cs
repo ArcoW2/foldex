@@ -115,7 +115,7 @@ sealed class ProjectsForm : Form
                 app.CloseProjects(Ids(msg));
                 return true;
             case "delete":
-                app.DeleteProjects(this, Ids(msg));
+                app.DeleteProjects(Ids(msg));
                 return true;
             case "setting":
                 AppHost.SetQuietly(msg["name"]!.GetValue<string>(), msg["value"]?.DeepClone());

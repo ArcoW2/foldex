@@ -37,6 +37,9 @@
 .pv-pane { padding: 1px 4px; overflow-wrap: anywhere; }
 .pv-pane b { color: var(--fg); font-weight: 600; }
 .pv-mark { background: color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 2px; }
+.pv-dialog-text { max-height: 50vh; overflow: auto; color: var(--fg-dim); }
+.pv-dialog-text div:not(:last-child) { padding-left: 1.5em; color: var(--fg); }
+.pv-dialog-text div:last-child:not(:first-child) { margin-top: .6em; }
 .pv-empty { padding: 14px 10px; color: var(--fg-dim); }
 .pv-bottom { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-top: 1px solid var(--border); background: var(--bg-bar); }
 .pv-count { flex: 1; color: var(--fg-dim); }

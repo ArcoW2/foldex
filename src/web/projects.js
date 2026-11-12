@@ -188,7 +188,15 @@ async function busy(work) {
 }
 const openProjects = () => { const ids = targets(); if (ids.length) host('open', { projects: ids }); };
 const closeProjects = () => { const ids = targets().filter(id => byId(id)?.open); if (ids.length) busy(() => host('close', { projects: ids })); };
-const deleteProjects = () => { const ids = targets(); if (ids.length) busy(() => host('delete', { projects: ids })); };
+// Asks first, in the window's own dialog: the projects by name.
+async function deleteProjects() {
+  const ids = targets();
+  if (!ids.length) return;
+  const names = ids.map(id => byId(id).display);
+  const title = ids.length === 1 ? `Delete "${names[0]}"?` : `Delete ${ids.length} projects?`;
+  const text = [...(ids.length > 1 ? names : []), 'An open one closes; folders and files are not touched.'];
+  if (await askYes(title, text)) busy(() => host('delete', { projects: ids }));
+}
 async function newProject() {
   const name = await askName('Name of the new project');
   if (name !== null) host('new', { name });
@@ -218,12 +226,22 @@ function endRename(keep) {
 
 // A name, or null for Cancel / Esc.
 function askName(title, value = '') {
-  const dialog = $('.pv-dialog'), input = $('.pv-dialog-input');
+  return ask(title, value, []);
+}
+// True for OK; `lines` under the title.
+async function askYes(title, lines) {
+  return (await ask(title, null, lines)) !== null;
+}
+function ask(title, value, lines) {
+  const dialog = $('.pv-dialog'), input = $('.pv-dialog-input'), text = $('.pv-dialog-text');
   $('.pv-dialog-label').textContent = title;
-  input.value = value;
+  text.replaceChildren(...lines.map(line => Object.assign(document.createElement('div'), { textContent: line })));
+  text.hidden = !lines.length;
+  input.hidden = value === null;
+  input.value = value ?? '';
   dialog.returnValue = '';
   dialog.showModal();
-  input.select();
+  if (value === null) dialog.querySelector('button[value=ok]').focus(); else input.select();
   return new Promise(resolve => dialog.addEventListener('close', () => {
     resolve(dialog.returnValue === 'ok' ? input.value.trim() : null);
     view.el.focus();
