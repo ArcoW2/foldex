@@ -28,6 +28,7 @@ function applyLook(settings, themes) {
   const barSize = (v, fallback) => `${Math.min(30, Math.max(4, Number(v) || fallback))}px`;
   root.style.setProperty('--scrollbar-w', barSize(settings.scrollbarWidth, 12));
   root.style.setProperty('--scrollbar-h', barSize(settings.scrollbarHeight, 12));
+  root.dataset.scrollbars = settings.scrollbarsSlim === false ? 'full' : 'slim';
   root.style.setProperty('--tree-line-mix', `${Math.min(100, Math.max(1, Number(settings.treeLinesIntensity) || 55))}%`);
   // Rows with stripes or lines (plan 11 3.5): the text colour mixed in at rowLinesIntensity %.
   root.dataset.rowLines = ['stripes', 'lines'].includes(settings.rowLines) ? settings.rowLines : 'none';

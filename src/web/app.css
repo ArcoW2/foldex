@@ -1687,3 +1687,23 @@ dialog.rename-many select.rn-tokens { flex: none; width: 10em; }
 ::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--branch, var(--fg-dim)) 85%, var(--fg)) padding-box; }
 ::-webkit-scrollbar-thumb:active { background: color-mix(in srgb, var(--branch, var(--fg-dim)) 70%, var(--fg)) padding-box; }
 ::-webkit-scrollbar-corner { background: color-mix(in srgb, var(--fg) 6%, var(--bg)); }
+
+/* Slim (the setting scrollbarsSlim, on the root as data-scrollbars): while the mouse is not over the scrolling part and
+   it does not have the focus (app.js puts .bars-full on it when it does), the bar keeps its room (nothing moves) but
+   is drawn slim: the track's background on its
+   far half, the handle a line of 2 px in the middle of that half. html, not :root: Chromium does not match :root
+   with the scrollbar pseudo-classes :vertical and :horizontal. */
+html[data-scrollbars="slim"] :not(.bars-full)::-webkit-scrollbar-track:vertical {
+  background: linear-gradient(to right, transparent 50%, color-mix(in srgb, var(--fg) 6%, var(--bg)) 50%);
+}
+html[data-scrollbars="slim"] :not(.bars-full)::-webkit-scrollbar-track:horizontal {
+  background: linear-gradient(to bottom, transparent 50%, color-mix(in srgb, var(--fg) 6%, var(--bg)) 50%);
+}
+html[data-scrollbars="slim"] :not(.bars-full)::-webkit-scrollbar-thumb:vertical {
+  border-width: 0 calc(var(--scrollbar-w, 12px) / 4 - 1px) 0 calc(var(--scrollbar-w, 12px) * 3 / 4 - 1px);
+  border-radius: 0;
+}
+html[data-scrollbars="slim"] :not(.bars-full)::-webkit-scrollbar-thumb:horizontal {
+  border-width: calc(var(--scrollbar-h, 12px) * 3 / 4 - 1px) 0 calc(var(--scrollbar-h, 12px) / 4 - 1px) 0;
+  border-radius: 0;
+}
