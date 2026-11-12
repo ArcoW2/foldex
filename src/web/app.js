@@ -73,10 +73,10 @@ function status(text, warn = false) {
 
 const same = (a, b) => a != null && b != null && a.toLowerCase() === b.toLowerCase();
 
-// Scrollbars drawn full (app.css; the setting scrollbarsSlim): the scrolling elements under the mouse and those holding
-// the focus get .bars-full. A class, not :hover in the stylesheet: Chromium repaints a scrollbar when its element's
-// class changes, not when only its :hover does.
-let barsHover = [], barsFocus = [];
+// Scrollbars drawn full (app.css; the setting scrollbarsSlim): the scrolling elements under the mouse get .bars-full
+// (the focused pane too is slim while the mouse is elsewhere). A class, not :hover in the stylesheet: Chromium repaints
+// a scrollbar when its element's class changes, not when only its :hover does.
+let barsHover = [];
 const barsChain = el => {
   const chain = [];
   for (let e = el; e instanceof Element && e !== document.documentElement; e = e.parentElement)
@@ -84,14 +84,12 @@ const barsChain = el => {
   return chain;
 };
 function barsUpdate() {
-  const want = new Set([...barsHover, ...barsFocus]);
+  const want = new Set(barsHover);
   for (const e of document.querySelectorAll('.bars-full')) if (!want.has(e)) e.classList.remove('bars-full');
   for (const e of want) e.classList.add('bars-full');
 }
 document.addEventListener('mouseover', e => { barsHover = barsChain(e.target); barsUpdate(); }, true);
 document.addEventListener('mouseout', e => { if (!e.relatedTarget) { barsHover = []; barsUpdate(); } }, true);
-document.addEventListener('focusin', e => { barsFocus = barsChain(e.target); barsUpdate(); }, true);
-document.addEventListener('focusout', e => { if (!e.relatedTarget) { barsFocus = []; barsUpdate(); } }, true);
 
 // ---------- Icons: the system's, asked once per index ----------
 

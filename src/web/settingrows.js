@@ -70,7 +70,7 @@ const SETTING_ROWS = [
   { tab: 'Contents', group: 'Items', name: 'renameCompanions', kind: 'toggle', title: 'Rename companion files',
     hint: 'Renaming photo.jpg to beach.jpg also renames photo.xmp and photo.raw beside it (highlighted while you type the name). Shift+Enter does the other.' },
   { tab: 'Panes', group: 'Scrollbars', name: 'scrollbarsSlim', kind: 'toggle', title: 'Slim until used',
-    hint: 'On: a scrollbar is drawn slim (half its track, the handle a thin line) until the mouse is over its pane or the pane has the focus. Off: always full.' },
+    hint: 'On: a scrollbar is drawn slim (half its track, the handle a thin line) until the mouse is over its pane (the focused pane too). Off: always full.' },
   { tab: 'Panes', group: 'Scrollbars', name: 'scrollbarWidth', kind: 'range', range: [4, 30, 1], unit: 'px', title: 'Vertical scrollbar width',
     hint: 'The bar at the right of a pane (and of every list in Foldex), in the colours of the pane.' },
   { tab: 'Panes', group: 'Scrollbars', name: 'scrollbarHeight', kind: 'range', range: [4, 30, 1], unit: 'px', title: 'Horizontal scrollbar height',

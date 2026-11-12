@@ -1695,8 +1695,8 @@ dialog.rename-many select.rn-tokens { flex: none; width: 10em; }
 ::-webkit-scrollbar-thumb:active { background: color-mix(in srgb, var(--branch, var(--fg-dim)) 70%, var(--fg)) padding-box; }
 ::-webkit-scrollbar-corner { background: color-mix(in srgb, var(--fg) 6%, var(--bg)); }
 
-/* Slim (the setting scrollbarsSlim, on the root as data-scrollbars): while the mouse is not over the scrolling part and
-   it does not have the focus (app.js puts .bars-full on it when it does), the bar keeps its room (nothing moves) but
+/* Slim (the setting scrollbarsSlim, on the root as data-scrollbars): while the mouse is not over the scrolling part
+   (app.js puts .bars-full on it when it is), the bar keeps its room (nothing moves) but
    is drawn slim: the track's background on its
    far half, the handle a line of 2 px in the middle of that half. html, not :root: Chromium does not match :root
    with the scrollbar pseudo-classes :vertical and :horizontal. */
