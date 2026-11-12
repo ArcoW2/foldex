@@ -141,10 +141,18 @@ function visibleRange(body, count) {
   return [first, last];
 }
 
+// The rows kept in view above and below the cursor (the setting scrollMargin), so scrolling starts before the cursor
+// reaches the edge: 1 starts it at the second row from the edge. Never more than fits: in a low pane at most as many as
+// leave the cursor in the middle.
+function scrollMargin(rows) {
+  return Math.max(0, Math.min(Math.floor((rows - 1) / 2), Math.round(Number(settings.scrollMargin) || 0)));
+}
+
 function scrollIntoView(body, index) {
-  const top = index * RowHeight;
-  if (top < body.scrollTop) body.scrollTop = top;
-  else if (top + RowHeight > body.scrollTop + body.clientHeight) body.scrollTop = top + RowHeight - body.clientHeight;
+  const margin = scrollMargin(Math.floor(body.clientHeight / RowHeight));
+  const top = (index - margin) * RowHeight, bottom = (index + 1 + margin) * RowHeight;
+  if (top < body.scrollTop) body.scrollTop = Math.max(0, top);
+  else if (bottom > body.scrollTop + body.clientHeight) body.scrollTop = bottom - body.clientHeight;
 }
 
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
@@ -975,9 +983,10 @@ class ListView {
   // An item in view: its row of tiles, or its row.
   scrollTo(index) {
     if (!this.iconsView()) return scrollIntoView(this.body, index);
-    const { height, perRow } = this.tile(), top = Math.floor(index / perRow) * height;
-    if (top < this.body.scrollTop) this.body.scrollTop = top;
-    else if (top + height > this.body.scrollTop + this.body.clientHeight) this.body.scrollTop = top + height - this.body.clientHeight;
+    const { height, perRow } = this.tile(), margin = scrollMargin(Math.floor(this.body.clientHeight / height));
+    const row = Math.floor(index / perRow), top = (row - margin) * height, bottom = (row + 1 + margin) * height;
+    if (top < this.body.scrollTop) this.body.scrollTop = Math.max(0, top);
+    else if (bottom > this.body.scrollTop + this.body.clientHeight) this.body.scrollTop = bottom - this.body.clientHeight;
   }
 
   renderIcons() {
