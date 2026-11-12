@@ -145,10 +145,11 @@ function showProgress() {
   const slow = [...listeners.values()].filter(l => now - l.sent > ProgressAfter);
   $('progress').hidden = !slow.length;
   if (!slow.length) return;
+  $('progress').style.left = `${$('status').offsetLeft}px`;   // over the status text, after the project
   const counted = slow.every(l => l.total);
   const total = slow.reduce((a, l) => a + (l.total ?? 0), 0), got = slow.reduce((a, l) => a + l.got, 0);
   $('progress').classList.toggle('counted', counted);
-  $('progress').firstElementChild.style.width = counted ? `${Math.min(100, total ? got / total * 100 : 0)}%` : '';
+  $('progress').querySelector('.track > div').style.width = counted ? `${Math.min(100, total ? got / total * 100 : 0)}%` : '';
 }
 
 // A pane's own view settings (plan 03 3.1). Hidden items: its own choice, else the setting showHidden. A filter:

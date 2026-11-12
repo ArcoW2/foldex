@@ -1195,6 +1195,7 @@ footer {
 
 /* The window's project at the left (projectmenu.js; a click: the Projects menu), then the status text. */
 #statusline {
+  position: relative;
   display: flex;
   align-items: baseline;
   gap: 10px;
@@ -1262,34 +1263,42 @@ dialog.ask form {
   color: var(--warning);
 }
 
-/* The progress bar (app.js showProgress): filling up in the accent colour, or without a count a piece of it going from
-   left to right. */
+/* The progress bar (app.js showProgress): over the status line from where the status text starts to its end, the text
+   hidden while it runs; filling up in the accent colour, or without a count a piece of it going from left to right. */
 #progress {
-  flex: none;
-  align-self: center;
-  position: relative;
-  width: 320px;
-  height: 6px;
-  overflow: hidden;
-  border-radius: 3px;
-  background: color-mix(in srgb, var(--fg) 12%, transparent);
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  background: var(--bg);
 }
 
 #progress[hidden] {
   display: none;
 }
 
-#progress > div {
+#progress .track {
+  position: relative;
+  flex: 1;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--fg) 12%, transparent);
+}
+
+#progress .track > div {
   position: absolute;
   top: 0;
   bottom: 0;
   width: 35%;
-  border-radius: 3px;
+  border-radius: 4px;
   background: var(--accent);
   animation: progress-run 1.2s ease-in-out infinite;
 }
 
-#progress.counted > div {
+#progress.counted .track > div {
   left: 0;
   animation: none;
   transition: width .15s linear;
