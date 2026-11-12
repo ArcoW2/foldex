@@ -129,8 +129,8 @@ function toggleIn(name, list, value) {
   for (const v of views.values()) if (v.thumbsView?.()) v.render();
 }
 
-// The Views menu (the ribbon's Views, as xplorer2's; one plain menu): details or icons, the thumbnail layouts, and for
-// thumbnails the size, names, information and icons; a dimmed line heads each group.
+// The Views menu (the ribbon's Views, as xplorer2's): details or icons, the thumbnail layouts, and for thumbnails the
+// size and names; a dimmed line heads each group; the information and the icons in a submenu each.
 function viewsMenu(id) {
   const pane = layout.pane(id);
   const on = pane.view === 'thumbs';
@@ -156,12 +156,9 @@ function viewsMenu(id) {
       views.get(id)?.render();
       tellLayout();
     } },
-    '-',
-    heading('Information (details, cards)'),
-    ...ThumbInfoChoices.map(([prop, label]) => ({ label, checked: thumbInfo().includes(prop), run: () => toggleIn('thumbInfo', thumbInfo(), prop) })),
-    '-',
-    heading('Icons on images'),
-    ...[['gps', 'GPS location'], ['raw', 'RAW']].map(([icon, label]) => ({ label, checked: thumbIcons().includes(icon),
-      run: () => toggleIn('thumbIcons', thumbIcons(), icon) })),
+    { label: 'Information (details, cards)', items: ThumbInfoChoices.map(([prop, label]) => ({ label, checked: thumbInfo().includes(prop),
+      run: () => toggleIn('thumbInfo', thumbInfo(), prop) })) },
+    { label: 'Icons on images', items: [['gps', 'GPS location'], ['raw', 'RAW']].map(([icon, label]) => ({ label, checked: thumbIcons().includes(icon),
+      run: () => toggleIn('thumbIcons', thumbIcons(), icon) })) },
   ];
 }
