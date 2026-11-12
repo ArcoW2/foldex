@@ -118,6 +118,12 @@ function highlightShares(settings) {
 
 function applyHighlights(settings) {
   const root = document.documentElement.style;
+  // The text of the columns after the name (sortColumnIntensity for the one the pane is sorted on, otherColumnsIntensity
+  // for the rest), 0 to 200 %: 100 the theme's dim text, lower toward the background, higher toward the full text.
+  for (const [name, variable, otherwise] of [['otherColumnsIntensity', '--column-text', 100], ['sortColumnIntensity', '--sort-column-text', 150]]) {
+    const p = between(Number(settings[name]), 0, 200, otherwise);
+    root.setProperty(variable, p <= 100 ? `color-mix(in srgb, var(--fg-dim) ${p}%, var(--bg))` : `color-mix(in srgb, var(--fg) ${p - 100}%, var(--fg-dim))`);
+  }
   for (const [kind, { keep, up }] of Object.entries(highlightShares(settings))) {
     root.setProperty(`--${kind}-keep`, `${keep}%`);
     root.setProperty(`--${kind}-up`, `${up}%`);

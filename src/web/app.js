@@ -530,7 +530,8 @@ class TreeView {
       row.dataset.index = i;
       cols.forEach((c, k) => {
         const cell = document.createElement('span');
-        cell.className = k === 0 ? 'cell first' : 'cell' + (RightAligned.has(c.kind) ? ' right' : '') + (c.id === 'git' && n.git ? ` git-${n.git === '!' ? 'conflict' : n.git}` : '');
+        cell.className = k === 0 ? 'cell first' : 'cell' + (RightAligned.has(c.kind) ? ' right' : '') + (c.id === 'git' && n.git ? ` git-${n.git === '!' ? 'conflict' : n.git}` : '')
+          + (c.id === this.cols.sort?.id ? ' sorted' : '');
         cell.style.width = `${c.width}px`;
         if (k > 0) cell.textContent = columnText(n, c.id);
         else {
@@ -1174,7 +1175,8 @@ class ListView {
       row.draggable = true;
       cols.forEach((c, k) => {
         const cell = document.createElement('span');
-        cell.className = k === 0 ? 'cell first' : 'cell' + (RightAligned.has(c.kind) ? ' right' : '') + (c.id === 'git' && x.git ? ` git-${x.git === '!' ? 'conflict' : x.git}` : '');
+        cell.className = k === 0 ? 'cell first' : 'cell' + (RightAligned.has(c.kind) ? ' right' : '') + (c.id === 'git' && x.git ? ` git-${x.git === '!' ? 'conflict' : x.git}` : '')
+          + (c.id === this.cols.sort?.id ? ' sorted' : '');
         cell.style.width = `${c.width}px`;
         if (k === 0) {
           const name = document.createElement('span');

@@ -10,7 +10,7 @@
 const SETTING_TABS = [
   ['App', ['Theme', 'Fonts']],
   ['Panes', ['Colours', 'Behaviour']],
-  ['Contents', ['Rows', 'Highlights', 'Trees', 'Items']],
+  ['Contents', ['Rows', 'Columns', 'Highlights', 'Trees', 'Items']],
   ['Search and scrap', ['Search bar']],
 ];
 
@@ -47,6 +47,10 @@ const SETTING_ROWS = [
     hint: 'How long the cursor rests in a pane before its children follow it: a quick walk with the arrows loads nothing on the way.' },
   { tab: 'Search and scrap', group: 'Search bar', name: 'searchDelay', kind: 'range', range: [100, 2000, 50], unit: 'ms', title: 'Typing delay',
     hint: 'How long after typing in a pane it acts: more than 3 characters filter the pane (in the search bar), fewer go to the first item starting with them.' },
+  { tab: 'Contents', group: 'Columns', name: 'sortColumnIntensity', kind: 'range', range: [0, 200, 5], unit: '%', title: 'Sort column',
+    hint: "The text of the column the pane is sorted on: 100% the theme's grey, lower fainter, higher brighter (200% as bright as the name)." },
+  { tab: 'Contents', group: 'Columns', name: 'otherColumnsIntensity', kind: 'range', range: [0, 200, 5], unit: '%', title: 'Other columns',
+    hint: 'The text of the other columns after the name, the same way.' },
   { tab: 'Contents', group: 'Highlights', name: 'focusIntensity', kind: 'range', range: [0, 200, 5], unit: '%', title: 'Focused item',
     hint: 'The highlight of the item the cursor is on: 100% the theme colour, lower fainter, higher stronger. The text turns over where it would no longer stand out.' },
   { tab: 'Contents', group: 'Highlights', name: 'selectIntensity', kind: 'range', range: [0, 200, 5], unit: '%', title: 'Selected items',

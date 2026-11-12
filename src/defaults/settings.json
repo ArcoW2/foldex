@@ -28,6 +28,8 @@
   "treeLines": "dotted",          // a tree's lines: "dotted", "solid" or "none"
   "followDelay": 150,              // ms the cursor rests in a pane before its children follow it, 0 to 1000
   "searchDelay": 600,              // ms after typing in a pane before it filters (more than 3 characters) or jumps, 100 to 2000
+  "sortColumnIntensity": 150,     // the text of the column the pane is sorted on, 0 to 200 %: 100 the theme's dim text, 200 the full text
+  "otherColumnsIntensity": 100,   // the text of the other columns after the name, the same way
   "focusIntensity": 100,          // the focused item's highlight, 0 to 200 %: 100 the theme's, lower fainter, higher stronger
   "selectIntensity": 100,         // the other selected items' highlight, the same way
   "hoverIntensity": 100,          // the highlight under the mouse, the same way

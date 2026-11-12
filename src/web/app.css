@@ -1055,7 +1055,11 @@ body[data-focus-away] :is(.row, .tile).selected.focused {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--fg-dim);
+  color: var(--column-text, var(--fg-dim));   /* the settings otherColumnsIntensity, sortColumnIntensity (look.js) */
+}
+
+.row .cell.sorted {
+  color: var(--sort-column-text, var(--fg-dim));
 }
 
 .row .cell.first {
