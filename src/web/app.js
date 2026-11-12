@@ -603,11 +603,11 @@ class TreeView {
   // The search text changed (search.js): its files again.
   searchChanged() { this.flatten(); }
 
-  // Typed (search.js): the first row from the focus on (then from the top) starting with it.
-  goToStart(text) {
+  // Typed (search.js): the first row from the focus on (then from the top) whose name passes the test.
+  goToMatch(test) {
     const at = Math.max(0, this.flat.indexOf(this.node(layout.state(this.id).focus)));
     const rows = [...this.flat.slice(at), ...this.flat.slice(0, at)];
-    const n = rows.find(x => x.name.toLowerCase().startsWith(text));
+    const n = rows.find(x => test(x.name));
     if (n) this.select(n.id);
   }
 
@@ -1047,11 +1047,11 @@ class ListView {
     if (paneSearch.has(this.id)) status(`${this.entries.length} of ${this.all.length} items`);
   }
 
-  // Typed (search.js): the first item from the focus on (then from the top) starting with it.
-  goToStart(text) {
+  // Typed (search.js): the first item from the focus on (then from the top) whose name passes the test.
+  goToMatch(test) {
     const at = Math.max(0, this.entries.findIndex(x => same(x.id, layout.state(this.id).focus)));
     const rows = [...this.entries.slice(at), ...this.entries.slice(0, at)];
-    const x = rows.find(y => y.name.toLowerCase().startsWith(text));
+    const x = rows.find(y => test(y.name));
     if (x) this.select(x, { shiftKey: false, ctrlKey: false });
   }
 

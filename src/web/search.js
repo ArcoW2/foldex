@@ -2,8 +2,8 @@
 // The search bar (a bar of bars.js) and typing in a pane. A pane's search text filters what it shows: in a list the
 // files and folders whose name contains it, in a tree those and the folders leading to them. Each pane has
 // its own, kept until the text changes (emptied too); the bar shows the active pane's.
-// Typing in a pane is a go-to: each key at once takes the pane to the first item starting with what was typed, and the
-// bar shows the text. Once typing rests (the setting searchDelay) with more than 3 characters, the text becomes the
+// Typing in a pane is a go-to: each key at once takes the pane to the first item starting with what was typed (with a
+// leading *: containing the rest), and the bar shows the text. Once typing rests (the setting searchDelay) with more than 3 characters, the text becomes the
 // filter and the keyboard goes to the bar; with fewer the text clears a second after the last key. In the bar the text
 // is always the filter, each change at once; its X clears it; Esc clears it and goes back to the pane, Enter and Down
 // go back to the pane. Ctrl+Shift+F (search.focus) goes to the bar. Without a search bar typing is only the go-to.
@@ -16,10 +16,17 @@ const SearchFilterFrom = 4;     // characters typed before they filter (more tha
 
 const searchDelay = () => Math.min(2000, Math.max(100, Number(settings.searchDelay ?? 600) || 600));
 
-// The pane's search test (app.js uses it with its filter).
+// The pane's search test (app.js uses it with its filter): the name contains the text (a leading * changes nothing).
 function searchTest(id) {
-  const text = (paneSearch.get(id) ?? '').toLowerCase();
+  const text = (paneSearch.get(id) ?? '').replace(/^\*+/, '').toLowerCase();
   return text ? x => x.name.toLowerCase().includes(text) : () => true;
+}
+
+// The go-to's test for what was typed: the name starts with it; with a leading *, contains the rest (null: * alone).
+function typedTest(typed) {
+  const text = typed.toLowerCase(), rest = text.replace(/^\*+/, '');
+  if (rest === text) return name => name.toLowerCase().startsWith(text);
+  return rest ? name => name.toLowerCase().includes(rest) : null;
 }
 
 const searchBoxes = () => [...document.querySelectorAll('.bar-search input')];
@@ -59,7 +66,8 @@ function typeInPane(view, e) {
   clearTimeout(typing.timer);
   typing.text += e.key;
   showSearch(typing.text);
-  view.goToStart?.(typing.text.toLowerCase());
+  const test = typedTest(typing.text);
+  if (test) view.goToMatch?.(test);
   typing.timer = setTimeout(typingRests, searchDelay());
   // A short text clears a second after the last key; a longer one becomes the filter when typing rests.
   typedClear = setTimeout(() => {

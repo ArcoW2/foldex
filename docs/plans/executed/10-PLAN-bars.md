@@ -235,3 +235,8 @@ None.
   again once the keyboard leaves it. Test copy: "prog" in the tree (C:\ read) left This PC, Local Disk (C:), Program
   Files and Program Files (x86); a filtered list with the tree active: the mark on the list's head only, the box
   empty; a click on the mark made the list active with the keyboard in the box; X took the mark away.
+- A leading `*`: the go-to finds the first name containing the rest instead of starting with it (`*` alone does not
+  move); the filter, a "contains" already, ignores it, so `*files` filters on "files". All other rules stay (more than
+  3 characters, the `*` counted, become the filter). Tests (Jint): the go-to's test with and without `*`, the filter's
+  test. Test copy: from BL_Intune, `*x8` went to Program Files (x86) at once, no filter, the box empty a second later;
+  `*files` filtered C:\ to Program Files and Program Files (x86).
