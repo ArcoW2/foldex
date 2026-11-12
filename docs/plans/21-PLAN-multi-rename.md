@@ -6,6 +6,7 @@ Status: draft 2026-11-12, revised 2026-11-12; not started; see Status.
   and files with the same name and another extension renamed along (a setting, on by default).
 - 2026-11-12: revised: the token syntax is a setting, xplorer2's by default.
 - 2026-11-12: revised: companions renamed in place without a question, highlighted while the name is edited.
+- 2026-11-12: revised: rename settings can be saved by name, for every project.
 
 Builds on the rename in place (F2, `web/rename.js`) and Foldex's file operations (`Shell/FileOps.cs`). The number in
 the file name is the priority; rename to reorder.
@@ -44,6 +45,7 @@ the files beside it with the same name and another extension; a setting turns th
 | Case | lower, upper, first letters | Rename dialog | 3.3 |
 | Parts of names | insert, remove or replace characters at a position, counted from the start or the end | Rename dialog; open question 1 | 3.3 |
 | One operation | all renames through one IFileOperation, undoable in Windows; swaps through a name in between | Rename dialog | 3.4 |
+| Saved renames | a rename's settings saved by name and used again, for every project (renames.json) | Rename dialog | 3.3 |
 | Companion files | same name, another extension, renamed along without a question, highlighted during F2; setting renameCompanions (default on) | -- | 3.5 |
 | Tests | see 3.6 | -- | 3.6 |
 
@@ -78,6 +80,9 @@ the files beside it with the same name and another extension; a setting turns th
 - **Parts of names**: at a position counted from the start or from the end: insert a text, remove a number of
   characters, or replace them. What "partial parts" should cover beyond this: open question 1.
 - The ways combine in order (for instance find and replace, then the case); the list shows the result.
+- **Saved renames**: the dialog's settings (what changes, the ways and their values) saved under a name and chosen
+  again from a list, as the Find dialog's Predefined; kept for every project, in renames.json in the data folder
+  (as searches.json), every window told when it changes.
 
 ### 3.4 Renaming
 
@@ -105,7 +110,7 @@ the files beside it with the same name and another extension; a setting turns th
 
 - Unit (the new names as pure functions, under Jint): each token; a counter in the pane's order; find and replace
   with text and with a regular expression and its groups; the case; parts at positions from the start and the end;
-  ways combined; conflicts (two the same, an existing name, a refused name); companions found, their new names, a
+  ways combined; a saved rename back as it was saved; conflicts (two the same, an existing name, a refused name); companions found, their new names, a
   collision left out, the setting off.
 - In the test copy: F2 on three selected files, a pattern with a counter, OK, the files renamed, the pane focused on
   the renamed focus; a swap of two names; Esc leaves all as they were; F2 on photo.jpg with photo.xmp beside it, both
@@ -118,5 +123,3 @@ the files beside it with the same name and another extension; a setting turns th
    editing a range of characters (insert, remove, replace at a position from the start or the end) and the tokens
    for parts of the old name; or is it something else (for instance renaming a selected part of the name, the same
    part in every file)?
-2. **Saved renames.** Keep named rename settings to use again, as the Find dialog's Predefined (searches.json), or
-   not?
