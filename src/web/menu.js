@@ -4,11 +4,18 @@
 // Esc, or choosing. A submenu opens to the right, or to the left when there is no room; a menu whose submenus open to
 // the left has its arrows at the left. Keys: Up / Down, Right opens a submenu,
 // Left closes it (the other way round where it opens to the left), Enter chooses.
+// Any button (or other element) whose left click opened a menu is its opener: a click on it while the menu is open
+// closes the menu, and does not open it again (for every opener, whether it opens on mousedown or on click, at once
+// or after an answer of the host).
 //
 // An item: '-' (a line) or { label, run, enabled (default true), checked, swatch (a CSS colour), items (a submenu),
 // indent (steps in, for a tree), guides (its tree lines, panes.js treeGuides) }.
 
 let openMenus = [];   // the menu and its open submenus, outermost first
+let menuDown = null;    // the last left mousedown outside a menu: { target, time }; a menu opened soon after is its
+let menuOpener = null;  // opener's (the element of that mousedown)
+let menuSwallow = null; // the opener clicked to close: the click that follows does nothing
+const MenuOpenerTime = 1500;   // ms from that mousedown to the menu, as for a menu that waits for the host
 
 function closeMenus(from = 0) {
   for (const m of openMenus.splice(from)) m.el.remove();
@@ -98,16 +105,40 @@ function openMenu(x, y, items, level = 0, back = null) {
     else return false;
     return true;
   };
-  if (level === 0) el.focus();
+  if (level === 0) {
+    menuOpener = menuDown && performance.now() - menuDown.time < MenuOpenerTime ? menuDown.target : null;
+    menuDown = null;
+    el.focus();
+  }
   return menu;
 }
 
 document.addEventListener('mousedown', e => {
-  if (openMenus.length && !e.target.closest('.menu')) closeMenus();
+  menuSwallow = null;
+  if (e.target.closest('.menu')) return;
+  const again = openMenus.length > 0 && e.button === 0 && menuOpener?.isConnected && menuOpener.contains(e.target);
+  if (openMenus.length) closeMenus();
+  if (again) {
+    // Its opener again: closed, and its own handlers do not open it once more.
+    e.preventDefault();
+    e.stopPropagation();
+    menuSwallow = menuOpener;
+    menuOpener = menuDown = null;
+    return;
+  }
+  menuDown = e.button === 0 ? { target: e.target, time: performance.now() } : null;
+}, true);
+document.addEventListener('click', e => {
+  if (menuSwallow?.contains(e.target)) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  menuSwallow = null;
 }, true);
 
 // The keys go to the innermost open menu, before keys.json's (a menu is modal while open).
 document.addEventListener('keydown', e => {
+  menuDown = null;   // a menu opened by a key has no opener
   if (!openMenus.length) return;
   if (openMenus.at(-1).key(e) !== false || e.key.length === 1) {
     e.preventDefault();

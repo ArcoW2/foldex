@@ -125,21 +125,20 @@ opens the Projects menu there (the page's own menu, `menu.js`):
 
 ```
 Projects
-  v Foldex  (this window)          >    Folders
-  v Klanten                        >      foldex
-    Project 7                      >        Preview
-  -----------------------------           LexPen
-  New project...                        Folders
-  Rename this project...                Open project / Show project
-  -----------------------------         ------------------------------------
-  Manage projects...                    (its panes, as above)
+  Manage projects...                    Open project / Show project
+  New project...                        ------------------------------------
+  Rename this project...                Folders
+  -----------------------------           foldex
+  v Foldex  (this window)          >        Preview
+  v Klanten                        >      LexPen
+    Project 7                      >    Folders
                                         ------------------------------------
                                         Delete project...                  (closed projects)
 ```
 
 (`v`: the menu's check mark: an open project.)
 
-- The projects: open ones checked, this window's project first and marked, then the most recently used first.
+- As LexPen's: Manage projects, New project, Rename this project, then the projects: open ones checked, this window's project first and marked, then the most recently used first.
 - A project's submenu: Open project (or Show project) first, then its window's panes as a tree: each root pane, then the panes that follow it a step in, down
   to the end, each by its name as its head and tab show it (a tree "Folders", a list its folder's name, "Preview").
   The page keeps those names with its layout; the tree has lines as the trees do (plan 16). A click on a pane opens
@@ -301,3 +300,5 @@ None.
 - The Delete question then moved from a Windows message box into the page's own dialog (the one that asks names), the
   host deleting without asking. Test copy: "Delete 2 projects?" with both names and the line under them, no text box
   (screenshot); OK removed them.
+- The Projects menu in LexPen's order: Manage projects, New project, Rename this project, then the projects (they were
+  last). Test copy, real mouse events over CDP: that order.

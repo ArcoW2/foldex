@@ -1,9 +1,9 @@
 'use strict';
 // Projects in a window (docs/plans/15-PLAN-projects.md 3.6, as LexPen's): the window's project at the left of the bottom
-// bar; a click there (or the action projects.menu) opens the Projects menu (menu.js): every project, each with the panes
-// of its window by name as a tree (roots, their children indented), New project, Rename this project, Manage projects. The
-// host keeps the projects (AppHost, ProjectStore); a name is asked in a small dialog of the page (askText). Loaded after
-// menu.js, before app.js.
+// bar; a click there (or the action projects.menu) opens the Projects menu (menu.js): Manage projects, New project,
+// Rename this project, then every project, each with the panes of its window by name as a tree (roots, their children
+// indented). The host keeps the projects (AppHost, ProjectStore); a name is asked in a small dialog of the page
+// (askText). Loaded after menu.js, before app.js.
 
 let project = { id: null, name: '', display: '' };
 let projectMenuAt = null;   // where the menu asked for opens: { x, y }; null: at the bottom bar
@@ -45,16 +45,16 @@ function projectMenuItems(list) {
       ],
     };
   };
+  // As LexPen's: Manage, New, Rename, then the projects.
   return [
-    ...list.map(projectItem),
-    '-',
+    { label: 'Manage projects...', run: () => post({ op: 'openProjects' }) },
     { label: 'New project...', run: async () => {
       const name = await askText('Name of the new project', '', 'Empty: a number');
       if (name !== null) projectCommand('new', { name });
     } },
     { label: 'Rename this project...', enabled: !!mine, run: renameProject },
     '-',
-    { label: 'Manage projects...', run: () => post({ op: 'openProjects' }) },
+    ...list.map(projectItem),
   ];
 }
 
