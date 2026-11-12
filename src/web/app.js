@@ -140,16 +140,27 @@ function list(channel, location, foldersOnly, onPart, onDone, elevated = false, 
 // items come, against the count the host sends for a folder on disk ("listCount"); without a count (another place) a
 // piece of it runs from left to right.
 const ProgressAfter = 400;
+const progressRun = { listings: new Set(), shown: 0 };   // the listings of this run of the bar (done ones count as full)
 function showProgress() {
   const now = performance.now();
-  const slow = [...listeners.values()].filter(l => now - l.sent > ProgressAfter);
+  const open = new Set(listeners.values());
+  const slow = [...open].filter(l => now - l.sent > ProgressAfter);
   $('progress').hidden = !slow.length;
-  if (!slow.length) return;
+  if (!slow.length) {
+    progressRun.listings.clear();
+    progressRun.shown = 0;
+    return;
+  }
   $('progress').style.left = `${$('status').offsetLeft}px`;   // over the status text, after the project
-  const counted = slow.every(l => l.total);
-  const total = slow.reduce((a, l) => a + (l.total ?? 0), 0), got = slow.reduce((a, l) => a + l.got, 0);
-  $('progress').classList.toggle('counted', counted);
-  $('progress').querySelector('.track > div').style.width = counted ? `${Math.min(100, total ? got / total * 100 : 0)}%` : '';
+  // It fills from the listings with a count (places other than folders on disk have none), those done since the bar
+  // came counting as full, and never goes back (a count coming later makes the whole larger).
+  for (const l of slow) progressRun.listings.add(l);
+  const counted = [...progressRun.listings].filter(l => l.total !== null);
+  const total = counted.reduce((a, l) => a + l.total, 0);
+  const got = counted.reduce((a, l) => a + (open.has(l) ? Math.min(l.got, l.total) : l.total), 0);
+  if (total) progressRun.shown = Math.max(progressRun.shown, got / total * 100);
+  $('progress').classList.toggle('counted', counted.length > 0);
+  $('progress').querySelector('.track > div').style.width = counted.length ? `${Math.min(100, progressRun.shown)}%` : '';
 }
 
 // A pane's own view settings (plan 03 3.1). Hidden items: its own choice, else the setting showHidden. A filter:

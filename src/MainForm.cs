@@ -473,8 +473,8 @@ sealed class MainForm : Form
         var cancel = listings[channel] = new CancellationTokenSource();
         var clock = System.Diagnostics.Stopwatch.StartNew();
         // A folder on disk counted beside the listing (names only, much quicker than the listing itself), so the page's
-        // progress bar has a measure; a tree's rows are not counted (a level is seldom slow), nor other places.
-        if (!tree && Path.IsPathFullyQualified(location))
+        // progress bar has a measure; other places are not counted.
+        if (Path.IsPathFullyQualified(location))
             _ = Task.Run(() =>
             {
                 try
