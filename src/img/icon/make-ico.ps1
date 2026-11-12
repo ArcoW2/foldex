@@ -1,4 +1,4 @@
-# Builds an .ico (and a 256 px .png) from an SVG: Edge renders every size on a transparent page,
+# Builds an .ico (and a .png of every size side by side, each at its real size) from an SVG: Edge renders every size on a transparent page,
 # each size at its own resolution, and the frames are stored as PNG entries in the .ico.
 #   .\make-ico.ps1                      # foldex.svg -> foldex.ico + foldex.png
 #   .\make-ico.ps1 -Svg other.svg
@@ -30,9 +30,9 @@ try {
         $b = $sheet.Clone([Drawing.Rectangle]::new($x, 0, $s, $s), [Drawing.Imaging.PixelFormat]::Format32bppArgb)
         $ms = [IO.MemoryStream]::new(); $b.Save($ms, [Drawing.Imaging.ImageFormat]::Png)
         $frames += , @($s, $ms.ToArray())
-        if ($s -eq 256) { $b.Save("$base.png") }
         $b.Dispose(); $x += $s + 8
     }
+    $sheet.Save("$base.png")
     $sheet.Dispose()
 
     # ICO: header, one 16-byte entry per frame (0 means 256), then the PNG data.
