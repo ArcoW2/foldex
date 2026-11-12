@@ -8,6 +8,8 @@ Status: draft 2026-11-12, revised 2026-11-12; not started; see Status.
 - 2026-11-12: revised with the user's answers: Foldex's own thumbnail cache, as FastStone's, made in the background,
   kept in Foldex's data folder or in the image folders (a setting); the information and the icons one choice for every
   pane; a RAW icon; by default the date taken, the author or copyright, and the description.
+- 2026-11-12: revised: the cache in Foldex's data folder by default; its size a setting, the oldest thumbnails going
+  first.
 
 Builds on plan 03 (a pane's view: details or icons) and plan 11 (Windows' properties for columns). The number in the
 file name is the priority; rename to reorder.
@@ -41,9 +43,9 @@ RAW mark) are one choice for every pane; the thumbnail size follows Ctrl+mouse w
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| Thumbnail cache | Foldex's own: thumbnails made once (from Windows' thumbnail handlers), kept by path, size and date, made again when the file changes | open questions 1, 2 | 3.1 |
+| Thumbnail cache | Foldex's own: thumbnails made once (from Windows' thumbnail handlers), kept by path, size and date, made again when the file changes; its size a setting, the oldest going first | -- | 3.1 |
 | Making in the background | a folder's thumbnails made ahead of scrolling, off the UI thread, what is in view first | Thumbnail cache | 3.1 |
-| Where the cache is | a setting: Foldex's data folder, or next to the images in each folder | Thumbnail cache; open question 1 | 3.1 |
+| Where the cache is | a setting: Foldex's data folder (the default), or next to the images in each folder | Thumbnail cache | 3.1 |
 | The view | Thumbnails as a pane's view beside Details and Icons; its layout and size per pane, kept with the layout | -- | 3.2 |
 | Grid | equal cells: cut to fill, or fitted | The view | 3.3 |
 | Mosaic | columns, each image at its own proportions, nothing cut | The view | 3.3 |
@@ -65,17 +67,17 @@ RAW mark) are one choice for every pane; the thumbnail size follows Ctrl+mouse w
   an item without one shows its icon, large.
 - Kept per item by its path, its size and date changed, and the thumbnail size (a few fixed sizes; the size drawn is
   scaled from the nearest larger one); a file changed or gone makes its thumbnail stale, made again or dropped.
-- **Where**: a setting, thumbnailCache: in Foldex's data folder (one cache for every folder; nothing written next to
-  the images), or in the image folders themselves (a hidden file or folder per folder, which goes along when the folder
-  is copied or moved). Which is the default, and the in-folder form: open question 1. [Where FastStone keeps its
-  cache: not yet checked.]
+- **Where**: a setting, thumbnailCache: in Foldex's data folder (the default: one cache for every folder; nothing
+  written next to the images), or in the image folders themselves (hidden, so it goes along when the folder is copied
+  or moved). [Where FastStone keeps its cache: not yet checked.]
 - **Made in the background**: when a pane shows a folder in Thumbnails, the host makes what is missing on a thread of
   its own, at low priority: the items in view first, then the rest of the folder ahead of scrolling. The page draws
   each thumbnail as it comes; one not made yet shows its icon until then. Leaving the folder stops what is left for
   it.
 - Each thumbnail is kept with the image's own width and height, so the mosaic and the river place an image right
   before its thumbnail is drawn.
-- How large the cache may grow and when old thumbnails go: open question 2.
+- **Its size**: a setting, thumbnailCacheMB; above it the thumbnails used longest ago go first. The default is set once
+  the size of a thumbnail is measured (6. As built).
 
 ### 3.2 The view
 
@@ -142,10 +144,4 @@ RAW mark) are one choice for every pane; the thumbnail size follows Ctrl+mouse w
 
 ## 4. Open questions
 
-1. **The cache's default place, and its form in a folder.** Foldex's data folder (nothing next to your images; lost
-   with nothing when a folder is moved) or the image folders (goes along with them; visible to other programs and
-   synchronised by Synology Drive and the like)? And in a folder: one hidden file (a small database) or a hidden
-   folder of thumbnails? Suggestion: Foldex's data folder by default; in a folder one hidden file.
-2. **The cache's size.** How large may it grow, and what goes first: the thumbnails of folders not shown for longest,
-   down to a size you set (a setting, in MB)? Suggestion: yes, with a default of [not yet calculated: to be set once
-   the size of a thumbnail is known].
+None.
