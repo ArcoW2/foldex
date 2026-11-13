@@ -540,9 +540,10 @@ sealed class MainForm : Form
             {
                 var path = msg["path"]!.GetValue<string>();
                 var (handler, error) = preview.Show(path, AreaOf(msg["rect"]!));
-                // No Windows preview: Foldex's own for an image, a video, a sound or text (Shell/OwnPreview.cs).
+                // No Windows preview: Foldex's own for an image, a video, a sound or text (Shell/OwnPreview.cs; a file of
+                // an extension it does not know is looked at, and shown when it is text).
                 JsonObject? own = null;
-                if (error is not null && Shell.OwnPreview.KindOf(path) is not null && await NetworkGuard.Reachable(path))
+                if (error is not null && !Directory.Exists(path) && await NetworkGuard.Reachable(path))
                 {
                     own = await Task.Run(() =>
                     {

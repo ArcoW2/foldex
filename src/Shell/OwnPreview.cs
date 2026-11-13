@@ -53,16 +53,56 @@ static class OwnPreview
     }
 
     /// <summary>The own preview of a file for the page (event previewShown's `own`): its kind, and its URL or (text) its
-    /// first TextBytes. Null when Foldex has none for it. Touches the file: off the window's thread.</summary>
+    /// first TextBytes. A file of an extension not known here is shown as text when its start looks like text (an .nss,
+    /// a .reg). Null when Foldex has none for it. Touches the file: off the window's thread.</summary>
     public static JsonObject? Read(string path)
     {
         var kind = KindOf(path);
-        if (kind is null || !File.Exists(path)) return null;
-        if (kind != "text") return new JsonObject { ["kind"] = kind, ["url"] = $"https://{FilesHost}/file?path={Uri.EscapeDataString(path)}" };
+        if (!File.Exists(path) || kind is not (null or "text")) return kind is null ? null
+            : new JsonObject { ["kind"] = kind, ["url"] = $"https://{FilesHost}/file?path={Uri.EscapeDataString(path)}" };
         using var file = File.OpenRead(path);
-        var buffer = new byte[Math.Min(TextBytes, file.Length)];
+        var buffer = new byte[Math.Min(kind is null ? SniffBytes : TextBytes, file.Length)];
         var read = file.ReadAtLeast(buffer, buffer.Length, false);
-        return new JsonObject { ["kind"] = kind, ["text"] = Encoding.UTF8.GetString(buffer, 0, read), ["cut"] = file.Length > TextBytes };
+        if (kind is null)
+        {
+            if (!LooksLikeText(buffer.AsSpan(0, read))) return null;
+            buffer = new byte[Math.Min(TextBytes, file.Length)];
+            file.Position = 0;
+            read = file.ReadAtLeast(buffer, buffer.Length, false);
+        }
+        var cut = file.Length > TextBytes;
+        return new JsonObject { ["kind"] = "text", ["text"] = Decode(buffer.AsSpan(0, read), cut), ["cut"] = cut };
+    }
+
+    /// <summary>How much of a file of an unknown extension is looked at to tell whether it is text.</summary>
+    const int SniffBytes = 8 * 1024;
+
+    /// <summary>Whether bytes look like text: a byte order mark, or no NUL byte and hardly any other control bytes (tab,
+    /// line ends, form feed and escape count as text). An empty file is not shown as text.</summary>
+    internal static bool LooksLikeText(ReadOnlySpan<byte> bytes)
+    {
+        if (bytes.IsEmpty) return false;
+        if (bytes.StartsWith((byte[])[0xEF, 0xBB, 0xBF]) || bytes.StartsWith((byte[])[0xFF, 0xFE]) || bytes.StartsWith((byte[])[0xFE, 0xFF])) return true;
+        var control = 0;
+        foreach (var b in bytes)
+        {
+            if (b == 0) return false;
+            if (b < 0x20 && b is not (9 or 10 or 12 or 13 or 27)) control++;
+        }
+        return control * 100 <= bytes.Length;   // at most 1 in 100
+    }
+
+    /// <summary>Text by its byte order mark (UTF-8, UTF-16 LE or BE); without one UTF-8 when it is valid UTF-8, else
+    /// Latin-1 (an old ANSI file still reads). `cut`: the text was cut at TextBytes, so a UTF-8 character cut off at its
+    /// end is left out rather than taking the whole text for Latin-1.</summary>
+    internal static string Decode(ReadOnlySpan<byte> bytes, bool cut = false)
+    {
+        if (bytes.StartsWith((byte[])[0xEF, 0xBB, 0xBF])) return Encoding.UTF8.GetString(bytes[3..]);
+        if (bytes.StartsWith((byte[])[0xFF, 0xFE])) return Encoding.Unicode.GetString(bytes[2..]);
+        if (bytes.StartsWith((byte[])[0xFE, 0xFF])) return Encoding.BigEndianUnicode.GetString(bytes[2..]);
+        for (var off = 0; off <= (cut ? Math.Min(3, bytes.Length) : 0); off++)
+            if (System.Text.Unicode.Utf8.IsValid(bytes[..^off])) return Encoding.UTF8.GetString(bytes[..^off]);
+        return Encoding.Latin1.GetString(bytes);
     }
 
     /// <summary>Makes a WebView2 serve the files of the own preview (before its page is loaded).</summary>
