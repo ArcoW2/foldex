@@ -120,7 +120,8 @@ function thumbZoom(id, step) {
 // The information details and cards show, and the icons on images: one choice for every pane (3.4, 3.5).
 const ThumbInfoChoices = [['System.Photo.DateTaken', 'Date taken'], ['System.Author', 'Author'], ['System.Copyright', 'Copyright'],
   ['System.Title', 'Description (title)'], ['System.Comment', 'Comments'], ['System.Image.Dimensions', 'Dimensions'],
-  ['System.Photo.CameraModel', 'Camera'], ['System.Rating', 'Rating'], ['size', 'Size'], ['modified', 'Date modified']];
+  ['System.Photo.CameraModel', 'Camera'], ['System.Rating', 'Rating'], ['size', 'Size'], ['modified', 'Date modified'],
+  ['gpsLocation', 'GPS location']];
 const thumbInfo = () => Array.isArray(settings.thumbInfo) ? settings.thumbInfo : ['System.Photo.DateTaken', 'System.Author', 'System.Copyright', 'System.Title'];
 const thumbIcons = () => Array.isArray(settings.thumbIcons) ? settings.thumbIcons : ['gps', 'raw'];
 

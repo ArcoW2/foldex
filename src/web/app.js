@@ -717,13 +717,10 @@ class TreeView {
     const [first, last] = visibleRange(this.body, this.flat.length);
     const focus = this.focused();
     const missing = [], nodes = [], noProps = [];
-    const propNames = cols.filter(c => c.id.includes('.')).map(c => c.id);
+    const propNames = cols.flatMap(c => propsFor(c.id));
     for (let i = first; i < last; i++) {
       const n = this.flat[i];
-      if (propNames.length && propNames.some(p => !(n.props && p in n.props)) && !n.propsAsked && /^[A-Za-z]:\\|^\\\\/.test(n.id)) {
-        n.propsAsked = true;
-        noProps.push(n);
-      }
+      if (propNames.length && /^[A-Za-z]:\\|^\\\\/.test(n.id) && propsToAsk(n, propNames)) noProps.push(n);
       const row = document.createElement('div');
       row.className = 'row cols' + (n === focus ? ' selected focused' : '') + (n.hidden ? ' hidden' : '') + (i % 2 ? ' odd' : '')
         + (isCompanion(this, n.id) ? ' companion' : '') + (n.qa ? ` qa-${n.qa}` : '') + (n.inQa ? ' qa' : '')
@@ -991,9 +988,9 @@ class TreeView {
   // Sorted again: every level read so far.
   async sortEntries() {
     const sort = this.cols.sort;
-    if (sort?.id.includes('.')) {
-      const missing = this.allNodes().filter(n => !(n.props && sort.id in n.props) && /^[A-Za-z]:\\|^\\\\/.test(n.id));
-      if (missing.length) await this.askProps(missing, [sort.id]);
+    if (sort && propsFor(sort.id).length) {
+      const missing = this.allNodes().filter(n => !(n.props && propsFor(sort.id).every(p => p in n.props)) && /^[A-Za-z]:\\|^\\\\/.test(n.id));
+      if (missing.length) await this.askProps(missing, propsFor(sort.id));
     }
     const compare = this.comparer();
     if (this.folder) this.top.sort(compare);
@@ -1154,11 +1151,11 @@ class ListView {
   // Sorted again (a click on a title): by a property of Windows, its value is read for every item first.
   async sortEntries() {
     const sort = this.cols.sort;
-    if (sort?.id.includes('.')) {
-      const missing = this.entries.filter(x => !(x.props && sort.id in x.props) && !x.propsAll);
+    if (sort && propsFor(sort.id).length) {
+      const missing = this.entries.filter(x => !(x.props && propsFor(sort.id).every(p => p in x.props)) && !x.propsAll);
       if (missing.length) {
         status(`Reading ${columnInfo(sort.id).title} of ${missing.length} items to sort by it...`);
-        await this.askProps(missing, [sort.id]);
+        await this.askProps(missing, propsFor(sort.id));
         for (const x of missing) x.propsAll = true;
         status(`${this.name ?? ''}: ${this.entries.length} items`);
       }
@@ -1313,15 +1310,12 @@ class ListView {
     const top = this.body.scrollTop - size, bottom = this.body.scrollTop + this.body.clientHeight + size;
     const focus = layout.state(this.id).focus, bucket = thumbBucket(size, devicePixelRatio);
     const icons = thumbIcons(), missing = [], nodes = [], noProps = [], shown = [];
-    const wanted = [...info, ...(icons.includes('gps') ? ['System.GPS.Latitude'] : [])].filter(n => n.includes('.'));
+    const wanted = [...new Set([...info.flatMap(propsFor), ...(icons.includes('gps') ? propsFor('gps') : [])])];
     boxes.forEach((b, i) => {
       if (b.y + b.h < top || b.y > bottom) return;
       const x = this.entries[i];
       shown.push(x);
-      if (wanted.length && wanted.some(n => !(x.props && n in x.props)) && !x.propsAsked && !x.folder) {
-        x.propsAsked = true;
-        noProps.push(x);
-      }
+      if (wanted.length && !x.folder && propsToAsk(x, wanted)) noProps.push(x);
       const el = document.createElement('div');
       el.className = `thumb thumb-${kind}` + (this.selected.has(x.id) ? ' selected' : '') + (same(x.id, focus) ? ' focused' : '') + (x.hidden ? ' hidden' : '');
       Object.assign(el.style, { left: `${b.x}px`, top: `${b.y}px`, width: `${b.w}px`, height: `${b.h}px` });
@@ -1336,7 +1330,7 @@ class ListView {
       else pic.append(Object.assign(iconImage(x, missing, 48), { className: 'thumb-icon', draggable: false }));
       // Its icons (3.5): a map pin for a GPS location, RAW.
       const marks = [];
-      if (icons.includes('gps') && x.props?.['System.GPS.Latitude']?.[0]) marks.push(['gps', 'GPS', `A GPS location: ${x.props['System.GPS.Latitude'][0]}`]);
+      if (icons.includes('gps') && hasGps(x)) marks.push(['gps', 'GPS', gpsText(x) ? `A GPS location: ${gpsText(x)}` : 'A GPS location']);
       if (icons.includes('raw') && !x.folder && isRaw(x.name)) marks.push(['raw', 'RAW', 'A camera RAW file']);
       if (marks.length) {
         const bar = document.createElement('div');
@@ -1527,7 +1521,7 @@ class ListView {
     else if (this.entries.length && !this.renameOnLoad) this.select(this.entries[0], {}, true);
     this.backDone();
     this.askColumnValues();
-    if (this.cols.sort?.id.includes('.')) this.sortEntries();
+    if (this.cols.sort && propsFor(this.cols.sort.id).length) this.sortEntries();
     if (this.cols.fit) this.fitColumns();
     // A new folder or file made here (F8, F7; rename.js): focused and renamed in place.
     const made = this.renameOnLoad && this.entries.find(x => same(x.id, this.renameOnLoad));
@@ -1572,14 +1566,11 @@ class ListView {
     const [first, last] = visibleRange(this.body, this.entries.length);
     const focus = layout.state(this.id).focus;
     const missing = [], own = [], nodes = [], noProps = [];
-    const propNames = cols.filter(c => c.id.includes('.')).map(c => c.id);
+    const propNames = cols.flatMap(c => propsFor(c.id));
     for (let i = first; i < last; i++) {
       const x = this.entries[i];
       if (x.own) { own.push(x.id); x.own = false; }   // its own icon asked once, when in view
-      if (propNames.length && propNames.some(n => !(x.props && n in x.props)) && !x.propsAsked) {
-        x.propsAsked = true;
-        noProps.push(x);
-      }
+      if (propNames.length && propsToAsk(x, propNames)) noProps.push(x);
       const row = document.createElement('div');
       row.className = 'row cols' + (this.selected.has(x.id) ? ' selected' : '') + (same(x.id, focus) ? ' focused' : '')
         + (x.hidden ? ' hidden' : '') + (i % 2 ? ' odd' : '') + (isCompanion(this, x.id) ? ' companion' : '');
