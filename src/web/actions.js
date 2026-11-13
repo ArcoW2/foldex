@@ -175,6 +175,10 @@ action('branch.next', { title: 'Next branch', hint: 'the next child branch of th
   enabled: () => !!activePane, run: () => nextBranch() });
 action('pane.next', { title: 'Next pane', group: 'panes', enabled: () => views.size > 1, run: () => cyclePane(1) });
 action('pane.previous', { title: 'Previous pane', group: 'panes', enabled: () => views.size > 1, run: () => cyclePane(-1) });
+action('pane.toSide', { title: 'To the pane at a side', hint: 'the keyboard to the nearest pane at the left, right, above or below the active one',
+  group: 'panes', enabled: () => views.size > 1, variants: [['left'], ['right'], ['up'], ['down']],
+  variantTitles: { left: 'To the pane at the left', right: 'To the pane at the right', up: 'To the pane above', down: 'To the pane below' },
+  run: params => toSide(params[0]) });
 
 // ---------- View ----------
 

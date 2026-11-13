@@ -157,3 +157,20 @@ class Docks {
     return d;
   }
 }
+
+// The pane at a side of another (Ctrl+Alt+arrow keys): of the rectangles ({ id, left, top, right, bottom }, as on
+// screen) wholly at that side of `from`, the nearest; one beside it (overlapping across) before one only diagonally
+// across; of equal ones, the one whose middle is nearest `from`'s middle across. Null at the window's edge.
+function paneOnSide(from, rects, side) {
+  const horizontal = side === 'left' || side === 'right';
+  const slack = 4;   // px: a splitter between two panes
+  const gap = r => side === 'right' ? r.left - from.right : side === 'left' ? from.left - r.right
+    : side === 'down' ? r.top - from.bottom : from.top - r.bottom;
+  const [lo, hi] = horizontal ? ['top', 'bottom'] : ['left', 'right'];
+  const overlap = r => Math.min(r[hi], from[hi]) - Math.max(r[lo], from[lo]);
+  const across = r => Math.abs((r[lo] + r[hi]) / 2 - (from[lo] + from[hi]) / 2);
+  const found = rects.filter(r => r.id !== from.id && gap(r) >= -slack)
+    .map(r => ({ r, beside: overlap(r) > 0, gap: Math.max(0, gap(r)), across: across(r) }))
+    .sort((a, b) => (b.beside - a.beside) || (a.gap - b.gap) || (a.across - b.across));
+  return found[0]?.r.id ?? null;
+}

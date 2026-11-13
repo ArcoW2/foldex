@@ -106,4 +106,17 @@ public class DocksTests
             """, "[places, back('p2'), back('p4'), back('p1') && shape(d.areas.left)]");
         Assert.Equal("""[[{"area":"left"},{"pane":"p3","side":"top","area":"center"},{"pane":"p4","side":"tab","area":"center"},{"pane":"p3","side":"tab","area":"center"}],"column(p2, p3|[p4])","column(p2, p3|[p4])","p1"]""", r);
     }
+
+    [Fact]
+    public void CtrlAltArrowsGoToThePaneAtThatSide()
+    {
+        // A tree at the left (0-200), at its right list A above list B (200-800, A 0-300, B 300-600).
+        var r = Run("""
+            const T = { id: 'T', left: 0, top: 0, right: 198, bottom: 600 };
+            const A = { id: 'A', left: 202, top: 0, right: 800, bottom: 298 };
+            const B = { id: 'B', left: 202, top: 302, right: 800, bottom: 600 };
+            const all = [T, A, B];
+            """, "[paneOnSide(T, all, 'right'), paneOnSide(A, all, 'down'), paneOnSide(B, all, 'up'), paneOnSide(B, all, 'left'), paneOnSide(T, all, 'left'), paneOnSide(A, all, 'up')]");
+        Assert.Equal("""["A","B","A","T",null,null]""", r);
+    }
 }

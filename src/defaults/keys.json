@@ -42,4 +42,8 @@
   "Ctrl+O": "pane.toggle",
   "F6": "pane.next",
   "Shift+F6": "pane.previous",
+  "Ctrl+Alt+Left": ["pane.toSide", "left"],
+  "Ctrl+Alt+Right": ["pane.toSide", "right"],
+  "Ctrl+Alt+Up": ["pane.toSide", "up"],
+  "Ctrl+Alt+Down": ["pane.toSide", "down"],
 }

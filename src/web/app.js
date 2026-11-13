@@ -2602,6 +2602,15 @@ function togglePreview() {
   preview.show(layout.state(list.id).focus);
   drawHeads();
 }
+// Ctrl+Alt+arrow keys: the keyboard to the pane at that side of the active one, as they are on screen (docks.js
+// paneOnSide); only panes shown (no tab behind another, no hidden pane).
+function toSide(side) {
+  const rect = id => { const r = views.get(id).el.getBoundingClientRect(); return { id, left: r.left, top: r.top, right: r.right, bottom: r.bottom }; };
+  const shown = docks.panes().filter(id => docks.visible(id) && views.get(id));
+  if (!shown.includes(activePane)) return;
+  focusPane(paneOnSide(rect(activePane), shown.map(rect), side));
+}
+
 function cyclePane(step) {
   const order = docks.panes().filter(id => docks.visible(id) && views.get(id));
   const next = order[(order.indexOf(activePane) + step + order.length) % order.length];
