@@ -184,6 +184,8 @@ action('pane.toSide', { title: 'To the pane at a side', hint: 'the keyboard to t
 
 // ---------- View ----------
 
+action('log.toggle', { title: 'Log', hint: "a pane at the bottom with the status line's messages and the file operations",
+  group: 'view', checked: () => !!logPane, run: () => toggleLog() });
 action('preview.toggle', { title: 'Preview', hint: 'a preview pane showing the item of the pane with the keyboard', group: 'view',
   checked: () => !!preview, run: () => togglePreview() });
 action('info.toggle', { title: 'Info', hint: 'a pane with everything known of the item of the pane with the keyboard: its image, video and sound fields, its details, the file itself',

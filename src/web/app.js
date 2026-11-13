@@ -66,9 +66,15 @@ document.addEventListener('wheel', e => {
   paneSizeTimer = setTimeout(() => post({ op: 'setSetting', name: 'paneSize', value: settings.paneSize }), PaneSizes.rest);
 }, { passive: false });
 
+// The log (its pane and functions: LogView): declared here, as status() writes to it from the start.
+const log = { entries: [], seen: 0 };
+const LogMax = 1000, LogRepeat = 1500;
+let logPane = null;
+
 function status(text, warn = false) {
   $('status').textContent = text;
   $('status').classList.toggle('warn', warn);
+  logStatus(text, warn);
 }
 
 const same = (a, b) => a != null && b != null && a.toLowerCase() === b.toLowerCase();
@@ -178,7 +184,8 @@ function filterTest(pattern) {
 // The view of a pane as its kind says: a tree, a list or a preview.
 function makeView(id) {
   const kind = layout.pane(id).kind;
-  return kind === 'tree' ? new TreeView(id) : kind === 'preview' ? (layout.pane(id).info ? new InfoView(id) : new PreviewView(id))
+  return kind === 'tree' ? new TreeView(id) : kind === 'log' ? new LogView(id)
+    : kind === 'preview' ? (layout.pane(id).info ? new InfoView(id) : new PreviewView(id))
     : kind === 'scrap' ? new ScrapView(id) : new ListView(id);
 }
 
@@ -2163,6 +2170,101 @@ class InfoView extends PreviewView {
   close() { }   // no Windows preview to close
 }
 
+// ---------- The log: the status line's messages and the file operations, kept ----------
+
+// Every message of the status line and every file operation (copy, move, delete, new; their state kept up to date in
+// their own line), oldest first, for as long as the window is open; the host keeps the operations of all windows and
+// tells a new page (hello). Shown in the Log pane (LogView), docked at the bottom and hidden until the status bar's Log
+// button (or the action log.toggle) shows it. A message that follows one that is not a warning within LogRepeat ms
+// takes its line (a count that runs: "Scrap: 120 items, searching..."), so the log is not flooded.
+function logStatus(text, warn) {
+  if (!text) return;
+  const last = log.entries.at(-1), now = Date.now();
+  if (last?.kind === 'status' && !last.warn && !warn && now - last.at < LogRepeat) Object.assign(last, { text, at: now });
+  else log.entries.push({ kind: 'status', text, warn, at: now });
+  logChanged();
+}
+
+// A file operation came or changed (fileOp, hello): its line, made once and kept up to date.
+function logOp(op) {
+  const had = log.entries.find(e => e.kind === 'op' && e.op.id === op.id);
+  if (had) had.op = op;
+  else log.entries.push({ kind: 'op', op, at: Date.now() });
+  logChanged();
+}
+
+// An operation's line: "#3 Copy 2 items: done" (a new folder or file has no items to count).
+const OpNames = { copy: 'Copy', move: 'Move', delete: 'Delete', deletePermanent: 'Delete from disk', rename: 'Rename',
+  renameMany: 'Rename', newFolder: 'New folder', newFile: 'New file' };
+const opText = o => `#${o.id} ${OpNames[o.kind] ?? o.kind}${o.items ? ` ${o.items} item${o.items === 1 ? '' : 's'}` : ''}: ` +
+  (o.error ? `failed: ${o.error}` : o.finished ? (o.aborted ? 'stopped' : 'done') : `${o.total ? Math.round(o.done * 100 / o.total) : 0}%`);
+
+function logChanged() {
+  if (log.entries.length > LogMax) {
+    const over = log.entries.length - LogMax;
+    log.entries.splice(0, over);
+    log.seen = Math.max(0, log.seen - over);
+  }
+  if (logPane) log.seen = log.entries.length;
+  drawLogButton();
+  logPane?.render();
+}
+
+// The status bar's Log button: lit while the pane is shown; marked when a warning or a failed operation came that
+// the pane has not shown yet.
+function drawLogButton() {
+  const button = $('log-button');
+  if (!button) return;
+  button.classList.toggle('on', !!logPane);
+  button.classList.toggle('warn', log.entries.slice(log.seen).some(e => e.warn || e.op?.error));
+  const running = log.entries.filter(e => e.kind === 'op' && !e.op.finished).length;
+  button.textContent = running ? `Log (${running} running)` : 'Log';
+}
+
+function toggleLog() {
+  if (logPane) return closePane(logPane.id);
+  const id = layout.add({ kind: 'log' });
+  logPane = placeView(new LogView(id), { area: 'bottom' });
+  logChanged();
+  drawHeads();
+  views.get(activePane)?.body.focus();   // the keyboard stays in the pane that had it
+}
+
+// The Log pane: a line per entry, its time first; a warning or a failure in the warning colour. Kept at its end
+// while it was at its end, so the newest stays in view.
+class LogView extends PreviewView {
+  constructor(id) {
+    super(id);
+    this.el.classList.add('log');
+    this.el.querySelector('.title').textContent = 'Log';
+    this.render();
+  }
+
+  show() { }
+
+  render() {
+    const atEnd = this.body.scrollTop + this.body.clientHeight >= this.body.scrollHeight - 4;
+    if (!log.entries.length) return this.message('Nothing yet: messages and file operations come here.');
+    const time = at => new Date(at).toLocaleTimeString();
+    this.rows.replaceChildren(...log.entries.map(e => {
+      const row = document.createElement('div');
+      row.className = 'log-row' + (e.warn || e.op?.error ? ' warn' : '');
+      row.append(Object.assign(document.createElement('span'), { className: 'log-time', textContent: time(e.at) }),
+        Object.assign(document.createElement('span'), { className: 'log-text', textContent: e.kind === 'op' ? opText(e.op) : e.text }));
+      return row;
+    }));
+    if (atEnd) this.body.scrollTop = this.body.scrollHeight;
+  }
+
+  refresh() { this.render(); }
+
+  locationText() { return ''; }
+
+  tabTitle() { return 'Log'; }
+
+  close() { }   // no Windows preview to close
+}
+
 // ---------- Dropping files from Explorer onto a pane ----------
 
 // A target of { scrap } is a scrap: what is dropped becomes its entries, nothing is copied or moved (plan 06 3.2), so
@@ -2634,7 +2736,8 @@ function restoreLayout(saved, path) {
     for (const id of docks.panes()) {
       const view = makeView(id);
       views.set(id, view);
-      if (view instanceof PreviewView && layout.pane(id).source === null) {
+      if (view instanceof LogView) logPane = view;
+      else if (view instanceof PreviewView && layout.pane(id).source === null) {
         if (view instanceof InfoView) infoPane = view;
         else preview = view;
       }
@@ -2674,6 +2777,7 @@ function applyPreset(name) {
     preview = null;
   }
   infoPane = null;
+  logPane = null;
   for (const v of views.values()) {
     v.el.remove();
     iconUsers.delete(v);
@@ -2759,6 +2863,10 @@ function closePane(id) {
     preview = null;
   }
   if (view === infoPane) infoPane = null;
+  if (view === logPane) {
+    logPane = null;
+    queueMicrotask(drawLogButton);
+  }
   view.el.remove();
   views.delete(id);
   iconUsers.delete(view);
@@ -2807,6 +2915,10 @@ function hidePane(id) {
       preview = null;
     }
     if (view === infoPane) infoPane = null;
+    if (view === logPane) {
+      logPane = null;
+      queueMicrotask(drawLogButton);
+    }
     view.el.remove();
     views.delete(p);
     iconUsers.delete(view);
@@ -2825,7 +2937,8 @@ function unhidePane(id) {
     const { place } = pane.away;
     delete pane.away;
     const view = makeView(p);
-    if (view instanceof InfoView && pane.source === null) infoPane ??= view;
+    if (view instanceof LogView) logPane ??= view;
+    else if (view instanceof InfoView && pane.source === null) infoPane ??= view;
     else if (view instanceof PreviewView && pane.source === null && !preview) preview = view;
     placeView(view, place.pane != null && docks.find(place.pane) ? place : { area: place.area ?? 'center' });
     shown.push(view);
@@ -2858,6 +2971,7 @@ function drawHiddenPanes() {
   el.hidden = !n;
   el.textContent = n === 1 ? '1 hidden pane' : `${n} hidden panes`;
 }
+$('log-button').addEventListener('click', () => toggleLog());
 $('hidden-panes').addEventListener('mousedown', e => {
   e.preventDefault();
   const r = $('hidden-panes').getBoundingClientRect();
@@ -3275,19 +3389,7 @@ for (const type of ['mousedown', 'mouseup', 'auxclick'])
     if (type === 'mouseup') runAction(e.button === 3 ? 'history.back' : 'history.forward');
   }, true);
 
-// ---------- File operations ----------
-
-const ops = new Map();
-
-function showOps() {
-  $('ops').replaceChildren(...[...ops.values()].reverse().map(o => {
-    const li = document.createElement('li');
-    const pct = o.total ? Math.round(o.done * 100 / o.total) : 0;
-    li.textContent = `#${o.id} ${o.kind} ${o.items} item(s): ` +
-      (o.error ? `failed: ${o.error}` : o.finished ? (o.aborted ? 'stopped' : 'done') : `${pct}%`);
-    return li;
-  }));
-}
+// ---------- File operations (their lines: the log, logOp) ----------
 
 // Every list read again after something changed files (a file operation `op`, a verb of Explorer's menu): its
 // selection and focus kept, what the operation put there selected (ListView.reread).
@@ -3310,8 +3412,7 @@ const events = {
     setBars(m.bars);
     setColumnSets(m.columnSets);
     post({ op: 'drives' });
-    for (const o of m.ops) ops.set(o.id, o);
-    showOps();
+    for (const o of m.ops) logOp(o);
     settingsProblems(m);
     showProject(m.project);
     runId = m.run;
@@ -3411,8 +3512,7 @@ const events = {
     if (!m.count) status(`Nothing to copy came with the drop (${m.types.join(', ')})`, true);
   },
   fileOp(m) {
-    ops.set(m.op.id, m.op);
-    showOps();
+    logOp(m.op);
     if (!m.op.finished) return;
     fileOpDone(m.op);   // a new item renamed (rename.js)
     reloadLists(m.op);

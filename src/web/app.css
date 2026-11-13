@@ -1217,7 +1217,7 @@ footer {
   gap: 10px;
 }
 
-#project, #hidden-panes {
+#project, #hidden-panes, #log-button {
   flex: none;
   font: inherit;
   color: var(--fg);
@@ -1230,10 +1230,21 @@ footer {
 
 #hidden-panes[hidden] { display: none; }
 
-#project:hover, #hidden-panes:hover {
+#project:hover, #hidden-panes:hover, #log-button:hover {
   background: var(--hover);
   border-color: var(--border);
 }
+
+/* The Log button (app.js drawLogButton): lit while the Log pane is shown, in the warning colour while a warning or a
+   failed operation waits unseen. */
+#log-button.on { border-color: var(--border); background: var(--hover); }
+#log-button.warn { color: var(--warning); }
+
+/* The Log pane (app.js LogView): a line per message or operation, its time dimmed. */
+.log-row { display: flex; gap: 10px; padding: 1px 8px; white-space: nowrap; }
+.log-time { flex: none; color: var(--fg-dim); font-variant-numeric: tabular-nums; }
+.log-text { overflow: hidden; text-overflow: ellipsis; }
+.log-row.warn .log-text { color: var(--warning); }
 
 #status {
   color: var(--fg-dim);
@@ -1479,11 +1490,6 @@ dialog.find > form > .find-row > button {
 }
 
 .find-gap { flex: 1; }
-
-#ops {
-  margin: 0;
-  padding-left: 18px;
-}
 
 /* Where a pane being dragged lands (app.js dragToDock). */
 .dock-mark {
