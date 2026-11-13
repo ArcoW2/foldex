@@ -1777,12 +1777,21 @@ class ScrapView extends ListView {
     };
     this.stopButton = button('scrap-stop', 'Stop', 'Stop the search', () => this.stop());
     this.stopButton.hidden = true;
+    // In the head an X that closes the scrap (the pane, nothing on disk); deleting from disk is a file action, in a
+    // bar of its own under the head, with its name, so it is never taken for closing.
+    const close = button('scrap-close', '<svg viewBox="0 0 16 16"><path d="M4 3l4 4 4-4 1 1-4 4 4 4-1 1-4-4-4 4-1-1 4-4-4-4z"/></svg>',
+      'Close this scrap (nothing on disk changes)', () => closePane(id));
+    this.el.querySelector('.marks').before(this.stopButton, close);
     const bin = '<svg viewBox="0 0 16 16"><path d="M6 2h4l1 1h3v1.5H2V3h3zM3.5 5.5h9l-.8 9h-7.4z"/></svg>';
-    const del = button('scrap-delete', bin, 'Delete the selected items from disk: to the Recycle Bin (Alt+Del)', () => {
+    const del = Object.assign(document.createElement('button'), { className: 'scrap-delete', innerHTML: `${bin}<span>Delete from disk</span>`,
+      title: 'Delete the selected items from disk: to the Recycle Bin (Alt+Del)' });
+    del.addEventListener('click', () => {
       activate(id);
       runAction('item.deleteDisk');
     });
-    this.el.querySelector('.marks').before(this.stopButton, del);
+    const bar = Object.assign(document.createElement('div'), { className: 'scrap-bar' });
+    bar.append(del);
+    this.el.querySelector('.head').after(bar);
     this.showName();
   }
 
