@@ -23,7 +23,8 @@ Go; it belongs in Home > Open.
 
 One list of bookmarks, in bookmarks.json. A bookmark is a folder or an item (a file), each with a location, a name,
 an icon, two optional keys, a way of opening (Regular or Root) and a quick access flag: with the flag it shows in the
-Quick access area of a tree without a parent, without it in the Bookmarks menu, so switching is one click. Manage
+Quick access area of a tree without a parent, without it in the Bookmarks menu; switching is one check box, in
+Manage or Edit (no menu item of its own: right-click menus stay short). Manage
 shows every bookmark in columns: Name (the icon, then the name), Location and Quick access (a check box). Edit...
 opens a window with all of it; Custom icons come from a Change Icon window (every icon of a dll, exe or ico file,
 SHELL32.dll by default); keys are pressed into key fields as one key or a chord, starting with Ctrl+B by default: one
@@ -31,7 +32,7 @@ opens the bookmark in the active pane, the other in a new pane with a child pane
 child pane: its parent focuses the folder and the child follows); Root makes it the top of the pane, with a ".." row
 to go up. An item opens its folder and is focused there (gone: the folder, at its top). A location not there or not
 reachable is a message; nothing moves. In the Bookmarks menu a click opens a bookmark; a right-click offers Open, Open
-in a new pane, Open in a new pane with a child pane, Edit..., Move to quick access and Remove. F2 on a quick access
+in a new pane, Open in a new pane with a child pane, Edit... and Remove. F2 on a quick access
 shortcut renames it. The Bookmarks button is in Home > Open.
 
 ## Status
@@ -53,7 +54,7 @@ shortcut renames it. The Bookmarks button is in Home > Open.
 | Change Icon | the window with a file's icons; the host reads them | Edit | 3.5 |
 | Keys | a bookmark's two keys in the key set, a clash asked; the key fields | One list | 3.6 |
 | Menu | names, icons and keys in the Bookmarks menu | One list | 3.7 |
-| Right-click | in the menu: Open, Open in a new pane (with or without a child pane), Edit..., Move to quick access, Remove; on a shortcut: Move to bookmarks | Edit | 3.8 |
+| Right-click | in the menu: Open, Open in a new pane (with or without a child pane), Edit..., Remove; on a shortcut: Edit... | Edit | 3.8 |
 | Ribbon | Bookmarks in Home > Open | Word | 3.9 |
 | Quick access shortcuts | F2 renames a shortcut; its icon | One list | 3.10 |
 | Regular and Root | a bookmark opened as the top of a pane, ".." to go up in trees and lists | One list | 3.11 |
@@ -71,7 +72,7 @@ Plan 23's quick access and favourite folders stay and are changed, not made agai
 | Two lists: quickaccess.json and favourite-folders.json, each `folders`, a list of paths | FolderLists.cs, AppHost.cs | one list, bookmarks.json, `bookmarks`, a list of entries (3.1); both old files taken over once |
 | "folderLists" to every window; folderListAdd, folderListRemove, folderListSet per kind | AppHost.cs, MainForm.cs, folderlists.js | the one list of entries; a change sets an entry's flag rather than moving it between lists (3.2) |
 | The word "favourite folders", "Favourites" | ribbon.json, folderlists.js, actions.js, MainForm.cs (Windows' menu items), F1 | "Bookmarks": the ribbon button, the menu, Manage's title, Windows' menu items, the actions (bookmarks.menu, bookmarks.add, bookmarks.manage; the old names still accepted, so a ribbon.json or keys.json of your own keeps working) |
-| Windows' menu: Add to / Remove from quick access, Add to / Remove from favourite folders, for one folder | MainForm.cs (ShellMenu.AddOwn), app.js | for one folder or one file; Add to quick access / Add to bookmarks, Move to quick access / Move to bookmarks, Remove from quick access / Remove from bookmarks (3.2) |
+| Windows' menu: Add to / Remove from quick access, Add to / Remove from favourite folders, for one folder | MainForm.cs (ShellMenu.AddOwn), app.js | for one folder or one file; Add to quick access / Add to bookmarks, or Remove from quick access / Remove from bookmarks for one that is there (3.2) |
 | Manage: a row of name with its parent folder; Change... picks a folder | folderlists.js (manageFavourites), app.css | every bookmark; columns Name, Location, Quick access; Edit... and Add... open Edit (3.3, 3.4) |
 | The menu: the folder's name | folderlists.js (favouritesMenu), menu.js | the name, icon and key; a right-click menu (3.7, 3.8) |
 | The button in Home > Go | defaults/ribbon.json | in Home > Open (3.9) |
@@ -113,9 +114,8 @@ within it, Del on a shortcut), Add current folder / Remove current folder, Add a
 - Switching is one change to the flag; the entry keeps its place in the list, name, icon, keys and the rest:
   - Manage: the Quick access check box of a row (a click, or Space on the selected row).
   - Edit: the Quick access check box.
-  - The Bookmarks menu: right-click a bookmark, Move to quick access (3.8).
-  - A shortcut: Windows' menu on it has Move to bookmarks (Foldex's own items at its top, as built).
-  - Windows' menu on a folder or file that is a bookmark: Move to quick access or Move to bookmarks, beside Remove.
+- No menu has a switch of its own: right-click menus stay short. Edit is one click away from both (the Bookmarks
+  menu's right-click, a shortcut's right-click, Manage).
 - Dragging within the area (as built) moves the entry in the list: it lands before the shortcut it was dropped on,
   or after the last one; bookmarks of the menu in between keep their places. A folder dropped on the area is added
   with quickAccess set, or, when it is a bookmark of the menu, gets the flag.
@@ -208,14 +208,15 @@ within it, Del on a shortcut), Add current folder / Remove current folder, Add a
     top (3.11). The new pane has no children: Enter on a folder in it opens a child pane, as in any root pane.
   - Open in a new pane with a child pane: the same, and a child list beside it showing the folder.
   - Edit...: Edit (3.4) for this bookmark.
-  - Move to quick access (3.2).
   - Remove: off the list (no question; nothing on disk changes).
 - A location that is not there or not reachable: the Open items give the message of 3.12, as a left click does.
 - With the keys: the menu key or Shift+F10 on the lit bookmark opens the same small menu.
 - menu.js gets this generic: an item may carry `context` (items), shown at a right-click or the menu key on that item.
   The opener rule (CLAUDE.md, Menus) is about the button that opened the menu and is not touched.
-- A quick access shortcut's right-click is Windows' menu with Foldex's items at its top (as built): Move to bookmarks
-  and Remove from quick access, plus Edit... (3.4).
+- A quick access shortcut's right-click is Windows' menu with Foldex's items at its top (as built: Remove from quick
+  access), plus Edit... (3.4).
+- Right-click menus are kept short on purpose: Foldex has many features, and each item added makes every menu longer.
+  What is set once (the quick access flag, Regular or Root, the icon, the keys) lives in Edit and Manage only.
 
 ### 3.9 Ribbon
 
@@ -283,8 +284,8 @@ within it, Del on a shortcut), Add current folder / Remove current folder, Add a
   the old action names still run.
 - In the test copy (CDP, real keys and mouse where possible): the word Bookmarks in the ribbon, the menu, Manage and
   Windows' menu; the old lists taken over (both, a folder in both); Manage's columns with icons and the Quick access
-  check box (a click and Space: the entry moves between the menu and the area at once, in every window); Move to
-  quick access from the menu's right-click, Move to bookmarks from a shortcut's menu; Edit: a name, a location by
+  check box (a click and Space: the entry moves between the menu and the area at once, in every window); Edit from
+  the menu's right-click and from a shortcut's right-click, its Quick access box moving the entry; Edit: a name, a location by
   typing, the Quick access box, Plain / Default / Custom, Change Icon (SHELL32's icons, a double click), a key and a
   chord pressed into the key fields, a clash asked (No keeps the old key; Yes on Ctrl+C: the bookmark opens with it,
   Copy has no key in F1); kept after a restart; the Open key opens the bookmark in the active pane, the other in a
