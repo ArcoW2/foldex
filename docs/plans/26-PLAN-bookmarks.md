@@ -19,9 +19,10 @@ Open. A quick access shortcut cannot be renamed either.
 
 ## 2. The solution, in brief
 
-Favourite folders become Bookmarks. Every bookmark has a name, an icon, two optional keys and a way of opening,
-kept with its folder in bookmarks.json. Manage shows two columns, Name (the icon, then the name) and Location; Edit...
-opens a window with the name, the location (a folder, a network path or a shell folder), Regular or Root, the icon
+Favourite folders become Bookmarks. A bookmark is a folder or an item, kept alike as one entry in bookmarks.json
+(a flag marks an item) with its name, icon, two optional keys and way of opening. Manage shows two columns, Name
+(the icon, then the name) and Location; Edit... opens a window with the name, the location (a folder or file, a
+network path or a shell folder), Regular or Root, the icon
 (Plain, Default or Custom; Custom opens a Change Icon window with every icon of a dll, exe or ico file, SHELL32.dll by
 default) and the two keys, pressed into key fields as one key or a chord (starting with Ctrl+B by default): one opens
 the bookmark in the active pane, the other in a new pane with a child pane. Regular goes to the folder (from a child
@@ -66,13 +67,13 @@ Plan 23's favourite folders stay and are changed, not made again:
 | Built (plan 23) | Where | Changes to |
 |---|---|---|
 | The word "favourite folders", "Favourites" | ribbon.json, folderlists.js, actions.js, MainForm.cs (Windows' menu items), F1 | "Bookmarks": the ribbon button, the menu, Manage's title, "Add to bookmarks" / "Remove from bookmarks" in Windows' menu, the actions (bookmarks.menu, bookmarks.add, bookmarks.manage; the old names still accepted, so a ribbon.json or keys.json of your own keeps working) |
-| favourite-folders.json: `folders` only | FolderLists.cs, AppHost.cs | bookmarks.json: `folders` plus `items` (3.1); favourite-folders.json read once when bookmarks.json is not there yet |
-| "folderLists" to every window, folderListSet | AppHost.cs, MainForm.cs, folderlists.js | carry the items too (3.1) |
+| favourite-folders.json: `folders`, a list of paths | FolderLists.cs, AppHost.cs | bookmarks.json: `bookmarks`, a list of entries (3.1); favourite-folders.json read once when bookmarks.json is not there yet |
+| "folderLists" to every window, folderListSet: paths | AppHost.cs, MainForm.cs, folderlists.js | entries (3.1) |
 | Manage: a row of name with its parent folder; Change... picks a folder | folderlists.js (manageFavourites), app.css | columns Name and Location; Edit... and Add... open Edit (3.2, 3.3) |
 | The menu: the folder's name | folderlists.js (favouritesMenu), menu.js | the name, icon and key; a right-click menu (3.6, 3.7) |
 | The button in Home > Go | defaults/ribbon.json | in Home > Open (3.8) |
 | The key set from keys.json | keys.js | plus the bookmarks' keys (3.5) |
-| quickaccess.json: `folders` only; a shortcut shows its folder's name | FolderLists.cs, folderlists.js (quickAccessEntries) | `items` with a name; F2 on a shortcut (3.9) |
+| quickaccess.json: `folders`, a list of paths; a shortcut shows its folder's name | FolderLists.cs, folderlists.js (quickAccessEntries) | entries with a name (3.1); F2 on a shortcut (3.9) |
 | item.rename (F2): the item on disk | actions.js | a quick access shortcut first: its name (3.9) |
 
 | A missing folder: a question to take it off the list | folderlists.js (openFavourite, missingFolder) | a message only; nothing moves (3.11) |
@@ -83,17 +84,22 @@ access apart from its names.
 
 ### 3.1 Kept
 
-- bookmarks.json keeps the folders (`folders`, in your order) and `items`: folder -> { name, icon, key, keyNew,
-  root }, only for bookmarks that have one of them. quickaccess.json gets `items` the same way, with only a name
-  (3.9); its shortcuts keep the folder's own icon.
-- name: empty, or the folder's own name, is not kept (the folder's name is shown). icon: absent is Default (the
-  folder's own icon), "plain" is no icon, otherwise "<file>,<index>" (as Windows writes an icon place, %SystemRoot%
+- Folders and items are bookmarks alike: bookmarks.json is one list, `bookmarks`, in your order, one entry per
+  bookmark: { location, item, name, icon, key, keyNew, root }. Only location is always there; the rest only when set.
+- item: true when the location is an item (a file) rather than a folder, set when it is added (Windows' menu on a file,
+  or Edit finding a file there). It is the one difference: after the folder opens, the item is focused (3.11). It is
+  kept rather than asked each time, so a file that is gone is still known to be one (its folder opens at the top).
+- name: empty, or the location's own name, is not kept (its own name is shown). icon: absent is Default (the
+  location's own icon), "plain" is no icon, otherwise "<file>,<index>" (as Windows writes an icon place, %SystemRoot%
   kept as written). key (Open) and keyNew (Open in a new pane with a child pane): each as keys.json writes one
   ("Ctrl+B, 1"); either can be absent. root: true for Root (3.10); absent is Regular.
-- FolderLists keeps them with the list: a folder taken off loses them; the same folder (any case, a known folder by
-  its shell name or path) has one entry; a folder changed in Edit keeps its name, icon and keys.
-- The host sends them with the lists ("folderLists") to every window; folderListSet carries them.
-- Folders added from Windows' right-click menu or from the Bookmarks menu get none of them.
+- quickaccess.json gets the same shape, `bookmarks` with { location, name } (3.9); its shortcuts keep the folder's
+  own icon. An entry that is a plain string (favourite-folders.json, quickaccess.json as written now) reads as
+  { location }.
+- FolderLists keeps the list: one entry per location (any case, a known folder by its shell name or path); a location
+  changed in Edit keeps its name, icon, keys and root.
+- The host sends the entries ("folderLists") to every window; folderListSet carries them.
+- Added from Windows' right-click menu or the Bookmarks menu: only location (and item for a file).
 
 ### 3.2 Manage
 
@@ -227,8 +233,9 @@ access apart from its names.
 
 ### 3.11 Files, and places that are not there
 
-- A file can be a bookmark: Windows' right-click menu for one file gets "Add to bookmarks" / "Remove from bookmarks"
-  (as one folder has), and Edit takes a file's path. Its Default icon is the file's own.
+- An item (a file) is a bookmark as a folder is, with item set (3.1): Windows' right-click menu for one file gets
+  "Add to bookmarks" / "Remove from bookmarks" (as one folder has), and Edit takes a file's path. Its Default icon is
+  the file's own.
 - Opened, a file bookmark opens its folder as a folder bookmark would (Regular or Root, from a child pane through
   its parent, 3.10), and the file is selected and focused in the pane that lists the folder's items: the active pane
   when it lists, else the child that follows it (a tree of folders shows no files). A Root file bookmark makes its
@@ -241,10 +248,11 @@ access apart from its names.
 
 ### 3.12 Tests
 
-- Unit (FolderListsTests): name, icon, both keys and root kept and read back; one key without the other; a file without
-  `items` read as before; favourite-folders.json taken over when bookmarks.json is not there; all of them dropped when
-  the folder is taken off and kept when it is changed; one entry for the same folder in another case and for a known
-  folder by its shell name and path; an empty name and the folder's own name not kept. The icons of SHELL32.dll read
+- Unit (FolderListsTests): an entry's location, item, name, icon, both keys and root kept and read back; one key
+  without the other; plain-string entries (favourite-folders.json, quickaccess.json as now) read as locations;
+  favourite-folders.json taken over when bookmarks.json is not there; a location changed keeps the rest; one entry
+  for the same location in another case and for a known folder by its shell name and path; an empty name and the
+  location's own name not kept. The icons of SHELL32.dll read
   (some found, each a picture); a file without icons gives none.
 - Page (Jint): the clashes of 3.5 found and named (a key bound, a prefix, a chord on a bound first key, another
   bookmark's key, a bookmark's two keys the same); a bookmark's key over a keys.json key runs the bookmark; the old
