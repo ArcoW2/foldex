@@ -62,6 +62,7 @@ sealed class MainForm : Form
     }
 
     readonly PreviewHost preview;
+    const int PictureSize = 1600;   // px, the longer side of Windows' picture of a file in the preview (chosen, not measured)
 
     /// <summary>Its window in the projects (ProjectStore.Window.Key).</summary>
     public int Key { get; private set; }
@@ -549,7 +550,20 @@ sealed class MainForm : Form
                         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException) { return null; }
                     });
                 }
+                // Nor that: the picture Windows makes of it (its thumbnail handler: a PSD, a PDF, ...), large.
+                if (error is not null && own is null && !Directory.Exists(path) && await NetworkGuard.Reachable(path)
+                    && await StaWorker.Once("previewPicture", () => Shell.Thumbnails.Picture(path, PictureSize)) is string picture)
+                    own = new JsonObject { ["kind"] = "image", ["url"] = picture };
                 Post(new JsonObject { ["event"] = "previewShown", ["path"] = path, ["handler"] = handler, ["error"] = error, ["own"] = own });
+                break;
+            }
+            case "fileInfo":
+            {
+                // Everything Windows knows of an item, for the Info pane (Shell/FileDetails.cs), off this thread.
+                var path = msg["path"]!.GetValue<string>();
+                var groups = await NetworkGuard.Reachable(path) ? await StaWorker.Once("fileInfo", () => Shell.FileDetails.Groups(path)) : null;
+                Post(new JsonObject { ["event"] = "answer", ["req"] = msg["req"]?.DeepClone(), ["groups"] = groups,
+                    ["error"] = groups is null ? $"{NetworkGuard.Server(path)} is not reachable" : null });
                 break;
             }
             case "previewMove":

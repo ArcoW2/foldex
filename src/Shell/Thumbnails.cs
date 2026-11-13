@@ -56,6 +56,17 @@ static class Thumbnails
         return new Thumb(Url(data, extension), bitmap.Width, bitmap.Height);
     }
 
+    /// <summary>What Windows gives as a picture of a file at `size` (its thumbnail handler: a PSD, a PDF, a RAW when a
+    /// program put one there), not kept: for the preview of a file nothing else shows. Null when Windows has none. On
+    /// an STA thread.</summary>
+    public static string? Picture(string path, int size)
+    {
+        using var bitmap = Make(path, size);
+        if (bitmap is null) return null;
+        var (data, extension) = Encode(bitmap);
+        return Url(data, extension);
+    }
+
     public static string CacheDir(string dataDir) => Path.Combine(DataFolder.StateDir(dataDir), "Thumbnails");
 
     static string Key(string path, long length, long ticks, int size) =>

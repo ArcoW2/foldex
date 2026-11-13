@@ -35,6 +35,7 @@
       { "name": "Show", "items": [
         { "action": "view.menu", "size": "large", "label": "Views" },
         { "action": "preview.toggle", "size": "large", "label": "Preview" },
+        { "action": "info.toggle", "size": "large", "label": "Info" },
         { "action": "hidden.toggle", "label": "Hidden items" } ] },
       { "name": "Projects", "items": [
         { "action": "projects.menu", "size": "large", "label": "Projects" },

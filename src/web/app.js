@@ -178,7 +178,8 @@ function filterTest(pattern) {
 // The view of a pane as its kind says: a tree, a list or a preview.
 function makeView(id) {
   const kind = layout.pane(id).kind;
-  return kind === 'tree' ? new TreeView(id) : kind === 'preview' ? new PreviewView(id) : kind === 'scrap' ? new ScrapView(id) : new ListView(id);
+  return kind === 'tree' ? new TreeView(id) : kind === 'preview' ? (layout.pane(id).info ? new InfoView(id) : new PreviewView(id))
+    : kind === 'scrap' ? new ScrapView(id) : new ListView(id);
 }
 
 // ---------- Rows in view only ----------
@@ -1966,7 +1967,7 @@ class PreviewView {
     // Windows' preview lies over this pane's area: it moves with it, goes when the pane is a tab not shown, and comes
     // back when it is shown again.
     new ResizeObserver(() => {
-      if (!this.path) return;
+      if (!this.path || this.info) return;   // the Info pane has no Windows preview to move
       const r = this.body.getBoundingClientRect();
       if (r.width === 0 || r.height === 0) {
         if (!this.away) post({ op: 'previewClose' });
@@ -2037,6 +2038,48 @@ class PreviewView {
   close() { post({ op: 'previewClose' }); }
 }
 
+// ---------- The Info pane: everything Windows knows of an item (Shell/FileDetails.cs) ----------
+
+// A preview pane of its own kind: it follows the list's focused item as the preview does, and lists its properties
+// in groups (the image's, the video's and sound's, the other details, the file itself), a line between them.
+class InfoView extends PreviewView {
+  constructor(id) {
+    super(id);
+    this.info = true;
+    this.el.classList.add('info');
+    this.el.querySelector('.title').textContent = 'Info';
+    this.message('Select an item to see what is known of it.');
+  }
+
+  show(path) {
+    this.path = path || null;
+    if (!path) return this.message('Select an item to see what is known of it.');
+    const x = views.get(layout.pane(this.id).source)?.entries?.find(e => same(e.id, path));
+    this.el.querySelector('.title').textContent = x?.name ?? path;
+    if (!/^[A-Za-z]:\\|^\\\\/.test(path)) return this.message('Nothing is known of this item.');
+    askHost({ op: 'fileInfo', path }).then(m => {
+      if (!same(this.path, path)) return;   // another item meanwhile
+      if (!m.groups?.length) return this.message(m.error ?? 'Nothing is known of this item.');
+      const list = Object.assign(document.createElement('div'), { className: 'info-list' });
+      m.groups.forEach((g, k) => {
+        if (k) list.append(Object.assign(document.createElement('hr'), { className: 'info-split' }));
+        list.append(Object.assign(document.createElement('div'), { className: 'info-group', textContent: g.title }));
+        for (const [name, value] of g.rows) {
+          const row = Object.assign(document.createElement('div'), { className: 'info-row' });
+          row.append(Object.assign(document.createElement('span'), { className: 'info-name', textContent: name, title: name }),
+            Object.assign(document.createElement('span'), { className: 'info-value', textContent: value }));
+          list.append(row);
+        }
+      });
+      this.rows.replaceChildren(list);
+    });
+  }
+
+  tabTitle() { return 'Info'; }
+
+  close() { }   // no Windows preview to close
+}
+
 // ---------- Dropping files from Explorer onto a pane ----------
 
 // A target of { scrap } is a scrap: what is dropped becomes its entries, nothing is copied or moved (plan 06 3.2), so
@@ -2066,6 +2109,7 @@ function dropTarget(body, targetOf) {
 
 const docks = new Docks();
 let preview = null;
+let infoPane = null;   // the Info pane (InfoView), as `preview` the preview
 
 // A view docked at `place` (docks.js add) and drawn.
 function placeView(view, place) {
@@ -2491,7 +2535,8 @@ function restoreLayout(saved, path) {
     for (const id of docks.panes()) {
       const view = makeView(id);
       views.set(id, view);
-      if (view instanceof PreviewView) preview = view;
+      if (view instanceof InfoView) infoPane = view;
+      else if (view instanceof PreviewView) preview = view;
     }
     renderDock();
     let firstTree = path ? null : true;
@@ -2527,6 +2572,7 @@ function applyPreset(name) {
     preview.close();
     preview = null;
   }
+  infoPane = null;
   for (const v of views.values()) {
     v.el.remove();
     iconUsers.delete(v);
@@ -2607,6 +2653,7 @@ function closePane(id) {
     preview.close();
     preview = null;
   }
+  if (view === infoPane) infoPane = null;
   view.el.remove();
   views.delete(id);
   iconUsers.delete(view);
@@ -2652,6 +2699,7 @@ function hidePane(id) {
       preview.close();
       preview = null;
     }
+    if (view === infoPane) infoPane = null;
     view.el.remove();
     views.delete(p);
     iconUsers.delete(view);
@@ -2670,7 +2718,8 @@ function unhidePane(id) {
     const { place } = pane.away;
     delete pane.away;
     const view = makeView(p);
-    if (view instanceof PreviewView && !preview) preview = view;
+    if (view instanceof InfoView) infoPane ??= view;
+    else if (view instanceof PreviewView && !preview) preview = view;
     placeView(view, place.pane != null && docks.find(place.pane) ? place : { area: place.area ?? 'center' });
     shown.push(view);
   }
@@ -2711,6 +2760,20 @@ $('hidden-panes').addEventListener('mousedown', e => {
 });
 
 // The preview pane (Preview on the ribbon, Alt+P): a child of the active list, or of the first list, at its right.
+// The Info pane (Alt+I): everything Windows knows of the item a list focuses; a child of the active list, or of the
+// first list, below the preview when there is one, else at the list's right.
+function toggleInfo() {
+  if (infoPane) return closePane(infoPane.id);
+  const list = activeView() instanceof ListView ? activeView() : [...views.values()].find(v => v instanceof ListView);
+  if (!list) return status('The Info pane follows a list: make one with New child pane.', true);
+  // In the list's branch shown (with the preview, when there is one): it follows the same focus.
+  const id = layout.add({ source: list.id, kind: 'preview', colour: layout.followers(list.id).length ? layout.keyOf(list.id) : null });
+  layout.pane(id).info = true;
+  infoPane = placeView(new InfoView(id), preview ? { pane: preview.id, side: 'bottom' } : { pane: list.id, side: 'right' });
+  infoPane.show(layout.state(list.id).focus);
+  drawHeads();
+}
+
 function togglePreview() {
   if (preview) return closePane(preview.id);
   const list = activeView() instanceof ListView ? activeView() : [...views.values()].find(v => v instanceof ListView);

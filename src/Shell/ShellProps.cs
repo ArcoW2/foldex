@@ -80,6 +80,41 @@ static class ShellProps
         return result;
     }
 
+    /// <summary>Every property an item has a value for, with its display name and its value as Explorer shows it:
+    /// [(canonical name, title, value)]; properties without a display name and empty values left out.</summary>
+    public static List<(string Name, string Title, string Value)> All(string path)
+    {
+        var list = new List<(string, string, string)>();
+        var iid = typeof(IPropertyStore).GUID;
+        if (SHGetPropertyStoreFromParsingName(path, IntPtr.Zero, GpsBestEffort, ref iid, out var store) < 0) return list;
+        try
+        {
+            store.GetCount(out var count);
+            var descIid = typeof(IPropertyDescription).GUID;
+            for (uint i = 0; i < count; i++)
+            {
+                if (store.GetAt(i, out var key) < 0 || PSGetPropertyDescription(ref key, ref descIid, out var description) < 0) continue;
+                string? name = null, title = null;
+                try
+                {
+                    if (description.GetCanonicalName(out name) < 0 || description.GetDisplayName(out title) < 0) continue;
+                }
+                finally { Marshal.ReleaseComObject(description); }
+                if (string.IsNullOrEmpty(name) || string.IsNullOrWhiteSpace(title)) continue;
+                if (store.GetValue(ref key, out var value) < 0) continue;
+                try
+                {
+                    if (value.vt == 0 || PSFormatForDisplayAlloc(ref key, ref value, 0, out var text) < 0) continue;
+                    text = DirectionMarks.Replace(text, "").Trim();
+                    if (text.Length > 0) list.Add((name, title, text));
+                }
+                finally { PropVariantClear(ref value); }
+            }
+        }
+        finally { Marshal.ReleaseComObject(store); }
+        return list;
+    }
+
     static readonly System.Text.RegularExpressions.Regex DirectionMarks = new("[\u200E\u200F\u202A-\u202E]");
 
     const int PdefColumn = 6, GpsBestEffort = 0x40;
@@ -133,6 +168,9 @@ static class ShellProps
 
     [DllImport("propsys.dll")]
     static extern int PSEnumeratePropertyDescriptions(int filter, ref Guid riid, out IPropertyDescriptionList list);
+
+    [DllImport("propsys.dll")]
+    static extern int PSGetPropertyDescription(ref PropertyKey key, ref Guid riid, out IPropertyDescription description);
 
     [DllImport("propsys.dll", CharSet = CharSet.Unicode)]
     static extern int PSGetPropertyKeyFromName(string name, out PropertyKey key);

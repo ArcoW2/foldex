@@ -35,6 +35,7 @@
   "Ctrl+H": "hidden.toggle",
   "Ctrl+Shift+F": "search.focus",
   "Alt+P": "preview.toggle",
+  "Alt+I": "info.toggle",
   "Ctrl+Alt+N": ["pane.newChild", "right"],
   "Ctrl+Alt+Shift+N": "pane.new",
   "Ctrl+T": "pane.newTab",

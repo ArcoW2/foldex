@@ -186,6 +186,8 @@ action('pane.toSide', { title: 'To the pane at a side', hint: 'the keyboard to t
 
 action('preview.toggle', { title: 'Preview', hint: 'a preview pane following the list', group: 'view',
   checked: () => !!preview, run: () => togglePreview() });
+action('info.toggle', { title: 'Info', hint: 'a pane following the list with everything known of the focused item: its image, video and sound fields, its details, the file itself',
+  group: 'view', checked: () => !!infoPane, run: () => toggleInfo() });
 action('hidden.toggle', { title: 'Hidden items', hint: 'hidden and system files and folders in the active pane (its own choice; the setting is for the others)',
   group: 'view', enabled: () => !!activePane && !(views.get(activePane) instanceof PreviewView),
   checked: () => !!activePane && showsHidden(activePane), run: () => setPaneHidden(activePane, !showsHidden(activePane)) });
