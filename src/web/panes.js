@@ -101,9 +101,9 @@ class Layout {
       : { kind: 'list', content: 'both' };
   }
 
-  // A colour no connection has yet; with all taken, the one used least.
-  newColour() {
-    const used = [...this.panes.values()].map(p => p.colour).filter(c => c !== null);
+  // A colour no connection has yet; with all taken, the one used least. `drawn`: colours counted as used as well.
+  newColour(drawn = []) {
+    const used = [...this.panes.values()].map(p => p.colour).filter(c => c !== null).concat(drawn);
     const count = c => used.filter(u => u === c).length;
     return Branches.reduce((best, c) => count(c) < count(best) ? c : best);
   }

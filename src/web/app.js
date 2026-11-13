@@ -2690,9 +2690,13 @@ function applyPreset(name) {
 
 // A new root: a tree of folders (3.4, New pane), in the left area (or at `place`), on `path` or else This PC.
 function newRootPane(path, place = { area: 'left' }) {
+  // Its own colour, not one another root is drawn in (a root without one is drawn in the first branch's).
+  const drawn = [...layout.panes.values()].filter(p => p.source === null && p.colour === null).map(p => layout.pathColour(p.id));
   const id = layout.add({ kind: 'tree', content: 'folders' });
+  layout.pane(id).colour = layout.newColour(drawn);
   const tree = placeView(new TreeView(id), place);
   activate(id);
+  tree.body.focus();   // the keyboard in it (the arrows, Page Up / Down are the pane's own)
   tree.ready = tree.init().then(() => path ? tree.reveal(path) : tree.select(ThisPC));
   return tree;
 }
