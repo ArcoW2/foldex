@@ -11,6 +11,8 @@ Status: not started.
   or without a child pane; the favourites' keys start with Ctrl+F; a location is a path or a network path.
 - 2026-11-13: revised: two keys per favourite, both optional: Open, and Open in a new pane with a child pane.
 - 2026-11-13: revised: Ctrl+F kept for the favourites by convention; any key can be taken, a clash asked, not refused.
+- 2026-11-13: revised: Ctrl+F stays Find, the favourites' keys start with Ctrl+B instead; Regular from a child pane
+  (the parent focuses the folder, the child shows it); a list gets a ".." row for a Root favourite.
 
 Builds on plan 23 (`docs/plans/executed/23-PLAN-quick-access-and-favourites.md` 3.6, 3.7), which built the favourite
 folders as LexPen's: the Favourites menu (the folders, Add current folder, Add a folder..., Manage...), Manage (Up,
@@ -31,9 +33,10 @@ Every favourite gets a name, an icon and two keys of its own, kept with its fold
 shows two columns, Name (the icon, then the name) and Location, and its Change... becomes Edit...: a window with the
 name, the location, the icon (Plain, Default or Custom; Custom opens a Change Icon window that shows every icon of a
 dll, exe or ico file, SHELL32.dll by default) and two keys, both optional, each pressed into a key field as one key
-or a chord of two and checked against the keys Foldex has: one opens the favourite in the active pane ("Ctrl+F, 1"),
-the other in a new pane with a child pane ("Ctrl+F, Shift+1"). A favourite opens Regular (the pane goes to the
-folder, as now) or as Root (the folder becomes the top of the pane, with ".." to go up), also in an existing pane. A
+or a chord of two and checked against the keys Foldex has: one opens the favourite in the active pane ("Ctrl+B, 1"),
+the other in a new pane with a child pane ("Ctrl+B, Shift+1"). A favourite opens Regular (the pane goes to the
+folder, as now; from a child pane its parent focuses the folder and the child shows it and keeps the keyboard) or as
+Root (the folder becomes the top of the pane, with ".." to go up), also in an existing pane. A
 click in the Favourites menu opens it in the active pane; a right-click on a favourite offers Open, Open in a new pane
 (a new root tree, This PC at its top and the folder focused, or the folder as its top for a Root favourite), Open in
 a new pane with a child pane, Edit... and Remove. The Favourites button moves from Home > Go to Home > Open. A quick
@@ -92,7 +95,7 @@ a favourite opens (favouritePane), a missing folder's question, quick access.
 - name: empty, or the folder's own name, is not kept (the folder's name is shown). icon: absent is Default (the
   folder's own icon, as now), "plain" is no icon, otherwise "<file>,<index>" (as Windows writes an icon place,
   %SystemRoot% kept as written). key (Open) and keyNew (Open in a new pane with a child pane): each as keys.json
-  writes one ("Ctrl+F, 1", "Ctrl+F, Shift+1"); either can be absent.
+  writes one ("Ctrl+B, 1", "Ctrl+B, Shift+1"); either can be absent.
 - FolderLists keeps them with the list: a folder taken off loses them; the same folder (any case, a known folder by
   its shell name or path) has one entry; a folder changed in Edit keeps its name, icon and keys.
 - The host sends them with the lists ("folderLists") to every window; folderListSet carries them.
@@ -138,16 +141,18 @@ a favourite opens (favouritePane), a missing folder's question, quick access.
 ### 3.5 Keys
 
 - A favourite has two keys, both optional, as it can be opened in more than one way:
-  - Open: in the active pane (as a click in the menu; Regular or Root as the favourite is set). Example "Ctrl+F, 1".
-  - Open in a new pane with a child pane (as that item of the right-click menu, 3.7). Example "Ctrl+F, Shift+1".
-- Each key can be one key ("Ctrl+Alt+1") or a chord of two, as LexPen and keys.json have them ("Ctrl+F, 1", "Ctrl+F,
+  - Open: in the active pane (as a click in the menu; Regular or Root as the favourite is set). Example "Ctrl+B, 1".
+  - Open in a new pane with a child pane (as that item of the right-click menu, 3.7). Example "Ctrl+B, Shift+1".
+- Each key can be one key ("Ctrl+Alt+1") or a chord of two, as LexPen and keys.json have them ("Ctrl+B, 1", "Ctrl+B,
   B"): the first waits in the status line for the second (keys.js, as now). The second key of a chord may have its
-  own Ctrl, Alt, Shift ("Ctrl+F, Shift+1"). Any key is allowed, not only Ctrl/Alt/Shift with 0-9.
-- The keys above are examples; both are free to choose. The favourites' keys start with Ctrl+F by default: an empty
-  key field (either one) offers "Ctrl+F, " and waits for the second key (another first key can be pressed instead:
-  Backspace empties the field). Ctrl+F is kept for the favourites: the shipped keys.json binds no other key or chord
-  starting with Ctrl+F (Find moves, open question 1), now or later. This is a convention for the shipped keys, not
-  a rule for you: any key can be chosen (3.5, a clash).
+  own Ctrl, Alt, Shift ("Ctrl+B, Shift+1"). Any key is allowed, not only Ctrl/Alt/Shift with 0-9.
+- The keys above are examples; both are free to choose. The favourites' keys start with Ctrl+B by default: an empty
+  key field (either one) offers "Ctrl+B, " and waits for the second key (another first key can be pressed instead:
+  Backspace empties the field). B for bookmarks, xplorer2's word for these. Ctrl+F stays Find. Ctrl+B is free in the
+  shipped keys.json, and WebView2's own browser keys are off (MainForm: AreBrowserAcceleratorKeysEnabled false), so
+  nothing else answers it. Ctrl+B is kept for the favourites: the shipped keys.json binds no other key or chord
+  starting with Ctrl+B, now or later. This is a convention for the shipped keys, not a rule for you: any key can be
+  chosen (3.5, a clash).
 - The keys live with the favourites (3.1), not in keys.json: the page adds them to the key set when the lists come
   (actions favourites.open and favourites.openNew, with the folder as their parameter), so F1 lists them with the
   rest. keys.json is not written by Foldex (it may hold your own comments).
@@ -207,18 +212,24 @@ a favourite opens (favouritePane), a missing folder's question, quick access.
 - Kept in quickaccess.json (3.1) and told to every window, so every tree shows it.
 - A shortcut's subfolders (when it is expanded) are folders on disk: F2 on them renames them, as now.
 
-### 3.10 Root favourites
+### 3.10 Regular and Root
 
-- A favourite set to Root opens as the top of the pane, also in an existing pane:
+- Regular (as built, goTo in app.js): a pane without a parent, or pinned, goes to the folder itself (a tree reveals
+  and focuses it, a list shows it). A child pane does not go there on its own: its parent focuses the folder (a tree
+  reveals it, a list selects it), and the child, following, shows the folder's items, its first item focused, and
+  keeps the keyboard.
+- A favourite set to Root opens as the top of the pane, also in an existing pane (from a child pane: open question 2):
   - A tree: its tops (This PC, Quick access and the rest) give way to that one folder, opened; a ".." row above it
     goes up: the folder above becomes the top (a drive's ".." gives the tree back its usual tops). Backspace and Up
     on the top do the same. The Quick access area is not shown while a tree has a folder as its top.
-  - A list: it shows the folder, as Regular (a list's folder is its top already; Up and Backspace go up). [How a
-    list shows Root is open question 2.]
+  - A list: it shows the folder with a ".." row at the top of its items; ".." (Enter or a double click on it) goes
+    to the folder above, which keeps the ".." row (a drive's ".." goes to This PC, without one). Backspace and Up do
+    the same, as now. The ".." row is never selected with Ctrl+A, never copied, dragged or deleted, and sorts first
+    whatever the sort.
 - The top is kept with the pane in the layout, so it is still there after a restart. A Regular favourite opened in
   such a tree reveals the folder under that top when it is under it, else gives the tree its usual tops back first.
 - Built on what child trees have now: a child tree already has a folder as its top (TreeView `root`) and goes up from
-  it (`up()`); a root tree gets the same, and the ".." row is new.
+  it (`up()`); a root tree gets the same, and the ".." row is new in trees and lists.
 
 ### 3.11 Tests
 
@@ -235,15 +246,16 @@ a favourite opens (favouritePane), a missing folder's question, quick access.
   in a new pane with a child pane; a favourite with only one of the two keys; F1 lists them; the menu with names, icons and keys; the right-click: Open, Open in a new pane (its own
   colour, the keyboard in it, This PC at the top and the folder focused), with a child pane, Edit..., Remove; the
   menu key on a lit favourite; a Root favourite in an existing tree and in a new pane: the folder as the top, "..",
-  Backspace, up to a drive and back to the usual tops, kept after a restart; a network path as a location;
+  Backspace, up to a drive and back to the usual tops, kept after a restart; a Root favourite in a list: the ".."
+  row first in every sort, left out of Ctrl+A, going up; Regular from a child pane: the parent focuses the folder,
+  the child shows it with its first item focused and keeps the keyboard; a network path as a location;
   Favourites in Home > Open. F2 on a quick access shortcut: renamed, the folder on disk
   unchanged, kept after a restart, emptied back to the folder's name; F2 on a subfolder under a shortcut still renames
   that folder.
 
 ## 4. Open questions
 
-1. Ctrl+F starts the favourites' chords, but Ctrl+F is Find now. Once Ctrl+F is the first key of a chord, it waits
-   for a second key and no longer finds on its own. Where does Find go? Ctrl+F is kept for the favourites, so not a
-   chord starting with it. Suggested: F3 (free in the shipped keys.json). Other free Ctrl keys there: Ctrl+B, Ctrl+D, Ctrl+E, Ctrl+G, Ctrl+I, Ctrl+J, Ctrl+K,
-   Ctrl+L, Ctrl+M, Ctrl+N, Ctrl+P, Ctrl+Q, Ctrl+S, Ctrl+U, Ctrl+Y, Ctrl+Z.
-2. A Root favourite in a list pane: the same as Regular (the plan now), or should a list get a ".." row as well?
+1. xplorer2 calls these Bookmarks, and their keys now start with Ctrl+B. Should Foldex call them Bookmarks too (the
+   ribbon button, the menu, Manage, the actions, F1), or keep Favourites?
+2. A Root favourite opened while a child pane is active: does the parent get the folder as its top (the child then
+   shows it, as Regular does), or the child itself?
