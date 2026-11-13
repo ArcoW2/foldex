@@ -76,7 +76,8 @@ static class OwnPreview
             var query = uri.Query.TrimStart('?').Split('&').Select(p => p.Split('=', 2)).FirstOrDefault(p => p[0] == "path");
             var path = query is { Length: 2 } ? Uri.UnescapeDataString(query[1]) : "";
             var range = e.Request.Headers.Contains("Range") ? e.Request.Headers.GetHeader("Range") : null;
-            using var deferral = e.GetDeferral();
+            // Completed once below, not disposed: its Dispose completes it again, which WebView2 refuses (0x8000000E).
+            var deferral = e.GetDeferral();
             // Only a kind the preview shows; opened off this thread.
             var part = KindOf(path) is string kind && kind != "text" ? await Task.Run(() => Open(path, range)) : null;
             try
