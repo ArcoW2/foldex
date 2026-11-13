@@ -1,11 +1,8 @@
 # Plan 14: Floating panes
 
-Status: draft 2026-11-11, revised 2026-11-12; not started; see Status.
+Status: not started; see Status.
 
 - 2026-11-11: draft, taken out of plan 12 (its open question 1).
-- 2026-11-12: revised: wanted, for any pane, a scrap included; connected and coloured as when docked.
-- 2026-11-12: revised: a floating scrap does not come back after a restart, unless it is pinned.
-- 2026-11-12: revised: a pinned scrap comes back empty (built with plan 06's scraps).
 
 Builds on plan 12 (docking panes) and plan 03 (connected panes). The number in the file name is the priority; rename to
 reorder.
@@ -21,7 +18,8 @@ Any pane can float, a scrap included: it is shown in a window of its own, a form
 from its menu or by dragging. It stays connected exactly as when docked: a floating child still follows its parent, a
 floating parent still drives its children, and its colours (head, ring, branch marks, pane theme) are the ones it
 would have docked; the messages go through the host, as LexPen's floating panes do. Moving a pane between docked and
-floating hands over what it shows, so it comes back as it was.
+floating hands over what it shows, so it comes back as it was. F3 opens a preview in a new floating window of its
+own, showing the item the active pane focuses.
 
 ## Status
 
@@ -37,6 +35,7 @@ floating hands over what it shows, so it comes back as it was.
 | Colours across windows | head, ring, branch marks and pane theme as when docked, changing with the window's | Connections across windows | 3.3 |
 | A floating scrap | drops, its search, its dashed ring; gone after a restart unless pinned (then back empty) | -- | 3.3 |
 | Kept | a floating pane's place and size with the window's layout | -- | 3.4 |
+| F3 | a preview in a new floating window | The floating window; open questions 1, 2 | 3.5 |
 
 ## 3. Details
 
@@ -69,13 +68,30 @@ floating hands over what it shows, so it comes back as it was.
 
 - A floating pane's place and size go with the window's layout (plan 12 3.4; plan 15 once projects are built).
 
-### 3.5 Tests
+### 3.5 F3: a preview in a floating window
+
+- F3 (action preview.float; F3 is free in the shipped keys.json) opens a new preview pane, floating in a window of
+  its own (3.2), showing the item the active pane focuses: Windows' preview, else Foldex's own (plan 04, OwnPreview),
+  as a docked preview.
+- The window opens beside the main window (on the other monitor when there is one, else at the right of it), sized as
+  the last floating preview was; its place and size are kept (3.4).
+- It is not the global preview (Alt+P) nor a pane's own: those stay as they are. Esc in the floating window closes
+  it; Dock in its menu docks it as a preview pane (3.1).
+- The keyboard stays in the active pane of the main window.
+- What it shows after it opens, and what a second F3 does: open questions 1 and 2.
+
+### 3.6 Tests
 
 - In the test copy: a list floated, the tree's focus changed, the floating list follows; docked back, it shows the
   same folder and selection; the layout with a floating pane back after a restart.
 - A floating list's head and ring in its branch colour, changing when another branch becomes active in the main
   window; a floating tree driving a docked list; a scrap floated, files dropped on it, a search into it.
+- F3 on an image, a video and a file without a preview: the floating window with its preview, the keyboard still in
+  the list; Esc closes it; its place and size after a restart.
 
 ## 4. Open questions
 
-None.
+1. After F3, does the floating preview follow the focus of the active pane (as the global preview does), or keep
+   showing the item it was opened on?
+2. A second F3: another floating window (one per F3), the same window brought to the item, or the window closed
+   (F3 as a toggle)?
