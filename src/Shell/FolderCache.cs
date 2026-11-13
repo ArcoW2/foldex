@@ -124,9 +124,17 @@ sealed class FolderCache : IDisposable
 
     static long SizeOf(Folder f) => f.Items.Count * BareBytes + f.Entries * EntryBytes;
 
-    /// <summary>Whether a path is cached at all: a folder on disk, or on a share when shares are cached.</summary>
-    public bool Caches(string location) =>
-        Path.IsPathFullyQualified(location) && !location.StartsWith(@"\\?\") && (CacheNetwork || !NetworkGuard.IsNetwork(location));
+    /// <summary>Whether a path goes through the cache: a folder on disk or on a share (so a window gets the changes of
+    /// either item by item).</summary>
+    public bool Caches(string location) => Path.IsPathFullyQualified(location) && !location.StartsWith(@"\\?\");
+
+    /// <summary>Whether a folder is kept once no window shows it (and may be read ahead): on disk always, on a share
+    /// when shares are cached (cacheNetwork). A share's folder not kept is let go as soon as no window shows it, so it
+    /// is read anew when opened again.</summary>
+    public bool Keeps(string location) => CacheNetwork || !NetworkGuard.IsNetwork(location);
+
+    /// <summary>How long a share's folder not kept stays after it was last asked for, while no window says it shows it.</summary>
+    public static TimeSpan ShareGrace = TimeSpan.FromSeconds(10);
 
     /// <summary>Whether a folder is in the cache, read whole.</summary>
     public bool Has(string location)
@@ -139,7 +147,13 @@ sealed class FolderCache : IDisposable
     /// <summary>The folders a window shows (its lists, the folders open in its trees): never let go.</summary>
     public void Shown(object window, IEnumerable<string> shown)
     {
-        lock (gate) shownBy[window] = shown.Select(Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        lock (gate)
+        {
+            shownBy[window] = shown.Select(Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            // A share's folder not kept: let go once no window shows it (not one just read: its window says so a moment later).
+            foreach (var f in folders.Values.Where(f => f.Network && !Keeps(f.Path) && f.Reading is null && !IsShown(Key(f.Path))
+                && DateTime.UtcNow - f.LastUsed > ShareGrace).ToList()) Drop(f);
+        }
     }
 
     public void Forget(object window)
@@ -376,7 +390,7 @@ sealed class FolderCache : IDisposable
         Dictionary<string, Item> fresh;
         try { fresh = Read(location); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException) { return; }
-        var differs = false;
+        List<string> differs = [];
         lock (gate)
         {
             if (!folders.TryGetValue(Key(location), out var f) || !f.Complete) return;
@@ -385,15 +399,15 @@ sealed class FolderCache : IDisposable
                     || had.Info.Attributes != item.Info.Attributes || had.Info is FileInfo a && item.Info is FileInfo b && a.Length != b.Length)
                 {
                     f.Items[name] = item;
-                    differs = true;
+                    differs.Add(name);
                 }
             foreach (var name in f.Items.Keys.Where(n => !fresh.ContainsKey(n)).ToList())
             {
                 f.Items.Remove(name);
-                differs = true;
+                differs.Add(name);
             }
         }
-        if (differs) Tell(location, null);
+        if (differs.Count > 0) Tell(location, differs.Count > MaxNames ? null : differs);   // the items that changed, as a watch tells them
     }
 
     // ---------- Memory (3.5) ----------
@@ -440,7 +454,7 @@ sealed class FolderCache : IDisposable
     /// Stops between items when a window asks for something. False when it could not be read.</summary>
     public bool ReadAhead(string location, Func<bool> stop)
     {
-        if (!Caches(location) || Has(location)) return Has(location);
+        if (!Caches(location) || !Keeps(location) || Has(location)) return Has(location);
         var (f, _) = Bare(location);
         if (f is null) return false;
         List<Item> items;

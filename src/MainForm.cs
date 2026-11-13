@@ -505,8 +505,8 @@ sealed class MainForm : Form
                 break;
             case "watch":
                 var shown = msg["folders"]?.AsArray().Select(n => n!.GetValue<string>()).ToList() ?? [];
-                // The cache watches the folders it keeps and tells of their changes itself (plan 24 3.4); the others (a
-                // share when shares are not cached) are watched here as before.
+                // The cache watches the folders on disk and on shares and tells of their changes itself (plan 24 3.4);
+                // the others (shell places that are no path) are watched here as before.
                 app.Folders?.Set(this, shown.Where(f => !app.Cache.Caches(f)));
                 app.Cache.Shown(this, shown);   // never let go of while shown (plan 24 3.5)
                 break;

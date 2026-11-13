@@ -80,6 +80,38 @@ public class FolderCacheTests : IDisposable
         Assert.Null(cache.Entries(Path.Combine(dir, "sub"), ["deeper"], false, false));   // not cached: read whole
     }
 
+    // The same folder as a share (the loopback's admin share, \\localhost\D$\...): through the cache, its changes told
+    // item by item; with shares not kept, let go once no window shows it.
+    string Unc => $@"\\localhost\{dir[0]}$\{dir[3..]}";
+
+    [Fact]
+    public void AShareGoesThroughTheCacheItsChangesToldByNameAndNotKeptWhenNotShown()
+    {
+        if (!Directory.Exists(Unc)) return;   // no admin share here: nothing to test
+        var told = new System.Collections.Concurrent.ConcurrentQueue<IReadOnlyList<string>?>();
+        using var cache = new FolderCache((_, names) => told.Enqueue(names)) { CacheNetwork = false };
+        var window = new object();
+        Assert.True(cache.Caches(Unc));
+        Assert.False(cache.Keeps(Unc));
+        cache.List(Unc, null, default, false, false);
+        cache.Shown(window, [Unc]);
+        File.WriteAllText(Path.Combine(dir, "c.txt"), "c");
+        // Told by its watch, or else by the check made when it is shown again from the cache.
+        for (var i = 0; i < 60 && told.IsEmpty; i++)
+        {
+            Thread.Sleep(50);
+            if (i == 20) cache.List(Unc, null, default, false, false);
+        }
+        Assert.True(told.TryDequeue(out var names));
+        Assert.Contains("c.txt", names!);
+        Assert.True(cache.Has(Unc));
+        var grace = FolderCache.ShareGrace;
+        FolderCache.ShareGrace = TimeSpan.Zero;
+        try { cache.Shown(window, []); }
+        finally { FolderCache.ShareGrace = grace; }
+        Assert.False(cache.Has(Unc));
+    }
+
     [Fact]
     public void TwoRequestsAtOnceShareTheRead()
     {

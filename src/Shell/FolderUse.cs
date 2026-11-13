@@ -136,7 +136,7 @@ sealed class ReadAhead : IDisposable
         return null;
     }
 
-    bool Allowed(string folder) => cache.Caches(folder) && (!NetworkGuard.IsNetwork(folder) || NetworkGuard.DownSince(folder) is null);
+    bool Allowed(string folder) => cache.Caches(folder) && cache.Keeps(folder) && (!NetworkGuard.IsNetwork(folder) || NetworkGuard.DownSince(folder) is null);
 
     public void Dispose() => stopping = true;
 }

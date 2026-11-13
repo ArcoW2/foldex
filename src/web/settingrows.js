@@ -26,7 +26,7 @@ const SETTING_ROWS = [
   { tab: 'App', group: 'Memory', name: 'folderCacheMB', kind: 'range', range: [16, 4096, 16], unit: ' MB', title: 'Folder cache',
     hint: 'How much memory the folders read may keep, for all windows: a folder read once is shown again at once, and folders you use often are read ahead. When Windows runs short of memory, the cache lets go anyway.' },
   { tab: 'App', group: 'Memory', name: 'cacheNetwork', kind: 'toggle', title: 'Cache network shares',
-    hint: 'On: folders on network shares are kept too, and checked again when shown. Off: they are read every time.' },
+    hint: 'On: folders on network shares are kept after they are shown, read ahead, and checked again when shown again. Off: they are kept only while shown, and read anew when opened again. Either way their changes come in item by item, as on a local drive.' },
   { tab: 'App', group: 'Fonts', name: 'appFont', kind: 'font', title: 'Window font',
     hint: 'The ribbon, the pane heads, the location box, the status line and this window.' },
   { tab: 'App', group: 'Fonts', name: 'appSize', kind: 'size', title: 'Window font size', hint: 'In points, 4 to 36.' },

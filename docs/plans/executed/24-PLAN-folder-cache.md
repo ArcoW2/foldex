@@ -206,6 +206,10 @@ None.
   selection, the focus and the focused row's place kept, instead of reading the folder again whole. Measured in the
   test copy with D:	emp (the TEMP folder, 50423 items, changing every second or two) in two lists: the host's CPU
   while nothing was done in the window went from 15.7 s to 0.2 s per 20 s, with no listing asked for.
+  2026-11-13: every share goes through the cache too (cacheNetwork now says only whether a share's folder is kept
+  once no window shows it, and read ahead; off: let go then, read anew when opened again); the check of a share
+  shown again tells the items that changed by name, as a watch does. Measured with \localhost\D$	emp in two
+  lists: as D:	emp (0.2 s host CPU per 20 s, no listing asked for).
   A folder Windows refuses to watch is read again on every request. One watcher per drive (3.4) was not built: one per
   cached folder, the plan's fallback; whether one per drive is cheaper on a busy drive: [not yet calculated].
 - Memory: the setting folderCacheMB (Settings > App > Memory, 16 to 4096 MB, default 256); over it the folders used
