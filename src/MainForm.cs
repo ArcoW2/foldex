@@ -152,6 +152,7 @@ sealed class MainForm : Form
         // copy, paste and undo in a text box stay.
         core.Settings.AreBrowserAcceleratorKeysEnabled = false;
         WebFiles.Serve(core);
+        Shell.OwnPreview.Serve(core);   // the files of Foldex's own preview (before the page is loaded)
         core.ContextMenuRequested += (_, m) => WebFiles.BrowserMenu(m);
         // Not inside a WebView2 event handler: dialogs and long work must not run there.
         // Files dropped from Explorer come along as objects that carry their path (docs/plans/02 3.6).
@@ -538,7 +539,17 @@ sealed class MainForm : Form
             {
                 var path = msg["path"]!.GetValue<string>();
                 var (handler, error) = preview.Show(path, AreaOf(msg["rect"]!));
-                Post(new JsonObject { ["event"] = "previewShown", ["path"] = path, ["handler"] = handler, ["error"] = error });
+                // No Windows preview: Foldex's own for an image, a video, a sound or text (Shell/OwnPreview.cs).
+                JsonObject? own = null;
+                if (error is not null && Shell.OwnPreview.KindOf(path) is not null && await NetworkGuard.Reachable(path))
+                {
+                    own = await Task.Run(() =>
+                    {
+                        try { return Shell.OwnPreview.Read(path); }
+                        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException) { return null; }
+                    });
+                }
+                Post(new JsonObject { ["event"] = "previewShown", ["path"] = path, ["handler"] = handler, ["error"] = error, ["own"] = own });
                 break;
             }
             case "previewMove":

@@ -2011,6 +2011,24 @@ class PreviewView {
     post({ op: 'preview', path, rect: this.rect() });
   }
 
+  // Foldex's own preview, when Windows has none for the file (Shell/OwnPreview.cs): an image (a GIF moving), a video
+  // or a sound in the page's own players, text as text.
+  showOwn(own) {
+    const kind = own.kind;
+    const el = document.createElement(kind === 'image' ? 'img' : kind === 'text' ? 'pre' : kind);
+    el.className = `own own-${kind}`;
+    if (kind === 'text') el.textContent = own.text + (own.cut ? '\n\n[Only the start of the file is shown.]' : '');
+    else {
+      el.src = own.url;
+      el.addEventListener('error', () => this.message('This item cannot be previewed.'));
+      if (kind !== 'image') {
+        el.controls = true;
+        el.preload = 'metadata';
+      }
+    }
+    this.rows.replaceChildren(el);
+  }
+
   restore() { }
 
   up() { }
@@ -3203,7 +3221,9 @@ const events = {
   renames(m) { renames = m.renames; },
   previewShown(m) {
     window.__spike.events.push({ previewShown: m.path, handler: m.handler, error: m.error });
-    if (m.error && preview) preview.message(`No Windows preview: ${m.error}`);
+    if (!preview || !same(m.path, preview.path)) return;   // another file meanwhile
+    if (m.own) preview.showOwn(m.own);
+    else if (m.error) preview.message('This item cannot be previewed.');
   },
 };
 

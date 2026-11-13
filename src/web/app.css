@@ -1759,3 +1759,9 @@ dialog.fav-manage { width: 520px; }
 .fav-row .fav-dir { color: var(--fg-dim); overflow: hidden; text-overflow: ellipsis; }
 .fav-row.missing .fav-name { text-decoration: line-through; color: var(--fg-dim); }
 .fav-none { padding: 8px; color: var(--fg-dim); }
+
+/* Foldex's own preview (app.js PreviewView.showOwn): the image or video as large as fits, a sound's player, text. */
+.pane.preview .rows:has(> .own) { height: 100%; }
+.own-image, .own-video { display: block; width: 100%; height: 100%; object-fit: contain; }
+.own-audio { display: block; width: calc(100% - 16px); margin: 12px 8px; }
+.own-text { margin: 0; padding: 6px 8px; white-space: pre-wrap; overflow-wrap: anywhere; font: 12px Consolas, monospace; user-select: text; }
