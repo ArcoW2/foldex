@@ -264,6 +264,7 @@ function activate(id) {
   if (activePane === id) return;
   activePane = id;
   queueMicrotask(ribbonRefresh);
+  if (!(views.get(id) instanceof PreviewView)) showGlobal(layout.state(id).focus);
   showSearch();   // the search bar shows this pane's text
   for (const changed of layout.activate(id)) views.get(changed)?.restore();
   for (const v of views.values()) v.el.classList.toggle('active', v.id === id);
@@ -315,7 +316,32 @@ const focusTimers = new Map();
 function focusItem(paneId, item) {
   layout.state(paneId).focus = item ? item.id : null;
   clearTimeout(focusTimers.get(paneId));
-  focusTimers.set(paneId, setTimeout(() => apply(layout.focus(paneId, item)), followDelay()));
+  focusTimers.set(paneId, setTimeout(() => {
+    apply(layout.focus(paneId, item));
+    if (paneId === activePane) showGlobal(item?.id ?? null);
+  }, followDelay()));
+}
+
+// A path on disk or a share (not a shell place).
+const isDiskPath = id => /^[A-Za-z]:\\|^\\\\/.test(id ?? '');
+
+// An item a pane shows, by id (its name, whether it is a folder): in `first` when given, else in any pane; a tree's
+// node is a folder.
+function itemShown(id, first) {
+  for (const v of [first, ...views.values()]) {
+    const x = v?.entries?.find(e => same(e.id, id));
+    if (x) return x;
+    const n = v instanceof TreeView ? v.node(id) : null;
+    if (n) return { ...n, folder: n.folder !== false };
+  }
+  return null;
+}
+
+// The global preview and Info pane (the ribbon's Preview and Info, Alt+P, Alt+I): the item the active pane focuses,
+// whatever pane that is (a list, a scrap, a tree). A preview or Info pane that is a child of a pane follows only that
+// one (Layout.follow).
+function showGlobal(id) {
+  for (const v of [preview, infoPane]) if (v && !same(v.path, id)) v.show(id);
 }
 
 function apply(updates) {
@@ -1524,6 +1550,7 @@ class ListView {
     const now = layout.state(this.id).focus;
     for (const f of layout.followers(this.id, layout.keyOf(this.id)))
       if (f.kind === 'preview' && !f.pinned && now && !same(views.get(f.id)?.path, now)) views.get(f.id)?.show(now);
+    if (this.id === activePane && now) showGlobal(now);
     this.backDone();
     this.askColumnValues();
     if (this.cols.sort && propsFor(this.cols.sort.id).length) this.sortEntries();
@@ -1994,11 +2021,11 @@ class PreviewView {
   }
 
   show(path) {
-    const x = path && views.get(layout.pane(this.id).source)?.entries?.find(e => same(e.id, path));
-    if (!path || x?.folder) {
+    const x = path && itemShown(path, views.get(layout.pane(this.id).source));
+    if (!path || x?.folder || !isDiskPath(path)) {
       this.path = null;
       post({ op: 'previewClose' });
-      this.message(path ? 'A folder.' : 'Select a file to preview it.');
+      this.message(path ? x?.folder || !isDiskPath(path) ? 'A folder.' : '' : 'Select a file to preview it.');
       return;
     }
     this.path = path;
@@ -2054,9 +2081,9 @@ class InfoView extends PreviewView {
   show(path) {
     this.path = path || null;
     if (!path) return this.message('Select an item to see what is known of it.');
-    const x = views.get(layout.pane(this.id).source)?.entries?.find(e => same(e.id, path));
+    const x = itemShown(path, views.get(layout.pane(this.id).source));
     this.el.querySelector('.title').textContent = x?.name ?? path;
-    if (!/^[A-Za-z]:\\|^\\\\/.test(path)) return this.message('Nothing is known of this item.');
+    if (!isDiskPath(path)) return this.message('Nothing is known of this item.');
     askHost({ op: 'fileInfo', path }).then(m => {
       if (!same(this.path, path)) return;   // another item meanwhile
       if (!m.groups?.length) return this.message(m.error ?? 'Nothing is known of this item.');
@@ -2313,7 +2340,10 @@ function paneMenu(id) {
     ...scrapItems,
     { label: 'New child pane', enabled: !(views.get(id) instanceof PreviewView), items: [
       { label: 'At the right', run: () => newChildPane(id, 'right') },
-      { label: 'Below', run: () => newChildPane(id, 'below') } ] },
+      { label: 'Below', run: () => newChildPane(id, 'below') },
+      '-',
+      { label: 'Preview', checked: layout.followers(id).some(f => f.kind === 'preview' && !f.info), run: () => togglePanePreview(id, false) },
+      { label: 'Info', checked: layout.followers(id).some(f => f.kind === 'preview' && f.info), run: () => togglePanePreview(id, true) } ] },
     { label: 'New tab', enabled: !(views.get(id) instanceof PreviewView), run: () => newTab(id) },
     { label: 'Hidden panes', enabled: layout.hiddenTops().length > 0, items: hiddenPanesMenu() },
     '-',
@@ -2535,8 +2565,10 @@ function restoreLayout(saved, path) {
     for (const id of docks.panes()) {
       const view = makeView(id);
       views.set(id, view);
-      if (view instanceof InfoView) infoPane = view;
-      else if (view instanceof PreviewView) preview = view;
+      if (view instanceof PreviewView && layout.pane(id).source === null) {
+        if (view instanceof InfoView) infoPane = view;
+        else preview = view;
+      }
     }
     renderDock();
     let firstTree = path ? null : true;
@@ -2674,7 +2706,7 @@ function closePane(id) {
 // one. A pane hidden goes with the panes below it; each keeps its connection, its state and where it was docked
 // (Docks.placeOf), its view goes; it is in Hidden panes (View > Panes, the pane menu, the status bar) until shown.
 function togglePane() {
-  if (!layout.pane(activePane)) return;
+  if (!layout.pane(activePane) || views.get(activePane) instanceof PreviewView) return;
   const r = layout.toggle(activePane);
   if (r.hide) {
     for (const id of r.hide) hidePane(id);
@@ -2718,8 +2750,8 @@ function unhidePane(id) {
     const { place } = pane.away;
     delete pane.away;
     const view = makeView(p);
-    if (view instanceof InfoView) infoPane ??= view;
-    else if (view instanceof PreviewView && !preview) preview = view;
+    if (view instanceof InfoView && pane.source === null) infoPane ??= view;
+    else if (view instanceof PreviewView && pane.source === null && !preview) preview = view;
     placeView(view, place.pane != null && docks.find(place.pane) ? place : { area: place.area ?? 'center' });
     shown.push(view);
   }
@@ -2764,23 +2796,37 @@ $('hidden-panes').addEventListener('mousedown', e => {
 // first list, below the preview when there is one, else at the list's right.
 function toggleInfo() {
   if (infoPane) return closePane(infoPane.id);
-  const list = activeView() instanceof ListView ? activeView() : [...views.values()].find(v => v instanceof ListView);
-  if (!list) return status('The Info pane follows a list: make one with New child pane.', true);
-  // In the list's branch shown (with the preview, when there is one): it follows the same focus.
-  const id = layout.add({ source: list.id, kind: 'preview', colour: layout.followers(list.id).length ? layout.keyOf(list.id) : null });
-  layout.pane(id).info = true;
-  infoPane = placeView(new InfoView(id), preview ? { pane: preview.id, side: 'bottom' } : { pane: list.id, side: 'right' });
-  infoPane.show(layout.state(list.id).focus);
-  drawHeads();
+  infoPane = globalPane(true);
 }
 
+// The global preview (Alt+P): a pane without a parent, in the right area (below the global Info pane when there is
+// one), showing the item the active pane focuses (showGlobal).
 function togglePreview() {
   if (preview) return closePane(preview.id);
-  const list = activeView() instanceof ListView ? activeView() : [...views.values()].find(v => v instanceof ListView);
-  if (!list) return status('A preview follows a list: make one with New child pane.', true);
-  const id = layout.add({ source: list.id, kind: 'preview' });
-  preview = placeView(new PreviewView(id), { pane: list.id, side: 'right' });
-  preview.show(layout.state(list.id).focus);
+  preview = globalPane(false);
+}
+
+function globalPane(info) {
+  const id = layout.add({ kind: 'preview' });
+  if (info) layout.pane(id).info = true;
+  const other = info ? preview : infoPane;
+  const view = placeView(info ? new InfoView(id) : new PreviewView(id), other ? { pane: other.id, side: info ? 'bottom' : 'top' } : { area: 'right' });
+  view.show(activePane && !(views.get(activePane) instanceof PreviewView) ? layout.state(activePane).focus : null);
+  drawHeads();
+  return view;
+}
+
+// A preview or Info pane of one pane (the pane menu's New child pane, the ribbon's Pane preview and Pane info): its
+// child at its right, in the branch it shows, following only its focus. A second time: that one closed.
+function togglePanePreview(id, info) {
+  const pane = layout.pane(id);
+  if (!pane || views.get(id) instanceof PreviewView) return;
+  const had = layout.followers(id).find(f => f.kind === 'preview' && !!f.info === info);
+  if (had) return closePane(had.id);
+  const child = layout.add({ source: id, kind: 'preview', colour: layout.followers(id).length ? layout.keyOf(id) : null });
+  if (info) layout.pane(child).info = true;
+  const view = placeView(info ? new InfoView(child) : new PreviewView(child), { pane: id, side: 'right' });
+  view.show(layout.state(id).focus);
   drawHeads();
 }
 // Ctrl+Alt+arrow keys: the keyboard to the pane at that side of the active one, as they are on screen (docks.js
@@ -3279,9 +3325,12 @@ const events = {
   renames(m) { renames = m.renames; },
   previewShown(m) {
     window.__spike.events.push({ previewShown: m.path, handler: m.handler, error: m.error });
-    if (!preview || !same(m.path, preview.path)) return;   // another file meanwhile
-    if (m.own) preview.showOwn(m.own);
-    else if (m.error) preview.message('This item cannot be previewed.');
+    // Every preview showing that file (another file meanwhile: nothing).
+    for (const v of views.values()) {
+      if (!(v instanceof PreviewView) || v instanceof InfoView || !same(m.path, v.path)) continue;
+      if (m.own) v.showOwn(m.own);
+      else if (m.error) v.message('This item cannot be previewed.');
+    }
   },
 };
 

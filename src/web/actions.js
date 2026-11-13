@@ -184,10 +184,15 @@ action('pane.toSide', { title: 'To the pane at a side', hint: 'the keyboard to t
 
 // ---------- View ----------
 
-action('preview.toggle', { title: 'Preview', hint: 'a preview pane following the list', group: 'view',
+action('preview.toggle', { title: 'Preview', hint: 'a preview pane showing the item of the pane with the keyboard', group: 'view',
   checked: () => !!preview, run: () => togglePreview() });
-action('info.toggle', { title: 'Info', hint: 'a pane following the list with everything known of the focused item: its image, video and sound fields, its details, the file itself',
+action('info.toggle', { title: 'Info', hint: 'a pane with everything known of the item of the pane with the keyboard: its image, video and sound fields, its details, the file itself',
   group: 'view', checked: () => !!infoPane, run: () => toggleInfo() });
+const ownPreview = info => layout.followers(activePane ?? '').some(f => f.kind === 'preview' && !!f.info === info);
+action('preview.pane', { title: 'Pane preview', hint: 'a preview of the active pane only: its child, following its focused item', group: 'view',
+  enabled: () => !!activeView() && !(activeView() instanceof PreviewView), checked: () => ownPreview(false), run: () => togglePanePreview(activePane, false) });
+action('info.pane', { title: 'Pane info', hint: 'an Info pane of the active pane only: its child, following its focused item', group: 'view',
+  enabled: () => !!activeView() && !(activeView() instanceof PreviewView), checked: () => ownPreview(true), run: () => togglePanePreview(activePane, true) });
 action('hidden.toggle', { title: 'Hidden items', hint: 'hidden and system files and folders in the active pane (its own choice; the setting is for the others)',
   group: 'view', enabled: () => !!activePane && !(views.get(activePane) instanceof PreviewView),
   checked: () => !!activePane && showsHidden(activePane), run: () => setPaneHidden(activePane, !showsHidden(activePane)) });
