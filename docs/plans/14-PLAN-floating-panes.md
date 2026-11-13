@@ -19,7 +19,7 @@ from its menu or by dragging. It stays connected exactly as when docked: a float
 floating parent still drives its children, and its colours (head, ring, branch marks, pane theme) are the ones it
 would have docked; the messages go through the host, as LexPen's floating panes do. Moving a pane between docked and
 floating hands over what it shows, so it comes back as it was. F3 opens a preview in a new floating window of its
-own, showing the item the active pane focuses.
+own, showing the item the active pane focuses, and keeps showing that item.
 
 ## Status
 
@@ -35,7 +35,7 @@ own, showing the item the active pane focuses.
 | Colours across windows | head, ring, branch marks and pane theme as when docked, changing with the window's | Connections across windows | 3.3 |
 | A floating scrap | drops, its search, its dashed ring; gone after a restart unless pinned (then back empty) | -- | 3.3 |
 | Kept | a floating pane's place and size with the window's layout | -- | 3.4 |
-| F3 | a preview in a new floating window | The floating window; open questions 1, 2 | 3.5 |
+| F3 | a preview in a new floating window | The floating window; open question 1 | 3.5 |
 
 ## 3. Details
 
@@ -78,7 +78,8 @@ own, showing the item the active pane focuses.
 - It is not the global preview (Alt+P) nor a pane's own: those stay as they are. Esc in the floating window closes
   it; Dock in its menu docks it as a preview pane (3.1).
 - The keyboard stays in the active pane of the main window.
-- What it shows after it opens, and what a second F3 does: open questions 1 and 2.
+- It keeps showing the item it was opened on: it does not follow the focus (it is no child of any pane).
+- What a second F3 does: open question 1.
 
 ### 3.6 Tests
 
@@ -87,11 +88,9 @@ own, showing the item the active pane focuses.
 - A floating list's head and ring in its branch colour, changing when another branch becomes active in the main
   window; a floating tree driving a docked list; a scrap floated, files dropped on it, a search into it.
 - F3 on an image, a video and a file without a preview: the floating window with its preview, the keyboard still in
-  the list; Esc closes it; its place and size after a restart.
+  the list; another item focused: the window keeps its item; Esc closes it; its place and size after a restart.
 
 ## 4. Open questions
 
-1. After F3, does the floating preview follow the focus of the active pane (as the global preview does), or keep
-   showing the item it was opened on?
-2. A second F3: another floating window (one per F3), the same window brought to the item, or the window closed
-   (F3 as a toggle)?
+1. A second F3: another floating window (one per F3, so two items can be compared), the same window brought to the
+   newly focused item, or the window closed (F3 as a toggle)?
