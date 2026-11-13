@@ -97,6 +97,8 @@ sealed class AppHost : ApplicationContext
     // One read per folder (docs/plans/executed/24-PLAN-folder-cache.md): the folder cache for every window, the folders you use
     // (for read-ahead), read-ahead itself; Windows' low-memory notice checked now and then.
     public Shell.FolderCache Cache { get; }
+    /// <summary>Network and its machines, known at once and listed again in the background (Shell/PlaceCache.cs).</summary>
+    public Shell.PlaceCache Places { get; }
     public Shell.FolderUse Use { get; } = new(DataFolder.StatePath(DataDir, Shell.FolderUse.Name));
     Shell.ReadAhead? readAhead;
     readonly System.Windows.Forms.Timer cacheTimer = new() { Interval = 5000 };
@@ -136,14 +138,19 @@ sealed class AppHost : ApplicationContext
         });
         // A cached folder changed: every window showing it asks for the items that changed (names), or reads it again
         // whole (no names).
-        Cache = new Shell.FolderCache((folder, names) =>
+        // A cached folder or place changed: every window showing it asks for the items that changed (ids), or reads it
+        // again whole (no ids).
+        void Changed(string folder, IEnumerable<string>? ids)
         {
+            var list = ids?.ToList();
             foreach (var w in windows.ToList())
                 if (w.IsHandleCreated) w.BeginInvoke(() => w.Post(new JsonObject
                 {
-                    ["event"] = "folderChanged", ["folder"] = folder, ["names"] = names is null ? null : new JsonArray([.. names.Select(n => JsonValue.Create(n))]),
+                    ["event"] = "folderChanged", ["folder"] = folder, ["ids"] = list is null ? null : new JsonArray([.. list.Select(n => JsonValue.Create(n))]),
                 }));
-        });
+        }
+        Cache = new Shell.FolderCache((folder, names) => Changed(folder, names?.Select(n => Path.Combine(folder, n))));
+        Places = new Shell.PlaceCache((place, ids) => Changed(place, ids));
         ConfigureCache();
         // Now and then: the folder use written, and Windows asked whether memory is short (then the cache lets go of
         // every folder no window shows).

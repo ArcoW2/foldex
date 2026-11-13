@@ -145,6 +145,12 @@ sealed class FolderCache : IDisposable
     static string Key(string path) => path.Length > 3 ? path.TrimEnd('\\') : path;
 
     /// <summary>The folders a window shows (its lists, the folders open in its trees): never let go.</summary>
+    /// <summary>F5: a folder read from disk again when next asked (its items, entries and extras anew).</summary>
+    public void Invalidate(string location)
+    {
+        lock (gate) if (folders.TryGetValue(Key(location), out var f) && f.Complete) f.Stale = true;
+    }
+
     public void Shown(object window, IEnumerable<string> shown)
     {
         lock (gate)

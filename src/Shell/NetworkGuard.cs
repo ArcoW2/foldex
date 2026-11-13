@@ -57,13 +57,40 @@ static class NetworkGuard
         var server = Server(path!);
         if (down.TryGetValue(server, out var since) && DateTime.UtcNow - since < RetryAfter) return false;
         var root = Root(path!);
-        var check = Task.Run(() => { try { return Directory.Exists(root); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return true; } });
+        var exists = Task.Run(() => { try { return Directory.Exists(root); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return true; } });
+        // A machine (\\server, no share) is no folder, and a share you may not open yet (a log-on needed) does not
+        // "exist" either: a UNC path counts as reachable too when its server answers on file sharing (port 445).
+        var check = path!.StartsWith(@"\\") ? AnyTrue(exists, Answers(server[2..])) : exists;
         if (await Task.WhenAny(check, Task.Delay(LimitMs)) == check && check.Result)
         {
             down.TryRemove(server, out _);
             return true;
         }
         down[server] = DateTime.UtcNow;
+        return false;
+    }
+
+    static async Task<bool> Answers(string host)
+    {
+        using var client = new System.Net.Sockets.TcpClient();
+        try
+        {
+            await client.ConnectAsync(host, 445);
+            return true;
+        }
+        catch (Exception ex) when (ex is System.Net.Sockets.SocketException or ArgumentException) { return false; }
+    }
+
+    // True as soon as one is true; false when all are false.
+    static async Task<bool> AnyTrue(params Task<bool>[] tasks)
+    {
+        var left = tasks.ToList();
+        while (left.Count > 0)
+        {
+            var done = await Task.WhenAny(left);
+            if (done.Result) return true;
+            left.Remove(done);
+        }
         return false;
     }
 

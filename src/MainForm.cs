@@ -223,6 +223,8 @@ sealed class MainForm : Form
                 freshLayout = false;
                 break;
             case "list":
+                // F5: from disk again, not from the cache.
+                if (msg["fresh"]?.GetValue<bool>() == true) app.Cache.Invalidate(msg["location"]!.GetValue<string>());
                 await List(msg["location"]!.GetValue<string>(), msg["req"]?.GetValue<int>() ?? 0,
                     msg["channel"]?.GetValue<string>() ?? "", msg["foldersOnly"]?.GetValue<bool>() == true, msg["tree"]?.GetValue<bool>() == true);
                 break;
@@ -441,13 +443,24 @@ sealed class MainForm : Form
                 break;
             // Columns (docs/plans/executed/11-PLAN-columns.md 3.6): the Git status of a folder's items, the properties Windows
             // has for columns (once per run), their values for items, and the column sets written.
+            case "netLogon":
+            {
+                // Windows' log-on prompt for a machine or share that refused you (Shell/NetLogon.cs), off this thread.
+                var path = msg["path"]!.GetValue<string>();
+                var owner = Handle;
+                var ok = await Task.Run(() => NetLogon.LogOn(owner, path));
+                Post(new JsonObject { ["event"] = "answer", ["req"] = msg["req"]?.DeepClone(), ["ok"] = ok });
+                break;
+            }
             case "changedEntries":
             {
                 // The items of a cached folder that changed (FolderCache.Entries), for a pane to put in where they are.
                 var location = msg["location"]!.GetValue<string>();
-                var names = msg["names"]!.AsArray().Select(n => n!.GetValue<string>()).ToList();
+                var told = msg["ids"]!.AsArray().Select(n => n!.GetValue<string>()).ToList();
                 bool foldersOnly = msg["foldersOnly"]?.GetValue<bool>() == true, tree = msg["tree"]?.GetValue<bool>() == true;
-                var entries = await StaWorker.Once("listing", () => app.Cache.Entries(location, names, foldersOnly, tree));
+                var entries = await StaWorker.Once("listing", () => Shell.PlaceCache.Handles(location)
+                    ? app.Places.Entries(location, told, foldersOnly, tree)
+                    : app.Cache.Entries(location, [.. told.Select(Path.GetFileName).OfType<string>()], foldersOnly, tree));
                 Post(new JsonObject { ["event"] = "answer", ["req"] = msg["req"]?.DeepClone(), ["whole"] = entries is null, ["entries"] = entries });
                 break;
             }
@@ -549,6 +562,10 @@ sealed class MainForm : Form
     readonly Dictionary<string, CancellationTokenSource> listings = [];
 
     // On a thread of its own: a slow location never holds up the next one; what is read so far comes in batches.
+    // A listing from the folder cache or the place cache (Network and its machines), alike.
+    delegate ShellListing.Result ListFn(string location, Action<JsonArray>? batch, CancellationToken cancel, bool foldersOnly, bool tree,
+        Action<int, bool>? count);
+
     async Task List(string location, int req, string channel, bool foldersOnly, bool tree = false)
     {
         if (listings.Remove(channel, out var before)) before.Cancel();
@@ -567,7 +584,7 @@ sealed class MainForm : Form
             if (listings.GetValueOrDefault(channel) == cancel) listings.Remove(channel);
             if (cancel.IsCancellationRequested) return;
             var since = NetworkGuard.DownSince(location)?.ToLocalTime().ToString("HH:mm:ss");
-            var cached = app.Cache.Cached(location, foldersOnly, tree);
+            var cached = Shell.PlaceCache.Handles(location) ? app.Places.Cached(location, foldersOnly, tree) : app.Cache.Cached(location, foldersOnly, tree);
             Post(new JsonObject
             {
                 ["event"] = "listed", ["req"] = req, ["channel"] = channel, ["location"] = location,
@@ -591,12 +608,15 @@ sealed class MainForm : Form
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException) { }
             });
-        var r = await StaWorker.Once("listing", () => app.Cache.List(location,
+        var r = await StaWorker.Once("listing", () => (Shell.PlaceCache.Handles(location) ? (ListFn)app.Places.List : app.Cache.List)(location,
             part => BeginInvoke(() => Post(new JsonObject { ["event"] = "listing", ["req"] = req, ["channel"] = channel, ["entries"] = part })),
             cancel.Token, foldersOnly, tree, Count));
         if (listings.GetValueOrDefault(channel) == cancel) listings.Remove(channel);
         app.StartReadAhead();
         if (r.Cancelled) return;
+        // A network path that answered: its machine and share are known on Network from now on (every tree shows them).
+        if (r.Error is null && !r.Denied && NetworkGuard.IsNetwork(location) && location.StartsWith(@"\\"))
+            _ = StaWorker.Once("found", () => { app.Places.Found(location); return true; });
         var name = await StaWorker.Once("name", () => ShellListing.NameOf(location));
         var answer = new JsonObject
         {
