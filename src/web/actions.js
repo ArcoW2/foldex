@@ -87,7 +87,9 @@ action('item.paste', { title: 'Paste', group: 'items', enabled: () => !!currentF
 action('item.copyPath', { title: 'Copy path', group: 'items', enabled: onDisk,
   run: () => post({ op: 'copyText', text: selectedIds().join('\r\n') }) });
 // The focused item's full path; with several selected, theirs on one line, comma-separated.
-const pathsOnOneLine = () => selectedIds().length > 1 ? selectedIds() : focusedItem() ? [focusedItem().id] : [];
+// The preview active: the file it shows.
+const pathsOnOneLine = () => activeView() instanceof PreviewView ? (activeView().path ? [activeView().path] : [])
+  : selectedIds().length > 1 ? selectedIds() : focusedItem() ? [focusedItem().id] : [];
 action('item.copyPathsLine', { title: 'Copy path (on one line)', hint: 'the focused item; several selected: comma-separated', group: 'items',
   enabled: () => pathsOnOneLine().length > 0 && pathsOnOneLine().every(id => /^[A-Za-z]:\\|^\\\\/.test(id)),
   run: () => post({ op: 'copyText', text: pathsOnOneLine().join(', ') }) });

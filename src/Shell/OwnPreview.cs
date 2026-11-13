@@ -79,12 +79,19 @@ static class OwnPreview
             using var deferral = e.GetDeferral();
             // Only a kind the preview shows; opened off this thread.
             var part = KindOf(path) is string kind && kind != "text" ? await Task.Run(() => Open(path, range)) : null;
-            e.Response = part is null
-                ? core.Environment.CreateWebResourceResponse(null, 404, "Not Found", "")
-                : core.Environment.CreateWebResourceResponse(part.Value.Stream, part.Value.Status, part.Value.Status == 206 ? "Partial Content" : "OK",
-                    $"Content-Type: {TypeOf(path)}\r\nAccept-Ranges: bytes\r\nContent-Length: {part.Value.Length}"
-                    + (part.Value.Status == 206 ? $"\r\nContent-Range: bytes {part.Value.From}-{part.Value.From + part.Value.Length - 1}/{part.Value.Total}" : ""));
-            deferral.Complete();
+            try
+            {
+                e.Response = part is null
+                    ? core.Environment.CreateWebResourceResponse(null, 404, "Not Found", "")
+                    : core.Environment.CreateWebResourceResponse(part.Value.Stream, part.Value.Status, part.Value.Status == 206 ? "Partial Content" : "OK",
+                        $"Content-Type: {TypeOf(path)}\r\nAccept-Ranges: bytes\r\nContent-Length: {part.Value.Length}"
+                        + (part.Value.Status == 206 ? $"\r\nContent-Range: bytes {part.Value.From}-{part.Value.From + part.Value.Length - 1}/{part.Value.Total}" : ""));
+                deferral.Complete();
+            }
+            catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException or ObjectDisposedException)
+            {
+                part?.Stream.Dispose();   // the request was given up meanwhile (another file shown, the window closing)
+            }
         };
     }
 
