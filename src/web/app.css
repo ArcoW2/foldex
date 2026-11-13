@@ -1773,3 +1773,7 @@ dialog.fav-manage { width: 520px; }
 .info-row { display: grid; grid-template-columns: minmax(7em, 40%) 1fr; gap: 10px; padding: 1px 0; }
 .info-name { color: var(--fg-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .info-value { overflow-wrap: anywhere; }
+
+/* Not in front, with the setting ignoreActivationClick (app.js setInert): the page answers no mouse, not even
+   hovering. */
+body[data-inert] { pointer-events: none; }

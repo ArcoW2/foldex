@@ -2905,6 +2905,15 @@ addEventListener('blur', () => { activation.away = true; });
 addEventListener('focus', () => { activation.back = performance.now(); });
 addEventListener('keydown', () => { activation.away = false; activation.until = 0; }, true);
 const activationEating = () => performance.now() < activation.until;
+// Not in front, with the setting: the page answers no mouse at all, not even hovering (no hover colours, tooltips or
+// wheel; app.css body[data-inert]); the click that brings it back still reaches the window (above). A drag from
+// another program still lands: while it is over the window, the page answers again.
+const setInert = on => document.body.toggleAttribute('data-inert', on && settings.ignoreActivationClick !== false);
+addEventListener('blur', () => setInert(true));
+addEventListener('focus', () => setInert(false));
+addEventListener('dragenter', () => setInert(false), true);
+addEventListener('dragleave', e => { if (!e.relatedTarget && !document.hasFocus()) setInert(true); }, true);
+addEventListener('drop', () => setTimeout(() => setInert(!document.hasFocus())), true);
 addEventListener('pointerdown', e => {
   const now = performance.now();
   const first = activation.away && (!document.hasFocus() || now - activation.back < 500);

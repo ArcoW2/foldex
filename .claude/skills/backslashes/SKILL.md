@@ -27,6 +27,7 @@ matches and writes the wrong text.
 - A Windows path into a JS expression for CDP: build it in JS, so no escaping is needed:
   `"'" + (($path -split '\\') -join "' + String.fromCharCode(92) + '") + "'"`.
 - Numbers for CDP (`Input.dispatchMouseEvent` x, y) as numbers (`[int]`), not strings from `Split`.
-- No PowerShell function named after an alias: `start` is `Start-Process`, so a function `start` never runs.
+- No PowerShell function named after an alias: `start` is `Start-Process` and `move` is `Move-Item`, so such a
+  function never runs (check a name with `Get-Alias name` first).
 - Builds run from the PowerShell tool only (a Bash `-p:OutDir=...` loses its backslashes and leaves stray build folders
   in src and tests).
