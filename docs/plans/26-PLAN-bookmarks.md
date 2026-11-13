@@ -26,7 +26,9 @@ opens a window with the name, the location (a folder, a network path or a shell 
 default) and the two keys, pressed into key fields as one key or a chord (starting with Ctrl+B by default): one opens
 the bookmark in the active pane, the other in a new pane with a child pane. Regular goes to the folder (from a child
 pane: its parent focuses the folder and the child shows it); Root makes the folder the top of the pane, with a ".."
-row to go up. In the Bookmarks menu a click opens a bookmark in the active pane; a right-click offers Open, Open in a
+row to go up. A bookmark can be a file too: its folder opens as a folder bookmark would and the file is selected
+(a file that is gone: the folder, at its top). A location that is not there or not reachable is said in a message;
+nothing moves and the active pane keeps the keyboard. In the Bookmarks menu a click opens a bookmark in the active pane; a right-click offers Open, Open in a
 new pane, Open in a new pane with a child pane, Edit... and Remove. The Bookmarks button is in Home > Open. F2 on a
 quick access shortcut gives it a name of its own, without touching the folder.
 
@@ -52,7 +54,8 @@ quick access shortcut gives it a name of its own, without touching the folder.
 | Ribbon | Bookmarks in Home > Open | Word | 3.8 |
 | Quick access names | F2 on a shortcut: its own name, kept in quickaccess.json | -- | 3.9 |
 | Regular and Root | a bookmark opened as the top of a pane, ".." to go up in trees and lists | Kept | 3.10 |
-| Tests | unit and in the app | all | 3.11 |
+| Files and missing places | a file as a bookmark; a location not there or not reachable: a message, nothing moves | Kept | 3.11 |
+| Tests | unit and in the app | all | 3.12 |
 
 ## 3. Details
 
@@ -72,8 +75,11 @@ Plan 23's favourite folders stay and are changed, not made again:
 | quickaccess.json: `folders` only; a shortcut shows its folder's name | FolderLists.cs, folderlists.js (quickAccessEntries) | `items` with a name; F2 on a shortcut (3.9) |
 | item.rename (F2): the item on disk | actions.js | a quick access shortcut first: its name (3.9) |
 
-Unchanged: Add current folder / Remove current folder, Add a folder..., where a bookmark opens (favouritePane), a
-missing folder's question, quick access apart from its names.
+| A missing folder: a question to take it off the list | folderlists.js (openFavourite, missingFolder) | a message only; nothing moves (3.11) |
+| Windows' menu items for one folder only | MainForm.cs (ShellMenu.AddOwn), app.js | also for one file: Add to / Remove from bookmarks (3.11) |
+
+Unchanged: Add current folder / Remove current folder, Add a folder..., where a bookmark opens (favouritePane), quick
+access apart from its names.
 
 ### 3.1 Kept
 
@@ -105,10 +111,11 @@ missing folder's question, quick access apart from its names.
 
 - A modal window in the page (as every Foldex dialog: Esc cancels, Enter is OK, letter shortcuts). Fields:
   - Name: a text box, its text selected. Empty: the folder's name.
-  - Location: a text box with Browse... (Windows' folder picker at that folder): a folder on disk, a network path
-    (`\\server\share\folder`) or a shell folder. Other places (FTP and the like) are not part of this plan; the field
-    and the stored location are plain text, so they can come later. A folder already another bookmark is refused
-    with a message on OK. A folder that is not there: asked whether to keep it anyway (a share can be away).
+  - Location: a text box with Browse... (Windows' folder picker at that folder): a folder or a file on disk, a network
+    path (`\\server\share\folder`) or a shell folder; a file's path is typed or comes from Windows' menu (3.11).
+    Other places (FTP and the like) are not part of this plan; the field and the stored location are plain text, so
+    they can come later. A location already another bookmark is refused with a message on OK. One that is not there:
+    asked whether to keep it anyway (a share can be away).
   - Open as: Regular or Root (two radio buttons; 3.10).
   - Icon: Plain, Default or Custom (three radio buttons), the icon shown beside them. Custom: the Change Icon button
     shows and opens Change Icon (3.4); choosing Custom without an icon yet opens it at once.
@@ -174,7 +181,7 @@ missing folder's question, quick access apart from its names.
   - Open in a new pane with a child pane: the same, and a child list beside it showing the folder.
   - Edit...: Edit (3.3) for this bookmark.
   - Remove: off the bookmarks (no question; nothing on disk changes).
-- A missing folder: the Open items ask to take it off, as a left click does.
+- A location that is not there or not reachable: the Open items give the message of 3.11, as a left click does.
 - With the keys: the menu key or Shift+F10 on the lit bookmark opens the same small menu.
 - menu.js gets this generic: an item may carry `context` (items), shown at a right-click or the menu key on that item.
   The opener rule (CLAUDE.md, Menus) is about the button that opened the menu and is not touched.
@@ -218,7 +225,21 @@ missing folder's question, quick access apart from its names.
 - Built on what child trees have: a child tree has a folder as its top (TreeView `root`) and goes up from it
   (`up()`); a root tree gets the same, and the ".." row is new in trees and lists.
 
-### 3.11 Tests
+### 3.11 Files, and places that are not there
+
+- A file can be a bookmark: Windows' right-click menu for one file gets "Add to bookmarks" / "Remove from bookmarks"
+  (as one folder has), and Edit takes a file's path. Its Default icon is the file's own.
+- Opened, a file bookmark opens its folder as a folder bookmark would (Regular or Root, from a child pane through
+  its parent, 3.10), and the file is selected and focused in the pane that lists the folder's items: the active pane
+  when it lists, else the child that follows it (a tree of folders shows no files). A Root file bookmark makes its
+  folder the top.
+- A file that is gone: its folder opens all the same, the focus on its first item.
+- A location that is not there or not reachable (a folder, a file bookmark's folder, a share or server that does not
+  answer; asked as a pane asks, NetworkGuard): a message in the status line ("<location> is not there." / "<server>
+  is not reachable."). Nothing moves: no pane goes anywhere, no new pane is made, the bookmark stays in the list. The
+  active pane gets the keyboard back (after the menu or a key). Taking the bookmark off is Remove (3.7) or Manage.
+
+### 3.12 Tests
 
 - Unit (FolderListsTests): name, icon, both keys and root kept and read back; one key without the other; a file without
   `items` read as before; favourite-folders.json taken over when bookmarks.json is not there; all of them dropped when
@@ -238,7 +259,10 @@ missing folder's question, quick access apart from its names.
   a lit bookmark; Root in an existing tree and in a new pane: the folder as the top, "..", Backspace, up to a drive
   and back to the usual tops, kept after a restart; Root in a list: the ".." row first in every sort, left out of
   Ctrl+A, going up; Root from a child pane: as Regular, no top changed; Regular from a child pane: the parent focuses the folder, the child shows it with its first item
-  focused and keeps the keyboard; a network path as a location; Bookmarks in Home > Open. F2 on a quick access
+  focused and keeps the keyboard; a network path as a location; a file bookmark (added from Windows' menu): its
+  folder opens and the file is selected and focused, in a list and through a tree's child; the file renamed away: the
+  folder at its top; a folder renamed away and an unreachable share: the message, no pane moved, the keyboard back in
+  the active pane; Bookmarks in Home > Open. F2 on a quick access
   shortcut: renamed, the folder on disk unchanged, kept after a restart, emptied back to the folder's name; F2 on a
   subfolder under a shortcut still renames that folder.
 
