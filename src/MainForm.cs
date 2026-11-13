@@ -20,6 +20,10 @@ sealed class MainForm : Form
     bool pageReady;
     readonly List<string> queue = [];   // told before the page was ready
 
+    /// <summary>The page's look (look.js hostLook: colours as RGB, dark, the window font), told whenever its theme is
+    /// applied; Foldex's own windows asking over this one (AskForm) take it.</summary>
+    public JsonObject? Look { get; private set; }
+
     public MainForm(AppHost app, int key, IReadOnlyList<string> paths)
     {
         this.app = app;
@@ -123,9 +127,8 @@ sealed class MainForm : Form
             }
             catch (COMException ex) when (ex.HResult == ResourceInUse)
             {
-                MessageBox.Show(this, "Foldex could not start its browser view: the browser data folder is still in use, " +
-                    "most likely by a Foldex that is closing. Start Foldex again in a moment.", "Foldex",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                AskForm.Tell(app, this, AskForm.Sign.Warning, "Foldex could not start its browser view: the browser data folder is " +
+                    "still in use, most likely by a Foldex that is closing. Start Foldex again in a moment.");
                 return false;
             }
         }
@@ -197,6 +200,14 @@ sealed class MainForm : Form
         var ids = msg["ids"]?.AsArray().Select(n => n!.GetValue<string>()).ToList() ?? [];
         switch (msg["op"]?.GetValue<string>())
         {
+            // The page's look, for Foldex's own windows over this one (AskForm).
+            case "look":
+                Look = msg["look"] as JsonObject is { } look ? (JsonObject)look.DeepClone() : null;
+                break;
+            // A yes / no question of the page (askYes), in Foldex's own window, as LexPen's: never behind Windows' preview.
+            case "confirm":
+                Post(new JsonObject { ["event"] = "answer", ["req"] = msg["req"]?.DeepClone(), ["yes"] = AskForm.Confirm(app, this, msg) });
+                break;
             case "ready":
                 pageReady = true;
                 var (version, commit) = AppHost.Version();

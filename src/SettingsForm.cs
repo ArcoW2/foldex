@@ -73,7 +73,7 @@ sealed class SettingsForm : Form
                 try { app.SetSetting(msg["name"]!.GetValue<string>(), msg["value"]?.DeepClone()); }
                 catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException)
                 {
-                    MessageBox.Show(this, ex.Message, "Settings - Foldex", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    AskForm.Tell(app, this, AskForm.Sign.Warning, ex.Message);
                 }
                 break;
             case "fonts":
@@ -107,7 +107,7 @@ sealed class SettingsForm : Form
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or Win32Exception)
         {
-            MessageBox.Show(this, ex.Message, "Settings - Foldex", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            AskForm.Tell(app, this, AskForm.Sign.Warning, ex.Message);
         }
     }
 }

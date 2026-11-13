@@ -124,6 +124,9 @@ sealed class ProjectsForm : Form
             case "back":
                 if (app.LastActive is { } last) AppHost.BringToFront(last);
                 return true;
+            // A yes / no question of the page (askYes), in Foldex's own window over this one, in the page's look.
+            case "confirm":
+                return AskForm.Confirm(app, this, msg, msg["look"] as JsonObject);
             default:
                 throw new InvalidOperationException($"Unknown request '{op}'.");
         }

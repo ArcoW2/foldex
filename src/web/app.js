@@ -24,6 +24,7 @@ function post(msg) {
 function applyTheme() {
   applyLook(settings, themes);
   setRowHeight(paneRowHeight(settings));
+  post({ op: 'look', look: hostLook() });   // for Foldex's own windows over this one (AskForm)
 }
 
 // Rows of another height: every tree and list drawn again, the same rows at the top, the focused one kept in view.

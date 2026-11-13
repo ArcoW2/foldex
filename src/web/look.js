@@ -36,6 +36,23 @@ function applyLook(settings, themes) {
   applyFonts(settings);
 }
 
+// The look for Foldex's own windows (AskForm.cs, as LexPen's): the window's colours as RGB (worked out by drawing
+// them, so a color-mix() comes out as the colour it is), dark or light, and the window font.
+function hostLook() {
+  const root = document.documentElement, style = getComputedStyle(root);
+  const ctx = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+  const colours = {};
+  for (const name of ['--bg', '--fg', '--bg-bar', '--border', '--accent']) {
+    ctx.clearRect(0, 0, 1, 1);
+    ctx.fillStyle = '#000';
+    ctx.fillStyle = style.getPropertyValue(name).trim() || '#000';
+    ctx.fillRect(0, 0, 1, 1);
+    colours[name] = [...ctx.getImageData(0, 0, 1, 1).data.slice(0, 3)];
+  }
+  const body = getComputedStyle(document.body);
+  return { colours, dark: root.dataset.theme === 'dark', font: body.fontFamily, size: parseFloat(body.fontSize) };
+}
+
 // Pane themes (docs/plans/executed/13-PLAN-pane-themes.md 3.2, 3.3): per branch place N, from the theme's base colour
 // (--branch-N) and the colours it sets itself (--branch-N-bg, ...), the variables app.js drawHeads puts on a pane:
 // --branch-N the base colour at its intensity (rings, marks, and the colour the mixes start from); --branch-N-bg,

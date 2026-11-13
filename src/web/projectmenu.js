@@ -83,9 +83,12 @@ function askText(title, value = '', placeholder = '') {
   return ask(title, { value, placeholder });
 }
 
-// True for OK. `lines`: shown under the question (the folders of a delete, plan 06 3.5).
+// True for Yes. `lines`: shown under the question (the folders of a delete, plan 06 3.5). Asked in Foldex's own window
+// (AskForm.cs, as LexPen's), so it is never behind Windows' preview; the keyboard back in the active pane after.
 async function askYes(title, lines = []) {
-  return (await ask(title, null, lines)) !== null;
+  const m = await askHost({ op: 'confirm', text: title, lines });
+  activeView()?.body.focus();
+  return !!m.yes;
 }
 
 function ask(title, input, lines = []) {

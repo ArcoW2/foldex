@@ -228,9 +228,11 @@ function endRename(keep) {
 function askName(title, value = '') {
   return ask(title, value, []);
 }
-// True for OK; `lines` under the title.
+// True for Yes; `lines` under the title. Asked in Foldex's own window (AskForm.cs, as LexPen's), in this page's look.
 async function askYes(title, lines) {
-  return (await ask(title, null, lines)) !== null;
+  const yes = await host('confirm', { text: title, lines: lines ?? [], look: hostLook() });
+  view.el.focus();
+  return !!yes;
 }
 function ask(title, value, lines) {
   const dialog = $('.pv-dialog'), input = $('.pv-dialog-input'), text = $('.pv-dialog-text');
