@@ -1810,3 +1810,5 @@ body[data-pane-inert] .pane:not(.active) > .body * { pointer-events: none; }
 .own-note { flex: none; padding: 4px 8px; color: var(--fg-dim); }
 .own-note + .own-image { flex: 1; min-height: 0; }
 .own-video.own-sound { flex: none; height: 40px; }
+/* Windows' preview as a picture of itself while a dialog or menu is over it (app.js previewCoverCheck). */
+.preview-cover { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }

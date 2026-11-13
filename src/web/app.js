@@ -2033,6 +2033,7 @@ class PreviewView {
   }
 
   show(path) {
+    this.native = false;   // until the host says Windows shows it (previewShown)
     const x = path && itemShown(path, views.get(layout.pane(this.id).source));
     if (!path || x?.folder || !isDiskPath(path)) {
       this.path = null;
@@ -2095,6 +2096,30 @@ class PreviewView {
 
   close() { post({ op: 'previewClose' }); }
 }
+
+// Windows' preview is a window of its own lying over the page, so a dialog or a menu of the page would be hidden behind
+// it. While a dialog is open, or a menu lies over the preview, the preview is a picture of itself (the host's
+// snapshot, the window hidden); when they are gone the window is shown again.
+const previewCover = { on: false, img: null };
+const nativePreview = () => [...views.values()].find(v => v instanceof PreviewView && v.native && v.path);
+
+function previewCoverCheck() {
+  const v = nativePreview();
+  const r = v?.body.getBoundingClientRect();
+  const over = !!v && [...document.querySelectorAll('dialog[open], .menu')].some(e => {
+    if (e.tagName === 'DIALOG') return true;   // modal: over the whole window
+    const b = e.getBoundingClientRect();
+    return b.left < r.right && b.right > r.left && b.top < r.bottom && b.bottom > r.top;
+  });
+  if (over === previewCover.on) return;
+  previewCover.on = over;
+  if (over) return post({ op: 'previewSnapshot' });
+  previewCover.img?.remove();
+  previewCover.img = null;
+  post({ op: 'previewRestore' });
+}
+new MutationObserver(previewCoverCheck).observe(document.body, { childList: true });   // menus and dialogs come and go here
+new MutationObserver(previewCoverCheck).observe(document.body, { attributes: true, attributeFilter: ['open'], subtree: true });
 
 // ---------- The Info pane: everything Windows knows of an item (Shell/FileDetails.cs) ----------
 
@@ -3413,9 +3438,21 @@ const events = {
     // Every preview showing that file (another file meanwhile: nothing).
     for (const v of views.values()) {
       if (!(v instanceof PreviewView) || v instanceof InfoView || !same(m.path, v.path)) continue;
+      v.native = !!m.handler && !m.error;   // Windows' own window over the pane (previewCoverCheck)
       if (m.own) v.showOwn(m.own);
       else if (m.error) v.message('This item cannot be previewed.');
     }
+    // Another file shown while covered: its window came up over the dialog; a picture of it instead.
+    if (previewCover.on && m.handler && !m.error) post({ op: 'previewSnapshot' });
+    previewCoverCheck();
+  },
+  // The picture of Windows' preview while a dialog or menu is over it (previewCoverCheck).
+  previewSnapshot(m) {
+    const v = nativePreview();
+    if (!previewCover.on || !m.url || !v) return;
+    previewCover.img?.remove();
+    previewCover.img = Object.assign(document.createElement('img'), { className: 'preview-cover', src: m.url });
+    v.body.append(previewCover.img);
   },
 };
 
