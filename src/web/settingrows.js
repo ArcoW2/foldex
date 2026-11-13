@@ -32,7 +32,7 @@ const SETTING_ROWS = [
   { tab: 'App', group: 'Mouse', name: 'ignoreActivationClick', kind: 'toggle', title: 'Ignore the first click on a window that is not in front',
     hint: 'On: a click on a Foldex window that is not in front only brings it to the front; it does not select, open or press anything there (the title bar works at once). Off: that click also acts.' },
   { tab: 'App', group: 'Mouse', name: 'ignorePaneActivationClick', kind: 'toggle', title: 'Ignore the first click on a pane that is not active',
-    hint: 'On: a click in a pane that is not the active one only makes it the active pane; it does not select, open or press anything there (its head works at once). Off: that click also acts.' },
+    hint: 'On: a click in a pane that is not the active one only makes it the active pane; it does not select, open or press anything there (its head works at once), and nothing in it lights up under the mouse. Off: that click also acts.' },
   { tab: 'App', group: 'Fonts', name: 'appSize', kind: 'size', title: 'Window font size', hint: 'In points, 4 to 36.' },
   { tab: 'Contents', group: 'Rows', name: 'paneFont', kind: 'font', title: 'Pane font', hint: 'The rows of every tree and list.' },
   { tab: 'Contents', group: 'Rows', name: 'paneSize', kind: 'size', title: 'Pane font size',

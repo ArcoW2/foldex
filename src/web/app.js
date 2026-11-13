@@ -2978,7 +2978,15 @@ for (const type of ['mousedown', 'mouseup', 'pointerup', 'click', 'dblclick', 'a
 
 // With the setting ignorePaneActivationClick: a press in the body of a pane that is not the active one only makes it the
 // active pane (the keyboard to it); it selects, opens or presses nothing there, a double click included (stopped as
-// above). Its head (title, menu, close) acts at once.
+// above). Its head (title, menu, close) acts at once. Nor does the mouse light anything in such a pane (no hover colours
+// or tooltips; app.css body[data-pane-inert]): only its body itself answers the mouse, so it still scrolls and the press
+// still lands.
+const setPaneInert = (on = true) => document.body.toggleAttribute('data-pane-inert', on && !!settings.ignorePaneActivationClick);
+// A drag answers in every pane (a drop on a folder row of a pane that is not active).
+addEventListener('dragenter', () => setPaneInert(false), true);
+addEventListener('dragleave', e => { if (!e.relatedTarget) setPaneInert(); }, true);
+addEventListener('drop', () => setPaneInert(), true);
+addEventListener('dragend', () => setPaneInert(), true);
 addEventListener('pointerdown', e => {
   if (!settings.ignorePaneActivationClick || e.button !== 0) return;
   const el = e.target.closest?.('.pane[data-pane]');
@@ -3262,6 +3270,7 @@ const events = {
     settings = m.settings.values;
     themes = m.themes.themes;
     applyTheme();
+    setPaneInert();
     setKeys(m.keys);
     setRibbon(m.ribbon);
     version = m.version + (m.commit ? ` (${m.commit})` : '');
@@ -3301,6 +3310,7 @@ const events = {
     settings = m.settings.values;
     themes = m.themes.themes;
     settingsChanged(before);
+    setPaneInert();
     settingsProblems(m);
   },
   open(m) {

@@ -1804,6 +1804,8 @@ dialog.fav-manage { width: 520px; }
 /* Not in front, with the setting ignoreActivationClick (app.js setInert): the page answers no mouse, not even
    hovering. */
 body[data-inert] { pointer-events: none; }
+/* Setting ignorePaneActivationClick: a pane that is not active lights nothing under the mouse (app.js setPaneInert). */
+body[data-pane-inert] .pane:not(.active) > .body * { pointer-events: none; }
 .pane.preview .rows:has(> .own-note) { display: flex; flex-direction: column; }
 .own-note { flex: none; padding: 4px 8px; color: var(--fg-dim); }
 .own-note + .own-image { flex: 1; min-height: 0; }
