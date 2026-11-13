@@ -2976,6 +2976,20 @@ for (const type of ['mousedown', 'mouseup', 'pointerup', 'click', 'dblclick', 'a
     if (type === 'pointerup') activation.until = performance.now() + activation.double;   // a next press may follow
   }, true);
 
+// With the setting ignorePaneActivationClick: a press in the body of a pane that is not the active one only makes it the
+// active pane (the keyboard to it); it selects, opens or presses nothing there, a double click included (stopped as
+// above). Its head (title, menu, close) acts at once.
+addEventListener('pointerdown', e => {
+  if (!settings.ignorePaneActivationClick || e.button !== 0) return;
+  const el = e.target.closest?.('.pane[data-pane]');
+  const id = el?.dataset.pane;
+  if (!id || id === activePane || !e.target.closest('.body') || !views.has(id)) return;
+  activation.until = performance.now() + activation.double;
+  e.preventDefault();
+  e.stopImmediatePropagation();
+  views.get(id).body.focus();
+}, true);
+
 // ---------- Between panes (3.6), and back and forward per pane (plan 17) ----------
 
 // The pane chain of the active branch: the root above the active pane, then down the active branch from there (each

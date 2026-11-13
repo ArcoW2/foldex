@@ -29,6 +29,7 @@
   "folderCacheMB": 256,            // MB the folder cache may keep (16 to 4096): folders read once, and read ahead
   "cacheNetwork": true,            // folders on network shares kept after shown and read ahead (off: only while shown)
   "ignoreActivationClick": true,   // a click on a window that is not in front only brings it to the front
+  "ignorePaneActivationClick": false, // a click in a pane that is not active only makes it the active pane
   "quickAccess": true,             // the Quick access area at the top of a tree without a parent
   "treeLinesIntensity": 55,       // 1 to 100: how strong the tree lines are, the dim text colour at that %
   "followDelay": 150,              // ms the cursor rests in a pane before its children follow it, 0 to 1000
