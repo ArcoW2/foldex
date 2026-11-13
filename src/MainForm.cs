@@ -441,6 +441,16 @@ sealed class MainForm : Form
                 break;
             // Columns (docs/plans/executed/11-PLAN-columns.md 3.6): the Git status of a folder's items, the properties Windows
             // has for columns (once per run), their values for items, and the column sets written.
+            case "changedEntries":
+            {
+                // The items of a cached folder that changed (FolderCache.Entries), for a pane to put in where they are.
+                var location = msg["location"]!.GetValue<string>();
+                var names = msg["names"]!.AsArray().Select(n => n!.GetValue<string>()).ToList();
+                bool foldersOnly = msg["foldersOnly"]?.GetValue<bool>() == true, tree = msg["tree"]?.GetValue<bool>() == true;
+                var entries = await StaWorker.Once("listing", () => app.Cache.Entries(location, names, foldersOnly, tree));
+                Post(new JsonObject { ["event"] = "answer", ["req"] = msg["req"]?.DeepClone(), ["whole"] = entries is null, ["entries"] = entries });
+                break;
+            }
             case "git":
             {
                 var folder = msg["folder"]!.GetValue<string>();

@@ -44,7 +44,7 @@ sealed class FolderCache : IDisposable
     readonly Dictionary<string, Folder> folders = new(StringComparer.OrdinalIgnoreCase);
     readonly object gate = new();
     readonly Dictionary<object, HashSet<string>> shownBy = [];
-    readonly Action<string> changed;
+    readonly Action<string, IReadOnlyList<string>?> changed;
     int busy;
     long lastRequest;
 
@@ -52,8 +52,10 @@ sealed class FolderCache : IDisposable
     public int Reads;
 
     /// <summary>`changed`: a folder's items changed (reported by its watch, or found by a check of a share shown
-    /// again), for the windows to read it again from the cache; told once the folder has been quiet for QuietMs.</summary>
-    public FolderCache(Action<string> changed)
+    /// again), told once the folder has been quiet for QuietMs: with the names of the items that changed, for the
+    /// windows to ask for those only (Entries) and put them in where they are; without (null: changes lost, a share
+    /// checked, more than MaxNames), for them to read it again whole from the cache.</summary>
+    public FolderCache(Action<string, IReadOnlyList<string>?> changed)
     {
         this.changed = changed;
         quiet = new System.Threading.Timer(_ => TellChanged());
@@ -62,20 +64,50 @@ sealed class FolderCache : IDisposable
     // The windows told of changes once things have been quiet for a moment (a file being written does not make its
     // folder read again and again), as FolderWatch did.
     const int QuietMs = 300;
+    // More names changed at once than this: the windows read the folder again whole (cheaper than asking item by item).
+    public const int MaxNames = 500;
     readonly System.Threading.Timer quiet;
-    readonly HashSet<string> toTell = new(StringComparer.OrdinalIgnoreCase);
+    readonly Dictionary<string, HashSet<string>?> toTell = new(StringComparer.OrdinalIgnoreCase);
 
-    void Tell(string path)
+    // `names`: the items that changed; null: the folder as a whole.
+    void Tell(string path, IEnumerable<string>? names)
     {
-        lock (toTell) toTell.Add(path);
+        lock (toTell)
+        {
+            if (names is null) toTell[path] = null;
+            else if (!toTell.TryGetValue(path, out var had)) toTell[path] = new HashSet<string>(names, StringComparer.OrdinalIgnoreCase);
+            else if (had is not null)
+            {
+                had.UnionWith(names);
+                if (had.Count > MaxNames) toTell[path] = null;
+            }
+        }
         quiet.Change(QuietMs, Timeout.Infinite);
     }
 
     void TellChanged()
     {
-        List<string> paths;
-        lock (toTell) { paths = [.. toTell]; toTell.Clear(); }
-        foreach (var p in paths) changed(p);
+        List<KeyValuePair<string, HashSet<string>?>> told;
+        lock (toTell) { told = [.. toTell]; toTell.Clear(); }
+        foreach (var (path, names) in told) changed(path, names?.ToList());
+    }
+
+    /// <summary>The entries of some items of a cached folder, by name, as List gives them (the extras of the request
+    /// too): for the names that changed (the constructor's `changed`). An item gone (or not a folder, with foldersOnly)
+    /// is left out. Null when the folder is not in the cache read whole: then it is read again whole.</summary>
+    public JsonArray? Entries(string location, IReadOnlyList<string> names, bool foldersOnly, bool tree)
+    {
+        Folder? f;
+        List<Item> items;
+        lock (gate)
+        {
+            if (!folders.TryGetValue(Key(location), out f) || !f.Complete || f.Stale) return null;
+            f.LastUsed = DateTime.UtcNow;
+            items = names.Select(n => f.Items.GetValueOrDefault(n)).OfType<Item>().Where(i => !foldersOnly || i.Folder).ToList();
+        }
+        var entries = new JsonArray();
+        foreach (var item in items) entries.Add(EntryOf(f, item, foldersOnly, tree, null));
+        return entries;
     }
 
     /// <summary>The memory the cache may take (folderCacheMB) and whether shares are cached (cacheNetwork).</summary>
@@ -290,7 +322,7 @@ sealed class FolderCache : IDisposable
             w.Changed += (_, e) => Changed(f, WatcherChangeTypes.Changed, e.FullPath, null);
             w.Deleted += (_, e) => Changed(f, WatcherChangeTypes.Deleted, e.FullPath, null);
             w.Renamed += (_, e) => Changed(f, WatcherChangeTypes.Renamed, e.FullPath, e.OldFullPath);
-            w.Error += (_, _) => { lock (gate) f.Stale = true; Tell(f.Path); };   // changes lost: read again
+            w.Error += (_, _) => { lock (gate) f.Stale = true; Tell(f.Path, null); };   // changes lost: read again
             w.EnableRaisingEvents = true;
             return w;
         }
@@ -307,7 +339,7 @@ sealed class FolderCache : IDisposable
             if (!f.Complete) f.Pending.Add((kind, path, old));   // reported during the read: put in after it
             else Apply(f, kind, path, old);
         }
-        Tell(f.Path);
+        Tell(f.Path, old is null ? [Path.GetFileName(path)] : [Path.GetFileName(path), Path.GetFileName(old)]);
     }
 
     // One change into a folder's items (under the gate). A folder made or gone in it changes what its own folder's tree
@@ -361,7 +393,7 @@ sealed class FolderCache : IDisposable
                 differs = true;
             }
         }
-        if (differs) Tell(location);
+        if (differs) Tell(location, null);
     }
 
     // ---------- Memory (3.5) ----------

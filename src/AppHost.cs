@@ -134,11 +134,15 @@ sealed class AppHost : ApplicationContext
         {
             foreach (var w in windows) w.Post(new JsonObject { ["event"] = "fileOp", ["op"] = op.ToJson() });
         });
-        // A folder changed by a check of the cache (a share shown again): every window reads it again if it shows it.
-        Cache = new Shell.FolderCache(folder =>
+        // A cached folder changed: every window showing it asks for the items that changed (names), or reads it again
+        // whole (no names).
+        Cache = new Shell.FolderCache((folder, names) =>
         {
             foreach (var w in windows.ToList())
-                if (w.IsHandleCreated) w.BeginInvoke(() => w.Post(new JsonObject { ["event"] = "folderChanged", ["folder"] = folder }));
+                if (w.IsHandleCreated) w.BeginInvoke(() => w.Post(new JsonObject
+                {
+                    ["event"] = "folderChanged", ["folder"] = folder, ["names"] = names is null ? null : new JsonArray([.. names.Select(n => JsonValue.Create(n))]),
+                }));
         });
         ConfigureCache();
         // Now and then: the folder use written, and Windows asked whether memory is short (then the cache lets go of

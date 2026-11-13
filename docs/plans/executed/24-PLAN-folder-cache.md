@@ -201,6 +201,11 @@ None.
   or gone in it makes its parent's tree extras be worked out again; a lost change (the watcher's error) marks the
   folder to be read again. The cache tells the windows of a change itself, once the folder is quiet for 300 ms (as
   FolderWatch did); FolderWatch now watches only what the cache does not keep (a share, with shares not cached).
+  2026-11-13: the windows are told which items changed (by name, at most FolderCache.MaxNames, else the folder as a
+  whole); a pane asks for those only (FolderCache.Entries, op changedEntries) and puts them in where they belong, the
+  selection, the focus and the focused row's place kept, instead of reading the folder again whole. Measured in the
+  test copy with D:	emp (the TEMP folder, 50423 items, changing every second or two) in two lists: the host's CPU
+  while nothing was done in the window went from 15.7 s to 0.2 s per 20 s, with no listing asked for.
   A folder Windows refuses to watch is read again on every request. One watcher per drive (3.4) was not built: one per
   cached folder, the plan's fallback; whether one per drive is cheaper on a busy drive: [not yet calculated].
 - Memory: the setting folderCacheMB (Settings > App > Memory, 16 to 4096 MB, default 256); over it the folders used

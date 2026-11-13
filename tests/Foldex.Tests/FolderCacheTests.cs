@@ -27,7 +27,7 @@ public class FolderCacheTests : IDisposable
     [Fact]
     public void FoldersOnlyThenEverythingReadsTheFolderOnceAndGivesTheTreeItsExtras()
     {
-        using var cache = new FolderCache(_ => { });
+        using var cache = new FolderCache((_, _) => { });
         int? count = null;
         var tree = cache.List(dir, null, default, foldersOnly: true, tree: true, (c, _) => count = c);
         Assert.Equal(["empty", "sub"], Names(tree));
@@ -45,7 +45,7 @@ public class FolderCacheTests : IDisposable
     [Fact]
     public void AChangeOnDiskIsInTheCacheWithoutReadingAgain()
     {
-        using var cache = new FolderCache(_ => { });
+        using var cache = new FolderCache((_, _) => { });
         cache.List(dir, null, default, false, false);
         File.WriteAllText(Path.Combine(dir, "c.txt"), "c");
         File.Delete(Path.Combine(dir, "a.txt"));
@@ -62,9 +62,28 @@ public class FolderCacheTests : IDisposable
     }
 
     [Fact]
+    public void TheWindowsAreToldWhichItemsChangedAndGetOnlyThose()
+    {
+        var told = new System.Collections.Concurrent.ConcurrentQueue<(string Folder, IReadOnlyList<string>? Names)>();
+        using var cache = new FolderCache((folder, names) => told.Enqueue((folder, names)));
+        cache.List(dir, null, default, false, false);
+        File.WriteAllText(Path.Combine(dir, "c.txt"), "c");
+        File.Delete(Path.Combine(dir, "a.txt"));
+        for (var i = 0; i < 50 && told.IsEmpty; i++) Thread.Sleep(50);
+        Assert.True(told.TryDequeue(out var t));
+        Assert.Equal(dir, t.Folder);
+        Assert.Contains("a.txt", t.Names!);
+        Assert.Contains("c.txt", t.Names!);   // Windows may report more (a folder made just before, as sub)
+        var entries = cache.Entries(dir, ["a.txt", "c.txt"], false, false)!;
+        Assert.Equal(["c.txt"], entries.Select(e => e!["name"]!.GetValue<string>()));   // a.txt is gone: left out
+        Assert.Empty(cache.Entries(dir, ["sub", "c.txt"], true, true)!.Where(e => e!["name"]!.GetValue<string>() == "c.txt"));
+        Assert.Null(cache.Entries(Path.Combine(dir, "sub"), ["deeper"], false, false));   // not cached: read whole
+    }
+
+    [Fact]
     public void TwoRequestsAtOnceShareTheRead()
     {
-        using var cache = new FolderCache(_ => { });
+        using var cache = new FolderCache((_, _) => { });
         var results = new ShellListing.Result[2];
         Parallel.For(0, 2, i => results[i] = cache.List(dir, null, default, false, i == 1));
         Assert.All(results, r => Assert.Equal(["a.txt", "b.txt", "empty", "sub"], Names(r)));
@@ -74,7 +93,7 @@ public class FolderCacheTests : IDisposable
     [Fact]
     public void OverTheBudgetTheFolderUsedLongestAgoGoesNeverAShownOne()
     {
-        using var cache = new FolderCache(_ => { });
+        using var cache = new FolderCache((_, _) => { });
         var sub = Path.Combine(dir, "sub");
         var deeper = Path.Combine(sub, "deeper");
         cache.Shown("window", [dir]);

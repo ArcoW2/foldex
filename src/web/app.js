@@ -617,22 +617,46 @@ class TreeView {
     if (!at) return;
     list(`tree:${this.id}:${n ? n.id : ''}`, at, !this.showsFiles(), part => kids.push(...part), m => {
       if (m.error) return;
-      const parent = n ?? null;
-      const shown = n ? n.children : this.top;
-      const next = kids.concat(m.entries).sort(this.comparer()).map(e => this.add(e, parent));
-      if (shown && next.length === shown.length && next.every((c, k) => c === shown[k])) return;
-      const focus = this.focused();
-      const offset = focus ? this.flat.indexOf(focus) * RowHeight - this.body.scrollTop : 0;
-      for (const gone of shown ?? []) if (!next.includes(gone)) this.forget(gone);
-      if (n) n.children = next;
-      else this.top = next;
-      this.flatten();
-      const i = focus ? this.flat.indexOf(focus) : -1;
-      if (i >= 0) {
-        this.body.scrollTop = i * RowHeight - offset;
-        this.render();
-      }
+      this.put(n, kids.concat(m.entries).sort(this.comparer()).map(e => this.add(e, n ?? null)));
     }, false, true);
+  }
+
+  // Some items of a folder open in the tree changed on disk, and the host says which (by name): only those asked
+  // again; one made or gone is put in or taken out where it belongs, one changed gets its new values; the rest stays
+  // as it is. Without names (the host lost track, or too many): read again.
+  patch(n, names) {
+    const at = n ? n.id : this.root;
+    if (!at) return;
+    if (!names) return this.reread(n);
+    askHost({ op: 'changedEntries', location: at, names, foldersOnly: !this.showsFiles(), tree: true }).then(m => {
+      const shown = n ? n.children : this.top;
+      if (m.whole || !shown) return this.reread(n);
+      const ids = new Set(names.map(name => inFolder(at, name).toLowerCase()));
+      const came = new Map(m.entries.map(e => [e.id.toLowerCase(), e]));
+      for (const c of shown) if (came.has(c.id.toLowerCase())) Object.assign(c, came.get(c.id.toLowerCase()));
+      const next = shown.filter(c => !ids.has(c.id.toLowerCase()) || came.has(c.id.toLowerCase()));
+      for (const e of m.entries) if (!shown.some(c => same(c.id, e.id))) next.push(this.add(e, n ?? null));
+      if (!this.put(n, next.sort(this.comparer()))) this.render();
+    });
+  }
+
+  // A folder's children (or the top) as `next`: the ones gone forgotten, the focused row kept where it is on screen.
+  // False when nothing changed.
+  put(n, next) {
+    const shown = n ? n.children : this.top;
+    if (shown && next.length === shown.length && next.every((c, k) => c === shown[k])) return false;
+    const focus = this.focused();
+    const offset = focus ? this.flat.indexOf(focus) * RowHeight - this.body.scrollTop : 0;
+    for (const gone of shown ?? []) if (!next.includes(gone)) this.forget(gone);
+    if (n) n.children = next;
+    else this.top = next;
+    this.flatten();
+    const i = focus ? this.flat.indexOf(focus) : -1;
+    if (i >= 0) {
+      this.body.scrollTop = i * RowHeight - offset;
+      this.render();
+    }
+    return true;
   }
 
   async expand(n, open = true) {
@@ -1379,6 +1403,49 @@ class ListView {
         if (arrived.length) focusItem(this.id, { id: focus.id, folder: focus.folder });   // its children follow it
       }
       this.render();
+    });
+  }
+
+  // Some items of the folder changed on disk, and the host says which (by name): only those asked again and put in
+  // where they belong (gone ones taken out, changed ones replaced), without reading the folder again; the selection,
+  // the focus and the focused row's place on screen stay. Without names (the host lost track, or too many), while
+  // the folder is being read, or after a file operation: read again (reread).
+  patch(names) {
+    if (!names || !this.location || this.message || this.opPending || listeners.has(this.id)) return this.reread();
+    const at = this.location;
+    askHost({ op: 'changedEntries', location: at, names, foldersOnly: this.content() === 'folders' }).then(m => {
+      if (this.location !== at || listeners.has(this.id)) return;
+      if (m.whole) return this.reread();
+      const ids = new Set(names.map(name => inFolder(at, name).toLowerCase()));
+      const s = layout.state(this.id), top = this.body.scrollTop;
+      const was = this.entries.findIndex(x => same(x.id, s.focus));
+      const offset = was >= 0 && !this.iconsView() && !this.thumbsView() ? was * RowHeight - top : null;
+      const out = x => !ids.has(x.id.toLowerCase());
+      this.all = this.all.filter(out).concat(m.entries);
+      this.entries = this.entries.filter(out);
+      const passes = this.passes(), compare = this.comparer();
+      for (const e of m.entries.filter(passes)) {
+        let lo = 0, hi = this.entries.length;
+        while (lo < hi) {
+          const mid = (lo + hi) >> 1;
+          if (compare(this.entries[mid], e) <= 0) lo = mid + 1;
+          else hi = mid;
+        }
+        this.entries.splice(lo, 0, e);
+      }
+      const here = new Set(this.entries.map(x => x.id));
+      this.selected = new Set([...this.selected].filter(id => here.has(id)));
+      s.selection = [...this.selected];
+      // The focused item gone: the one now in its place.
+      let focus = s.focus && this.entries.find(x => same(x.id, s.focus));
+      if (s.focus && !focus && was >= 0 && this.entries.length) {
+        focus = this.entries[Math.min(was, this.entries.length - 1)];
+        s.focus = focus.id;
+      }
+      if (focus && offset !== null) this.body.scrollTop = this.entries.indexOf(focus) * RowHeight - offset;
+      this.render();
+      if (activePane === this.id && $('status').textContent.startsWith(`${this.name}: `))
+        status(`${this.name}: ${this.entries.length} items`);
     });
   }
 
@@ -2649,20 +2716,24 @@ function tellWatched() {
   }, 500);
 }
 
-// A folder shown changed on disk: the lists showing it read it again where they are, a tree its subfolders.
-function folderChanged(folder) {
+// A folder shown changed on disk: the lists showing it put in the items that changed (`names`, from the cache) where
+// they are, or read it again (no names: a folder not cached, or too many changes), a tree its subfolders.
+function folderChanged(folder, names = null) {
   for (const v of views.values()) {
     if (v instanceof ScrapView) {
       const there = v.all.filter(x => same(folderOf(x.id), folder)).map(x => x.id);
       if (there.length) v.verify(there);
     }
-    if (v instanceof ListView && same(v.location, folder)) v.reread();
+    if (v instanceof ListView && same(v.location, folder)) v.patch(names);
     if (v instanceof TreeView) {
-      if (v.folder && same(v.root, folder)) v.reread(null);
-      for (const n of v.placesOf(folder)) if (n.children) v.reread(n);
+      if (v.folder && same(v.root, folder)) v.patch(null, names);
+      for (const n of v.placesOf(folder)) if (n.children) v.patch(n, names);
     }
   }
 }
+
+// An item's id in a folder on disk.
+const inFolder = (folder, name) => folder.endsWith('\\') ? folder + name : `${folder}\\${name}`;
 
 // ---------- Between panes (3.6), and back and forward per pane (plan 17) ----------
 
@@ -3029,7 +3100,7 @@ const events = {
   menuTexts(m) { window.__spike.events.push({ menuTexts: m.texts, error: m.error }); },
   verbDone(m) { window.__spike.events.push({ verbDone: m.ok, error: m.error }); setTimeout(reloadLists, 300); },
   executeFailed(m) { status(m.error, true); },
-  folderChanged(m) { folderChanged(m.folder); },
+  folderChanged(m) { folderChanged(m.folder, m.names ?? null); },
   clipboardDone(m) { if (m.error) status(m.error, true); },
   settingFailed(m) { status(`settings.json: ${m.error}`, true); },
   dragDone(m) {
