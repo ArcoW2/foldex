@@ -1514,11 +1514,15 @@ class ListView {
     else status(`${m.name}${m.elevated ? ' (as administrator)' : ''}: ${this.entries.length} items`);
     drawTabs();   // the tab shows the folder's name
     // The focus of this branch, as it was left, comes back when it is still there; nothing focused here yet (a pane
-    // opened, another folder): the first item, as Down would (its followers wait until the focus moves).
+    // opened, another folder): the first item, as Down would. Its followers wait until the focus moves, but a preview
+    // shows it at once (also when Foldex starts with one).
     const focus = layout.state(this.id).focus;
     const kept = focus && this.entries.find(x => same(x.id, focus));
     if (kept) this.select(kept, {}, true);
     else if (this.entries.length && !this.renameOnLoad) this.select(this.entries[0], {}, true);
+    const now = layout.state(this.id).focus;
+    for (const f of layout.followers(this.id, layout.keyOf(this.id)))
+      if (f.kind === 'preview' && !f.pinned && now && !same(views.get(f.id)?.path, now)) views.get(f.id)?.show(now);
     this.backDone();
     this.askColumnValues();
     if (this.cols.sort && propsFor(this.cols.sort.id).length) this.sortEntries();
