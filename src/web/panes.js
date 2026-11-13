@@ -43,7 +43,7 @@ class Layout {
     if (!this.panes.has(source) || this.pane(id).kind === 'scrap') return false;   // a scrap is never a child (plan 06 3.1)
     for (let p = source; p !== null; p = this.pane(p).source) if (p === id) return false;
     const pane = this.pane(id);
-    const siblings = this.followers(source).filter(f => f.id !== id);
+    const siblings = this.followers(source, undefined, true).filter(f => f.id !== id);
     pane.source = source;
     pane.colour = colour ?? (siblings.length ? null : this.pane(source).colour) ?? this.newColour();
     return true;
@@ -57,9 +57,9 @@ class Layout {
     const parent = this.pane(pane.source), colour = pane.colour;
     pane.source = null;
     pane.colour = null;
-    if (!this.followers(parent.id, colour).length) {
+    if (!this.followers(parent.id, colour, true).length) {
       // Its last child gone: what it showed for that branch is what it shows now, without children ('').
-      if (!this.followers(parent.id).length) parent.states[''] = parent.states[colour] ?? parent.states[''];
+      if (!this.followers(parent.id, undefined, true).length) parent.states[''] = parent.states[colour] ?? parent.states[''];
       delete parent.states[colour];
       if (parent.activeKey === colour) parent.activeKey = null;
       if (parent.lastKey === colour) parent.lastKey = null;
@@ -81,10 +81,10 @@ class Layout {
     const pane = this.pane(id);
     if (!pane || pane.source === null || pane.colour === colour) return [];
     const parent = this.pane(pane.source), old = pane.colour;
-    const joins = this.followers(parent.id, colour).length > 0;
+    const joins = this.followers(parent.id, colour, true).length > 0;
     const shown = this.keyOf(parent.id) === old;
     pane.colour = colour;
-    const others = this.followers(parent.id, old).length > 0;
+    const others = this.followers(parent.id, old, true).length > 0;
     if (!joins && parent.states[old]) parent.states[colour] = others ? { ...parent.states[old], selection: [...parent.states[old].selection] } : parent.states[old];
     if (!others) delete parent.states[old];
     if (shown) parent.activeKey = colour;
@@ -112,7 +112,7 @@ class Layout {
   remove(id) {
     if (!this.panes.has(id)) return false;
     const gone = this.pane(id);
-    for (const f of this.followers(id)) {
+    for (const f of this.followers(id, undefined, true)) {
       f.source = gone.source;
       if (gone.source === null) f.colour = null;
     }
@@ -121,9 +121,47 @@ class Layout {
     return true;
   }
 
-  // The panes following `id`; with `key`, only those of that colour.
-  followers(id, key) {
-    return [...this.panes.values()].filter(p => p.source === id && (key === undefined || p.colour === key));
+  // The panes following `id`; with `key`, only those of that colour. A hidden pane (Ctrl+O, `away`) only with `all`: it
+  // keeps its connection and its state, but follows nothing and is no step on a branch until it is shown again.
+  followers(id, key, all = false) {
+    return [...this.panes.values()].filter(p => p.source === id && (key === undefined || p.colour === key) && (all || !p.away));
+  }
+
+  // A pane and the panes below it (hidden ones too), the pane first.
+  subtree(id) {
+    const found = [id];
+    for (let k = 0; k < found.length; k++) found.push(...this.followers(found[k], undefined, true).map(f => f.id));
+    return found;
+  }
+
+  // The hidden panes on top of what was hidden at once (a pane hidden with its children: that pane), the last hidden first.
+  hiddenTops() {
+    return [...this.panes.values()].filter(p => p.away && !this.pane(p.source)?.away).sort((a, b) => b.away.at - a.away.at);
+  }
+
+  // What Ctrl+O does from a pane, as Xplorer2's: { hide: [ids] }, { show: id } or { newChild: parent, beside: id }.
+  // Its children count, not a preview. A pane with children: of two or more shown it keeps the one focused last and
+  // hides the others; else it shows its child hidden last; else it gets one more child (beside the one it has). A
+  // child without children: its parent's other shown children hidden; else the parent's child hidden last shown; else
+  // a sibling beside it. A pane without either: a child.
+  toggle(id) {
+    const kids = p => this.followers(p, undefined, true).filter(f => f.kind !== 'preview');
+    const hidden = p => kids(p).filter(f => f.away).sort((a, b) => b.away.at - a.away.at);
+    const pane = this.pane(id);
+    const shown = kids(id).filter(f => !f.away);
+    if (shown.length || hidden(id).length) {
+      if (shown.length > 1) {
+        const keep = shown.find(f => f.id === pane.lastChild) ?? shown.find(f => f.colour === this.keyOf(id)) ?? shown[0];
+        return { hide: shown.filter(f => f !== keep).map(f => f.id) };
+      }
+      if (hidden(id).length) return { show: hidden(id)[0].id };
+      return { newChild: id, beside: shown[0].id };
+    }
+    if (pane.source === null) return { newChild: id, beside: id };
+    const siblings = kids(pane.source).filter(f => !f.away && f.id !== id);
+    if (siblings.length) return { hide: siblings.map(f => f.id) };
+    if (hidden(pane.source).length) return { show: hidden(pane.source)[0].id };
+    return { newChild: pane.source, beside: id };
   }
 
   // The colour a pane is drawn in: that of the end of the path it serves, down the branch each pane shows (not into a
@@ -164,6 +202,7 @@ class Layout {
     const changed = [];
     for (let c = id, p = this.pane(id).source; p !== null; c = p, p = this.pane(p).source) {
       const key = this.pane(c).colour;
+      this.pane(p).lastChild = c;   // for Ctrl+O (toggle): the child a parent keeps
       if (this.keyOf(p) !== key) {
         this.pane(p).activeKey = key;
         changed.push(p);

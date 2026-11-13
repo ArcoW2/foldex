@@ -303,6 +303,7 @@ function drawHeads() {
     }));
   }
   drawTabs();
+  drawHiddenPanes();
 }
 
 // Followers take what a pane focused once the cursor rests (3.3, debounce): followDelay ms, 0 to 1000.
@@ -2152,6 +2153,7 @@ function paneMenu(id) {
       { label: 'At the right', run: () => newChildPane(id, 'right') },
       { label: 'Below', run: () => newChildPane(id, 'below') } ] },
     { label: 'New tab', enabled: !(views.get(id) instanceof PreviewView), run: () => newTab(id) },
+    { label: 'Hidden panes', enabled: layout.hiddenTops().length > 0, items: hiddenPanesMenu() },
     '-',
     { label: 'Branch', items: [
       { label: 'Detach from parent', enabled: child, run: () => detachPane(id) },
@@ -2367,7 +2369,7 @@ function restoreLayout(saved, path) {
     Object.assign(layout, { panes: panes.panes, root: panes.root, next: panes.next });
     Object.assign(docks, { areas: placed.areas, sizes: placed.sizes });
     for (const id of placed.panes()) if (!layout.pane(id)) docks.remove(id);
-    for (const id of [...layout.panes.keys()]) if (!docks.find(id)) layout.remove(id);
+    for (const id of [...layout.panes.keys()]) if (!docks.find(id) && !layout.pane(id).away) layout.remove(id);
     for (const id of docks.panes()) {
       const view = makeView(id);
       views.set(id, view);
@@ -2502,6 +2504,93 @@ function closePane(id) {
   drawHeads();
   ribbonRefresh();
 }
+
+// Ctrl+O (Layout.toggle, as Xplorer2's): hides the other child of a parent, shows a hidden one again, or makes a new
+// one. A pane hidden goes with the panes below it; each keeps its connection, its state and where it was docked
+// (Docks.placeOf), its view goes; it is in Hidden panes (View > Panes, the pane menu, the status bar) until shown.
+function togglePane() {
+  if (!layout.pane(activePane)) return;
+  const r = layout.toggle(activePane);
+  if (r.hide) {
+    for (const id of r.hide) hidePane(id);
+    renderDock();
+    drawHeads();
+    ribbonRefresh();
+    views.get(activePane)?.body.focus();
+  } else if (r.show) unhidePane(r.show);
+  else {
+    const view = newChildPane(r.newChild, 'right', { pane: r.beside, side: 'right' });
+    view.body.focus();
+  }
+}
+
+function hidePane(id) {
+  const at = Date.now();
+  for (const p of layout.subtree(id).reverse()) {
+    const pane = layout.pane(p), view = views.get(p);
+    if (pane.away || !view) continue;
+    pane.away = { place: docks.placeOf(p) ?? { area: 'center' }, at, title: view.tabTitle() };
+    if (view === preview) {
+      preview.close();
+      preview = null;
+    }
+    view.el.remove();
+    views.delete(p);
+    iconUsers.delete(view);
+    docks.remove(p);
+  }
+}
+
+// A hidden pane shown again where it was (beside the pane it was next to, else in its area), with the panes hidden
+// with it; each on what it showed, a child on what its parent shows when it is in the branch shown. The keyboard
+// stays where it is.
+function unhidePane(id) {
+  const shown = [];
+  for (const p of layout.subtree(id)) {
+    const pane = layout.pane(p);
+    if (!pane?.away) continue;
+    const { place } = pane.away;
+    delete pane.away;
+    const view = makeView(p);
+    if (view instanceof PreviewView && !preview) preview = view;
+    placeView(view, place.pane != null && docks.find(place.pane) ? place : { area: place.area ?? 'center' });
+    shown.push(view);
+  }
+  for (const view of shown) {
+    const s = layout.state(view.id);
+    if (view instanceof TreeView) view.ready = view.folder ? view.init() : view.init().then(() => s.focus ? view.reveal(s.focus) : view.select(ThisPC));
+    else if (view instanceof PreviewView) view.show(layout.state(layout.pane(view.id).source).focus);
+    else if (view instanceof ScrapView) view.addIds(layout.pane(view.id).items ?? []);
+    else if (view instanceof ListView && s.location) view.load(s.location);
+  }
+  followParent(id);
+  for (const v of views.values()) v.el.classList.toggle('active', v.id === activePane);
+  drawHeads();
+  ribbonRefresh();
+  views.get(activePane)?.body.focus();
+}
+
+// The hidden panes, the last hidden first: a click shows one again.
+function hiddenPanesMenu() {
+  const tops = layout.hiddenTops();
+  if (!tops.length) return [{ label: 'No hidden panes', enabled: false }];
+  const titleOf = id => views.get(id)?.tabTitle() ?? layout.pane(id)?.away?.title ?? id;
+  return tops.map(p => ({ label: p.source !== null ? `${p.away.title} (child of ${titleOf(p.source)})` : p.away.title, run: () => unhidePane(p.id) }));
+}
+
+// On the status bar while panes are hidden: how many; a click opens Hidden panes, upward.
+function drawHiddenPanes() {
+  const el = $('hidden-panes'), n = layout.hiddenTops().length;
+  el.hidden = !n;
+  el.textContent = n === 1 ? '1 hidden pane' : `${n} hidden panes`;
+}
+$('hidden-panes').addEventListener('mousedown', e => {
+  e.preventDefault();
+  const r = $('hidden-panes').getBoundingClientRect();
+  openMenu(r.left, r.top, hiddenPanesMenu());
+  const el = document.querySelector('.menu');
+  if (el) el.style.top = `${Math.max(0, r.top - el.offsetHeight - 2)}px`;
+});
 
 // The preview pane (Preview on the ribbon, Alt+P): a child of the active list, or of the first list, at its right.
 function togglePreview() {

@@ -39,6 +39,7 @@
   "Ctrl+Alt+Shift+N": "pane.new",
   "Ctrl+T": "pane.newTab",
   "Ctrl+W": "pane.close",
+  "Ctrl+O": "pane.toggle",
   "F6": "pane.next",
   "Shift+F6": "pane.previous",
 }

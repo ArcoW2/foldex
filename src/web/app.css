@@ -1212,7 +1212,7 @@ footer {
   gap: 10px;
 }
 
-#project {
+#project, #hidden-panes {
   flex: none;
   font: inherit;
   color: var(--fg);
@@ -1223,7 +1223,9 @@ footer {
   cursor: pointer;
 }
 
-#project:hover {
+#hidden-panes[hidden] { display: none; }
+
+#project:hover, #hidden-panes:hover {
   background: var(--hover);
   border-color: var(--border);
 }

@@ -400,4 +400,57 @@ public class PanesTests
             """, "[went, again.state(A).focus, again.history(A).at]");
         Assert.Equal("""["p1","b",1]""", r.GetRawText());
     }
+
+    // Ctrl+O (Layout.toggle), as Xplorer2's: a tree T with two lists B and C.
+    const string Dual = """
+        const l = new Layout();
+        const T = l.add({ kind: 'tree', content: 'folders' });
+        const B = l.add({ source: T });
+        const C = l.add({ source: T });
+        """;
+
+    [Fact]
+    public void CtrlOFromAChildHidesItsSiblingAndThenShowsItAgain()
+    {
+        var r = Run(Dual + """
+            const first = l.toggle(B);
+            l.pane(C).away = { place: { area: 'center' }, at: 1 };
+            const second = l.toggle(B);
+            """, "[first, second, l.followers(T).map(f => f.id), l.followers(T, undefined, true).length]");
+        Assert.Equal("""[{"hide":["p3"]},{"show":"p3"},["p2"],2]""", r.GetRawText());
+    }
+
+    [Fact]
+    public void CtrlOFromTheParentKeepsTheChildFocusedLast()
+    {
+        var r = Run(Dual + "l.activate(C); l.activate(B); l.activate(C);", "l.toggle(T)");
+        Assert.Equal("""{"hide":["p2"]}""", r.GetRawText());
+    }
+
+    [Fact]
+    public void CtrlOWithNothingToHideOrShowMakesASiblingOrAChild()
+    {
+        var r = Run("""
+            const l = new Layout();
+            const T = l.add({ kind: 'tree' });
+            const alone = l.toggle(T);
+            const B = l.add({ source: T });
+            const P = l.add({ source: B, kind: 'preview' });
+            """, "[alone, l.toggle(B), l.toggle(T)]");
+        Assert.Equal("""[{"newChild":"p1","beside":"p1"},{"newChild":"p1","beside":"p2"},{"newChild":"p1","beside":"p2"}]""", r.GetRawText());
+    }
+
+    [Fact]
+    public void AHiddenPaneIsNoStepOnABranchButKeepsItsConnection()
+    {
+        var r = Run(Dual + """
+            const D = l.add({ source: C, kind: 'preview' });
+            l.pane(C).away = { place: { area: 'center' }, at: 1 };
+            l.pane(D).away = { place: { area: 'center' }, at: 1 };
+            l.activate(B);
+            const updates = l.focus(T, { id: 'x', folder: true });
+            l.remove(T);
+            """, "[updates.map(u => u.pane), l.subtree(C), l.hiddenTops().map(p => p.id), l.pane(C).source]");
+        Assert.Equal("""[["p2"],["p3","p4"],["p3"],null]""", r.GetRawText());
+    }
 }

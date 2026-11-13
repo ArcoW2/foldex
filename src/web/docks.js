@@ -120,6 +120,23 @@ class Docks {
     return {};
   }
 
+  // Where a pane is, as a place add() puts it back at (Ctrl+O hides a pane and shows it again there): a tab beside
+  // another of its group; beside the node next to it in its split, a group before one that is a split (that one's
+  // first pane: then it comes back inside that split); else alone in its area.
+  placeOf(id) {
+    const at = this.find(id);
+    if (!at) return null;
+    const { group, area, parent, index } = at;
+    const tab = group.panes[group.panes.indexOf(id) - 1] ?? group.panes.find(p => p !== id);
+    if (tab) return { pane: tab, side: 'tab', area };
+    if (!parent) return { area };
+    const first = node => node.type === 'group' ? node.panes[0] : first(node.children[0]);
+    const sides = [[index - 1, 'after'], [index + 1, 'before']].filter(([k]) => parent.children[k]);
+    const [k, how] = sides.find(([k]) => parent.children[k].type === 'group') ?? sides[0];
+    const side = parent.dir === 'row' ? (how === 'after' ? 'right' : 'left') : (how === 'after' ? 'bottom' : 'top');
+    return { pane: first(parent.children[k]), side, area };
+  }
+
   // A tab shown (a click on it, or its pane activated).
   show(id) {
     const at = this.find(id);

@@ -94,4 +94,16 @@ public class DocksTests
             """, "[shape(back.areas.left), shape(back.areas.center), back.sizes.left]");
         Assert.Equal("""["p1","p2|[p3]",333]""", r);
     }
+
+    [Fact]
+    public void APaneHiddenComesBackWhereItWas()
+    {
+        var r = Run(Shape + """
+            d.add('p1', { area: 'left' }); d.add('p2', { area: 'center' }); d.add('p3', { pane: 'p2', side: 'bottom' });
+            d.add('p4', { pane: 'p3', side: 'tab' });
+            const places = ['p1', 'p2', 'p3', 'p4'].map(p => d.placeOf(p));
+            const back = id => { const at = d.placeOf(id); d.remove(id); d.add(id, at); return shape(d.areas.center); };
+            """, "[places, back('p2'), back('p4'), back('p1') && shape(d.areas.left)]");
+        Assert.Equal("""[[{"area":"left"},{"pane":"p3","side":"top","area":"center"},{"pane":"p4","side":"tab","area":"center"},{"pane":"p3","side":"tab","area":"center"}],"column(p2, p3|[p4])","column(p2, p3|[p4])","p1"]""", r);
+    }
 }

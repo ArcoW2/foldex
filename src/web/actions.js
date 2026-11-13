@@ -140,6 +140,13 @@ action('pane.newChild', { title: 'New child pane', group: 'panes', enabled: () =
   run: params => newChildPane(activePane, params[0] ?? 'right') });
 action('pane.newTab', { title: 'New tab', hint: 'this pane again as a tab: the same parent, a branch of its own', group: 'panes',
   enabled: () => !!activeView() && !(activeView() instanceof PreviewView), run: () => newTab(activePane) });
+action('pane.toggle', { title: 'Show or hide a pane', hint: 'as Ctrl+O in Xplorer2: hides the other child of the parent, shows a hidden one again, or makes one',
+  group: 'panes', enabled: () => !!activeView(), run: () => togglePane() });
+action('pane.hidden', { title: 'Hidden panes', hint: 'the panes hidden with Show or hide a pane: a click shows one again', group: 'panes',
+  run: (params, ctx) => {
+    const r = (ctx.el ?? views.get(activePane)?.body ?? document.body).getBoundingClientRect();
+    openMenu(r.left, ctx.el ? r.bottom : r.top, hiddenPanesMenu());
+  } });
 action('pane.close', { title: 'Close pane', group: 'panes', enabled: () => !!activeView(), run: () => closePane(activePane) });
 const isChild = () => layout.pane(activePane)?.source != null;
 action('pane.detach', { title: 'Detach from parent', hint: 'the pane stops following and goes its own way', group: 'panes',

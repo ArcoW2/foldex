@@ -29,6 +29,7 @@
       { "name": "Panes", "items": [
         { "action": "pane.newChild", "params": ["right"], "size": "large", "label": "New child\npane" },
         { "action": "pane.newTab", "label": "New tab" }, { "action": "pane.new", "label": "New pane", "stack": true }, { "action": "pane.close", "label": "Close pane", "stack": true },
+        { "action": "pane.toggle", "label": "Show/hide pane" }, { "action": "pane.hidden", "label": "Hidden panes", "stack": true },
         { "action": "pane.next", "label": "Next pane" },
         { "action": "pane.detach", "label": "Detach", "stack": true }, { "action": "pane.pin", "label": "Pin", "stack": true } ] },
       { "name": "Show", "items": [
