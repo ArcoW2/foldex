@@ -203,6 +203,7 @@ sealed class MainForm : Form
                     ["event"] = "hello",
                     ["version"] = version,
                     ["commit"] = commit,
+                    ["doubleClickTime"] = SystemInformation.DoubleClickTime,
                     ["settings"] = SettingsFile.Load(AppHost.DataDir),
                     ["themes"] = ThemeFile.Load(AppHost.DataDir),
                     ["keys"] = KeysFile.Load(AppHost.DataDir),

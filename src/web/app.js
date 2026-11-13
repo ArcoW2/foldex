@@ -2770,6 +2770,36 @@ function folderChanged(folder, ids = null) {
   }
 }
 
+// ---------- The click that brings the window back (setting ignoreActivationClick; as LexPen) ----------
+
+// It only brings the window to the front. After the window lost the focus, the next press that comes with the focus
+// back (before it, or just after it) goes no further: its press, release and click are stopped before anything sees
+// them (on the window, in the capture phase). The title bar is Windows' own and works at once. A double click to
+// bring the window back: every press, release, click and dblclick until Windows' double-click time has passed after
+// the last of them is stopped as well, so it does not act as a click or a double click (opening an item); a click
+// after that acts at once. Back by the keys (Alt+Tab) is no click.
+const activation = { away: false, back: 0, until: 0, double: 500 };
+addEventListener('blur', () => { activation.away = true; });
+addEventListener('focus', () => { activation.back = performance.now(); });
+addEventListener('keydown', () => { activation.away = false; activation.until = 0; }, true);
+const activationEating = () => performance.now() < activation.until;
+addEventListener('pointerdown', e => {
+  const now = performance.now();
+  const first = activation.away && (!document.hasFocus() || now - activation.back < 500);
+  activation.away = false;
+  if ((!first && !activationEating()) || settings.ignoreActivationClick === false) return;
+  activation.until = now + activation.double;
+  e.preventDefault();   // no mousedown, mouseup after it
+  e.stopImmediatePropagation();
+}, true);
+for (const type of ['mousedown', 'mouseup', 'pointerup', 'click', 'dblclick', 'auxclick', 'contextmenu'])
+  addEventListener(type, e => {
+    if (!activationEating()) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    if (type === 'pointerup') activation.until = performance.now() + activation.double;   // a next press may follow
+  }, true);
+
 // ---------- Between panes (3.6), and back and forward per pane (plan 17) ----------
 
 // The pane chain of the active branch: the root above the active pane, then down the active branch from there (each
@@ -3045,6 +3075,7 @@ const events = {
     setKeys(m.keys);
     setRibbon(m.ribbon);
     version = m.version + (m.commit ? ` (${m.commit})` : '');
+    if (m.doubleClickTime > 0) activation.double = m.doubleClickTime;
     setBars(m.bars);
     setColumnSets(m.columnSets);
     post({ op: 'drives' });

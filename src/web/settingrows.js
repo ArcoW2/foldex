@@ -8,7 +8,7 @@
 // The tabs of the settings window, each with its groups in order: the app itself, the panes, what is in them, and
 // searching and scraps.
 const SETTING_TABS = [
-  ['App', ['Theme', 'Fonts', 'Memory']],
+  ['App', ['Theme', 'Fonts', 'Mouse', 'Memory']],
   ['Panes', ['Colours', 'Behaviour', 'Scrollbars']],
   ['Contents', ['Rows', 'Columns', 'Highlights', 'Trees', 'Items', 'Thumbnails']],
   ['Search and scrap', ['Search bar']],
@@ -29,6 +29,8 @@ const SETTING_ROWS = [
     hint: 'On: folders on network shares are kept after they are shown, read ahead, and checked again when shown again. Off: they are kept only while shown, and read anew when opened again. Either way their changes come in item by item, as on a local drive.' },
   { tab: 'App', group: 'Fonts', name: 'appFont', kind: 'font', title: 'Window font',
     hint: 'The ribbon, the pane heads, the location box, the status line and this window.' },
+  { tab: 'App', group: 'Mouse', name: 'ignoreActivationClick', kind: 'toggle', title: 'Ignore the first click on a window that is not in front',
+    hint: 'On: a click on a Foldex window that is not in front only brings it to the front; it does not select, open or press anything there (the title bar works at once). Off: that click also acts.' },
   { tab: 'App', group: 'Fonts', name: 'appSize', kind: 'size', title: 'Window font size', hint: 'In points, 4 to 36.' },
   { tab: 'Contents', group: 'Rows', name: 'paneFont', kind: 'font', title: 'Pane font', hint: 'The rows of every tree and list.' },
   { tab: 'Contents', group: 'Rows', name: 'paneSize', kind: 'size', title: 'Pane font size',
