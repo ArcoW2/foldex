@@ -1390,8 +1390,10 @@ class ListView {
       this.done(m, first);
       const here = id => this.entries.find(x => same(x.id, id));
       const arrived = landed.map(here).filter(Boolean).sort((a, b) => this.entries.indexOf(a) - this.entries.indexOf(b));
-      // What arrived is the selection now (an action next is meant for it); otherwise the selection as it was.
-      this.selected = new Set((arrived.length ? arrived : keep.map(here)).filter(Boolean).map(x => x.id));
+      // What arrived is the selection now (an action next is meant for it); otherwise the selection as it was (nothing
+      // there before: what done chose, the first item).
+      const before = keep.length || focusBefore ? keep : [...this.selected];
+      this.selected = new Set((arrived.length ? arrived : before.map(here)).filter(Boolean).map(x => x.id));
       s.selection = [...this.selected];
       const focus = arrived[0] ?? (focusBefore && here(focusBefore));
       this.body.scrollTop = top;
@@ -1493,9 +1495,12 @@ class ListView {
     else if (m.offline) status(`${m.name}: ${this.entries.length} items as last read; not current: ${m.offline}`, true);
     else status(`${m.name}${m.elevated ? ' (as administrator)' : ''}: ${this.entries.length} items`);
     drawTabs();   // the tab shows the folder's name
-    // The focus of this branch, as it was left, comes back when it is still there.
+    // The focus of this branch, as it was left, comes back when it is still there; nothing focused here yet (a pane
+    // opened, another folder): the first item, as Down would (its followers wait until the focus moves).
     const focus = layout.state(this.id).focus;
-    if (focus && this.entries.some(x => same(x.id, focus))) this.select(this.entries.find(x => same(x.id, focus)), {}, true);
+    const kept = focus && this.entries.find(x => same(x.id, focus));
+    if (kept) this.select(kept, {}, true);
+    else if (this.entries.length && !this.renameOnLoad) this.select(this.entries[0], {}, true);
     this.backDone();
     this.askColumnValues();
     if (this.cols.sort?.id.includes('.')) this.sortEntries();
