@@ -2052,13 +2052,32 @@ class PreviewView {
     if (kind === 'text') el.textContent = own.text + (own.cut ? '\n\n[Only the start of the file is shown.]' : '');
     else {
       el.src = own.url;
-      el.addEventListener('error', () => this.message('This item cannot be previewed.'));
+      el.addEventListener('error', () => kind === 'image' ? this.message('This item cannot be previewed.') : this.still(own));
+      // A video whose sound plays but whose picture the player cannot decode (no error, no width): the still, its
+      // player kept under it for the sound.
+      if (kind === 'video') el.addEventListener('loadedmetadata', () => { if (!el.videoWidth) this.still(own, el); });
       if (kind !== 'image') {
         el.controls = true;
         el.preload = 'metadata';
       }
     }
     this.rows.replaceChildren(el);
+  }
+
+  // A video or sound the page's player cannot play (a codec it lacks): the picture Windows makes of it (a frame of a
+  // video), said to be a still, else that it cannot be previewed.
+  still(own, player = null) {
+    const path = this.path;
+    askHost({ op: 'previewPicture', path }).then(m => {
+      if (!same(this.path, path)) return;
+      if (!m.url && !player) return this.message('This item cannot be previewed.');
+      const note = Object.assign(document.createElement('div'), { className: 'own-note',
+        textContent: player ? 'The picture of this video cannot be played here; a still of it, and its sound.'
+          : `This ${own.kind === 'video' ? 'video' : 'sound'} cannot be played here; a still of it.` });
+      const img = m.url ? Object.assign(document.createElement('img'), { className: 'own own-image', src: m.url }) : null;
+      if (player) player.classList.add('own-sound');
+      this.rows.replaceChildren(...[note, img, player].filter(Boolean));
+    });
   }
 
   restore() { }
@@ -2714,8 +2733,10 @@ function closePane(id) {
   layout.remove(id);
   docks.remove(id);
   renderDock();
+  // The keyboard stays in the active pane when another one closed (the preview off with Alt+P); else the first.
+  const kept = activePane !== id && views.has(activePane) ? activePane : null;
   activePane = null;
-  const next = docks.panes().find(p => docks.visible(p) && views.get(p));
+  const next = kept ?? docks.panes().find(p => docks.visible(p) && views.get(p));
   if (next) {
     activate(next);
     views.get(next).body.focus();
@@ -2835,6 +2856,7 @@ function globalPane(info) {
   const view = placeView(info ? new InfoView(id) : new PreviewView(id), other ? { pane: other.id, side: info ? 'bottom' : 'top' } : { area: 'right' });
   view.show(activePane && !(views.get(activePane) instanceof PreviewView) ? layout.state(activePane).focus : null);
   drawHeads();
+  views.get(activePane)?.body.focus();   // the keyboard stays in the pane that had it
   return view;
 }
 
@@ -2850,6 +2872,7 @@ function togglePanePreview(id, info) {
   const view = placeView(info ? new InfoView(child) : new PreviewView(child), { pane: id, side: 'right' });
   view.show(layout.state(id).focus);
   drawHeads();
+  views.get(activePane)?.body.focus();   // the keyboard stays in the pane that had it
 }
 // Ctrl+Alt+arrow keys: the keyboard to the pane at that side of the active one, as they are on screen (docks.js
 // paneOnSide); only panes shown (no tab behind another, no hidden pane).

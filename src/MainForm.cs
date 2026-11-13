@@ -557,6 +557,14 @@ sealed class MainForm : Form
                 Post(new JsonObject { ["event"] = "previewShown", ["path"] = path, ["handler"] = handler, ["error"] = error, ["own"] = own });
                 break;
             }
+            case "previewPicture":
+            {
+                // A video the page cannot play: Windows' picture of it, for the preview (off this thread).
+                var path = msg["path"]!.GetValue<string>();
+                var url = await NetworkGuard.Reachable(path) ? await StaWorker.Once("previewPicture", () => Shell.Thumbnails.Picture(path, PictureSize)) : null;
+                Post(new JsonObject { ["event"] = "answer", ["req"] = msg["req"]?.DeepClone(), ["url"] = url });
+                break;
+            }
             case "fileInfo":
             {
                 // Everything Windows knows of an item, for the Info pane (Shell/FileDetails.cs), off this thread.

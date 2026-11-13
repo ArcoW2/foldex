@@ -24,7 +24,10 @@ function strokeOf(e, shift = e.shiftKey) {
   const name = /^Key[A-Z]$/.test(c) ? c[3] : /^Digit\d$/.test(c) ? c[5] : /^Numpad\d$/.test(c) ? 'Num' + c[6]
     : /^F\d{1,2}$/.test(c) ? c : KEY_NAMES[c];
   if (!name) return null;
-  return (e.ctrlKey ? 'Ctrl+' : '') + (e.altKey ? 'Alt+' : '') + (shift ? 'Shift+' : '') + name;
+  // AltGr is Ctrl+Alt to Windows (left Ctrl+Alt is AltGr on a layout that has one, as US-International), but the
+  // browser reports it as AltGraph with Ctrl and Alt off: counted as Ctrl+Alt, so Ctrl+Alt+C is Ctrl+Alt+C.
+  const altGr = !!e.getModifierState?.('AltGraph');
+  return (e.ctrlKey || altGr ? 'Ctrl+' : '') + (e.altKey || altGr ? 'Alt+' : '') + (shift ? 'Shift+' : '') + name;
 }
 
 const keys = {
@@ -74,8 +77,9 @@ document.addEventListener('keydown', e => {
   if (e.isComposing || ['Control', 'Shift', 'Alt', 'Meta', 'AltGraph'].includes(e.key)) return;
   // A modal window (F1) handles its own keys.
   if (e.defaultPrevented || document.querySelector('dialog[open]')) return;
-  // AltGr types its character (US-International: AltGr+C is (c)), unless keys.json binds that key (Ctrl+Alt+C).
-  if (!keys.pending && altGrText(e) && !keys.bindings.has(strokeOf(e))) return;
+  // AltGr types its character (US-International: AltGr+C is (c)) in a text box, and where keys.json binds nothing to
+  // that key; elsewhere a bound one runs (Ctrl+Alt+C).
+  if (!keys.pending && altGrText(e) && (inTextField() || !keys.bindings.has(strokeOf(e)))) return;
   const stroke = strokeOf(e);
   if (keys.pending) {
     const first = keys.pending;
