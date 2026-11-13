@@ -17,9 +17,9 @@ description: How to write, revise and close a plan or design document. Use whene
 ## Structure
 
 At the top, under the title, a **Status line** with the plan's state (`not started`, `partly executed` or
-`executed`) and where to look, then a list of its changes, one per line, oldest first: `- <date>: draft.`,
-`- <date>: revised: <what changed>.`, `- <date>: partly executed: <what>.`, `- <date>: executed.` Notes such as
-what the plan builds on follow the list as a paragraph of their own.
+`executed`) and where to look, then a list of its states, one per line, oldest first: `- <date>: draft.`,
+`- <date>: partly executed: <what>.`, `- <date>: executed.` Revisions are not listed: a plan keeps no history of
+itself (git has it). Notes such as what the plan builds on follow the list as a paragraph of their own.
 
 1. **What the plan is about**: the defect or the enhancement.
 2. **The solution, in brief**: a few lines at most, prose only. No code, no SQL, no examples, no options table, no
@@ -62,7 +62,8 @@ The reader wants the shape of the answer first. Nothing goes between the problem
 
 ## Revising
 
-- Add a line to the Status line's list of changes (`- <date>: revised: <what changed>.`).
+- No history: no "revised" lines, no earlier choices, no "was X, now Y", no mention of a key, name or idea the plan
+  no longer uses. The plan reads as the current answer only; git keeps the rest.
 - Keep the brief solution in step with the details after every change.
 
 ## Executing and closing
