@@ -10,6 +10,7 @@ Status: not started.
   has Edit... and Remove; a favourite opens Regular or as Root (the pane's top, with ".." up); Open in a new pane with
   or without a child pane; the favourites' keys start with Ctrl+F; a location is a path or a network path.
 - 2026-11-13: revised: two keys per favourite, both optional: Open, and Open in a new pane with a child pane.
+- 2026-11-13: revised: Ctrl+F kept for the favourites by convention; any key can be taken, a clash asked, not refused.
 
 Builds on plan 23 (`docs/plans/executed/23-PLAN-quick-access-and-favourites.md` 3.6, 3.7), which built the favourite
 folders as LexPen's: the Favourites menu (the folders, Add current folder, Add a folder..., Manage...), Manage (Up,
@@ -144,17 +145,24 @@ a favourite opens (favouritePane), a missing folder's question, quick access.
   own Ctrl, Alt, Shift ("Ctrl+F, Shift+1"). Any key is allowed, not only Ctrl/Alt/Shift with 0-9.
 - The keys above are examples; both are free to choose. The favourites' keys start with Ctrl+F by default: an empty
   key field (either one) offers "Ctrl+F, " and waits for the second key (another first key can be pressed instead:
-  Backspace empties the field). Ctrl+F is Find now; what happens to Find is open question 1.
+  Backspace empties the field). Ctrl+F is kept for the favourites: the shipped keys.json binds no other key or chord
+  starting with Ctrl+F (Find moves, open question 1), now or later. This is a convention for the shipped keys, not
+  a rule for you: any key can be chosen (3.5, a clash).
 - The keys live with the favourites (3.1), not in keys.json: the page adds them to the key set when the lists come
   (actions favourites.open and favourites.openNew, with the folder as their parameter), so F1 lists them with the
   rest. keys.json is not written by Foldex (it may hold your own comments).
 - A key field: focused, it takes the next key pressed (with its Ctrl, Alt, Shift) and shows it; a second key
   pressed within it makes a chord of the two; a third starts again. Backspace and Clear empty it. It does not run
   the keys it takes.
-- A clash is refused on OK, naming what has the key: the two keys of the favourite the same; the same key or chord
-  already bound (keys.json or another favourite); a single key that another favourite or keys.json uses as the first
-  key of a chord; a chord whose first
-  key is bound on its own (that key would stop working on its own; Ctrl+F excepted once Find has moved, question 1).
+- The favourite's two keys the same: refused on OK.
+- Any other clash is asked on OK, naming what has the key and what it loses, and the favourite gets the key on Yes
+  (No: back in the field). Any key can be taken this way, Ctrl+C too (Copy then has no key, unless it has another):
+  - the same key or chord bound in keys.json ("Ctrl+C is Copy. Use it for this favourite? Copy then has no key.");
+  - the same key or chord of another favourite (that favourite loses it);
+  - a single key that keys.json or another favourite uses as the first key of a chord (those chords stop working);
+  - a chord whose first key is bound on its own (that key no longer runs its action on its own).
+- The favourites' keys are added to the key set after keys.json, so a key taken this way runs the favourite. F1 shows
+  the action that has the key now; one that lost it shows no key.
 - Where Foldex differs from xplorer2: xplorer2 allows only Ctrl, Alt, Shift with 0-9; Foldex allows any key or chord,
   as the user asked.
 
@@ -218,11 +226,12 @@ a favourite opens (favouritePane), a missing folder's question, quick access.
   dropped when the folder is taken off and kept when it is changed; one entry for the same folder in another case and
   for a known folder by its shell name and path; an empty name and the folder's own name not kept. The icons of
   SHELL32.dll read (some found, each a picture); a file without icons gives none.
-- Page (Jint): the clash rules of 3.5 (a key bound, a prefix, a chord on a bound first key, another favourite's key,
-  a favourite's two keys the same).
+- Page (Jint): the clashes of 3.5 found and named (a key bound, a prefix, a chord on a bound first key, another
+  favourite's key, a favourite's two keys the same); a favourite's key over a keys.json key runs the favourite.
 - In the test copy (CDP, real keys and mouse where possible): Manage's columns with icons; Edit: a name, a location by
   typing, Plain / Default / Custom, Change Icon (SHELL32's icons, a double click), a key and a chord pressed into the
-  key fields, a clash refused; kept after a restart; the Open key opens the favourite in the active pane, the other
+  key fields, a clash asked (No keeps the old key; Yes on Ctrl+C: the favourite opens with it, Copy has no key in F1);
+  kept after a restart; the Open key opens the favourite in the active pane, the other
   in a new pane with a child pane; a favourite with only one of the two keys; F1 lists them; the menu with names, icons and keys; the right-click: Open, Open in a new pane (its own
   colour, the keyboard in it, This PC at the top and the folder focused), with a child pane, Edit..., Remove; the
   menu key on a lit favourite; a Root favourite in an existing tree and in a new pane: the folder as the top, "..",
@@ -234,7 +243,7 @@ a favourite opens (favouritePane), a missing folder's question, quick access.
 ## 4. Open questions
 
 1. Ctrl+F starts the favourites' chords, but Ctrl+F is Find now. Once Ctrl+F is the first key of a chord, it waits
-   for a second key and no longer finds on its own. Where does Find go? Suggested: "Ctrl+F, F" (Ctrl+F then F), and
-   F3 as well. Other free Ctrl keys in the shipped keys.json: Ctrl+B, Ctrl+D, Ctrl+E, Ctrl+G, Ctrl+I, Ctrl+J, Ctrl+K,
+   for a second key and no longer finds on its own. Where does Find go? Ctrl+F is kept for the favourites, so not a
+   chord starting with it. Suggested: F3 (free in the shipped keys.json). Other free Ctrl keys there: Ctrl+B, Ctrl+D, Ctrl+E, Ctrl+G, Ctrl+I, Ctrl+J, Ctrl+K,
    Ctrl+L, Ctrl+M, Ctrl+N, Ctrl+P, Ctrl+Q, Ctrl+S, Ctrl+U, Ctrl+Y, Ctrl+Z.
 2. A Root favourite in a list pane: the same as Regular (the plan now), or should a list get a ".." row as well?
