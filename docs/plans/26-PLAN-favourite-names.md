@@ -5,6 +5,7 @@ Status: not started.
 - 2026-11-13: draft, at the user's request.
 - 2026-11-13: revised: Manage in columns (Name with its icon, Location); Edit... instead of Change..., a window with
   name, location, icon (Plain, Default, Custom with a Change Icon window) and a key (a chord as keys.json has them).
+- 2026-11-13: revised: a quick access shortcut renamed with F2.
 
 Builds on plan 23 (`docs/plans/executed/23-PLAN-quick-access-and-favourites.md` 3.6, 3.7), which built the favourite
 folders as LexPen's: the Favourites menu (the folders, Add current folder, Add a folder..., Manage...), Manage (Up,
@@ -27,7 +28,8 @@ name, the location, the icon (Plain, Default or Custom; Custom opens a Change Ic
 dll, exe or ico file, SHELL32.dll by default) and the key, pressed into a key field as one key or a chord of two
 ("Ctrl+K, 1"), checked against the keys Foldex has. The key opens the favourite in the active pane. In the
 Favourites menu a click opens a favourite in the active pane, a right-click offers Open and Open in a new pane (a new
-root pane on that folder). The Favourites button moves from Home > Go to Home > Open.
+root pane on that folder). The Favourites button moves from Home > Go to Home > Open. A quick access shortcut gets a
+name of its own too: F2 on it edits its name in place, as a rename does, without touching the folder.
 
 ## Status
 
@@ -48,7 +50,8 @@ root pane on that folder). The Favourites button moves from Home > Go to Home > 
 | Menu | names and icons in the Favourites menu | Kept | 3.6 |
 | Right-click | a right-click (or the menu key) on a favourite in the menu: Open, Open in a new pane | -- | 3.7 |
 | Ribbon | Favourites moved from Home > Go to Home > Open | -- | 3.8 |
-| Tests | unit and in the app | all | 3.9 |
+| Quick access names | F2 on a shortcut: its own name, kept in quickaccess.json | Kept | 3.9 |
+| Tests | unit and in the app | all | 3.10 |
 
 ## 3. Details
 
@@ -64,6 +67,8 @@ The favourites of plan 23 stay; this plan changes them, it does not make them ag
 | The Favourites menu: the folder's name | folderlists.js (favouritesMenu), menu.js | the name, icon and key; a right-click menu (3.6, 3.7) |
 | The button in Home > Go | defaults/ribbon.json | in Home > Open (3.8) |
 | The key set from keys.json | keys.js | plus the favourites' keys (3.5) |
+| quickaccess.json: `folders` only; a shortcut shows its folder's name | FolderLists.cs, folderlists.js (quickAccessEntries) | `items` with a name; F2 on a shortcut (3.9) |
+| item.rename (F2): the item on disk | actions.js | a quick access shortcut first: its name (3.9) |
 
 Unchanged: Add current folder / Remove current folder, Add a folder..., the right-click items in Windows' menu, where
 a favourite opens (favouritePane), a missing folder's question, quick access.
@@ -72,7 +77,7 @@ a favourite opens (favouritePane), a missing folder's question, quick access.
 
 - favourite-folders.json keeps its list of folders (`folders`, in your order) and gets `items`: folder -> { name,
   icon, key }, only for favourites that have one of them. A file without `items` (as written now) reads as before.
-  Quick access has none of this (it shows the folder's own name and icon, plan 23 3.4).
+  quickaccess.json gets `items` the same way, with only a name (3.9); its shortcuts keep the folder's own icon.
 - name: empty, or the folder's own name, is not kept (the folder's name is shown). icon: absent is Default (the
   folder's own icon, as now), "plain" is no icon, otherwise "<file>,<index>" (as Windows writes an icon place,
   %SystemRoot% kept as written). key: as keys.json writes one ("Ctrl+K, 1").
@@ -157,7 +162,18 @@ a favourite opens (favouritePane), a missing folder's question, quick access.
   Refresh.
 - A ribbon.json of your own is not changed (it replaces the shipped one whole, plan 01 3.3).
 
-### 3.9 Tests
+### 3.9 Quick access names
+
+- F2 (item.rename) on a shortcut in a tree's Quick access area edits the shortcut's name in place, with the same edit
+  box as a rename (Enter keeps, Esc cancels). It is checked before the rename of the item on disk, as Delete checks
+  for a shortcut first (plan 23 3.4): the folder on disk keeps its name. The same through the ribbon's or a menu's
+  Rename on a shortcut.
+- Empty, or the folder's own name: the name is dropped, and the shortcut shows its folder's name again (with its
+  parent dimmed when two have the same name, as now).
+- Kept in quickaccess.json (3.1) and told to every window, so every tree shows it.
+- A shortcut's subfolders (when it is expanded) are folders on disk: F2 on them renames them, as now.
+
+### 3.10 Tests
 
 - Unit (FolderListsTests): name, icon and key kept and read back; a file without `items` read as before; all three
   dropped when the folder is taken off and kept when it is changed; one entry for the same folder in another case and
@@ -168,7 +184,9 @@ a favourite opens (favouritePane), a missing folder's question, quick access.
   typing, Plain / Default / Custom, Change Icon (SHELL32's icons, a double click), a key and a chord pressed into the
   key field, a clash refused (Ctrl+F, 1); kept after a restart; the key and the chord open the favourite in the
   active pane; F1 lists them; the menu with names, icons and keys; the right-click: Open, Open in a new pane; the
-  menu key on a lit favourite; Favourites in Home > Open.
+  menu key on a lit favourite; Favourites in Home > Open. F2 on a quick access shortcut: renamed, the folder on disk
+  unchanged, kept after a restart, emptied back to the folder's name; F2 on a subfolder under a shortcut still renames
+  that folder.
 
 ## 4. Open questions
 
