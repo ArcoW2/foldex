@@ -955,8 +955,8 @@ class TreeView {
   restore(back = false) {
     const s = layout.state(this.id);
     if (this.folder && !same(s.location, this.root)) {
-      this.load(s.location).then(() => { if (back && s.focus) this.reveal(s.focus); });
-    } else if (back && s.focus) this.reveal(s.focus);
+      this.load(s.location).then(() => { if (s.focus) this.reveal(s.focus, !back); });
+    } else if (s.focus) this.reveal(s.focus, !back);   // in view, with the scroll margin (opened down to it)
     else this.render();
   }
 
@@ -1737,6 +1737,9 @@ class ListView {
     if (!same(s.location, this.location)) this.load(s.location);
     else {
       this.selected = new Set(s.selection);
+      // Its focused item in view (another branch's child chosen: the item it shows), with the scroll margin.
+      const i = this.entries.findIndex(x => same(x.id, s.focus));
+      if (i >= 0) this.scrollTo(i);
       this.render();
       if (back) this.backDone();
     }
