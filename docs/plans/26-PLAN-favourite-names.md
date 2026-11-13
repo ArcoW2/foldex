@@ -6,6 +6,9 @@ Status: not started.
 - 2026-11-13: revised: Manage in columns (Name with its icon, Location); Edit... instead of Change..., a window with
   name, location, icon (Plain, Default, Custom with a Change Icon window) and a key (a chord as keys.json has them).
 - 2026-11-13: revised: a quick access shortcut renamed with F2.
+- 2026-11-13: revised: answers: a new pane is a tree from This PC with the folder focused; the right-click menu also
+  has Edit... and Remove; a favourite opens Regular or as Root (the pane's top, with ".." up); Open in a new pane with
+  or without a child pane; the favourites' keys start with Ctrl+F; a location is a path or a network path.
 
 Builds on plan 23 (`docs/plans/executed/23-PLAN-quick-access-and-favourites.md` 3.6, 3.7), which built the favourite
 folders as LexPen's: the Favourites menu (the folders, Add current folder, Add a folder..., Manage...), Manage (Up,
@@ -26,10 +29,13 @@ Every favourite gets a name, an icon and a key of its own, kept with its folder 
 shows two columns, Name (the icon, then the name) and Location, and its Change... becomes Edit...: a window with the
 name, the location, the icon (Plain, Default or Custom; Custom opens a Change Icon window that shows every icon of a
 dll, exe or ico file, SHELL32.dll by default) and the key, pressed into a key field as one key or a chord of two
-("Ctrl+K, 1"), checked against the keys Foldex has. The key opens the favourite in the active pane. In the
-Favourites menu a click opens a favourite in the active pane, a right-click offers Open and Open in a new pane (a new
-root pane on that folder). The Favourites button moves from Home > Go to Home > Open. A quick access shortcut gets a
-name of its own too: F2 on it edits its name in place, as a rename does, without touching the folder.
+("Ctrl+F, 1"), checked against the keys Foldex has. A favourite opens Regular (the pane goes to the folder, as now)
+or as Root (the folder becomes the top of the pane, with ".." to go up), also in an existing pane. The key and a
+click in the Favourites menu open it in the active pane; a right-click on a favourite offers Open, Open in a new pane
+(a new root tree, This PC at its top and the folder focused, or the folder as its top for a Root favourite), Open in
+a new pane with a child pane, Edit... and Remove. The Favourites button moves from Home > Go to Home > Open. A quick
+access shortcut gets a name of its own too: F2 on it edits its name in place, as a rename does, without touching the
+folder.
 
 ## Status
 
@@ -42,16 +48,17 @@ name of its own too: F2 on it edits its name in place, as a rename does, without
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| Kept | name, icon and key per favourite in favourite-folders.json, read and written by the host | -- | 3.1 |
+| Kept | name, icon, key and Regular / Root per favourite in favourite-folders.json, read and written by the host | -- | 3.1 |
 | Manage | columns Name (icon, name) and Location; Edit... instead of Change... | Kept | 3.2 |
-| Edit | the window: name, location, icon, key | Kept | 3.3 |
+| Edit | the window: name, location, open as, icon, key | Kept | 3.3 |
+| Root | a favourite opened as the top of a pane, ".." to go up | Kept; open question 2 | 3.10 |
 | Change Icon | the window with a file's icons; the host reads them | Edit | 3.4 |
 | Keys | a favourite's key in the key set, checked for clashes; the key field | Kept | 3.5 |
 | Menu | names and icons in the Favourites menu | Kept | 3.6 |
-| Right-click | a right-click (or the menu key) on a favourite in the menu: Open, Open in a new pane | -- | 3.7 |
+| Right-click | a right-click (or the menu key) on a favourite in the menu: Open, Open in a new pane (with or without a child pane), Edit..., Remove | Edit | 3.7 |
 | Ribbon | Favourites moved from Home > Go to Home > Open | -- | 3.8 |
 | Quick access names | F2 on a shortcut: its own name, kept in quickaccess.json | Kept | 3.9 |
-| Tests | unit and in the app | all | 3.10 |
+| Tests | unit and in the app | all | 3.11 |
 
 ## 3. Details
 
@@ -76,7 +83,8 @@ a favourite opens (favouritePane), a missing folder's question, quick access.
 ### 3.1 Kept
 
 - favourite-folders.json keeps its list of folders (`folders`, in your order) and gets `items`: folder -> { name,
-  icon, key }, only for favourites that have one of them. A file without `items` (as written now) reads as before.
+  icon, key, root }, only for favourites that have one of them. A file without `items` (as written now) reads as
+  before. root: true for a Root favourite (3.10); absent is Regular.
   quickaccess.json gets `items` the same way, with only a name (3.9); its shortcuts keep the folder's own icon.
 - name: empty, or the folder's own name, is not kept (the folder's name is shown). icon: absent is Default (the
   folder's own icon, as now), "plain" is no icon, otherwise "<file>,<index>" (as Windows writes an icon place,
@@ -102,8 +110,11 @@ a favourite opens (favouritePane), a missing folder's question, quick access.
 
 - A modal window in the page (as every Foldex dialog: Esc cancels, Enter is OK, letter shortcuts). Fields:
   - Name: a text box, its text selected. Empty: the folder's name.
-  - Location: a text box with Browse... (Windows' folder picker at that folder). A folder already another favourite
-    is refused with a message on OK. A folder that is not there: asked whether to keep it anyway (a share can be away).
+  - Location: a text box with Browse... (Windows' folder picker at that folder): a folder on disk, a network path
+    (`\\server\share\folder`) or a shell folder. Other places (FTP and the like) are not part of this plan; the field
+    and the stored location are plain text, so they can come later. A folder already another favourite is refused
+    with a message on OK. A folder that is not there: asked whether to keep it anyway (a share can be away).
+  - Open as: Regular or Root (two radio buttons; 3.10).
   - Icon: Plain, Default or Custom (three radio buttons), the icon shown beside them. Custom: the Change Icon button
     shows and opens Change Icon (3.4); choosing Custom without an icon yet opens it at once.
   - Key: a key field (3.5), with a Clear button.
@@ -123,8 +134,11 @@ a favourite opens (favouritePane), a missing folder's question, quick access.
 ### 3.5 Keys
 
 - A favourite's key opens it in the active pane (as a click in the menu). Keys can be one key ("Ctrl+Alt+1") or a
-  chord of two, as LexPen and keys.json have them ("Ctrl+K, 1", "Ctrl+K, B"): the first waits in the status line for
+  chord of two, as LexPen and keys.json have them ("Ctrl+F, 1", "Ctrl+F, B"): the first waits in the status line for
   the second (keys.js, as now). Any key is allowed, not only Ctrl/Alt/Shift with 0-9.
+- The favourites' keys start with Ctrl+F by default: an empty key field offers "Ctrl+F, " and waits for the second
+  key (another first key can be pressed instead: Backspace empties the field). Ctrl+F is Find now; what happens to
+  Find is open question 1.
 - The keys live with the favourites (3.1), not in keys.json: the page adds them to the key set when the lists come
   (an action favourites.open with the folder as its parameter), so F1 lists them with the rest. keys.json is not
   written by Foldex (it may hold your own comments).
@@ -133,7 +147,7 @@ a favourite opens (favouritePane), a missing folder's question, quick access.
   the keys it takes.
 - A clash is refused on OK, naming what has the key: the same key or chord already bound (keys.json or another
   favourite); a single key that another favourite or keys.json uses as the first key of a chord; a chord whose first
-  key is bound on its own (Ctrl+F is Find: a chord "Ctrl+F, 1" would take Find away, so it is refused).
+  key is bound on its own (that key would stop working on its own; Ctrl+F excepted once Find has moved, question 1).
 - Where Foldex differs from xplorer2: xplorer2 allows only Ctrl, Alt, Shift with 0-9; Foldex allows any key or chord,
   as the user asked.
 
@@ -141,15 +155,20 @@ a favourite opens (favouritePane), a missing folder's question, quick access.
 
 - The Favourites menu shows the icon (none for Plain) and the name, and the key at the right (as a key shows in
   other menus); the tooltip the full path (as now). A missing folder: "<name> (not there)", as now. Two favourites
-  with the same name are left as they are (the tooltip tells; open question 3).
+  with the same name are left as they are: the tooltip and Manage show their locations.
 - menu.js gets an icon per item (a picture before the label, in the check mark's column when the menu has no checks).
 
 ### 3.7 Right-click on a favourite
 
-- In the Favourites menu, a right-click on a favourite opens a small menu beside it, as a submenu: Open (the active
-  pane goes there, as a left click) and Open in a new pane (a new root pane on that folder: newRootPane, a folder tree
-  of its own in the left area with that folder revealed and focused, its children following). A missing folder: both
-  ask to take it off, as a left click does now.
+- In the Favourites menu, a right-click on a favourite opens a small menu beside it, as a submenu:
+  - Open: the active pane goes there, as a left click (Regular or Root, as the favourite is set).
+  - Open in a new pane: a new root pane (newRootPane: a folder tree of its own in the left area, in a colour of its
+    own, the keyboard in it). Regular: This PC at its top, the folder revealed and focused. Root: the folder as its
+    top (3.10). The new pane has no children: Enter on a folder in it opens a child pane, as in any root pane.
+  - Open in a new pane with a child pane: the same, and a child list beside it showing the folder.
+  - Edit...: Edit (3.3) for this favourite.
+  - Remove: off the favourites (no question; nothing on disk changes).
+- A missing folder: the Open items ask to take it off, as a left click does now.
 - With the keys: the menu key or Shift+F10 on the lit favourite opens the same small menu.
 - menu.js gets this generic: an item may carry `context` (items), shown at a right-click or the menu key on that item.
   The opener rule (CLAUDE.md, Menus) is unchanged: it is about the button that opened the menu.
@@ -173,7 +192,20 @@ a favourite opens (favouritePane), a missing folder's question, quick access.
 - Kept in quickaccess.json (3.1) and told to every window, so every tree shows it.
 - A shortcut's subfolders (when it is expanded) are folders on disk: F2 on them renames them, as now.
 
-### 3.10 Tests
+### 3.10 Root favourites
+
+- A favourite set to Root opens as the top of the pane, also in an existing pane:
+  - A tree: its tops (This PC, Quick access and the rest) give way to that one folder, opened; a ".." row above it
+    goes up: the folder above becomes the top (a drive's ".." gives the tree back its usual tops). Backspace and Up
+    on the top do the same. The Quick access area is not shown while a tree has a folder as its top.
+  - A list: it shows the folder, as Regular (a list's folder is its top already; Up and Backspace go up). [How a
+    list shows Root is open question 2.]
+- The top is kept with the pane in the layout, so it is still there after a restart. A Regular favourite opened in
+  such a tree reveals the folder under that top when it is under it, else gives the tree its usual tops back first.
+- Built on what child trees have now: a child tree already has a folder as its top (TreeView `root`) and goes up from
+  it (`up()`); a root tree gets the same, and the ".." row is new.
+
+### 3.11 Tests
 
 - Unit (FolderListsTests): name, icon and key kept and read back; a file without `items` read as before; all three
   dropped when the folder is taken off and kept when it is changed; one entry for the same folder in another case and
@@ -183,22 +215,18 @@ a favourite opens (favouritePane), a missing folder's question, quick access.
 - In the test copy (CDP, real keys and mouse where possible): Manage's columns with icons; Edit: a name, a location by
   typing, Plain / Default / Custom, Change Icon (SHELL32's icons, a double click), a key and a chord pressed into the
   key field, a clash refused (Ctrl+F, 1); kept after a restart; the key and the chord open the favourite in the
-  active pane; F1 lists them; the menu with names, icons and keys; the right-click: Open, Open in a new pane; the
-  menu key on a lit favourite; Favourites in Home > Open. F2 on a quick access shortcut: renamed, the folder on disk
+  active pane; F1 lists them; the menu with names, icons and keys; the right-click: Open, Open in a new pane (its own
+  colour, the keyboard in it, This PC at the top and the folder focused), with a child pane, Edit..., Remove; the
+  menu key on a lit favourite; a Root favourite in an existing tree and in a new pane: the folder as the top, "..",
+  Backspace, up to a drive and back to the usual tops, kept after a restart; a network path as a location;
+  Favourites in Home > Open. F2 on a quick access shortcut: renamed, the folder on disk
   unchanged, kept after a restart, emptied back to the folder's name; F2 on a subfolder under a shortcut still renames
   that folder.
 
 ## 4. Open questions
 
-1. Open in a new pane: a folder tree from This PC with the favourite revealed (as New pane does now), or a tree whose
-   top is the favourite itself (nothing above it)? The plan has the first, since Foldex has no tree with a folder as
-   its top yet.
-2. Should the right-click menu also have Edit... and Remove from favourites? Not asked, so not in the plan.
-3. Two favourites with the same name in the menu: leave them as they are (the tooltip tells), or show the folder
-   dimmed after the name, as Manage does?
-4. The first key of the favourites' chords: your example Ctrl+F is Find, so "Ctrl+F, 1" would be refused (3.5).
-   Which key should lead them, if any is to be suggested at all? Free now in keys.json among Ctrl+letter: Ctrl+B,
-   Ctrl+D, Ctrl+E, Ctrl+G, Ctrl+I, Ctrl+J, Ctrl+K, Ctrl+L, Ctrl+M, Ctrl+N, Ctrl+P, Ctrl+Q, Ctrl+S, Ctrl+U, Ctrl+Y,
-   Ctrl+Z (from the shipped keys.json; [not yet checked] whether the page or WebView2 uses any of them).
-5. "The url" in Edit: the plan reads it as the folder's location (a path, a share, a shell: folder). Should a
-   favourite also be able to hold a web address (http...), opened in the browser?
+1. Ctrl+F starts the favourites' chords, but Ctrl+F is Find now. Once Ctrl+F is the first key of a chord, it waits
+   for a second key and no longer finds on its own. Where does Find go? Suggested: "Ctrl+F, F" (Ctrl+F then F), and
+   F3 as well. Other free Ctrl keys in the shipped keys.json: Ctrl+B, Ctrl+D, Ctrl+E, Ctrl+G, Ctrl+I, Ctrl+J, Ctrl+K,
+   Ctrl+L, Ctrl+M, Ctrl+N, Ctrl+P, Ctrl+Q, Ctrl+S, Ctrl+U, Ctrl+Y, Ctrl+Z.
+2. A Root favourite in a list pane: the same as Regular (the plan now), or should a list get a ".." row as well?
