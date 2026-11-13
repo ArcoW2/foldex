@@ -542,6 +542,11 @@ body.bar-dragging .bars {
   flex: 1;
 }
 
+/* A side area taking the center's room while the center is empty (app.js renderDock). */
+.dock-area.dock-fill {
+  flex: 1;
+}
+
 .dock-area > *, .dock-cell > * {
   flex: 1;
   min-width: 0;

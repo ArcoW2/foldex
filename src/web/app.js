@@ -2175,9 +2175,22 @@ function renderDock() {
     return el;
   };
   const [top, left, center, right, bottom] = ['top', 'left', 'center', 'right', 'bottom'].map(area);
-  const centerEl = center ?? Object.assign(document.createElement('div'), { className: 'dock-area dock-center dock-empty' });
-  middle.append(...[left, left && areaSplitter('left'), centerEl, right && areaSplitter('right'), right].filter(x => x));
-  root.replaceChildren(...[top, top && areaSplitter('top'), middle, bottom && areaSplitter('bottom'), bottom].filter(x => x));
+  // Nothing in the center (its pane closed, hidden or moved): a side area takes the room instead, the right one, else
+  // the left, else the bottom, else the top (its own size is kept for when the center has a pane again). No pane at
+  // all: the empty center.
+  const fill = el => { el.style.width = el.style.height = ''; el.classList.add('dock-fill'); return el; };
+  if (center) {
+    middle.append(...[left, left && areaSplitter('left'), center, right && areaSplitter('right'), right].filter(x => x));
+    root.replaceChildren(...[top, top && areaSplitter('top'), middle, bottom && areaSplitter('bottom'), bottom].filter(x => x));
+  } else if (left || right) {
+    middle.append(...(right ? [left, left && areaSplitter('left'), fill(right)] : [fill(left)]).filter(x => x));
+    root.replaceChildren(...[top, top && areaSplitter('top'), middle, bottom && areaSplitter('bottom'), bottom].filter(x => x));
+  } else if (top || bottom) {
+    root.replaceChildren(...(bottom ? [top, top && areaSplitter('top'), fill(bottom)] : [fill(top)]).filter(x => x));
+  } else {
+    middle.append(Object.assign(document.createElement('div'), { className: 'dock-area dock-center dock-empty' }));
+    root.replaceChildren(middle);
+  }
   for (const v of views.values()) v.el.hidden = !docks.visible(v.id);
   for (const [v, top] of scrolls) v.body.scrollTop = top;
   drawTabs();
