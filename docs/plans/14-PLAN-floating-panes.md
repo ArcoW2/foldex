@@ -35,7 +35,7 @@ own, showing the item the active pane focuses, and keeps showing that item.
 | Colours across windows | head, ring, branch marks and pane theme as when docked, changing with the window's | Connections across windows | 3.3 |
 | A floating scrap | drops, its search, its dashed ring; gone after a restart unless pinned (then back empty) | -- | 3.3 |
 | Kept | a floating pane's place and size with the window's layout | -- | 3.4 |
-| F3 | a preview in a new floating window | The floating window; open question 1 | 3.5 |
+| F3 | a preview in a new floating window | The floating window | 3.5 |
 
 ## 3. Details
 
@@ -79,7 +79,8 @@ own, showing the item the active pane focuses, and keeps showing that item.
   it; Dock in its menu docks it as a preview pane (3.1).
 - The keyboard stays in the active pane of the main window.
 - It keeps showing the item it was opened on: it does not follow the focus (it is no child of any pane).
-- What a second F3 does: open question 1.
+- A second F3 opens another floating window, for the item focused then: each window keeps its own item, so two
+  items can be compared side by side.
 
 ### 3.6 Tests
 
@@ -88,9 +89,8 @@ own, showing the item the active pane focuses, and keeps showing that item.
 - A floating list's head and ring in its branch colour, changing when another branch becomes active in the main
   window; a floating tree driving a docked list; a scrap floated, files dropped on it, a search into it.
 - F3 on an image, a video and a file without a preview: the floating window with its preview, the keyboard still in
-  the list; another item focused: the window keeps its item; Esc closes it; its place and size after a restart.
+  the list; another item focused: the window keeps its item; F3 again: a second window with the new item; Esc closes it; its place and size after a restart.
 
 ## 4. Open questions
 
-1. A second F3: another floating window (one per F3, so two items can be compared), the same window brought to the
-   newly focused item, or the window closed (F3 as a toggle)?
+None.
