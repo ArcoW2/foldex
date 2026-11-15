@@ -17,7 +17,7 @@ public class BookmarkKeysTests
             var post = m => posted.push(m);
             if (typeof structuredClone === 'undefined') var structuredClone = x => JSON.parse(JSON.stringify(x));
             """);
-        foreach (var f in new[] { "panes.js", "keys.js", "actions.js", "bookmarks.js" }) engine.Execute(File.ReadAllText(Path.Combine(Web, f)));
+        foreach (var f in new[] { "panes.js", "keys.js", "actions.js", "bookmarktree.js", "bookmarks.js" }) engine.Execute(File.ReadAllText(Path.Combine(Web, f)));
         // keys.json: Copy, a chord starting with Ctrl+K, and F6 on its own. C:\A is both a shortcut and a bookmark.
         engine.Execute("""
             setKeys({ keys: { 'Ctrl+C': 'item.copy', 'Ctrl+K, K': 'refresh', 'F6': 'pane.next', 'F7': 'file.new' }, order: ['Ctrl+C', 'Ctrl+K, K', 'F6', 'F7'], problems: [] });

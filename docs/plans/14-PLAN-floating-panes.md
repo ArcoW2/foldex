@@ -4,6 +4,7 @@ Status: partly executed; see Status and 6 (As built).
 
 - 2026-11-11: draft, taken out of plan 12 (its open question 1).
 - 2026-11-15: partly executed: stage 1 (pane pages, the floating window, Float and Dock, the Log as a page).
+- 2026-11-15: partly executed: stage 2 (Manage the bookmarks as a page).
 
 Builds on plan 12 (docking panes) and plan 03 (connected panes). The number in the file name is the priority; rename to
 reorder.
@@ -48,13 +49,13 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 | Float and dock back | Float and Dock in the pane's menu (floating: its page's right-click); its window's own close button docks it back | 3.1; 6.1 |
 | Kinds stated | every pane kind says which it can be (PaneCan); Float and Dock offered only where it can | 3.7; 6.1 |
 | Log as a page | the Log, docked or floating | 3.0; 6.1 |
+| Manage the bookmarks | a pane page (docked or floating), no longer a modal dialog; first floating, then where it was last | 3.0; 3.7; 6.2 |
 
 ### Not yet built
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
 | Dock by dragging | a floating pane's window dragged onto its Foldex window docks it there, the places lit as for a docked pane | -- | 3.1 |
-| Manage the bookmarks | a pane page (docked or floating), no longer a modal dialog | The floating window | 3.0; 3.7; plan 26 3.3 |
 | Modal floating windows | the dialogs that ask and wait, each a page modal in a window of its own that can be moved anywhere | The floating window | 3.0; 3.7 |
 | Panes of their own | Manage column sets, F1, Settings, Projects as pane pages, docked or floating | The floating window | 3.0; 3.7 |
 | Preview and Info as pages | Windows' preview over a frame and over a floating window; Foldex's own preview; Info | The floating window | 3.0 |
@@ -223,3 +224,30 @@ None.
   loaded again after renderDock, a new pane, and the Log moved to the right area. `dotnet test`: 224 passed.
 - Not done in stage 1: docking by dragging the floating window onto its Foldex window (Not yet built, Dock by
   dragging); the speed figures (3.0) were not measured before this stage: `[not yet calculated]`.
+
+### 6.2 Stage 2: Manage the bookmarks
+
+- What every page that shows the bookmarks needs is in `bookmarktree.js` (out of bookmarks.js): the helpers of the
+  tree (bookmarkPlaces, locateIn, putIn, moveBookmarkTo, changeBookmark, copyOfEntry, the folder icon), each page
+  with its own `bookmarks`, `saveBookmarks` and the rest.
+- The page `bookmarks.html` / `bmmanage.js` holds Manage's screen as it was (tabs, rows, folders, the arrows, the
+  handle, To quick access / To bookmarks with Move to and Copy to, New, Move to folder... as a dialog of the page
+  itself); a change it makes is saved by the window's page (`save`). What needs the window's page is asked of it:
+  Edit, a new folder's name, a new bookmark, removing (the question for a folder that holds something), closing the
+  pane; the page selects the entry it gets back (`made`). The window's page sends the bookmarks with their paths,
+  whether each is there, and each one's icon as a picture (the system's, Custom, none for Plain), again whenever any
+  of it changes.
+- app.js `BookmarksView` (a PageView); bookmarks.js `manageBookmarks` opens it: the first time floating beside the
+  window; after it was closed, where it was (`bookmarksHome` with the window's layout: docked at its place, or
+  floating at its window's place); open already, it comes forward. Its buttons have no letters (they are a pane's,
+  not a dialog's); Close closes the pane.
+- Until stage 3, what Manage asks of its window (Edit, a new folder's name) opens as before, a dialog of the window's
+  page, so over the main window, not over a floating Manage.
+- Found while testing: an entry asked at the start, before Windows had its icons ready, came with icon -1 and was kept;
+  such entries are asked again (when the list comes, and when Manage opens).
+- Tests in the test copy: Manage opened floating (its window beside the main window), its rows with their icons; Space
+  on a row (a real key in its page) moving it to Quick access in the window's list, and back; a real drag by the handle
+  (Notes out of Projects to the top); Move to folder... in the page (back into Projects); Edit asked of the window (a
+  new name, the row selected after); Dock (the same rows in its frame, at the right); closed and opened again where it
+  was (docked); floated, its Close button (the pane closed, its window gone), opened again floating; floating again
+  after a restart. `dotnet test`: 224 passed.

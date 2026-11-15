@@ -188,13 +188,14 @@ function filterTest(pattern) {
 
 // What each kind of pane can be (docs/plans/14-PLAN-floating-panes.md 3.7): docked, floating, or both. A pane of a page
 // of its own (PageView) can float; the others are docked until they are pages (plan 14 3.0, the stages).
-const PaneCan = { tree: ['docked'], list: ['docked'], scrap: ['docked'], preview: ['docked'], log: ['docked', 'floating'] };
+const PaneCan = { tree: ['docked'], list: ['docked'], scrap: ['docked'], preview: ['docked'], log: ['docked', 'floating'],
+  bookmarks: ['docked', 'floating'] };
 const canFloat = id => (PaneCan[layout.pane(id)?.kind] ?? ['docked']).includes('floating') && views.get(id) instanceof PageView;
 
 // The view of a pane as its kind says: a tree, a list or a preview.
 function makeView(id) {
   const kind = layout.pane(id).kind;
-  return kind === 'tree' ? new TreeView(id) : kind === 'log' ? new LogView(id)
+  return kind === 'tree' ? new TreeView(id) : kind === 'log' ? new LogView(id) : kind === 'bookmarks' ? new BookmarksView(id)
     : kind === 'preview' ? (layout.pane(id).info ? new InfoView(id) : new PreviewView(id))
     : kind === 'scrap' ? new ScrapView(id) : new ListView(id);
 }
@@ -2416,6 +2417,18 @@ class LogView extends PageView {
   refresh() { this.render(); }
 }
 
+// Manage the bookmarks (its page bookmarks.html, bmmanage.js; bookmarks.js manageBookmarks): the bookmarks sent, what
+// it asks done there.
+class BookmarksView extends PageView {
+  constructor(id) {
+    super(id, 'bookmarks', 'bookmarks.html', 'Bookmarks');
+    iconUsers.add(this);   // drawn again when a system icon it waits for comes
+  }
+  state() { return new Map([['bookmarks', bookmarksForPage()]]); }
+  render() { this.send(bookmarksForPage()); }
+  receive(m) { return bookmarksPageAsks(this, m); }
+}
+
 // ---------- Floating and docking back (plan 14 3.1) ----------
 
 // A pane into a window of its own: where it is docked kept, its place there given up; its window where it was last.
@@ -2899,6 +2912,7 @@ let layoutTimer = 0;
 // With each pane's name as its head and tab show it (tabTitle), for the Projects menu (plan 15 3.6).
 let runId = '';   // this run of Foldex (AppHost.RunId): kept with the layout, for its scraps (plan 06 3.2)
 const windowLayout = () => JSON.parse(JSON.stringify({ panes: layout.toJSON(), docks: docks.toJSON(), active: activePane, run: runId,
+  bookmarksHome: bookmarksPaneHome,
   names: Object.fromEntries([...views].map(([id, v]) => [id, v.tabTitle()])) }));
 function tellLayout() {
   clearTimeout(layoutTimer);
@@ -2933,6 +2947,7 @@ function restoreLayout(saved, path) {
     const ids = placed.panes().filter(id => panes.pane(id));
     if (!ids.length) return false;
     Object.assign(layout, { panes: panes.panes, root: panes.root, next: panes.next });
+    bookmarksPaneHome = saved.bookmarksHome ?? null;
     Object.assign(docks, { areas: placed.areas, sizes: placed.sizes });
     for (const id of placed.panes()) if (!layout.pane(id)) docks.remove(id);
     for (const id of [...layout.panes.keys()]) if (!docks.find(id) && !layout.pane(id).away && !layout.pane(id).floating) layout.remove(id);
@@ -2942,6 +2957,7 @@ function restoreLayout(saved, path) {
       const view = makeView(id);
       views.set(id, view);
       if (view instanceof PageView && layout.pane(id).floating) view.channel.float(layout.pane(id).floating.bounds);
+      if (view instanceof BookmarksView) bookmarksPane = view;
       if (view instanceof LogView) logPane = view;
       else if (view instanceof PreviewView && layout.pane(id).source === null) {
         if (view instanceof InfoView) infoPane = view;
@@ -3084,6 +3100,7 @@ function closePane(id) {
     logPane = null;
     queueMicrotask(drawLogButton);
   }
+  if (view === bookmarksPane) bookmarksPaneClosed(id);   // where it was, for when it opens again
   // A pane of a page of its own: its window too when it floats, and its channel (plan 14 3.0).
   if (view instanceof PageView) {
     view.close();

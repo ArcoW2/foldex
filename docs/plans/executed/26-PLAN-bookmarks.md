@@ -362,7 +362,7 @@ None.
 - The row handle (bookmarks.js dragManageRow, moveInTab: mouse events, not the browser's drag): tested with a real
   mouse drag of the first row below the third and of the last row to the top, the line shown before the drop, the
   Quick access entries in between keeping their places.
-- Manage is still a modal dialog; as a pane, docked or floating, it is in plan 14 3.7.
+- Manage is a pane of a page of its own, docked or floating (plan 14 3.7, 6.2).
 
 ### 6.3 Edit, Change Icon
 

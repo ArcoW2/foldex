@@ -20,105 +20,6 @@ let qaDragging = null;             // the id of a quick access shortcut being dr
 const QaHeadId = '::foldex-quick-access', QaHintId = '::foldex-quick-access-hint';
 const DefaultIconFile = '%SystemRoot%\\System32\\SHELL32.dll';
 
-// Where a location is: a known folder to its path now.
-const folderPath = f => bookmarkPaths?.[f] ?? f;
-
-// A location's own name: the last part of its path (a known folder's where it is now: OneDrive's Documenten, as Explorer).
-const folderName = f => folderPath(f).replace(/\\+$/, '').split('\\').pop() || f;
-
-// The folder a location is in (shown dimmed by two shortcuts with the same name).
-const folderParent = f => folderPath(f).replace(/\\+$/, '').replace(/\\[^\\]*$/, '');
-
-// A folder of bookmarks (plan 27 3.1), not a bookmark of a folder on disk.
-const isGroup = b => b?.folder != null;
-
-// Every entry at any depth, in the order of the list, with where it is: { b, list (the array it is in), quick (its
-// tab), depth, parent (the folder's id; null at the top) }.
-function bookmarkPlaces(list = bookmarks, quick = null, depth = 0, parent = null, out = []) {
-  for (const b of list) {
-    const q = quick ?? !!b.quickAccess;
-    out.push({ b, list, quick: q, depth, parent });
-    if (isGroup(b)) bookmarkPlaces(b.items ?? [], q, depth + 1, b.id, out);
-  }
-  return out;
-}
-// Every bookmark (not the folders), at any depth.
-const allBookmarks = () => bookmarkPlaces().filter(p => !isGroup(p.b)).map(p => p.b);
-
-const bookmarkById = id => !!id && bookmarkPlaces().find(p => p.b.id === id)?.b || null;
-// The first bookmark of a location on a tab (quick: true for quick access, false for the menu's bookmarks), at any depth.
-const bookmarkAt = (f, quick) => !!f && bookmarkPlaces().find(p => p.quick === quick && !isGroup(p.b) && same(folderPath(p.b.location), folderPath(f)))?.b || null;
-// A new entry's id (the host gives one to an entry without).
-const newBookmarkId = () => [...crypto.getRandomValues(new Uint8Array(6))].map(x => x.toString(16).padStart(2, '0')).join('');
-const bookmarkName = b => isGroup(b) ? b.folder : b.name || folderName(b.location);
-// The top level of each tab: bookmarks and folders.
-const quickAccessList = () => bookmarks.filter(b => b.quickAccess);
-const menuBookmarks = () => bookmarks.filter(b => !b.quickAccess);
-const bookmarkMissing = f => bookmarkExists.get(f.toLowerCase()) === false;
-
-// ---------- Changing the list: on a copy, then saved whole (saveBookmarks) ----------
-
-const copyBookmarks = () => structuredClone(bookmarks);
-
-// Where an entry is in a list (a copy): { list, index, b }; null when it is not there.
-function locateIn(tree, id) {
-  for (const [index, b] of tree.entries()) {
-    if (b.id === id) return { list: tree, index, b };
-    const inside = isGroup(b) ? locateIn(b.items ?? [], id) : null;
-    if (inside) return inside;
-  }
-  return null;
-}
-
-// Whether `id` is the folder `group` or inside it (a folder cannot go into itself).
-function insideGroup(tree, group, id) {
-  const g = locateIn(tree, group)?.b;
-  return !!g && (g.id === id || !!locateIn(g.items ?? [], id));
-}
-
-// An entry and what it holds put on a tab.
-function onTab(b, quick) {
-  if (quick) b.quickAccess = true;
-  else delete b.quickAccess;
-  for (const c of b.items ?? []) onTab(c, quick);
-  return b;
-}
-
-// An entry put into a list (a copy) at `at`: in the folder `group`, or (null) at the top of a tab, counted among that
-// tab's top-level entries (past the last: after it).
-function putIn(tree, b, group, quick, at) {
-  onTab(b, quick);
-  if (group) {
-    const items = locateIn(tree, group).b.items ??= [];
-    items.splice(Math.max(0, Math.min(at, items.length)), 0, b);
-    return;
-  }
-  const tops = tree.filter(x => !!x.quickAccess === quick);
-  const index = at < tops.length ? tree.indexOf(tops[Math.max(0, at)]) : tops.length ? tree.indexOf(tops.at(-1)) + 1 : tree.length;
-  tree.splice(index, 0, b);
-}
-
-// An entry moved to `at` in the folder `group` (null: the top of the tab `quick`); `at` counted as the list was, so one
-// moved down lands where it was dropped. A folder into itself, or into one inside it, is refused (false).
-function moveBookmarkTo(id, group, quick, at) {
-  const tree = copyBookmarks(), from = locateIn(tree, id);
-  if (!from || group && insideGroup(tree, id, group)) return false;
-  const target = group ? locateIn(tree, group).b.items ?? [] : tree.filter(x => !!x.quickAccess === quick);
-  const was = target.indexOf(from.b);
-  from.list.splice(from.index, 1);
-  if (was >= 0 && was < at) at--;
-  putIn(tree, from.b, group, quick, at);
-  saveBookmarks(tree);
-  return true;
-}
-
-// An entry changed in place (`change` gets a copy of it to change).
-function changeBookmark(id, change) {
-  const tree = copyBookmarks(), at = locateIn(tree, id);
-  if (!at) return;
-  change(at.b);
-  saveBookmarks(tree);
-}
 
 // An entry taken off. A folder that holds something asks (plan 27 3.6): Remove all, Move up (what it holds to where the
 // folder was), or Cancel.
@@ -166,10 +67,6 @@ const bookmarkGroupMenu = id => [
   { label: 'Remove', run: () => removeBookmark(id) },
 ];
 
-// A folder's icon: a folder with a bookmark ribbon, drawn here (no folder on disk has it).
-const GroupIcon = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">' +
-  '<path d="M1 3.5h5l1.5 1.5H15v8.5H1z" fill="#e8b84a" stroke="#a87d1e"/><path d="M10 6.5h3v6l-1.5-1.2-1.5 1.2z" fill="#3a78d4"/></svg>');
-
 function bookmarksCame(m) {
   bookmarks = m.bookmarks ?? [];
   bookmarkPaths = m.paths ?? {};
@@ -179,7 +76,7 @@ function bookmarksCame(m) {
   askBookmarksExist();
   askBookmarkEntries();
   ribbonRefresh();
-  if (bmManage.el?.open) drawBookmarkManage();
+  bookmarksPane?.render();
 }
 
 // Whether the locations are there (the host asks off its window's thread, each with a time limit).
@@ -187,17 +84,18 @@ async function askBookmarksExist() {
   const m = await askHost({ op: 'bookmarksExist' });
   bookmarkExists = new Map(Object.entries(m.exists ?? {}).map(([f, on]) => [f.toLowerCase(), on]));
   for (const v of views.values()) if (v instanceof TreeView && v.qaHead) v.render();
-  if (bmManage.el?.open) drawBookmarkManage();
+  bookmarksPane?.render();
 }
 
 // The host's entry of every location (its own icon), once each.
 async function askBookmarkEntries() {
-  const wanted = allBookmarks().filter(b => !bookmarkEntries.has(b.location.toLowerCase()));
+  // Not asked yet, or asked before Windows had its icons ready (an icon of -1, at the start): asked (again).
+  const wanted = allBookmarks().filter(b => !(bookmarkEntries.get(b.location.toLowerCase())?.icon >= 0));
   await Promise.all(wanted.map(async b => {
     const [e] = (await askHost({ op: 'entries', ids: [b.location] })).entries ?? [];
     bookmarkEntries.set(b.location.toLowerCase(), e ?? null);
   }));
-  if (wanted.length && bmManage.el?.open) drawBookmarkManage();
+  if (wanted.length) bookmarksPane?.render();
 }
 
 // "file,index" split; null for anything else.
@@ -214,7 +112,7 @@ async function askFileIcon(icon) {
   const m = await askHost({ op: 'iconFile', file: place.file, index: place.index });
   fileIcons.set(icon, m.icons?.[0] ?? null);
   for (const v of views.values()) if (v instanceof TreeView && v.qaHead) v.render();
-  if (bmManage.el?.open) drawBookmarkManage();
+  bookmarksPane?.render();
 }
 
 // A bookmark's icon as an <img>: Plain is an empty one (the room kept), Custom its picture (one that is gone falls back
@@ -371,390 +269,87 @@ function toggleCurrentBookmark() {
 
 async function pickFolder(at = '') { return (await askHost({ op: 'pickFolder', at })).folder ?? null; }
 
-// ---------- Manage (plan 26 3.3; plan 27 3.4): every bookmark in columns, in your order, folders as rows ----------
+// ---------- Manage (plan 26 3.3; plan 27 3.4): a pane of a page of its own (plan 14 3.0, 3.7) ----------
 
-// Two tabs: the bookmarks of the menu and the quick access shortcuts, each entry on one of them. A folder is a row that
-// opens and closes (Left, Right, a double click, its expander), what it holds under it. The button To quick access (on
-// Bookmarks) or To bookmarks (on Quick access) opens a menu: Move to takes the selected entry to the other tab, Copy to
-// puts a copy of it there (without its keys: a key opens one entry). New opens a menu: Folder..., Bookmark...; Move to
-// folder... picks the folder it goes in. `at` counts the rows shown.
-const bmManage = { el: null, tab: 'bookmarks', at: 0, widths: [240, 300], closed: new Set() };
+// Its screen is its page's (bookmarks.html, bmmanage.js): docked in a frame, or floating, both as any pane of a page
+// can be. This page sends it the bookmarks with what it shows (their paths, whether each is there, each one's icon as
+// a picture) and does for it what needs this page: saving the list it changed, Edit, a new folder's name, removing,
+// closing it. Opened again it comes forward; opened after it was closed, where it was last (docked at its place, or
+// floating where its window was); the first time floating beside the window.
+let bookmarksPane = null;
+let bookmarksPaneHome = null;   // where it was when last closed: { floating, place, bounds }
 
-// The rows shown on the tab: { b, depth, parent } in list order, what a closed folder holds left out.
-function manageRows() {
-  const quick = bmManage.tab === 'quick', rows = [];
-  const walk = (list, depth, parent) => {
-    for (const b of list) {
-      rows.push({ b, depth, parent });
-      if (isGroup(b) && !bmManage.closed.has(b.id)) walk(b.items ?? [], depth + 1, b.id);
-    }
-  };
-  walk(bookmarks.filter(b => !!b.quickAccess === quick), 0, null);
-  return rows;
+// What the Manage page is sent (BookmarksView, app.js).
+function bookmarksForPage() {
+  return { kind: 'bookmarks', bookmarks, paths: bookmarkPaths, exists: Object.fromEntries(bookmarkExists),
+    icons: Object.fromEntries(bookmarkPlaces().filter(p => !isGroup(p.b)).map(p => [p.b.id, bookmarkPicture(p.b)])) };
 }
 
-// A row's place for moving: the folder it is in (null: the tab's top) and its place there (at the top counted among
-// the tab's top-level entries, as putIn and moveBookmarkTo count).
-function rowPlace(row) {
-  const quick = bmManage.tab === 'quick';
-  const list = row.parent ? bookmarkById(row.parent).items : bookmarks.filter(b => !!b.quickAccess === quick);
-  return { group: row.parent, at: list.indexOf(row.b) };
+// What the Manage page asks of this page.
+async function bookmarksPageAsks(view, m) {
+  const placeOf = (quick, place) => place ? (tree, entry) => putIn(tree, entry, place.group, quick, place.at) : null;
+  const made = id => view.send({ kind: 'made', id: id ?? null });
+  switch (m.kind) {
+    case 'save': return saveBookmarks(m.bookmarks);
+    case 'remove': return removeBookmark(m.id);
+    case 'newFolder': return made(await newBookmarkFolder(m.quick, placeOf(m.quick, m.place)));
+    case 'newBookmark': return made((await editBookmark(null, { quickAccess: m.quick }, placeOf(m.quick, m.place)))?.id);
+    case 'edit':
+      await editBookmark(m.id);
+      return made(m.id);
+    case 'rename':
+      await renameBookmarkFolder(m.id);
+      return made(m.id);
+    case 'close': return closePane(view.id);
+  }
+}
+
+// A bookmark's icon as a picture, for the Manage page: its Custom picture, its location's own (the system's, asked
+// when not here yet: the page gets it once it came), or none for Plain.
+function bookmarkPicture(b) {
+  if (b.icon === 'plain') return '';
+  if (b.icon && fileIcons.get(b.icon)) return fileIcons.get(b.icon);
+  const e = bookmarkEntries.get(b.location.toLowerCase());
+  if (!e || e.icon < 0) return '';
+  const missing = [], src = iconImage(e, missing).getAttribute('src') ?? '';
+  askIcons(missing, []);
+  return src;
 }
 
 function manageBookmarks() {
-  if (!bmManage.el) buildBookmarkManage();
-  bmManage.at = 0;
-  drawBookmarkManage();
-  bmManage.el.showModal();
-  bmManage.el.querySelector('.bm-list').focus();
-}
-
-function buildBookmarkManage() {
-  const el = bmManage.el = document.createElement('dialog');
-  el.className = 'ask bm-manage';
-  el.innerHTML = `<div class="bm-tabs"><button type="button" data-tab="bookmarks">Bookmarks</button><button type="button" data-tab="quick">Quick access</button></div>
-    <div class="bm-body">
-      <div class="bm-arrows">
-        <button data-do="up" tabindex="-1" title="Up (Ctrl+Up)"><svg viewBox="0 0 10 10"><path d="M1.5 6.5L5 3l3.5 3.5"/></svg></button>
-        <button data-do="down" tabindex="-1" title="Down (Ctrl+Down)"><svg viewBox="0 0 10 10"><path d="M1.5 3.5L5 7l3.5-3.5"/></svg></button>
-      </div>
-      <div class="bm-list" tabindex="0"><div class="bm-head"></div><div class="bm-rows"></div></div>
-    </div>
-    <div class="ask-buttons">
-      <button data-do="new" class="bm-menu-button" title="A new folder or bookmark, after the selected row">New</button>
-      <button data-do="edit" title="Enter, F2, double click">Edit...</button>
-      <button data-do="to" class="bm-menu-button"></button>
-      <button data-do="folder" title="Put the selected entry in a folder, or at the top">Move to folder...</button>
-      <button data-do="delete" title="Del">Delete</button><button data-do="close">Close</button>
-    </div>`;
-  document.body.append(el);
-  el.querySelector('.bm-tabs').addEventListener('click', e => {
-    const t = e.target.closest('[data-tab]');
-    if (!t || t.dataset.tab === bmManage.tab) return;
-    bmManage.tab = t.dataset.tab;
-    bmManage.at = 0;
-    drawBookmarkManage();
-    el.querySelector('.bm-list').focus();
-  });
-  const list = el.querySelector('.bm-list');
-  // The head: Name, Location; a border dragged makes the column before it wider (no sorting: the order is yours).
-  const head = el.querySelector('.bm-head');
-  ['Name', 'Location'].forEach((title, k) => {
-    const cell = Object.assign(document.createElement('span'), { className: 'bm-cell', textContent: title });
-    const grip = Object.assign(document.createElement('span'), { className: 'bm-grip' });
-    grip.addEventListener('mousedown', e => {
-      e.preventDefault();
-      e.stopPropagation();
-      const x0 = e.clientX, w0 = bmManage.widths[k];
-      const move = ev => { bmManage.widths[k] = Math.max(40, w0 + ev.clientX - x0); drawBookmarkWidths(); };
-      const up = () => { removeEventListener('mousemove', move); removeEventListener('mouseup', up); };
-      addEventListener('mousemove', move);
-      addEventListener('mouseup', up);
-    });
-    cell.append(grip);
-    head.append(cell);
-  });
-  list.addEventListener('mousedown', e => {
-    const r = e.target.closest('[data-i]');
-    if (!r) return;
-    bmManage.at = +r.dataset.i;
-    if (e.target.closest('.bm-twisty')) return bookmarkManageDo('fold');
-    drawBookmarkManage();
-    if (e.button === 0 && e.target.closest('.bm-handle')) dragManageRow(e, +r.dataset.i);
-  });
-  list.addEventListener('dblclick', e => {
-    if (!e.target.closest('[data-i]') || e.target.closest('.bm-twisty')) return;
-    bookmarkManageDo(isGroup(manageRows()[bmManage.at]?.b) ? 'fold' : 'edit');
-  });
-  for (const bar of el.querySelectorAll('.ask-buttons, .bm-arrows'))
-    bar.addEventListener('click', e => { const b = e.target.closest('[data-do]'); if (b) bookmarkManageDo(b.dataset.do); });
-  // The arrows keep the keyboard in the list.
-  el.querySelector('.bm-arrows').addEventListener('mousedown', e => e.preventDefault());
-  el.addEventListener('keydown', e => {
-    if (e.target.closest('button') && (e.key === 'Enter' || e.key === ' ')) return;
-    const key = (e.ctrlKey ? 'Ctrl+' : '') + e.key;
-    const what = { 'Ctrl+ArrowUp': 'up', 'Ctrl+ArrowDown': 'down', Delete: 'delete', ArrowUp: 'prev', ArrowDown: 'next',
-      ArrowLeft: 'shut', ArrowRight: 'open', Enter: 'edit', F2: 'edit', ' ': 'move' }[key];
-    if (!what) return;
-    e.preventDefault();
-    e.stopPropagation();
-    if (what === 'prev' || what === 'next') {
-      bmManage.at = Math.max(0, Math.min(manageRows().length - 1, bmManage.at + (what === 'next' ? 1 : -1)));
-      drawBookmarkManage();
-    } else bookmarkManageDo(what);
-  });
-  el.addEventListener('close', () => views.get(activePane)?.body.focus());
-}
-
-function drawBookmarkWidths() {
-  const el = bmManage.el;
-  el.style.setProperty('--bm-cols', bmManage.widths.map(w => `${w}px`).join(' '));
-}
-
-function drawBookmarkManage() {
-  drawBookmarkWidths();
-  const el = bmManage.el, quick = bmManage.tab === 'quick', rows = manageRows();
-  for (const t of el.querySelectorAll('[data-tab]')) t.classList.toggle('on', t.dataset.tab === bmManage.tab);
-  const to = el.querySelector('[data-do=to]');
-  if (to.dataset.text !== (quick ? 'To bookmarks' : 'To quick access')) {
-    to.textContent = to.dataset.text = quick ? 'To bookmarks' : 'To quick access';
-    to.title = quick ? 'Move or copy the selected entry to Bookmarks (Space: move)' : 'Move or copy the selected entry to Quick access (Space: move)';
-    markButtons(el);   // its letter again (buttons.js)
+  askBookmarkEntries();   // icons that were not there at the start
+  if (bookmarksPane) {
+    if (bookmarksPane.channel.floating) return bookmarksPane.channel.float();
+    return showPane(bookmarksPane.id);
   }
-  const box = el.querySelector('.bm-rows');
-  bmManage.at = Math.max(0, Math.min(bmManage.at, rows.length - 1));
-  box.replaceChildren(...rows.map(({ b, depth }, k) => {
-    const row = document.createElement('div');
-    row.className = 'bm-row' + (k === bmManage.at ? ' selected' : '') + (!isGroup(b) && bookmarkMissing(b.location) ? ' missing' : '')
-      + (isGroup(b) ? ' bm-group' : '');
-    row.dataset.i = k;
-    const name = Object.assign(document.createElement('span'), { className: 'bm-cell bm-name' });
-    name.style.paddingLeft = `${8 + depth * 16}px`;
-    const handle = Object.assign(document.createElement('span'), { className: 'bm-handle', title: 'Drag to move it: between rows, or onto a folder' });
-    // A folder's expander; a bookmark keeps the room, so the names line up.
-    const twisty = Object.assign(document.createElement('span'), { className: 'bm-twisty' + (isGroup(b) && b.items?.length ? bmManage.closed.has(b.id) ? ' shut' : ' open' : '') });
-    name.append(handle, twisty, bookmarkIcon(b), Object.assign(document.createElement('span'), { textContent: bookmarkName(b) }));
-    const place = isGroup(b) ? '' : folderPath(b.location);
-    const where = Object.assign(document.createElement('span'), { className: 'bm-cell bm-where', textContent: place, title: place });
-    row.append(name, where);
-    return row;
-  }));
-  if (!rows.length) box.append(Object.assign(document.createElement('div'), { className: 'bm-none',
-    textContent: quick ? 'No quick access yet: New, or To quick access on the Bookmarks tab.' : 'No bookmarks yet: New makes one.' }));
-  box.querySelector('.selected')?.scrollIntoView({ block: 'nearest' });
-  for (const b of el.querySelectorAll('[data-do=up], [data-do=down], [data-do=edit], [data-do=to], [data-do=folder], [data-do=delete]')) b.disabled = !rows.length;
-  // The arrows: not past the first or last entry of its folder.
-  const sel = rows[bmManage.at];
-  if (sel) {
-    const siblings = sel.parent ? bookmarkById(sel.parent).items : bookmarks.filter(b => !!b.quickAccess === quick), k = siblings.indexOf(sel.b);
-    el.querySelector('[data-do=up]').disabled = k <= 0;
-    el.querySelector('[data-do=down]').disabled = k >= siblings.length - 1;
+  const id = layout.add({ kind: 'bookmarks' });
+  const view = bookmarksPane = new BookmarksView(id);
+  views.set(id, view);
+  const home = bookmarksPaneHome ?? { floating: true, place: { area: 'right' } };
+  if (home.floating) {
+    layout.pane(id).floating = { place: home.place ?? { area: 'right' }, bounds: home.bounds ?? null };
+    view.channel.float(home.bounds ?? null);
+    drawHeads();
+    tellLayout();
+  } else {
+    placeView(view, home.place?.pane != null && docks.find(home.place.pane) ? home.place : { area: home.place?.area ?? 'right' });
+    showPane(id);
   }
 }
 
-// A row's handle dragged (plan 27 3.4): over a folder's middle the folder is lit and the entry goes in, at its end;
-// between rows a line, and it goes there, in the folder those rows are in (an open folder's lower part: at its top
-// inside). A folder into itself or one inside it: nothing shown, nothing done.
-function dragManageRow(e, from) {
-  e.preventDefault();
-  const box = bmManage.el.querySelector('.bm-rows'), list = bmManage.el.querySelector('.bm-list');
-  const rows = manageRows(), moving = rows[from].b, quick = bmManage.tab === 'quick';
-  let drop = null;   // { k, where: before / after / into, group, at }
-  box.classList.add('bm-dragging');
-  const target = ev => {
-    const els = [...box.querySelectorAll('.bm-row')];
-    for (const [k, el] of els.entries()) {
-      const r = el.getBoundingClientRect();
-      if (ev.clientY >= r.bottom && k < els.length - 1) continue;
-      const y = Math.max(0, Math.min(1, (ev.clientY - r.top) / r.height)), row = rows[k];
-      const open = isGroup(row.b) && !bmManage.closed.has(row.b.id) && !!row.b.items?.length;
-      let t;
-      if (isGroup(row.b) && y >= 0.25 && y <= 0.75) t = { k, where: 'into', group: row.b.id, at: Infinity };
-      else if (open && y > 0.5) t = { k, where: 'after', group: row.b.id, at: 0 };   // under an open folder: at its top inside
-      else {
-        const p = rowPlace(row);
-        t = { k, where: y < 0.5 ? 'before' : 'after', group: p.group, at: p.at + (y < 0.5 ? 0 : 1) };
-      }
-      if (row.b === moving || t.group && insideGroup(bookmarks, moving.id, t.group)) return null;
-      return t;
-    }
-    return null;
-  };
-  const show = () => box.querySelectorAll('.bm-row').forEach((el, k) => {
-    el.classList.toggle('bm-drop-before', drop?.k === k && drop.where === 'before');
-    el.classList.toggle('bm-drop-after', drop?.k === k && drop.where === 'after');
-    el.classList.toggle('bm-drop-into', drop?.k === k && drop.where === 'into');
-  });
-  const move = ev => {
-    // Near the list's top or bottom edge it scrolls.
-    const r = list.getBoundingClientRect();
-    if (ev.clientY < r.top + 20) list.scrollTop -= 8;
-    else if (ev.clientY > r.bottom - 20) list.scrollTop += 8;
-    drop = target(ev);
-    show();
-  };
-  const up = () => {
-    removeEventListener('mousemove', move);
-    removeEventListener('mouseup', up);
-    box.classList.remove('bm-dragging');
-    if (!drop) return drawBookmarkManage();
-    moveBookmarkTo(moving.id, drop.group, quick, drop.at);
-    bmManage.at = Math.max(0, manageRows().findIndex(r => r.b.id === moving.id));
-    drawBookmarkManage();
-  };
-  addEventListener('mousemove', move);
-  addEventListener('mouseup', up);
+// The Manage pane closed: where it was, for when it opens again.
+function bookmarksPaneClosed(id) {
+  const pane = layout.pane(id);
+  bookmarksPaneHome = pane?.floating ? { floating: true, place: pane.floating.place, bounds: pane.floating.bounds }
+    : { floating: false, place: docks.placeOf(id) ?? { area: 'right' }, bounds: pane?.floatBounds ?? null };
+  bookmarksPane = null;
 }
 
 // Every change goes to the host at once: the whole list.
 function saveBookmarks(list) {
   bookmarks = list;
   post({ op: 'bookmarksSet', bookmarks: list });
-  if (bmManage.el?.open) drawBookmarkManage();
-}
-
-// A copy of an entry and what it holds: every copy its own id, no keys.
-function copyOfEntry(b) {
-  const { key, keyNew, ...rest } = structuredClone(b);
-  const c = { ...rest, id: newBookmarkId() };
-  if (isGroup(c)) c.items = (c.items ?? []).map(copyOfEntry);
-  return c;
-}
-
-async function bookmarkManageDo(what) {
-  const rows = manageRows(), row = rows[bmManage.at], quick = bmManage.tab === 'quick';
-  const focusList = () => bmManage.el.querySelector('.bm-list').focus();
-  const reselect = id => { bmManage.at = Math.max(0, manageRows().findIndex(r => r.b.id === id)); drawBookmarkManage(); focusList(); };
-  // Where something new goes: after the selected row in its folder; an open folder selected: at its top inside.
-  const place = (tree, entry) => {
-    if (!row) return putIn(tree, entry, null, quick, Infinity);
-    if (isGroup(row.b) && !bmManage.closed.has(row.b.id)) return putIn(tree, entry, row.b.id, quick, 0);
-    const p = rowPlace(row);
-    putIn(tree, entry, p.group, quick, p.at + 1);
-  };
-  switch (what) {
-    case 'fold': case 'open':
-      // A folder opened or closed (a click on its expander, a double click, Right).
-      if (!row || !isGroup(row.b)) return;
-      if (what === 'open' && !bmManage.closed.has(row.b.id)) return;
-      if (bmManage.closed.has(row.b.id)) bmManage.closed.delete(row.b.id);
-      else bmManage.closed.add(row.b.id);
-      return drawBookmarkManage();
-    case 'shut':
-      // Left: an open folder closed, else to the folder it is in.
-      if (!row) return;
-      if (isGroup(row.b) && !bmManage.closed.has(row.b.id) && row.b.items?.length) bmManage.closed.add(row.b.id);
-      else if (row.parent) bmManage.at = rows.findIndex(r => r.b.id === row.parent);
-      return drawBookmarkManage();
-    case 'close':
-      return bmManage.el.close();
-    case 'up': case 'down': {
-      // Past its neighbour within its own folder; never into or out of a folder.
-      if (!row) return;
-      const p = rowPlace(row), to = p.at + (what === 'up' ? -1 : 1);
-      const siblings = row.parent ? bookmarkById(row.parent).items : bookmarks.filter(b => !!b.quickAccess === quick);
-      if (to < 0 || to >= siblings.length) return;
-      moveBookmarkTo(row.b.id, p.group, quick, what === 'up' ? to : to + 1);
-      return reselect(row.b.id);
-    }
-    case 'delete':
-      if (!row) return;
-      await removeBookmark(row.b.id);
-      drawBookmarkManage();
-      return focusList();
-    case 'to': {
-      // Its menu, under the button (inside the dialog, menu.js).
-      if (!row) return;
-      const r = bmManage.el.querySelector('[data-do=to]').getBoundingClientRect();
-      return openMenu(r.left, r.bottom, [
-        { label: 'Move to', run: () => bookmarkManageDo('move') },
-        { label: 'Copy to', run: () => bookmarkManageDo('copy') },
-      ]);
-    }
-    case 'move':
-      // To the other tab: an entry at the top in place (its place in the list kept); one inside a folder to the other
-      // tab's top, at the end (plan 27 3.5).
-      if (!row) return;
-      if (!row.parent) changeBookmark(row.b.id, b => onTab(b, !quick));
-      else moveBookmarkTo(row.b.id, null, !quick, Infinity);
-      drawBookmarkManage();
-      return focusList();
-    case 'copy': {
-      // A copy on the other tab: beside it in the list (one at the top), else at the other tab's top, at the end.
-      if (!row) return;
-      const tree = copyBookmarks(), c = onTab(copyOfEntry(row.b), !quick);
-      if (!row.parent) {
-        const at = locateIn(tree, row.b.id);
-        at.list.splice(at.index + 1, 0, c);
-      } else putIn(tree, c, null, !quick, Infinity);
-      saveBookmarks(tree);
-      return focusList();
-    }
-    case 'new': {
-      // Its menu: Folder... (on Quick access a quick access folder), Bookmark...
-      const r = bmManage.el.querySelector('[data-do=new]').getBoundingClientRect();
-      return openMenu(r.left, r.bottom, [
-        { label: quick ? 'Quick access folder...' : 'Folder...', run: () => bookmarkManageDo('newFolder') },
-        { label: quick ? 'Quick access shortcut...' : 'Bookmark...', run: () => bookmarkManageDo('newBookmark') },
-      ]);
-    }
-    case 'newFolder': {
-      const id = await newBookmarkFolder(quick, place);
-      return id ? reselect(id) : focusList();
-    }
-    case 'newBookmark': {
-      const made = await editBookmark(null, { quickAccess: quick }, place);
-      return made ? reselect(made.id) : focusList();
-    }
-    case 'edit':
-      if (!row) return;
-      if (isGroup(row.b)) await renameBookmarkFolder(row.b.id);
-      else await editBookmark(row.b.id);
-      return reselect(row.b.id);
-    case 'folder': {
-      if (!row) return;
-      const to = await pickBookmarkFolder(row);
-      if (to === undefined) return focusList();
-      moveBookmarkTo(row.b.id, to, quick, Infinity);
-      if (to) bmManage.closed.delete(to);
-      return reselect(row.b.id);
-    }
-  }
-}
-
-// Move to folder... (plan 27 3.4): the tab's folders as a tree, the tab itself at the top (the top level). Resolves to
-// the folder's id, null for the top, undefined for Cancel. The folder it is in now is selected; the entry itself and
-// the folders inside it are greyed out.
-function pickBookmarkFolder(row) {
-  const quick = bmManage.tab === 'quick';
-  const choices = [{ id: null, name: quick ? 'Quick access' : 'Bookmarks', depth: 0, off: false }];
-  const walk = (list, depth, off) => {
-    for (const b of list) if (isGroup(b)) {
-      const no = off || b.id === row.b.id;
-      choices.push({ id: b.id, name: b.folder, depth, off: no });
-      walk(b.items ?? [], depth + 1, no);
-    }
-  };
-  walk(bookmarks.filter(b => !!b.quickAccess === quick), 1, false);
-  const el = (tag, props = {}, ...kids) => {
-    const e = Object.assign(document.createElement(tag), props);
-    e.append(...kids);
-    return e;
-  };
-  const dialog = el('dialog', { className: 'find bm-pick' });
-  const form = el('form', { method: 'dialog' });
-  const list = el('div', { className: 'bm-pick-list', tabIndex: 0 });
-  let at = Math.max(0, choices.findIndex(c => c.id === row.parent));
-  const draw = () => list.replaceChildren(...choices.map((c, k) => {
-    const r = el('div', { className: 'bm-pick-row' + (k === at ? ' selected' : '') + (c.off ? ' off' : '') },
-      el('img', { src: c.id ? GroupIcon : '', className: c.id ? 'bm-group-icon' : 'bm-plain' }), el('span', { textContent: c.name }));
-    r.style.paddingLeft = `${8 + c.depth * 16}px`;
-    r.dataset.k = k;
-    return r;
-  }));
-  const ok = el('button', { value: 'ok', textContent: 'OK' });
-  const cancel = el('button', { value: 'cancel', textContent: 'Cancel', formNoValidate: true });
-  form.append(list, el('div', { className: 'ask-buttons' }, el('span', { className: 'find-gap' }), ok, cancel));
-  dialog.append(el('div', { className: 'find-title', textContent: `Move "${bookmarkName(row.b)}" to` }), form);
-  document.body.append(dialog);
-  const pick = k => { if (choices[k] && !choices[k].off) { at = k; draw(); } };
-  list.addEventListener('mousedown', e => { const r = e.target.closest('[data-k]'); if (r) pick(+r.dataset.k); });
-  list.addEventListener('dblclick', e => { if (e.target.closest('[data-k]') && !choices[at].off) ok.click(); });
-  list.addEventListener('keydown', e => {
-    const step = { ArrowUp: -1, ArrowDown: 1 }[e.key];
-    if (!step) return;
-    e.preventDefault();
-    for (let k = at + step; k >= 0 && k < choices.length; k += step) if (!choices[k].off) return pick(k);
-  });
-  draw();
-  return new Promise(resolve => {
-    dialog.addEventListener('close', () => {
-      dialog.remove();
-      resolve(dialog.returnValue === 'ok' && !choices[at].off ? choices[at].id : undefined);
-    }, { once: true });
-    dialog.showModal();
-    list.focus();
-  });
+  bookmarksPane?.render();
 }
 
 // ---------- Edit (3.4): one bookmark, all of it ----------
@@ -839,7 +434,7 @@ function editBookmark(id, start = {}, place = null) {
     dialog.addEventListener('close', () => {
       dialog.remove();
       resolve(kept);
-      if (!bmManage.el?.open) activeView()?.body.focus();
+      activeView()?.body.focus();
     }, { once: true });
     dialog.showModal();
     if (old) name.select();
