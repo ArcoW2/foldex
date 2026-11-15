@@ -167,6 +167,24 @@ sealed class MainForm : Form
             var files = m.AdditionalObjects?.OfType<CoreWebView2File>().Select(f => f.Path).ToArray() ?? [];
             BeginInvoke(() => OnMessage(json, files));
         };
+        // A pane's page in a frame of the page (plan 14 3.0, stage 6): it may talk to the host itself; the frame is known by
+        // its name, its pane's id.
+        core.FrameCreated += (_, f) =>
+        {
+            var frame = f.Frame;
+            var name = frame.Name;
+            frames[name] = frame;
+            frame.Destroyed += (_, _) => { if (frames.GetValueOrDefault(name) == frame) frames.Remove(name); };
+            frame.WebMessageReceived += (_, m) =>
+            {
+                var json = m.WebMessageAsJson;
+                BeginInvoke(() =>
+                {
+                    if (JsonNode.Parse(json) is JsonObject asked && asked["op"]?.GetValue<string>() == "ping")
+                        frame.PostWebMessageAsJson(new JsonObject { ["event"] = "pong", ["pane"] = name, ["req"] = asked["req"]?.DeepClone() }.ToJsonString());
+                });
+            };
+        };
         core.ProcessFailed += OnProcessFailed;
         core.Navigate($"https://{WebFiles.Host}/index.html");
         return true;
@@ -967,6 +985,7 @@ sealed class MainForm : Form
     // Windows' preview of a preview pane (plan 04; plan 14 3.5): docked, a native window of its own over the pane's area
     // in this window; floating, its window's (PaneForm.Preview), over the whole window.
     readonly Dictionary<string, PreviewHost> previews = [];
+    readonly Dictionary<string, CoreWebView2Frame> frames = [];   // the panes' frames by pane id (FrameCreated)
     PreviewHost PreviewOf(string pane)
     {
         if (floating.TryGetValue(pane, out var f)) return f.Preview;

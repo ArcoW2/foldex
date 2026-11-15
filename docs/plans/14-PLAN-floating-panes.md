@@ -449,6 +449,13 @@ None.
   back. Tested (UI Automation's Close on the window): the Log closed, gone from the layout; Manage column sets closed
   floating, opened again floating.
 
+### 6.12 Stage 6: started
+
+- A docked pane's frame talks to the host itself: the host knows each frame by its name, its pane's id (MainForm
+  `FrameCreated`, `frames`; panechannel.js names the frame), gets its messages (`CoreWebView2Frame.WebMessageReceived`)
+  and answers that frame alone (`PostWebMessageAsJson`). Tested: the Log's frame sent `ping` and got `{ event: pong, pane: p7 }`
+  back; the window's page saw nothing of it. Floating, PaneForm is that page's own host already.
+
 ### 6.11 Speed
 
 - Measured on this machine with `speed.ps1` (the session's scratch folder): each run a fresh data folder; the start
