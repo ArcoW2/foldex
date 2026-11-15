@@ -9,7 +9,9 @@
 // or after an answer of the host).
 //
 // An item: '-' (a line) or { label, run, enabled (default true), checked, swatch (a CSS colour), items (a submenu),
-// indent (steps in, for a tree), guides (its tree lines, panes.js treeGuides) }.
+// indent (steps in, for a tree), guides (its tree lines, panes.js treeGuides), icon (an <img>, in the check mark's
+// column), key (shown at the right), title (its tooltip), context (items: its own menu, opened beside it as a submenu
+// by a right-click on it, or the menu key or Shift+F10 while it is lit) }.
 
 let openMenus = [];   // the menu and its open submenus, outermost first
 let menuDown = null;    // the last left mousedown outside a menu: { target, time }; a menu opened soon after is its
@@ -41,20 +43,28 @@ function openMenu(x, y, items, level = 0, back = null) {
       check.style.background = item.swatch;
     }
     if (item.checked) check.classList.add('on');
+    if (item.icon) {
+      check.classList.add('icon');
+      check.append(item.icon);
+    }
     const label = document.createElement('span');
     label.className = 'menu-label';
     label.textContent = item.label;
     if (item.indent) label.style.paddingLeft = `${item.indent * 14}px`;
+    if (item.title) row.title = item.title;
     // Its tree lines over the whole row (it is positioned), so they join the rows above and below; the label starts
     // 26 px in (padding 8, the check mark 10, the gap 8).
     if (item.guides) row.append(...guideElements(item.guides, k => 30 + 14 * k, 8));
     row.append(check, label);
+    if (item.key) row.append(Object.assign(document.createElement('span'), { className: 'menu-key', textContent: item.key }));
     row.addEventListener('mouseenter', () => hover(rows.indexOf(row)));
     row.addEventListener('mousedown', e => {
       e.preventDefault();
       e.stopPropagation();
+      if (e.button === 2 && item.context) return openContext(rows.indexOf(row));
       choose(rows.indexOf(row));
     });
+    row.addEventListener('contextmenu', e => e.preventDefault());
     el.append(row);
     rows.push(row);
     row.item = item;
@@ -91,6 +101,15 @@ function openMenu(x, y, items, level = 0, back = null) {
     item.run?.();
   }
 
+  // An item's own menu (its context), beside it as a submenu.
+  function openContext(k) {
+    const item = rows[k]?.item;
+    if (!item?.context || item.enabled === false) return;
+    hover(k, false);
+    const rr = rows[k].getBoundingClientRect();
+    openMenu(rr.right - 2, rr.top - 4, item.context, level + 1, rr.left + 2);
+  }
+
   menu.key = e => {
     const live = rows.map((row, i) => i).filter(i => rows[i].item.enabled !== false);
     const pos = live.indexOf(menu.at);
@@ -98,6 +117,9 @@ function openMenu(x, y, items, level = 0, back = null) {
     else if (e.key === 'ArrowUp') hover(live[(pos - 1 + live.length) % live.length], false);
     else if (e.key === (leftward ? 'ArrowLeft' : 'ArrowRight') && rows[menu.at]?.item.items) {
       hover(menu.at);
+      if (openMenus.length > level + 1) openMenus.at(-1).key({ key: 'ArrowDown' });
+    } else if ((e.key === 'ContextMenu' || e.key === 'F10' && e.shiftKey) && rows[menu.at]?.item.context) {
+      openContext(menu.at);
       if (openMenus.length > level + 1) openMenus.at(-1).key({ key: 'ArrowDown' });
     } else if (e.key === (openMenus[level - 1]?.leftward ? 'ArrowRight' : 'ArrowLeft') && level > 0) closeMenus(level);
     else if (e.key === 'Enter') choose(menu.at);

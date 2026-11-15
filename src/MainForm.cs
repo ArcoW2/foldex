@@ -229,7 +229,7 @@ sealed class MainForm : Form
                     ["ops"] = new JsonArray(app.FileOps.All.Select(o => (JsonNode)o.ToJson()).ToArray()),
                     ["searches"] = SearchesFile.Load(AppHost.DataDir),
                     ["renames"] = RenamesFile.Load(AppHost.DataDir),
-                    ["folderLists"] = app.FolderListsJson(),
+                    ["bookmarks"] = app.BookmarksJson(),
                     ["run"] = AppHost.RunId,
                 });
                 foreach (var queued in queue) web.CoreWebView2.PostWebMessageAsJson(queued);
@@ -291,12 +291,12 @@ sealed class MainForm : Form
                     Post(new JsonObject { ["event"] = "menuDone", ["error"] = "the network location is not reachable" });
                     break;
                 }
-                ShowMenu(ids, ToScreen(msg), msg["extended"]?.GetValue<bool>() == true, msg["folder"]?.GetValue<bool>() == true);
+                ShowMenu(ids, ToScreen(msg), msg["extended"]?.GetValue<bool>() == true, msg["own"]?.GetValue<bool>() == true, msg["item"]?.GetValue<bool>() == true);
                 break;
             case "menuTexts":
             {
                 var (menu, error) = ShellMenu.Create(ids, false);
-                if (menu is not null && msg["folder"]?.GetValue<bool>() == true && ids.Count == 1) menu.AddOwn(OwnMenuTexts(ids[0]));
+                if (menu is not null && msg["own"]?.GetValue<bool>() == true && ids.Count == 1) menu.AddOwn(OwnMenu(ids[0], msg["item"]?.GetValue<bool>() == true).Select(o => o.Text).ToList());
                 using (menu)
                     Post(new JsonObject
                     {
@@ -323,11 +323,12 @@ sealed class MainForm : Form
             }
             case "drop" when msg["quickAccessAt"] is not null:
             {
-                // Onto the Quick access area (plan 23 3.5): the folders dropped put in where they were dropped, in their
-                // order; files left out. Whether each is a folder is asked off this thread (a share may not answer).
+                // Onto the Quick access area (plan 23 3.5; plan 26 3.2): the folders dropped put in where they were
+                // dropped, in their order (a bookmark of the menu gets the flag); files left out. Whether each is a
+                // folder is asked off this thread (a share may not answer).
                 var place = msg["quickAccessAt"]!.GetValue<int>();
                 var folders = await Task.Run(() => files.Where(f => Directory.Exists(f)).ToList());
-                foreach (var f in folders) app.AddToFolderList(FolderLists.QuickAccess, f, place++);
+                foreach (var f in folders) app.AddToQuickAccess(f, false, place++);
                 break;
             }
             case "drop" when msg["scrap"]?.GetValue<bool>() == true:
@@ -368,18 +369,63 @@ sealed class MainForm : Form
                 // The Rename dialog (plan 21 3.4): every item to its new name, as one operation.
                 app.FileOps.StartRenames(msg["renames"]!.AsArray().Select(r => (r![0]!.GetValue<string>(), r[1]!.GetValue<string>())).ToList(), Handle);
                 break;
-            // Quick access and favourite folders (plan 23 3.1): added, taken off, set in order; whether each still exists
-            // (asked off this thread, each with a time limit: a share that does not answer counts as there); the folder
-            // picker (Add..., Change...).
-            case "folderListAdd":
-                app.AddToFolderList(msg["kind"]!.GetValue<string>(), msg["folder"]!.GetValue<string>(), msg["at"]?.GetValue<int>() ?? int.MaxValue);
+            // The bookmarks, quick access among them (plan 26 3.1): added, taken off, set whole (Manage, Edit, a flag
+            // switched); whether each is there (asked off this thread, each with a time limit: a share that does not
+            // answer counts as there); one checked before it opens (3.12); the folder and file pickers; a file's icons.
+            case "bookmarkAdd":
+                app.AddBookmark(msg["location"]!.GetValue<string>(), msg["item"]?.GetValue<bool>() == true, msg["quickAccess"]?.GetValue<bool>() == true);
                 break;
-            case "folderListRemove":
-                app.RemoveFromFolderList(msg["kind"]!.GetValue<string>(), msg["folder"]!.GetValue<string>());
+            case "bookmarkRemove":
+                app.RemoveBookmark(msg["location"]!.GetValue<string>());
                 break;
-            case "folderListSet":
-                app.SetFolderList(msg["kind"]!.GetValue<string>(), msg["folders"]!.AsArray().Select(n => n!.GetValue<string>()));
+            case "bookmarksSet":
+                app.SetBookmarks(msg["bookmarks"]!.AsArray().Select(Bookmark.From).OfType<Bookmark>());
                 break;
+            case "bookmarkCheck":
+            {
+                var location = Bookmarks.Resolve(msg["location"]!.GetValue<string>());
+                var item = msg["item"]?.GetValue<bool>() == true;
+                var answer = new JsonObject { ["event"] = "answer", ["req"] = msg["req"]?.DeepClone(), ["state"] = "there" };
+                if (IsDiskPath(location))
+                {
+                    var folder = item ? Path.GetDirectoryName(location.TrimEnd('\\')) ?? location : location;
+                    if (!await NetworkGuard.Reachable(folder)) answer["state"] = "unreachable";
+                    else
+                    {
+                        var (folderThere, itemThere, isFile) = await Task.Run(() => (Directory.Exists(folder), !item || File.Exists(location) || Directory.Exists(location), File.Exists(location)));
+                        answer["state"] = folderThere || isFile ? "there" : "gone";
+                        answer["itemThere"] = itemThere;
+                        answer["isFile"] = isFile;
+                    }
+                    answer["server"] = NetworkGuard.IsNetwork(folder) ? NetworkGuard.Server(folder) : null;
+                }
+                Post(answer);
+                break;
+            }
+            case "pickFile":
+            {
+                using var d = new OpenFileDialog { Filter = msg["filter"]?.GetValue<string>() ?? "All files|*.*", CheckFileExists = true };
+                if (msg["at"]?.GetValue<string>() is { Length: > 0 } start && Environment.ExpandEnvironmentVariables(start) is var full && File.Exists(full))
+                {
+                    d.InitialDirectory = Path.GetDirectoryName(full);
+                    d.FileName = Path.GetFileName(full);
+                }
+                Post(new JsonObject { ["event"] = "answer", ["req"] = msg["req"]?.DeepClone(), ["file"] = d.ShowDialog(this) == DialogResult.OK ? d.FileName : null });
+                break;
+            }
+            case "iconFile":
+            {
+                // Change Icon (3.5): every icon of a file; or (index given) one, for a bookmark drawn with it.
+                var file = msg["file"]!.GetValue<string>();
+                var one = msg["index"]?.GetValue<int>();
+                var pictures = await Task.Run(() => one is int k ? [ShellIcons.FromFile(file, k)] : ShellIcons.AllFromFile(file));
+                Post(new JsonObject
+                {
+                    ["event"] = "answer", ["req"] = msg["req"]?.DeepClone(),
+                    ["icons"] = new JsonArray(pictures.Select(p => (JsonNode?)p).ToArray()),
+                });
+                break;
+            }
             case "cacheInfo":   // what the folder cache holds (plan 24; the tests ask)
             {
                 var info = app.CacheInfo();
@@ -393,14 +439,15 @@ sealed class MainForm : Form
                 Post(info);
                 break;
             }
-            case "folderListsExist":
+            case "bookmarksExist":
             {
-                var all = app.FolderList(FolderLists.QuickAccess).Concat(app.FolderList(FolderLists.Favourites)).Distinct().ToList();
+                var all = app.BookmarkList.ToList();
                 var exists = new JsonObject();
-                await Task.WhenAll(all.Select(async f =>
+                await Task.WhenAll(all.Select(async b =>
                 {
-                    var check = Task.Run(() => Directory.Exists(FolderLists.Resolve(f)));
-                    exists[f] = await Task.WhenAny(check, Task.Delay(1500)) == check ? check.Result : true;
+                    var path = Bookmarks.Resolve(b.Location);
+                    var check = Task.Run(() => !IsDiskPath(path) || (b.Item ? File.Exists(path) || Directory.Exists(path) : Directory.Exists(path)));
+                    exists[b.Location] = await Task.WhenAny(check, Task.Delay(1500)) == check ? check.Result : true;
                 }));
                 Post(new JsonObject { ["event"] = "answer", ["req"] = msg["req"]?.DeepClone(), ["exists"] = exists });
                 break;
@@ -408,7 +455,7 @@ sealed class MainForm : Form
             case "pickFolder":
             {
                 using var d = new FolderBrowserDialog();
-                if (msg["at"]?.GetValue<string>() is { Length: > 0 } start) d.SelectedPath = FolderLists.Resolve(start);
+                if (msg["at"]?.GetValue<string>() is { Length: > 0 } start) d.SelectedPath = Bookmarks.Resolve(start);
                 Post(new JsonObject { ["event"] = "answer", ["req"] = msg["req"]?.DeepClone(), ["folder"] = d.ShowDialog(this) == DialogResult.OK ? d.SelectedPath : null });
                 break;
             }
@@ -772,7 +819,7 @@ sealed class MainForm : Form
         Post(r);
     }
 
-    void ShowMenu(List<string> ids, Point screen, bool extended, bool folder)
+    void ShowMenu(List<string> ids, Point screen, bool extended, bool own, bool item)
     {
         var (menu, error) = ShellMenu.Create(ids, extended);
         if (menu is null)
@@ -782,26 +829,31 @@ sealed class MainForm : Form
         }
         using (menu)
         {
-            // One folder: Foldex's own items at the top (plan 23 3.2), quick access and favourite folders.
-            if (folder && ids.Count == 1) menu.AddOwn(OwnMenuTexts(ids[0]));
-            var verb = menu.Show(this, screen, out var own);
-            if (own is { } k)
-            {
-                var kind = OwnMenuLists[k];
-                if (InFolderList(kind, ids[0])) app.RemoveFromFolderList(kind, ids[0]);
-                else app.AddToFolderList(kind, ids[0]);
-            }
+            // One folder or file: Foldex's own items at the top (plan 23 3.2; plan 26 3.0), quick access and bookmarks.
+            var mine = own && ids.Count == 1 ? OwnMenu(ids[0], item) : [];
+            if (mine.Count > 0) menu.AddOwn(mine.Select(o => o.Text).ToList());
+            var verb = menu.Show(this, screen, out var chosen);
+            if (chosen is { } k) mine[k].Run();
             Post(new JsonObject { ["event"] = "menuDone", ["verb"] = verb });
         }
     }
 
-    // Foldex's own items in Windows' menu for one folder, in this order (plan 23 3.2).
-    static readonly string[] OwnMenuLists = [FolderLists.QuickAccess, FolderLists.Favourites];
+    // Foldex's own items in Windows' menu for one folder or file (plan 26 3.0, 3.8): Add to quick access and Add to
+    // bookmarks; for one that is a bookmark already, Remove from quick access (or bookmarks) and Edit...
+    List<(string Text, Action Run)> OwnMenu(string location, bool item)
+    {
+        var known = app.BookmarkList.FirstOrDefault(b => Bookmarks.Same(b.Location, location));
+        if (known is null)
+            return [("Add to quick access", () => app.AddBookmark(location, item, true)), ("Add to bookmarks", () => app.AddBookmark(location, item, false))];
+        return
+        [
+            (known.QuickAccess ? "Remove from quick access" : "Remove from bookmarks", () => app.RemoveBookmark(location)),
+            ("Edit...", () => Post(new JsonObject { ["event"] = "bookmarkEdit", ["location"] = known.Location })),
+        ];
+    }
 
-    bool InFolderList(string kind, string folder) => app.FolderList(kind).Any(f => FolderLists.Same(f, folder));
-
-    List<string> OwnMenuTexts(string folder) => OwnMenuLists.Select(kind => (InFolderList(kind, folder) ? "Remove from " : "Add to ")
-        + (kind == FolderLists.QuickAccess ? "quick access" : "favourite folders")).ToList();
+    // A path on disk or a share (not a shell place).
+    static bool IsDiskPath(string path) => path.Length >= 3 && (path[1] == ':' && path[2] == '\\' || path.StartsWith(@"\\"));
 
     // The page gives positions in its own pixels times devicePixelRatio: the browser's client pixels.
     Point ToScreen(JsonObject msg) =>

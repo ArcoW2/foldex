@@ -8,6 +8,9 @@ const ThisPC = '::{20D04FE0-3AEA-1069-A2D8-08002B30309D}';
 const Network = '::{F02C1A0D-BE21-4350-88B0-7367FC96EF3C}';
 const RecycleBin = 'shell:RecycleBinFolder';
 const TreeTop = ['shell:Profile', ThisPC, Network, RecycleBin];
+// The ".." row of a pane with a folder as its top (plan 26 3.11): a tree's first row, a list's first item.
+const UpRowId = '::foldex-up';
+const isUpRow = x => !!x?.up;
 const $ = id => document.getElementById(id);
 let settings = {};
 let themes = {};   // every theme, complete (ThemeFile.cs; look.js)
@@ -368,6 +371,7 @@ function apply(updates) {
 // Executing an item (3.3): a file opens as Windows opens it; a folder is opened by the pane's source, or expands in
 // place in a pane without one.
 function execute(paneId, item) {
+  if (item.up) return views.get(paneId)?.up();   // "..": the folder above (plan 26 3.11)
   if (item.folder && views.get(paneId) instanceof ScrapView) return openFromScrap(paneId, item);
   const r = layout.execute(paneId, item);
   if (r.open) post({ op: 'execute', ids: [r.open] });
@@ -431,15 +435,15 @@ class TreeView {
     this.body.addEventListener('contextmenu', e => {
       e.preventDefault();
       const n = this.nodeAt(e.target);
-      if (n?.qa) return;   // the Quick access head and its hint have no menu
-      // A folder: Windows' menu with Foldex's own items at its top (quick access, favourite folders; plan 23 3.2).
-      if (n) post({ op: 'menu', ids: [n.id], folder: n.folder !== false, x: e.clientX * devicePixelRatio, y: e.clientY * devicePixelRatio, extended: e.shiftKey });
+      if (n?.qa || n?.up) return;   // the Quick access head and its hint, and "..", have no menu
+      // A folder or file: Windows' menu with Foldex's own items at its top (quick access, bookmarks; plan 26 3.0).
+      if (n) post({ op: 'menu', ids: [n.id], own: true, item: n.folder === false, x: e.clientX * devicePixelRatio, y: e.clientY * devicePixelRatio, extended: e.shiftKey });
       else openMenu(e.clientX, e.clientY, emptyMenu());   // its empty space: a new folder or file (rename.js)
     });
     dropTarget(this.body, e => {
       const n = this.nodeAt(e.target), at = this.quickAccessDrop(e, n);
       if (at !== null) return { quickAccessAt: at };
-      return n?.folder === false ? n.parent?.id ?? this.root : n?.qa ? null : n?.id ?? this.root;
+      return n?.folder === false ? n.parent?.id ?? this.root : n?.qa || n?.up ? null : n?.id ?? this.root;
     });
     // Quick access (plan 23 3.5): where a drop would put a folder, shown by a line; a shortcut dragged is its folder (the
     // shell's drag, as a list's items), so dropped back between shortcuts it moves there.
@@ -533,7 +537,33 @@ class TreeView {
 
   quickAccessShown() {
     const pane = layout.pane(this.id);
-    return !this.folder && pane?.source === null && settings.quickAccess !== false && pane.quickAccess !== false;
+    return !this.folder && pane?.source === null && settings.quickAccess !== false && pane.quickAccess !== false && !pane.top;
+  }
+
+  // ---------- Root (plan 26 3.11): a folder as the top of a tree without a parent, a ".." row above it ----------
+
+  topFolder() { return this.folder ? null : layout.pane(this.id)?.top ?? null; }
+
+  // A folder as the top (null: the usual tops), kept with the pane; `focus` revealed then.
+  async setTop(folder, focus = folder) {
+    const pane = layout.pane(this.id);
+    if (folder) pane.top = folder;
+    else delete pane.top;
+    tellLayout();
+    this.clear();
+    this.top = [];
+    this.qaHead = null;
+    this.ready = this.init();
+    await this.ready;
+    if (focus) await this.reveal(focus);
+  }
+
+  // "..": the folder above becomes the top, the one left focused; a drive's (or a share's) gives the usual tops.
+  goUpTop() {
+    const top = this.topFolder();
+    if (!top) return;
+    const up = parentOf(top);
+    this.setTop(/^[A-Za-z]:\\|^\\\\[^\\]+\\[^\\]+/.test(up) ? up : null, top);
   }
 
   // The list changed (or the setting, or the pane's choice): the area made again, its shortcuts kept where they still
@@ -545,13 +575,14 @@ class TreeView {
       this.qaHead = null;
       return this.flatten();
     }
-    const list = [...folderLists.quickAccess];
+    const list = quickAccessList(), seen = JSON.stringify(list);
     const entries = await quickAccessEntries(list);
-    if (list.join('|') !== folderLists.quickAccess.join('|') || !this.quickAccessShown()) return;   // changed meanwhile
+    if (seen !== JSON.stringify(quickAccessList()) || !this.quickAccessShown()) return;   // changed meanwhile
     const head = this.qaHead ??= { id: QaHeadId, name: 'Quick access', qa: 'head', folder: true, depth: 0, parent: null, children: [] };
     head.expanded = !layout.pane(this.id).qaFolded;
     const old = head.children.filter(c => !c.qa);
-    const next = entries.map(e => Object.assign(this.add(e, head), { missing: !!e.missing }));
+    // Each shortcut its entry's name (the place may be there already, under its folder's own name).
+    const next = entries.map(e => Object.assign(this.add(e, head), { missing: !!e.missing, name: e.name, folder: e.folder }));
     for (const c of old) if (!next.includes(c)) this.forget(c);
     head.children = next.length ? next
       : [{ id: QaHintId, name: 'Right-click a folder: Add to quick access', qa: 'hint', folder: false, depth: 1, parent: head, children: null }];
@@ -588,14 +619,22 @@ class TreeView {
   // Ready to show: the tops, or (a child) its folder.
   init() {
     if (this.folder) return this.load(layout.state(this.id).location);
+    const top = this.topFolder();
     return new Promise(done => {
       described.set(++lastReq, entries => {
+        // A top that is not there (any more): the usual tops.
+        if (top && !entries.length) {
+          delete layout.pane(this.id).top;
+          tellLayout();
+          return this.init().then(done);
+        }
         this.top = entries.map(e => this.add(e, null));
+        if (top) this.top.unshift({ id: UpRowId, name: '..', up: true, folder: true, depth: 0, parent: null, children: null });
         this.flatten();
         this.quickAccessChanged();
-        done();
+        (top ? this.expand(this.top[1]) : Promise.resolve()).then(done);
       });
-      post({ op: 'describe', ids: TreeTop, req: lastReq });
+      post({ op: 'describe', ids: top ? [top] : TreeTop, req: lastReq });
     });
   }
 
@@ -719,7 +758,7 @@ class TreeView {
     };
     const walk = list => {
       for (const n of list) {
-        const shortcut = n.qa || n.parent?.qa === 'head';   // the area's head, hint and shortcuts always show
+        const shortcut = n.qa || n.up || n.parent?.qa === 'head';   // the area's head, hint and shortcuts, and "..", always show
         if (!shortcut && n.hidden && !hidden && n.depth > 0) continue;
         if (!shortcut && (!filter(n) || paneSearch.has(this.id) && !matches(n))) continue;
         this.flat.push(n);
@@ -737,7 +776,7 @@ class TreeView {
   // what the listing said (subs, and with files shown files: true, 'hidden' or false; absent, as for the tops: unknown,
   // so it gets one).
   hasItems(n) {
-    if (n.folder === false) return false;
+    if (n.folder === false || n.up) return false;
     const hidden = showsHidden(this.id);
     if (n.children) return n.children.some(c => hidden || !c.hidden);
     const some = v => v === undefined || v === true || (v === 'hidden' && hidden);
@@ -759,7 +798,7 @@ class TreeView {
       const row = document.createElement('div');
       row.className = 'row cols' + (n === focus ? ' selected focused' : '') + (n.hidden ? ' hidden' : '') + (i % 2 ? ' odd' : '')
         + (isCompanion(this, n.id) ? ' companion' : '') + (n.qa ? ` qa-${n.qa}` : '') + (n.inQa ? ' qa' : '')
-        + (n.missing || n.parent === this.qaHead && this.qaHead && folderMissing(n.id) ? ' missing' : '');
+        + (n.missing || n.parent === this.qaHead && this.qaHead && bookmarkMissing(n.id) ? ' missing' : '');
       if (n.parent === this.qaHead && this.qaHead) {
         row.draggable = true;
         const k = this.qaHead.children.indexOf(n);
@@ -773,7 +812,7 @@ class TreeView {
         cell.className = k === 0 ? 'cell first' : 'cell' + (RightAligned.has(c.kind) ? ' right' : '') + (c.id === 'git' && n.git ? ` git-${n.git === '!' ? 'conflict' : n.git}` : '')
           + (c.id === this.cols.sort?.id ? ' sorted' : '');
         cell.style.width = `${c.width}px`;
-        if (k > 0) cell.textContent = n.qa ? '' : columnText(n, c.id);
+        if (k > 0) cell.textContent = n.qa || n.up ? '' : columnText(n, c.id);
         else {
           cell.style.paddingLeft = `${8 + n.depth * 14}px`;
           const twisty = document.createElement('span');
@@ -787,7 +826,8 @@ class TreeView {
           const name = document.createElement('span');
           name.className = 'name';
           name.textContent = n.name;
-          if (n.qa) cell.append(twisty, name);   // the area's head and hint: no icon
+          if (n.qa || n.up) cell.append(twisty, name);   // the area's head and hint, "..": no icon
+          else if (n.parent === this.qaHead && this.qaHead && findBookmark(n.id)) cell.append(twisty, bookmarkIcon(findBookmark(n.id), n), name);
           else cell.append(twisty, iconImage(n, missing), name);
           // Two shortcuts with the same name: the folder each is in, dimmed after it (plan 23 3.4).
           if (n.parent === this.qaHead && this.qaHead && this.qaHead.children.some(c => c !== n && c.name.toLowerCase() === n.name.toLowerCase()))
@@ -822,7 +862,14 @@ class TreeView {
     // The Quick access head folds the area (kept per pane); its hint does nothing; a shortcut that is gone says so.
     if (n.qa === 'head') return this.foldQuickAccess(!n.expanded);
     if (n.qa) return;
-    if (n.parent === this.qaHead && this.qaHead && (n.missing || folderMissing(n.id))) return missingFolder('quickaccess', n.id);
+    if (n.up) return this.goUpTop();   // "..": the folder above as the top
+    // A shortcut that is gone, an item, or Root: opened as its bookmark (a message when gone, the item focused, the
+    // folder as the pane's top; plan 26 3.10, 3.12).
+    const shortcut = n.parent === this.qaHead && this.qaHead ? findBookmark(n.id) : null;
+    if (shortcut && (n.missing || bookmarkMissing(n.id) || shortcut.item || shortcut.root) && !e.target.classList.contains('twisty')) {
+      this.select(n.id, true, n);
+      return openBookmark(shortcut);
+    }
     // A double-click is the second press (its count): each press draws the rows anew, so the browser sends no dblclick.
     if (e.detail === 2 && !e.target.classList.contains('twisty')) return this.open(n);
     if (!e.target.classList.contains('twisty')) return this.select(n.id, false, n);
@@ -880,11 +927,12 @@ class TreeView {
     if (typeInPane(this, e)) return;
     const n = this.focused();
     const i = n ? this.flat.indexOf(n) : -1;
-    // The Quick access head and hint are passed over (a click folds the area).
+    // The Quick access head and hint, and "..", are passed over (a click folds the area, or goes up).
+    const marker = x => x?.qa || x?.up;
     const to = (k, step = 1) => {
-      while (this.flat[k]?.qa) k += step;
-      if (k < 0 || !this.flat[k]) for (k = i; this.flat[k + step] && this.flat[k + step].qa; k += step);
-      if (this.flat[k] && !this.flat[k].qa) this.select(this.flat[k].id, false, this.flat[k]);
+      while (marker(this.flat[k])) k += step;
+      if (k < 0 || !this.flat[k]) for (k = i; this.flat[k + step] && marker(this.flat[k + step]); k += step);
+      if (this.flat[k] && !marker(this.flat[k])) this.select(this.flat[k].id, false, this.flat[k]);
       e.preventDefault();
     };
     if (e.key === 'ArrowDown') to(i + 1);
@@ -910,6 +958,20 @@ class TreeView {
       for (let p = this.focusNode.parent; p; p = p.parent) p.expanded = true;
       this.flatten();
       return this.select(path, quiet, this.focusNode);
+    }
+    // A folder as the top (plan 26 3.11): a path under it found from it down; one that is not under it gives the tree
+    // its usual tops first.
+    const top = this.topFolder();
+    if (top && isDiskPath(path)) {
+      const topBase = top.replace(/\\+$/, '');
+      if (!same(path.replace(/\\+$/, ''), topBase) && !path.toLowerCase().startsWith(topBase.toLowerCase() + '\\')) return this.setTop(null, path);
+      let here = this.top.find(n => !n.up);
+      const parts = same(path.replace(/\\+$/, ''), topBase) ? [] : path.replace(/\\+$/, '').slice(topBase.length + 1).split('\\');
+      for (let k = 0; here && k < parts.length; k++) {
+        await this.expand(here);
+        here = here.children?.find(c => same(c.id, `${topBase}\\${parts.slice(0, k + 1).join('\\')}`));
+      }
+      if (here) return this.select(path, quiet, here);
     }
     if (!home && this.folder && base && path.toLowerCase().startsWith(base.toLowerCase() + '\\')) {
       const parts = path.slice(base.length + 1).split('\\');
@@ -972,6 +1034,7 @@ class TreeView {
     const n = this.focused();
     if (n?.parent) this.select(n.parent.id, false, n.parent);
     else if (this.folder && this.root) goTo(this.id, parentOf(this.root));
+    else if (this.topFolder()) this.goUpTop();   // on the top: as ".."
   }
 
   // The focused folder's items read again (a child tree on nothing focused: its folder).
@@ -1117,16 +1180,18 @@ class ListView {
       e.preventDefault();
       const x = this.entryAt(e.target);
       if (!x) return openMenu(e.clientX, e.clientY, emptyMenu());   // its empty space: a new folder or file (rename.js)
+      if (x.up) return;   // "..": no menu
       if (!this.selected.has(x.id)) this.select(x, e);
       if (this.ownMenu?.(e)) return;
-      // One folder: Windows' menu with Foldex's own items at its top (quick access, favourite folders; plan 23 3.2).
-      const one = this.ids().length === 1 && this.entries.find(y => y.id === this.ids()[0])?.folder === true;
-      post({ op: 'menu', ids: this.ids(), folder: one, x: e.clientX * devicePixelRatio, y: e.clientY * devicePixelRatio, extended: e.shiftKey });
+      // One folder or file: Windows' menu with Foldex's own items at its top (quick access, bookmarks; plan 26 3.0).
+      const one = this.ids().length === 1 ? this.entries.find(y => y.id === this.ids()[0]) : null;
+      post({ op: 'menu', ids: this.ids(), own: !!one, item: !!one && !one.folder, x: e.clientX * devicePixelRatio, y: e.clientY * devicePixelRatio, extended: e.shiftKey });
     });
     // Dragging out: the host starts the shell's own drag (plan 02 3.6).
     this.body.addEventListener('dragstart', e => {
       e.preventDefault();
       const x = this.entryAt(e.target);
+      if (x?.up) return;
       if (x && !this.selected.has(x.id)) this.select(x, e);
       post({ op: 'dragOut', ids: this.ids() });
     });
@@ -1143,7 +1208,7 @@ class ListView {
   // Where a drop lands: the folder dropped on, else the list's own.
   dropAt(e) {
     const x = this.entryAt(e.target);
-    return x?.folder ? x.id : this.location;
+    return x?.folder && !x.up ? x.id : this.location;
   }
 
   // ---------- Columns (plan 11) ----------
@@ -1178,10 +1243,22 @@ class ListView {
     if (!this.cols.set) tellLayout();
   }
 
+  // The ".." row (plan 26 3.11) first whatever the sort.
   comparer() {
     const sort = this.cols.sort;
-    return sort ? columnComparer(sort.id, columnInfo(sort.id).kind, sort.desc) : byName;
+    const by = sort ? columnComparer(sort.id, columnInfo(sort.id).kind, sort.desc) : byName;
+    return (a, b) => (isUpRow(b) - isUpRow(a)) || by(a, b);
   }
+
+  // A list without a parent with Root (plan 26 3.11): a ".." row at the top of its items, while it is on disk.
+  upRows() {
+    const pane = layout.pane(this.id);
+    return pane?.top && pane.source === null && isDiskPath(this.location)
+      ? [{ id: UpRowId, name: '..', up: true, folder: true }] : [];
+  }
+
+  // Its items, without the ".." row.
+  itemCount() { return this.entries.filter(x => !x.up).length; }
 
   // Sorted again (a click on a title): by a property of Windows, its value is read for every item first.
   async sortEntries() {
@@ -1505,17 +1582,17 @@ class ListView {
   }
 
   take(entries, reset) {
-    if (reset) this.entries = this.all = [];
+    if (reset) this.entries = this.all = this.upRows();
     this.all = this.all.concat(entries);
     this.entries = this.entries.concat(entries.filter(this.passes())).sort(this.comparer());
     this.render();
-    status(`${this.entries.length} items so far...`);
+    status(`${this.itemCount()} items so far...`);
   }
 
-  // What it shows of what it read: hidden items, Show, the filter and the search text (search.js).
+  // What it shows of what it read: hidden items, Show, the filter and the search text (search.js); ".." always.
   passes() {
     const hidden = showsHidden(this.id), filter = filterTest(layout.pane(this.id).filter), search = searchTest(this.id);
-    return x => (hidden || !x.hidden) && this.shows(x) && filter(x) && search(x);
+    return x => x.up || (hidden || !x.hidden) && this.shows(x) && filter(x) && search(x);
   }
 
   // The search text changed: filtered again from what it read, without reading the folder again.
@@ -1545,16 +1622,18 @@ class ListView {
     window.__spike.lists.push({ location: m.location, count: this.entries.length, enumMs: m.enumMs });
     if (m.error) status(`${m.name}: ${m.error}`, true);
     // A share that does not answer: what the cache had, said not to be current (plan 24 3.8).
-    else if (m.offline) status(`${m.name}: ${this.entries.length} items as last read; not current: ${m.offline}`, true);
-    else status(`${m.name}${m.elevated ? ' (as administrator)' : ''}: ${this.entries.length} items`);
+    else if (m.offline) status(`${m.name}: ${this.itemCount()} items as last read; not current: ${m.offline}`, true);
+    else status(`${m.name}${m.elevated ? ' (as administrator)' : ''}: ${this.itemCount()} items`);
     drawTabs();   // the tab shows the folder's name
     // The focus of this branch, as it was left, comes back when it is still there; nothing focused here yet (a pane
     // opened, another folder): the first item, as Down would. Its followers wait until the focus moves, but a preview
     // shows it at once (also when Foldex starts with one).
     const focus = layout.state(this.id).focus;
     const kept = focus && this.entries.find(x => same(x.id, focus));
+    const firstItem = this.entries.find(x => !x.up);
     if (kept) this.select(kept, {}, true);
-    else if (this.entries.length && !this.renameOnLoad) this.select(this.entries[0], {}, true);
+    else if (firstItem && !this.renameOnLoad) this.select(firstItem, {}, true);
+    itemListed(this);   // an item opened as a bookmark (plan 26 3.12): selected and focused
     const now = layout.state(this.id).focus;
     for (const f of layout.followers(this.id, layout.keyOf(this.id)))
       if (f.kind === 'preview' && !f.pinned && now && !same(views.get(f.id)?.path, now)) views.get(f.id)?.show(now);
@@ -1650,11 +1729,20 @@ class ListView {
 
   select(x, e, quiet = false) {
     const index = this.entries.indexOf(x);
+    // ".." (plan 26 3.11) is focused, never selected, and nothing follows it.
+    if (x.up) {
+      this.selected = new Set();
+      layout.state(this.id).selection = [];
+      layout.state(this.id).focus = x.id;
+      this.scrollTo(index);
+      this.render();
+      return ribbonRefresh();
+    }
     if (e.shiftKey && this.anchor) {
       const a = this.entries.findIndex(y => y.id === this.anchor);
       const [lo, hi] = [Math.min(a, index), Math.max(a, index)];
       if (!e.ctrlKey) this.selected.clear();
-      for (let k = lo; k <= hi; k++) this.selected.add(this.entries[k].id);
+      for (let k = lo; k <= hi; k++) if (!this.entries[k].up) this.selected.add(this.entries[k].id);
     } else if (e.ctrlKey) {
       this.selected.has(x.id) ? this.selected.delete(x.id) : this.selected.add(x.id);
       this.anchor = x.id;
@@ -1711,7 +1799,7 @@ class ListView {
   }
 
   selectAll() {
-    this.selected = new Set(this.entries.map(x => x.id));
+    this.selected = new Set(this.entries.filter(x => !x.up).map(x => x.id));
     layout.state(this.id).selection = [...this.selected];
     this.render();
   }
@@ -2818,17 +2906,28 @@ function applyPreset(name) {
   status(`Preset ${Presets[name]}: the window's panes made again${at ? `, at ${at}` : ''}.`);
 }
 
-// A new root: a tree of folders (3.4, New pane), in the left area (or at `place`), on `path` or else This PC.
-function newRootPane(path, place = { area: 'left' }) {
+// A new root: a tree of folders (3.4, New pane), in the left area (or at `place`), on `path` or else This PC; `top`:
+// that folder as its top (Root, plan 26 3.11), focused.
+function newRootPane(path, place = { area: 'left' }, top = null) {
   // Its own colour, not one another root is drawn in (a root without one is drawn in the first branch's).
   const drawn = [...layout.panes.values()].filter(p => p.source === null && p.colour === null).map(p => layout.pathColour(p.id));
   const id = layout.add({ kind: 'tree', content: 'folders' });
   layout.pane(id).colour = layout.newColour(drawn);
+  if (top) layout.pane(id).top = top;
   const tree = placeView(new TreeView(id), place);
   activate(id);
   tree.body.focus();   // the keyboard in it (the arrows, Page Up / Down are the pane's own)
-  tree.ready = tree.init().then(() => path ? tree.reveal(path) : tree.select(ThisPC));
+  tree.ready = tree.init().then(() => top ? tree.reveal(top) : path ? tree.reveal(path) : tree.select(ThisPC));
   return tree;
+}
+
+// Root in an existing pane without a parent (plan 26 3.11): a tree gets the folder as its top; a list shows ".." from
+// now on and goes there.
+function setPaneTop(id, folder) {
+  const v = views.get(id);
+  if (v instanceof TreeView) return v.setTop(folder);
+  layout.pane(id).top = true;
+  goTo(id, folder);
 }
 
 // A new child of a pane (3.4, New child pane; plan 12 3.2): directly at the right of that pane, or below it (`where`),
@@ -3419,9 +3518,8 @@ const events = {
     runId = m.run;
     searches = m.searches;
     renames = m.renames ?? renames;
-    folderLists = { ...folderLists, ...m.folderLists };
+    bookmarksCame(m.bookmarks);
     start(m.paths, m.layout);
-    askFolderExists();
   },
   // Bars changed in a window (plan 10 3.3), and the drives there are now (3.2).
   bars(m) { setBars(m.bars); },
@@ -3530,8 +3628,9 @@ const events = {
   searched(m) { views.get(m.channel)?.searched?.(m); },
   entries(m) { columnReply(m); },
   searches(m) { searches = m.searches; },
-  // Quick access or the favourite folders changed (in any window; plan 23 3.1), and answers to plain questions.
-  folderLists(m) { folderListsCame(m); },
+  // The bookmarks changed (in any window; plan 26 3.1); Edit asked from Windows' menu (3.8); answers to plain questions.
+  bookmarks(m) { bookmarksCame(m); },
+  bookmarkEdit(m) { editBookmark(m.location); },
   answer(m) { columnReply(m); },
   renames(m) { renames = m.renames; },
   previewShown(m) {

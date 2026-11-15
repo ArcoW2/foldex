@@ -13,14 +13,15 @@ let pendingNew = null; // a new folder or file asked for: { pane, folder }, rena
 const diskId = id => /^[A-Za-z]:\\|^\\\\/.test(id ?? '');
 const extensionOf = (item, name) => item.folder ? '' : name.lastIndexOf('.') > 0 ? name.slice(name.lastIndexOf('.')).toLowerCase() : '';
 
-// The rename box over an item's name (a list's row or tile, a tree's row).
-function startRename(view, id) {
+// The rename box over an item's name (a list's row or tile, a tree's row). `own`: a name of Foldex's own, not the
+// item's on disk ({ at: the row, done: name => ... }; a quick access shortcut, plan 26 3.10): Enter gives it the name.
+function startRename(view, id, own = null) {
   const items = view.flat ?? view.entries;
   if (!items) return;
-  const i = items.findIndex(x => same(x.id, id));
+  const i = own?.at ?? items.findIndex(x => same(x.id, id));
   const item = items[i];
   if (!item) return;
-  if (!diskId(item.id) || isDrive(item)) return status('Only files and folders on disk can be renamed.', true);
+  if (!own && (!diskId(item.id) || isDrive(item))) return status('Only files and folders on disk can be renamed.', true);
   endRename();
   if (view.scrollTo) view.scrollTo(i);
   else scrollIntoView(view.body, i);
@@ -35,9 +36,9 @@ function startRename(view, id) {
     width: `${Math.max(160, cell.right - at.left + 6)}px`, height: `${at.height + 4}px`,
   });
   view.body.append(input);
-  renaming = { view, item, input, asking: false, companions: companionsOf(view, item), shift: false };
+  renaming = { view, item, input, asking: false, companions: own ? [] : companionsOf(view, item), shift: false, own };
   view.render();   // the companions highlighted
-  selectName(input, item);
+  selectName(input, own ? { folder: true } : item);
   // Its keys are its own: no action, no typing into the pane, no row clicked.
   const shift = on => {
     if (renaming?.input !== input || renaming.shift === on) return;
@@ -103,6 +104,11 @@ async function commitRename() {
   const r = renaming;
   if (!r || r.asking) return;
   const name = r.input.value.trim();
+  if (r.own) {
+    endRename();
+    if (name !== r.item.name) r.own.done(name);
+    return;
+  }
   if (!name || name === r.item.name) return endRename();
   if (/[\\/:*?"<>|]/.test(name)) {
     status('A name cannot hold \\ / : * ? " < > |', true);

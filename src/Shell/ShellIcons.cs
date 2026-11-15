@@ -93,6 +93,44 @@ static class ShellIcons
     /// <summary>The icons the page can ask for: 16, 32 and 48 px (the system's small, large and extra large).</summary>
     public static readonly int[] Sizes = [16, 32, 48];
 
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    static extern uint ExtractIconEx(string file, int index, IntPtr[]? large, IntPtr[]? small, uint count);
+
+    static readonly Dictionary<string, string?> FilePngs = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Every icon in a file (a dll, exe, ico; docs/plans/executed/26-PLAN-bookmarks.md 3.5), in its order, each a 32 px PNG
+    /// data URL; none for a file without icons or that is not there. %SystemRoot% and the like expanded.</summary>
+    public static List<string?> AllFromFile(string file)
+    {
+        var path = Environment.ExpandEnvironmentVariables(file);
+        if (!File.Exists(path)) return [];
+        var count = (int)ExtractIconEx(path, -1, null, null, 0);
+        return Enumerable.Range(0, Math.Max(0, count)).Select(k => FromFile(file, k)).ToList();
+    }
+
+    /// <summary>One icon of a file, as Windows writes an icon place ("file,index"; a negative index a resource id), as a
+    /// 32 px PNG data URL, kept once made; null when it has none.</summary>
+    public static string? FromFile(string file, int index)
+    {
+        var key = $"{file},{index}";
+        lock (Gate)
+            if (FilePngs.TryGetValue(key, out var known)) return known;
+        var large = new IntPtr[1];
+        string? url = null;
+        if (ExtractIconEx(Environment.ExpandEnvironmentVariables(file), index, large, null, 1) > 0 && large[0] != IntPtr.Zero)
+            try
+            {
+                using var icon = Icon.FromHandle(large[0]);
+                using var bitmap = icon.ToBitmap();
+                using var stream = new MemoryStream();
+                bitmap.Save(stream, ImageFormat.Png);
+                url = "data:image/png;base64," + Convert.ToBase64String(stream.ToArray());
+            }
+            finally { Native.DestroyIcon(large[0]); }
+        lock (Gate) FilePngs[key] = url;
+        return url;
+    }
+
     /// <summary>The icon of an index at a size of <see cref="Sizes"/> as a PNG data URL; null when there is none.</summary>
     public static string? Png(int index, int size = 16)
     {

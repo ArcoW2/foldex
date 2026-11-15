@@ -11,21 +11,24 @@ const ACTION_GROUPS = [['items', 'Items'], ['scraps', 'Scraps and searching'], [
 
 const actions = new Map();
 const action = (name, def) => actions.set(name, { name, ...def });
-const isAction = name => actions.has(name);
-const actionDef = name => actions.get(name);
+// Old names still run (a ribbon.json or keys.json of your own keeps working): the action each is now.
+const ActionAliases = { 'favourites.menu': 'bookmarks.menu', 'favourites.add': 'bookmarks.add', 'favourites.manage': 'bookmarks.manage' };
+const actionOf = name => actions.get(ActionAliases[name] ?? name);
+const isAction = name => !!actionOf(name);
+const actionDef = name => actionOf(name);
 
 function actionTitle(name, params = []) {
-  const def = actions.get(name);
+  const def = actionOf(name);
   return def?.variantTitles?.[params.join(' ')] ?? def?.title ?? name;
 }
 
 function actionEnabled(name, params = []) {
-  const def = actions.get(name);
+  const def = actionOf(name);
   return !!def && (!def.enabled || !!def.enabled(params));
 }
 
 function runAction(name, params = [], ctx = {}) {
-  const def = actions.get(name);
+  const def = actionOf(name);
   if (!def) {
     status(`Foldex has no action ${name}.`, true);
     return;
@@ -43,7 +46,7 @@ const onDisk = () => selectedIds().length > 0 && selectedIds().every(id => /^[A-
 
 // Open is a switch for a folder: open (expanded in its tree) or not; a file has no open state.
 action('item.open', { title: 'Open', hint: 'a folder open or closed in its tree', group: 'items',
-  enabled: () => !!focusedItem()?.folder, checked: () => folderOpen(focusedItem()), run: () => toggleFolder(focusedItem()) });
+  enabled: () => !!focusedItem()?.folder && !focusedItem().up, checked: () => folderOpen(focusedItem()), run: () => toggleFolder(focusedItem()) });
 // As a double-click: a file starts in its program, a folder is opened by the parent (docs/plans/03 3.3).
 action('item.execute', { title: 'Execute', hint: 'as a double-click: a file starts, a folder opens', group: 'items',
   enabled: () => !!focusedItem(), run: () => execute(activePane, focusedItem()) });
@@ -66,7 +69,7 @@ action('item.delete', { title: 'Delete', hint: 'to the Recycle Bin; in a scrap: 
   enabled: anySelected, run: () => {
     // A shortcut in a tree's Quick access area: off the list, nothing on disk (plan 23 3.4).
     const shortcut = activeView() instanceof TreeView && activeView().quickAccessShortcut();
-    if (shortcut) return post({ op: 'folderListRemove', kind: 'quickaccess', folder: shortcut.id });
+    if (shortcut) return post({ op: 'bookmarkRemove', location: shortcut.id });
     return inScrap() ? activeView().takeOut(selectedIds()) : deleteItems(false);
   } });
 action('item.deleteDisk', { title: 'Delete from disk', hint: 'to the Recycle Bin, also in a scrap (and out of it)', group: 'items',
@@ -123,8 +126,12 @@ action('folder.new', { title: 'New folder', hint: 'in the folder of the active p
 action('file.new', { title: 'New file', hint: 'New file.txt in the folder of the active pane, then its name in place', group: 'folders',
   enabled: () => !!currentFolder(), run: () => newItem('file') });
 // One item: its name in place (rename.js); more selected: the Rename dialog for them all (renamedialog.js).
-action('item.rename', { title: 'Rename', hint: "the focused item's name in place (Enter renames, Esc cancels); with more selected, the Rename dialog", group: 'items',
-  enabled: () => !!focusedItem() && /^[A-Za-z]:\\|^\\\\/.test(focusedItem().id), run: () => {
+// A quick access shortcut: its name in Foldex, the folder on disk keeps its own (plan 26 3.10).
+const renameShortcut = () => activeView() instanceof TreeView && activeView().quickAccessShortcut();
+action('item.rename', { title: 'Rename', hint: "the focused item's name in place (Enter renames, Esc cancels); with more selected, the Rename dialog; a quick access shortcut: its name in Foldex", group: 'items',
+  enabled: () => !!renameShortcut() || !!focusedItem() && /^[A-Za-z]:\\|^\\\\/.test(focusedItem().id), run: () => {
+    const shortcut = renameShortcut();
+    if (shortcut) return renameBookmarkInPlace(activeView(), shortcut);
     const ids = selectedIds();
     if (ids.length > 1 && activeView() instanceof ListView) return openRenameMany(activeView(), ids);
     startRename(activeView(), focusedItem().id);
@@ -203,16 +210,26 @@ action('pane.filter', { title: 'Filter...', hint: 'the files the active pane sho
 
 // ---------- Foldex ----------
 
-// Favourite folders (plan 23 3.6; folderlists.js): the menu (the ribbon's Favourites), the current folder added or taken
-// off, Manage.
-action('favourites.menu', { title: 'Favourite folders', hint: 'the favourite folders; add the current folder, add one, manage them', group: 'folders',
+// Bookmarks (docs/plans/executed/26-PLAN-bookmarks.md; bookmarks.js): the menu (the ribbon's Bookmarks), the current folder added
+// or taken off, Manage; a bookmark opened by its keys (each bookmark a variant, so F1 lists them with their keys).
+action('bookmarks.menu', { title: 'Bookmarks', hint: 'the bookmarks; add the current folder, add one, manage them', group: 'folders',
   run: (params, ctx) => {
     const r = (ctx.el ?? views.get(activePane)?.body ?? document.body).getBoundingClientRect();
-    openMenu(r.left, ctx.el ? r.bottom : r.top, favouritesMenu());
+    openMenu(r.left, ctx.el ? r.bottom : r.top, bookmarksMenu());
   } });
-action('favourites.add', { title: 'Add the current folder to the favourite folders', group: 'folders', enabled: () => !!currentFolder(),
-  run: () => post({ op: inList('favourites', currentFolder()) ? 'folderListRemove' : 'folderListAdd', kind: 'favourites', folder: currentFolder() }) });
-action('favourites.manage', { title: 'Manage the favourite folders', group: 'folders', run: () => manageFavourites() });
+action('bookmarks.add', { title: 'Add the current folder to the bookmarks', hint: 'or take it off when it is one', group: 'folders',
+  enabled: () => !!currentFolder(), run: () => toggleCurrentBookmark() });
+action('bookmarks.manage', { title: 'Manage the bookmarks', group: 'folders', run: () => manageBookmarks() });
+const bookmarkOf = params => params[0] ? findBookmark(params[0]) : null;
+action('bookmarks.open', { title: 'Open a bookmark', hint: 'in the active pane', group: 'folders',
+  enabled: params => !!bookmarkOf(params), run: params => openBookmark(bookmarkOf(params)) });
+action('bookmarks.openNew', { title: 'Open a bookmark in a new pane with a child pane', group: 'folders',
+  enabled: params => !!bookmarkOf(params), run: params => openBookmark(bookmarkOf(params), 'newChild') });
+for (const [name, how] of [['bookmarks.open', 'Open'], ['bookmarks.openNew', 'Open in a new pane with a child pane:']])
+  Object.defineProperties(actions.get(name), {
+    variants: { get: () => bookmarks.map(b => [b.location]) },
+    variantTitles: { get: () => Object.fromEntries(bookmarks.map(b => [b.location, `${how} ${bookmarkName(b)}`])) },
+  });
 
 // Views (as xplorer2's ribbon button): in one plain menu (thumbs.js viewsMenu), the view of the active one-folder pane,
 // or with a tree active, of the first one-folder pane that follows it in its active branch.

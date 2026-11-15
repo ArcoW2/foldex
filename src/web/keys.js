@@ -35,26 +35,42 @@ const keys = {
   prefixes: new Set(),   // the first keys of chords
   byAction: new Map(),   // "pane.newChild right" -> ["Ctrl+Alt+N"]: for the ribbon's tooltips and F1
   pending: null,         // the first key of a chord, waiting for the second
+  file: { keys: {}, order: [] },   // keys.json as the host merged it
 };
 
-const callId = call => call.join(' ');
+// An action's id for its keys: an old name (favourites.menu) as the action it is now.
+const callId = call => [ActionAliases[call[0]] ?? call[0], ...call.slice(1)].join(' ');
 
 // The merged set from the host: { keys, order, problems }.
 function setKeys({ keys: map, order, problems }) {
+  keys.file = { keys: map, order };
+  buildKeys();
+  const unknown = [...new Set([...keys.bindings.values()].map(c => c[0]))].filter(name => !isAction(name));
+  if (unknown.length) problems = [...problems, 'unknown action ' + unknown.join(', ')];
+  if (problems.length) status('keys.json: ' + problems.join('; '), true);
+}
+
+// The key set: keys.json's, then the bookmarks' (docs/plans/executed/26-PLAN-bookmarks.md 3.6). A bookmark's key takes over
+// what it clashes with: the same key, the chords a single key starts, a single key a chord starts with.
+function buildKeys() {
   keys.bindings.clear();
+  for (const key of keys.file.order) {
+    const value = keys.file.keys[key];
+    keys.bindings.set(key, Array.isArray(value) ? value : [value]);
+  }
+  for (const [key, call] of typeof bookmarkBindings === 'function' ? bookmarkBindings() : []) {
+    const first = key.includes(', ') ? key.split(', ')[0] : null;
+    for (const k of [...keys.bindings.keys()]) if (k === key || k === first || !first && k.startsWith(key + ', ')) keys.bindings.delete(k);
+    keys.bindings.set(key, call);
+  }
   keys.prefixes.clear();
   keys.byAction.clear();
-  for (const key of order) {
-    const value = map[key], call = Array.isArray(value) ? value : [value];
-    keys.bindings.set(key, call);
+  for (const [key, call] of keys.bindings) {
     if (key.includes(', ')) keys.prefixes.add(key.split(', ')[0]);
     const id = callId(call);
     if (!keys.byAction.has(id)) keys.byAction.set(id, []);
     keys.byAction.get(id).push(key);
   }
-  const unknown = [...new Set([...keys.bindings.values()].map(c => c[0]))].filter(name => !isAction(name));
-  if (unknown.length) problems = [...problems, 'unknown action ' + unknown.join(', ')];
-  if (problems.length) status('keys.json: ' + problems.join('; '), true);
 }
 
 // The keys of an action: all of them, or the first one for a tooltip ('' without a key).

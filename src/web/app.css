@@ -1578,6 +1578,18 @@ body.docking, body.docking * {
   box-shadow: 0 0 0 2px var(--fg);
 }
 
+/* An item's icon (a bookmark's, bookmarks.js) in the check mark's column; its key at the right, dimmed. */
+.menu-check.icon {
+  width: 16px;
+  height: 16px;
+}
+.menu-check.icon img { width: 16px; height: 16px; display: block; }
+.menu-key {
+  margin-left: auto;
+  padding-left: 24px;
+  color: var(--fg-dim);
+}
+
 .menu-line {
   height: 1px;
   margin: 3px 0;
@@ -1770,28 +1782,59 @@ html[data-scrollbars="slim"] :not(.bars-full)::-webkit-scrollbar-thumb:horizonta
   border-radius: 0;
 }
 
-/* Manage the favourite folders (folderlists.js; as LexPen's): the list, a row per folder, its folder dimmed. */
-dialog.fav-manage { width: 520px; }
-.fav-list {
-  height: 260px;
-  overflow-y: auto;
+/* Manage the bookmarks (bookmarks.js): columns with a head whose borders size them (--bm-cols), a row per bookmark,
+   its icon before its name, a missing location struck through. */
+dialog.bm-manage { width: min(640px, calc(100vw - 32px)); }
+.bm-list {
+  height: 280px;
+  overflow: auto;
   border: 1px solid var(--border);
   border-radius: 4px;
   background: var(--bg);
   outline: none;
 }
-.fav-list:focus { border-color: var(--accent); }
-.fav-row {
-  display: flex;
-  gap: 10px;
-  padding: 2px 8px;
-  cursor: default;
-  white-space: nowrap;
+.bm-list:focus { border-color: var(--accent); }
+.bm-head, .bm-row {
+  display: grid;
+  grid-template-columns: var(--bm-cols, 200px 260px 90px);
+  width: max-content;
+  min-width: 100%;
 }
-.fav-row.selected { background: var(--select); }
-.fav-row .fav-dir { color: var(--fg-dim); overflow: hidden; text-overflow: ellipsis; }
-.fav-row.missing .fav-name { text-decoration: line-through; color: var(--fg-dim); }
-.fav-none { padding: 8px; color: var(--fg-dim); }
+.bm-head { position: sticky; top: 0; z-index: 1; background: var(--bg-bar); color: var(--fg-dim); }
+.bm-cell { position: relative; padding: 2px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bm-grip { position: absolute; top: 0; right: 0; bottom: 0; width: 6px; cursor: col-resize; border-right: 1px solid var(--border); }
+.bm-row { cursor: default; }
+.bm-row.selected { background: var(--select); }
+.bm-name { display: flex; align-items: center; gap: 6px; }
+.bm-name img, .bm-icon-shown img { width: 16px; height: 16px; flex: none; }
+.bm-where { color: var(--fg-dim); }
+.bm-row.missing .bm-where { text-decoration: line-through; }
+.bm-qa { text-align: center; }
+.bm-qa input { margin: 0; }
+.bm-none { padding: 8px; color: var(--fg-dim); }
+
+/* Edit a bookmark and Change Icon (bookmarks.js): the find dialog's look; the key fields; the panel of icons. */
+dialog.bm-edit { width: min(620px, calc(100vw - 32px)); }
+dialog.bm-edit .find-label { width: 120px; }
+dialog.bm-edit .find-row:nth-last-of-type(2) .find-label { width: 120px; white-space: normal; }
+.bm-icon-shown { display: inline-flex; width: 20px; justify-content: center; }
+dialog.find input.key-field { flex: 1; min-width: 0; caret-color: transparent; }
+dialog.bm-icons { width: min(520px, calc(100vw - 32px)); }
+.bm-icon-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  height: 260px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg);
+  outline: none;
+}
+.bm-icon-panel:focus { border-color: var(--accent); }
+.bm-icon-cell { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; }
+.bm-icon-cell img { width: 32px; height: 32px; }
+.bm-icon-cell.selected { background: var(--select); outline: 1px solid var(--accent); outline-offset: -1px; }
 
 /* Foldex's own preview (app.js PreviewView.showOwn): the image or video as large as fits, a sound's player, text. */
 .pane.preview .rows:has(> .own) { height: 100%; }

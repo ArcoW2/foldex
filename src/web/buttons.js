@@ -41,7 +41,8 @@ if (typeof document !== 'undefined') {
 
   document.addEventListener('keydown', e => {
     const dialog = [...document.querySelectorAll('dialog[open]')].pop();
-    if (!dialog || e.ctrlKey || e.metaKey) return;
+    // A key field (bookmarks.js keyField) takes every key itself, Alt with a letter too.
+    if (!dialog || e.ctrlKey || e.metaKey || document.activeElement?.matches('.key-field')) return;
     const buttons = rowButtons(dialog);
     if (!buttons.length) return;
     const at = buttons.indexOf(document.activeElement);

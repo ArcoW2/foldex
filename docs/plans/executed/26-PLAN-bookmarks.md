@@ -1,8 +1,9 @@
 # Plan 26: Bookmarks, quick access among them: names, icons, keys, Regular or Root, new panes, in Home > Open
 
-Status: not started.
+Status: executed; see Status and 6 (As built).
 
 - 2026-11-13: draft, at the user's request.
+- 2026-11-15: executed.
 
 Builds on plan 23 (`docs/plans/executed/23-PLAN-quick-access-and-favourites.md`), which built quick access (an area at
 the top of a tree without a parent) and favourite folders as LexPen's (a menu with Add current folder, Add a
@@ -41,25 +42,25 @@ shortcut renames it. The Bookmarks button is in Home > Open.
 
 | Part | What | Reference |
 |---|---|---|
+| One list | bookmarks.json: every bookmark an entry (location, item, quick access, name, icon, keys, root); quickaccess.json and favourite-folders.json taken over | 3.0; 3.1; 6.1 |
+| Word | Favourite folders called Bookmarks everywhere | 3.0; 6.1 |
+| Quick access flag | the area shows the flagged entries, the menu the others; switching | 3.2; 6.2 |
+| Manage | columns Name (icon, name), Location, Quick access; Edit... | 3.3; 6.2 |
+| Edit | the window: name, location, quick access, open as, icon, two keys | 3.4; 6.3 |
+| Change Icon | the window with a file's icons; the host reads them | 3.5; 6.3 |
+| Keys | a bookmark's two keys in the key set, a clash asked; the key fields | 3.6; 6.4 |
+| Menu | names, icons and keys in the Bookmarks menu | 3.7; 6.5 |
+| Right-click | in the menu: Open, Open in a new pane (with or without a child pane), Edit..., Remove; on a shortcut: Edit... | 3.8; 6.5 |
+| Ribbon | Bookmarks in Home > Open | 3.9; 6.5 |
+| Quick access shortcuts | F2 renames a shortcut; its icon | 3.10; 6.6 |
+| Regular and Root | a bookmark opened as the top of a pane, ".." to go up in trees and lists | 3.11; 6.7 |
+| Items and missing places | an item as a bookmark; a location not there or not reachable: a message, nothing moves | 3.12; 6.8 |
+| Tests | unit and in the app | 3.13; 6.9 |
 
 ### Not yet built
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| One list | bookmarks.json: every bookmark an entry (location, item, quick access, name, icon, keys, root); quickaccess.json and favourite-folders.json taken over | -- | 3.0; 3.1 |
-| Word | Favourite folders called Bookmarks everywhere | -- | 3.0 |
-| Quick access flag | the area shows the flagged entries, the menu the others; switching | One list | 3.2 |
-| Manage | columns Name (icon, name), Location, Quick access; Edit... | One list | 3.3 |
-| Edit | the window: name, location, quick access, open as, icon, two keys | One list | 3.4 |
-| Change Icon | the window with a file's icons; the host reads them | Edit | 3.5 |
-| Keys | a bookmark's two keys in the key set, a clash asked; the key fields | One list | 3.6 |
-| Menu | names, icons and keys in the Bookmarks menu | One list | 3.7 |
-| Right-click | in the menu: Open, Open in a new pane (with or without a child pane), Edit..., Remove; on a shortcut: Edit... | Edit | 3.8 |
-| Ribbon | Bookmarks in Home > Open | Word | 3.9 |
-| Quick access shortcuts | F2 renames a shortcut; its icon | One list | 3.10 |
-| Regular and Root | a bookmark opened as the top of a pane, ".." to go up in trees and lists | One list | 3.11 |
-| Items and missing places | an item as a bookmark; a location not there or not reachable: a message, nothing moves | One list | 3.12 |
-| Tests | unit and in the app | all | 3.13 |
 
 ## 3. Details
 
@@ -305,3 +306,102 @@ within it, Del on a shortcut), Add current folder / Remove current folder, Add a
 ## 4. Open questions
 
 None.
+
+## 6. As built
+
+### 6.1 One list, the word
+
+- src/Bookmarks.cs (was FolderLists.cs): `Bookmark` (the entry, written with only what is set) and `Bookmarks` (Load,
+  Start, Save, Unique, Add, ToQuickAccess, and the known folders as before). AppHost keeps one `List<Bookmark>`,
+  sends "bookmarks" (the list and the known folders' paths) in hello and to every window after a change.
+- The page's file is src/web/bookmarks.js (was folderlists.js). Ops to the host: bookmarkAdd, bookmarkRemove,
+  bookmarksSet (the whole list: Manage, Edit, a flag switched, F2), bookmarksExist, bookmarkCheck (3.12), pickFile,
+  iconFile; the event bookmarkEdit (Windows' menu's Edit...).
+- The old action names (favourites.menu, .add, .manage) run as the new ones (actions.js ActionAliases); F1 lists
+  only the new ones.
+- Windows' menu for one folder or file: Add to quick access and Add to bookmarks; for one that is a bookmark, Remove
+  from quick access (or from bookmarks) and Edit... Edit... is there for every bookmark, not only for a shortcut:
+  still two items.
+
+### 6.2 The flag, Manage
+
+- The area and the menu filter the one list (quickAccessList, menuBookmarks). A drop on the area goes through
+  Bookmarks.ToQuickAccess: its place counted among the shortcuts, a bookmark of the menu given the flag in its place.
+- Manage: a grid with a head; a border in the head dragged sizes the column before it (the widths are kept while
+  Foldex runs, not saved). A click on a row's check box, or Space, switches the flag; Enter, F2 and a double click
+  are Edit...
+
+### 6.3 Edit, Change Icon
+
+- Edit and Change Icon use the Find dialog's look (dialog.find). A location already a bookmark, an empty one and two
+  equal keys are refused in the status line, the dialog staying open; a location not there or not reachable is
+  asked (Foldex's own question window).
+- Change Icon reads every icon of the file on the host (ShellIcons.AllFromFile, ExtractIconEx, 32 px PNGs); a custom
+  icon is asked once per "file,index" (ShellIcons.FromFile, kept) and drawn wherever the bookmark shows.
+
+### 6.4 Keys
+
+- keys.js buildKeys: keys.json's keys, then the bookmarks'; a bookmark's key removes the same key, the chords a
+  single key starts, and a single key a chord starts with, so F1 shows what lost its key.
+- The key field takes every key itself (buttons.js leaves its Alt+letter alone); Tab, Esc and Enter keep their
+  dialog meanings, so they cannot be a bookmark's key.
+
+### 6.5 Menu, right-click, ribbon
+
+- menu.js: an item may have icon, key, title and context. A right-click on an item with a context opens it as a
+  submenu; the menu key and Shift+F10 on the lit item do the same. Items without a context are as before.
+- ribbon.json: Bookmarks under Properties and Select all in Home > Open; Go has Back, Forward, Up, Refresh.
+
+### 6.6 Quick access shortcuts
+
+- A shortcut row takes its entry's name and icon; an item's shortcut has no expander. F2 (item.rename) on a
+  shortcut opens the rename box with an own callback (rename.js startRename `own`): the entry's name, nothing on disk.
+- A click on a shortcut that is gone, an item or Root opens it as its bookmark (the message, the item focused, the
+  top set); a folder's shortcut is as built.
+
+### 6.7 Regular and Root
+
+- A tree: the pane's `top` (kept with the layout); init describes that folder, puts the ".." row before it and opens
+  it; Quick access is not shown. A click on ".." goes up (the row is not focused; the keys pass over it, as over the
+  area's head); Backspace and Up on the top do the same. A drive's or a share's ".." gives the usual tops. A path
+  revealed outside the top gives the usual tops first.
+- A list: `top: true` on the pane; while it is on disk its items start with a ".." entry. It sorts first, passes
+  every filter, is focused but never selected (so never copied, dragged, deleted or in Ctrl+A), and nothing follows
+  it; Enter or a double click goes up. A Regular bookmark opened in such a list takes the flag off.
+- From a child pane Root is Regular (goTo).
+
+### 6.8 Items, places not there
+
+- bookmarkCheck on the host: NetworkGuard for a share, then whether the folder (an item's folder) and the item are
+  there, and whether the location is a file (Edit sets `item` from it). The page then says "<location> is not
+  there." or "<server> is not reachable." in the status line and gives the keyboard back; nothing moves.
+- An item opened: its folder as a folder bookmark; the list that lists it selects and focuses it once it is listed
+  (bookmarks.js itemListed, from ListView.done); gone, the folder's first item is focused.
+- Not guarded: a tree whose top is on a share that does not answer waits for Windows' answer when Foldex starts (the
+  describe runs on its own thread; the window does not wait).
+
+### 6.9 Tests
+
+- Unit: BookmarksTests (entries kept and read back, only what is set written, one entry per location in any case and
+  for a known folder by both names, names dropped, the two plan 23 lists taken over and Explorer asked only without
+  them, ToQuickAccess and Add, an entry from the page, SHELL32's icons and a file without icons) and BookmarkKeysTests
+  in Jint (the area and the menu in list order, the keys in the key set, every kind of clash named, a bookmark's key
+  over a keys.json key, the old action names, F1's variants). `dotnet test`: 217 passed, 0 failed (2026-11-15).
+- In the test copy (CDP, real keys and mouse, UI Automation for the question window), with a data folder holding plan
+  23's two lists: taken over (a folder in both one shortcut); Bookmarks in Home > Open; the menu with names, icons
+  and keys; Edit from the menu with a name and keys pressed into the fields (the offered Ctrl+B, a chord with Shift, a
+  third key starting again, Backspace); Ctrl+B, 1 in a tree and Ctrl+B, Shift+1 (a new pane in its own colour, the
+  folder focused, a child showing it, the keyboard in the new pane); F1's rows; Ctrl+C for a bookmark asked (No kept
+  Copy's key and the dialog, Yes gave it to the bookmark, Copy without a key in F1); Manage's columns with icons, the
+  check box by a click and Space moving the entry between the area and the menu at once, Ctrl+Up; the menu's
+  right-click and the menu key and Shift+F10; Windows' menu items for a bookmark and for a file; Change Icon
+  (SHELL32's icons, a double click), Plain; Root in a tree (".." and Backspace up to the drive, then the usual
+  tops), kept after a restart with the keys, names and icons; Root and Regular from a child pane (the parent focuses,
+  the child shows the folder with its first item focused and keeps the keyboard); an item from Windows' menu as a
+  bookmark and as a shortcut, from a tree and from a list, and renamed away; a folder not there (the message, nothing
+  moved, no new pane, the keyboard back); F2 on a shortcut, emptied back, a subfolder under it not a shortcut; Root in
+  a list without a parent (".." first by size too, out of Ctrl+A, Delete and Copy disabled on it, Enter up, a drive's
+  ".." to This PC without one); two equal keys refused.
+- Not tried in the app: a network path as a location (no share here), the Edit... of Windows' menu clicked (its
+  text checked), a drop on the area (as built; ToQuickAccess unit tested), a second window getting the change.
+- Seen while testing: a click on a tree's ".." while the tree is being read again does nothing.
