@@ -8,14 +8,14 @@
 // app.js.
 
 // The kinds of pane whose views are pages of their own.
-const PagedKinds = new Set(['list']);
+const PagedKinds = new Set(['list', 'scrap']);
 // What of a pane this page decides (its connections, its place, its history); the rest its page does.
 const WindowFields = ['id', 'source', 'colour', 'pinned', 'activeKey', 'lastKey', 'lastChild', 'away', 'floating', 'floatBounds',
   'histories', 'recall', 'kind', 'fixed', 'info', 'path'];
 // The actions that run in the page of the active pane: they work on its rows themselves.
 const PageActions = new Set(['item.rename', 'folder.new', 'file.new']);
 // The methods of a stand-in answered here, from what its page told: they read the layout and that only.
-const PagedHere = new Set(['ids', 'content', 'iconsView', 'thumbsView', 'shows', 'tabTitle', 'locationText']);
+const PagedHere = new Set(['ids', 'content', 'iconsView', 'thumbsView', 'shows', 'tabTitle']);
 // The events of the host every pane's page gets as well: what they change is used there too.
 const PageEvents = new Set(['settings', 'columnSets', 'bookmarks', 'searches', 'renames', 'propList', 'fileOp', 'folderChanged']);
 
@@ -27,7 +27,8 @@ function pagedView(id) {
   const kind = layout.pane(id).kind;
   const Base = kind === 'tree' ? TreeView : kind === 'scrap' ? ScrapView : ListView;
   const v = Object.create(Base.prototype);
-  Object.assign(v, { id, paged: true, entries: [], all: [], selected: new Set(), location: null, name: null, message: null, count: 0 });
+  Object.assign(v, { id, paged: true, entries: [], all: [], selected: new Set(), location: null, name: null, message: null, count: 0,
+    answers: new Map() });
   v.el = paneElement(id, kind, '');
   v.el.classList.add('page');
   v.body = v.el.querySelector('.body');
@@ -41,6 +42,16 @@ function pagedView(id) {
   v.channel.frameEl();
   v.body.addEventListener('focus', () => v.channel.focus());
   v.itemCount = () => v.count;
+  v.locationText = () => v.text ?? '';
+  // A scrap's head: Stop while it searches, and its X (ScrapView).
+  if (kind === 'scrap') {
+    v.el.classList.add('scrap');
+    const button = (cls, html, title, run) => Object.assign(document.createElement('button'), { className: `scrap-button ${cls}`, innerHTML: html, title, onclick: run });
+    v.stopButton = button('scrap-stop', 'Stop', 'Stop the search', () => views.get(id)?.stop());
+    v.stopButton.hidden = true;
+    v.el.querySelector('.marks').before(v.stopButton, button('scrap-close', '<svg viewBox="0 0 16 16"><path d="M4 3l4 4 4-4 1 1-4 4 4 4-1 1-4-4-4 4-1-1 4-4-4-4z"/></svg>',
+      'Close this scrap (nothing on disk changes)', () => closePane(id)));
+  }
   // Floating, its window goes (closePane, applyPreset).
   v.close = () => { if (v.channel.floating) post({ op: 'paneDock', pane: id }); };
   v.moved = () => {};
@@ -50,11 +61,13 @@ function pagedView(id) {
       if (typeof p !== 'string' || Object.hasOwn(t, p) || PagedHere.has(p)) return Reflect.get(t, p, r);
       const f = t[p];
       if (typeof f !== 'function') return f;
-      // A method of the view: in its page, with the pane as this page has it now (before the page is ready, kept until it is).
-      // Kept until then, it goes without the pane: the page starts on it as it is then (init).
+      // A method of the view: in its page, with the pane as this page has it now (before the page is ready, kept until it is;
+      // then without the pane: the page starts on it as it is then, init). Its answer comes as a promise.
       return (...args) => {
         const ready = t.channel.floating ? t.channel.floatReady : t.channel.ready;
-        t.channel.send({ kind: 'call', key: `call:${++calls}`, method: p, args: pagedArgs(args), record: ready ? layout.pane(id) : undefined });
+        const req = ++calls;
+        t.channel.send({ kind: 'call', key: `call:${req}`, req, method: p, args: pagedArgs(args), record: ready ? layout.pane(id) : undefined });
+        return new Promise(done => t.answers.set(req, done));
       };
     },
   });
@@ -71,9 +84,11 @@ function pagedReceive(v, m) {
       const pane = layout.pane(id);
       if (!pane) return;
       for (const [k, value] of Object.entries(m.fields)) if (!WindowFields.includes(k)) pane[k] = value;
-      Object.assign(v, { location: m.location, name: m.name, message: m.message, count: m.count, entries: m.entries,
-        selected: new Set(m.selected), all: new Array(m.all), searching: m.searching });
+      // What it holds: a scrap's ids (its watched folders, a search in it), else how many.
+      Object.assign(v, { location: m.location, name: m.name, message: m.message, count: m.count, entries: m.entries, text: m.text,
+        selected: new Set(m.selected), all: m.allIds ? m.allIds.map(x => ({ id: x })) : new Array(m.all), searching: m.searching, watch: m.watch });
       v.el.querySelector('.title').textContent = m.title;
+      if (v.stopButton) v.stopButton.hidden = !m.searching;
       if (m.tell) tellLayout();
       if (m.tabs) drawTabs();
       if (m.ribbon) ribbonRefresh();
@@ -85,6 +100,9 @@ function pagedReceive(v, m) {
     case 'typed':
       typing = { id, text: m.text };
       return typingRests();
+    case 'callDone':
+      v.answers.get(m.req)?.(m.value);
+      return v.answers.delete(m.req);
     case 'focus': return focusItem(id, m.item);
     case 'step': return recordStep();
     case 'execute': return execute(id, m.item);

@@ -191,7 +191,7 @@ function filterTest(pattern) {
 // What each kind of pane can be (docs/plans/14-PLAN-floating-panes.md 3.7): docked, floating, or both. A pane of a page
 // of its own (a PreviewView: the previews, Info, and every PageView; a tree, a list or a scrap of pagedviews.js) can
 // float; the others are docked until they are pages (plan 14 3.0, the stages).
-const PaneCan = { tree: ['docked'], list: ['docked', 'floating'], scrap: ['docked'], preview: ['docked', 'floating'], log: ['docked', 'floating'],
+const PaneCan = { tree: ['docked'], list: ['docked', 'floating'], scrap: ['docked', 'floating'], preview: ['docked', 'floating'], log: ['docked', 'floating'],
   bookmarks: ['docked', 'floating'], columnsets: ['docked', 'floating'], palette: ['docked', 'floating'],
   settings: ['docked', 'floating'], projects: ['docked', 'floating'] };
 const canFloat = id => (PaneCan[layout.pane(id)?.kind] ?? ['docked']).includes('floating')
@@ -2123,7 +2123,7 @@ function newScrap(name = null, place = { area: 'right' }) {
   const cols = genericColumns();
   if (!cols.columns.some(c => c.id === 'path')) cols.columns.splice(1, 0, { id: 'path', width: columnInfo('path').width });
   pane.columns = cols;
-  const view = placeView(new ScrapView(id), place);
+  const view = placeView(makeView(id), place);
   activate(id);
   drawHeads();
   view.body.focus();
@@ -3450,6 +3450,10 @@ function tellWatched() {
     const folders = new Set();
     let scrapFolders = 0;
     for (const v of views.values()) {
+      if (isPaged(v)) {   // what its page said (viewpage.js watchedHere)
+        for (const f of v.watch ?? []) folders.add(f);
+        continue;
+      }
       if (v instanceof ListView && v.location) folders.add(v.location);
       // A scrap: the folders its entries are in, up to ScrapWatchMax of them (plan 06 3.1); the rest are checked on F5
       // and after Foldex's own file operations.

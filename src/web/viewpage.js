@@ -47,6 +47,7 @@ function init(m) {
   views.set(PanePage, pageView);
   $('panes').append(pageView.el);
   drawHeads();
+  if (m.restore && pageView instanceof ScrapView) pageView.addIds(layout.pane(PanePage).items ?? []);   // a scrap's entries
   if (m.restore) pageView.restore();   // where the pane is: its folder read
 }
 
@@ -70,13 +71,21 @@ function flush() {
   const fields = Object.fromEntries(Object.entries(pane).filter(([k]) => !WindowFields.includes(k)));
   const focus = layout.state(v.id).focus;
   const shown = v instanceof ListView ? v.entries.filter(x => v.selected.has(x.id) || same(x.id, focus)).slice(0, 2000) : [];
+  const scrap = v instanceof ScrapView;
   const msg = { kind: 'sync', fields, location: v.location ?? null, name: v.name ?? null, title: v.el.querySelector('.title').textContent,
-    message: v.message ?? null, count: v.itemCount?.() ?? 0, entries: shown, selected: [...(v.selected ?? [])], all: v.all?.length ?? 0,
-    searching: !!v.searching };
+    text: v.locationText(), message: v.message ?? null, count: v.itemCount?.() ?? 0, entries: shown, selected: [...(v.selected ?? [])],
+    all: v.all?.length ?? 0, allIds: scrap ? v.all.map(x => x.id) : undefined, searching: !!v.searching, watch: watchedHere(v) };
   const text = JSON.stringify(msg);
   if (text === lastSync && !Object.keys(flags).length) return;
   lastSync = text;
   toWindow({ ...msg, ...flags });
+}
+
+// The folders the window has watched for this pane (app.js tellWatched): a list's folder, the folders of a scrap's
+// entries (up to ScrapWatchMax).
+function watchedHere(v) {
+  if (v instanceof ScrapView) return [...new Set(v.all.map(x => folderOf(x.id)))].slice(0, ScrapWatchMax);
+  return v instanceof ListView && v.location ? [v.location] : [];
 }
 
 // ---------- What goes to the window ----------
@@ -166,9 +175,14 @@ function fromWindow(m) {
     case 'layout':
       takeLayout(m.layout, m.active);
       return pageView && drawHeads();
-    case 'call':
+    case 'call': {   // its answer back (a promise's when it is one; nothing that cannot go in a message)
       takeRecord(m.record);
-      return pageView?.[m.method]?.(...m.args);
+      const out = pageView?.[m.method]?.(...m.args);
+      return Promise.resolve(out).then(value => {
+        try { value = structuredClone(value); } catch { value = undefined; }
+        toWindow({ kind: 'callDone', req: m.req, value });
+      });
+    }
     case 'action': return runAction(m.name, m.params, { from: 'window' });
     case 'run':   // a function of the window's page on this pane (PageFunctions)
       takeRecord(m.record);
