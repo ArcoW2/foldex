@@ -20,11 +20,15 @@ window it is stated which it can be.
 
 ## 2. The solution, in brief
 
-Any pane can float, a scrap included: it is shown in a window of its own, a form with its own WebView2, and docks back
-from its menu or by dragging. It stays connected exactly as when docked: a floating child still follows its parent, a
-floating parent still drives its children, and its colours (head, ring, branch marks, pane theme) are the ones it
-would have docked; the messages go through the host, as LexPen's floating panes do. Moving a pane between docked and
-floating hands over what it shows, so it comes back as it was. F3 opens a preview in a new floating window of its
+As LexPen: every pane is a page of its own, the same page docked or floating. Docked, it is a frame in the window's
+page, from a site of its own, in its place in the docks; floating, it is that page in a window of its own (LexPen's
+`PaneForm`). The pane talks to its window's page only, through a channel (LexPen's `panechannel.js` and `pane.js`):
+directly as a frame, through the host while floating. The window's page keeps the layout (the connections, the
+branches, the colours, the docks) and tells each pane what it shows. Any pane can float, a scrap included, and docks
+back from its menu or by dragging. It stays connected exactly as when docked: a floating child still follows its
+parent, a floating parent still drives its children, and its colours (head, ring, branch marks, pane theme) are the
+ones it would have docked. Moving a pane between docked and floating hands over what it shows, so it comes back as it
+was. It is built in stages (3.0), the smallest panes first and the tree and the list last, each stage used at once. F3 opens a preview in a new floating window of its
 own, showing the item the active pane focuses, and keeps showing that item. Foldex's other windows become panes of
 their own kind as 3.7 lists them, Manage the bookmarks first: each can be docked, floating or both, as its row says,
 and moves between the two as any pane does; F1, Settings and Projects are such panes, as LexPen has them. The
@@ -40,19 +44,49 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| Float and dock back | Float in the pane head's menu, for any pane (a scrap too); back by the menu or by dragging onto the window | -- | 3.1 |
-| The floating window | a form with its own WebView2 showing one pane, in the window's theme | -- | 3.2 |
-| Connections across windows | following, executing, back and forward through the host | -- | 3.3 |
-| Colours across windows | head, ring, branch marks and pane theme as when docked, changing with the window's | Connections across windows | 3.3 |
-| A floating scrap | drops, its search, its dashed ring; gone after a restart unless pinned (then back empty) | -- | 3.3 |
-| Kept | a floating pane's place and size with the window's layout | -- | 3.4 |
-| F3 | a preview in a new floating window | The floating window | 3.5 |
-| Kinds stated | every pane kind says which it can be (docked, floating, both); Float and Dock offered only where it can | -- | 3.7 |
-| Manage the bookmarks | a pane (docked or floating), no longer a modal dialog | The floating window | 3.7; plan 26 3.3 |
-| Panes of their own | Manage column sets, F1, Settings, Projects as panes, docked or floating | The floating window | 3.7 |
-| Modal floating windows | the dialogs that ask and wait, each modal in a window of its own that can be moved anywhere | The floating window | 3.7 |
+| Pane pages | the panes' site, `pane.js` and `panechannel.js` from LexPen, a pane's frame in its dock place | -- | 3.0; 3.2 |
+| The floating window | `PaneForm` from LexPen: a pane's page in a window of its own, in the window's theme, its place kept | Pane pages | 3.2; 3.4 |
+| Float and dock back | Float in the pane head's menu; back by its menu, by closing its window, or by dragging onto the window | The floating window | 3.1 |
+| Kinds stated | every pane kind says which it can be (docked, floating, both); Float and Dock offered only where it can | Pane pages | 3.7 |
+| Log as a page | stage 1's first pane: the Log, docked or floating | The floating window | 3.0 |
+| Manage the bookmarks | a pane page (docked or floating), no longer a modal dialog | The floating window | 3.0; 3.7; plan 26 3.3 |
+| Modal floating windows | the dialogs that ask and wait, each a page modal in a window of its own that can be moved anywhere | The floating window | 3.0; 3.7 |
+| Panes of their own | Manage column sets, F1, Settings, Projects as pane pages, docked or floating | The floating window | 3.0; 3.7 |
+| Preview and Info as pages | Windows' preview over a frame and over a floating window; Foldex's own preview; Info | The floating window | 3.0 |
+| F3 | a preview in a new floating window | Preview and Info as pages | 3.5 |
+| Scrap, list and tree as pages | the panes of the layout as pages; following, executing, back and forward through the window's page | Preview and Info as pages | 3.0; 3.3 |
+| Colours across windows | head, ring, branch marks and pane theme as when docked, changing with the window's | Scrap, list and tree as pages | 3.3 |
+| A floating scrap | drops, its search, its dashed ring; gone after a restart unless pinned (then back empty) | Scrap, list and tree as pages | 3.3 |
+| Speed | measured before stage 1 and after each stage | -- | 3.0 |
 
 ## 3. Details
+
+### 3.0 Every pane a page, as LexPen; the stages
+
+- As LexPen (`..\LexPen\docs\plans\executed\PLAN-docking.md` 3.4, 3.5; `src/web/pane.js`, `panechannel.js`,
+  `src/PaneForm.cs`): every pane kind is a page of its own (log.html, bookmarks.html, preview.html, list.html,
+  tree.html, ...). Docked, its page is a frame (an iframe) in the window's page, in the pane's place in the docks
+  (docks.js, as built); the frame comes from the panes' site (a second host name served by WebFiles, as the page's own
+  is), so the browser runs it in a process of its own. Floating, the same page is in a `PaneForm`.
+- The pane and its window's page talk only through the channel: `postMessage` between the frame and the page;
+  floating, through the host (PaneForm passes `fromPane` to its window's page and `toPane` back). What needs the host
+  (a listing, the icons, a file operation) the pane asks of its window's page, which asks the host as now and passes
+  the answer back. The page keeps what is shared: the layout and its connections, the settings, the key set, the
+  bookmarks; a pane gets what it needs from it, and what changes.
+- A key the pane does not use goes to its window's page (pane.js), so the window's keys work in every pane. A press in
+  a pane makes it the active one. Floating, a menu of the window's page is drawn by the pane (pane.js paneMenu).
+- Moving a pane between docked and floating loads its page in the new place; what it shows is kept by the window's
+  page and handed over (`state()`), so it comes back as it was.
+- Where Foldex differs from LexPen: LexPen's editor panes stay in its page and only its tool panes are pages; in
+  Foldex every pane is one, the tree and the list too, as the user chose. LexPen's scope of a pane (one document, a
+  window, LexPen) is not taken: a Foldex pane belongs to its window's layout.
+- The stages, each built, tested and used before the next (the Status rows in this order): 1. pane pages, the
+  floating window, Float and Dock, the Log as the first page; 2. Manage the bookmarks as a page; 3. the modal floating
+  windows; 4. Manage column sets, F1, Settings and Projects; 5. the preview and Info, then F3; 6. the scrap, the list
+  and the tree, with their connections and colours across windows.
+- Speed comes first, as in LexPen (3.2 there): the start until the first folder shows, opening a folder of many
+  items, moving the cursor in a list, measured before stage 1 and after each stage (figures in 6, As built:
+  `[not yet calculated]`); a stage that makes one clearly slower is not merged until it is not.
 
 ### 3.1 Floating and docking back
 
@@ -62,15 +96,15 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 
 ### 3.2 The floating window
 
-- A form of its own with its own WebView2, as LexPen's `PaneForm`; it shows one pane, drawn by the same page code.
-- It belongs to the window it came from, and closes with it.
+- LexPen's `PaneForm`: a form of its own with its own WebView2, showing the pane's page from the panes' site, in its
+  window's theme (its caption dark in dark mode); not modal, owned by its window, closes with it. Closing it docks the
+  pane back where it was (paneClosed).
+- A modal floating window (3.7) is the same form shown modal over its window, with a dialog's page.
 
 ### 3.3 Connections
 
-- Foldex's panes are drawn in one page (plan 02 option A), so a floating pane is in another page: what a docked pane
-  gets from the layout in the page (its parent's focused folder, its branch, the colours) it gets by messages through
-  the host.
-- Whether that needs a channel of the pane's own, as LexPen's: `[not yet checked]`.
+- Every pane is a page (3.0): what it gets from the layout (its parent's focused folder, its branch, the colours) the
+  window's page sends it through the channel, docked or floating alike.
 - Connected as when docked: its parent and children, its branch and pin stay; the Branch menu (detach, attach, branch
   colour) works across windows.
 - Coloured as when docked: its head, its ring (a scrap's dashed), its branch marks and its pane theme are what the
