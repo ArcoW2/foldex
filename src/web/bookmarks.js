@@ -413,9 +413,14 @@ function buildBookmarkManage() {
   const el = bmManage.el = document.createElement('dialog');
   el.className = 'ask bm-manage';
   el.innerHTML = `<div class="bm-tabs"><button type="button" data-tab="bookmarks">Bookmarks</button><button type="button" data-tab="quick">Quick access</button></div>
-    <div class="bm-list" tabindex="0"><div class="bm-head"></div><div class="bm-rows"></div></div>
+    <div class="bm-body">
+      <div class="bm-arrows">
+        <button data-do="up" tabindex="-1" title="Up (Ctrl+Up)"><svg viewBox="0 0 10 10"><path d="M1.5 6.5L5 3l3.5 3.5"/></svg></button>
+        <button data-do="down" tabindex="-1" title="Down (Ctrl+Down)"><svg viewBox="0 0 10 10"><path d="M1.5 3.5L5 7l3.5-3.5"/></svg></button>
+      </div>
+      <div class="bm-list" tabindex="0"><div class="bm-head"></div><div class="bm-rows"></div></div>
+    </div>
     <div class="ask-buttons">
-      <button data-do="up" title="Ctrl+Up">Up</button><button data-do="down" title="Ctrl+Down">Down</button>
       <button data-do="new" class="bm-menu-button" title="A new folder or bookmark, after the selected row">New</button>
       <button data-do="edit" title="Enter, F2, double click">Edit...</button>
       <button data-do="to" class="bm-menu-button"></button>
@@ -461,7 +466,10 @@ function buildBookmarkManage() {
     if (!e.target.closest('[data-i]') || e.target.closest('.bm-twisty')) return;
     bookmarkManageDo(isGroup(manageRows()[bmManage.at]?.b) ? 'fold' : 'edit');
   });
-  el.querySelector('.ask-buttons').addEventListener('click', e => { const b = e.target.closest('[data-do]'); if (b) bookmarkManageDo(b.dataset.do); });
+  for (const bar of el.querySelectorAll('.ask-buttons, .bm-arrows'))
+    bar.addEventListener('click', e => { const b = e.target.closest('[data-do]'); if (b) bookmarkManageDo(b.dataset.do); });
+  // The arrows keep the keyboard in the list.
+  el.querySelector('.bm-arrows').addEventListener('mousedown', e => e.preventDefault());
   el.addEventListener('keydown', e => {
     if (e.target.closest('button') && (e.key === 'Enter' || e.key === ' ')) return;
     const key = (e.ctrlKey ? 'Ctrl+' : '') + e.key;
@@ -515,6 +523,13 @@ function drawBookmarkManage() {
     textContent: quick ? 'No quick access yet: New, or To quick access on the Bookmarks tab.' : 'No bookmarks yet: New makes one.' }));
   box.querySelector('.selected')?.scrollIntoView({ block: 'nearest' });
   for (const b of el.querySelectorAll('[data-do=up], [data-do=down], [data-do=edit], [data-do=to], [data-do=folder], [data-do=delete]')) b.disabled = !rows.length;
+  // The arrows: not past the first or last entry of its folder.
+  const sel = rows[bmManage.at];
+  if (sel) {
+    const siblings = sel.parent ? bookmarkById(sel.parent).items : bookmarks.filter(b => !!b.quickAccess === quick), k = siblings.indexOf(sel.b);
+    el.querySelector('[data-do=up]').disabled = k <= 0;
+    el.querySelector('[data-do=down]').disabled = k >= siblings.length - 1;
+  }
 }
 
 // A row's handle dragged (plan 27 3.4): over a folder's middle the folder is lit and the entry goes in, at its end;

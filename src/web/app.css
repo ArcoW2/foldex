@@ -1822,6 +1822,23 @@ dialog.bm-manage .ask-buttons { margin-top: 10px; }
   outline: none;
 }
 .bm-list:focus { border-color: var(--accent); }
+/* Up and Down as two small arrows in a narrow strip left of the list (bookmarks.js). */
+.bm-body { display: flex; gap: 3px; }
+.bm-body .bm-list { flex: 1; min-width: 0; }
+.bm-arrows { flex: none; display: flex; flex-direction: column; justify-content: center; gap: 2px; width: 16px; }
+.bm-arrows button {
+  width: 16px;
+  height: 18px;
+  padding: 0;
+  color: var(--fg);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.bm-arrows button:hover:not(:disabled) { background: color-mix(in srgb, var(--fg) 12%, transparent); border-color: var(--border); }
+.bm-arrows button:disabled { opacity: .35; cursor: default; }
+.bm-arrows svg { width: 10px; height: 10px; display: block; margin: auto; fill: none; stroke: currentColor; stroke-width: 1.5; }
 .bm-head, .bm-row {
   display: grid;
   grid-template-columns: var(--bm-cols, 200px 320px);

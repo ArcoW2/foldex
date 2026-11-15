@@ -132,7 +132,8 @@ within it, Del on a shortcut), Add current folder / Remove current folder, Add a
   shows its entries in the order of the list, in two columns with a head: Name (the icon, then the name; the
   location's own name when it has none) and Location (the full path; a missing one struck through). The columns can
   be made wider by dragging their border in the head; no sorting (the order is yours, set with Up and Down).
-- Buttons: Up, Down, Add..., Edit..., To quick access (on the Bookmarks tab) or To bookmarks (on the Quick access
+- Up and Down are two small arrows in a narrow strip left of the list (greyed out at the first and last entry); the
+  buttons under it: Add..., Edit..., To quick access (on the Bookmarks tab) or To bookmarks (on the Quick access
   tab), Delete, Close. Edit... (also Enter, F2 and a double click) opens Edit (3.4) for the selected row. Add... opens
   Edit empty, Quick access checked on the Quick access tab, with the location's Browse... opened at once (Windows'
   folder picker).

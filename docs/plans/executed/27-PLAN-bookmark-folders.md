@@ -173,7 +173,11 @@ None.
 
 - manageRows gives the rows shown { b, depth, parent }; a closed folder's entries left out (the closed ones are kept
   while Foldex runs). Rows are indented, a folder has an expander (a chevron) and its icon, its Location empty.
-- The buttons: Up, Down (within the entry's folder), New (a chevron; Folder... and Bookmark..., on the Quick access
+- Up and Down (within the entry's folder; Ctrl+Up, Ctrl+Down) are two small arrows in a narrow strip left of the
+  list, greyed out at the first and last entry of the folder; clicked, the keyboard stays in the list. Tested in the
+  test copy: the strip left of the list, Down greyed out on the last entry, the up arrow clicked moving Notes above
+  Alpha in Projects and then greyed out.
+- The buttons under the list: New (a chevron; Folder... and Bookmark..., on the Quick access
   tab "Quick access folder..." and "Quick access shortcut..."), Edit... (a folder: its name asked), To quick access /
   To bookmarks, Move to folder..., Delete, Close. New puts what it makes after the selected row in its folder, or at
   the top inside an open folder that is selected. Left closes a folder (else goes to the folder the row is in), Right
