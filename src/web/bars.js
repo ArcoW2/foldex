@@ -317,7 +317,7 @@ function barMeasure(el, row) {
 function fitBars() {
   const windowLength = side => across(side) ? document.documentElement.clientWidth : document.documentElement.clientHeight;
   for (const line of document.querySelectorAll('.bar-line')) {
-    const els = [...line.children];
+    const els = [...line.children].filter(x => x.bar);   // not the line's >> of the fit before
     if (!els.length) continue;
     const side = els[0].dataset.side, row = across(side);
     for (const el of els) {
