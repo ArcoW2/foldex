@@ -10,6 +10,8 @@ Status: partly executed; see Status and 6 (As built).
 - 2026-11-15: partly executed: stage 4 (Manage column sets, F1, Settings and Manage projects as pages).
 - 2026-11-15: partly executed: stage 5 (Preview and Info as pages, F3).
 - 2026-11-15: partly executed: Dock by dragging.
+- 2026-11-15: partly executed: stage 6 (the tree, the list and the scrap as pages; their colours across windows; a
+  floating scrap; the speed measured).
 
 Builds on plan 12 (docking panes) and plan 03 (connected panes). The number in the file name is the priority; rename to
 reorder.
@@ -66,15 +68,16 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 | F1 | a pane page (docked or floating), not modal; it stays open while actions run, on the active pane | 3.7; 6.7 |
 | Manage column sets | a pane page (docked or floating), no longer a dialog; one of it, opened where it was last (shared with Manage the bookmarks) | 3.7; 6.6 |
 | The Size of a bar | a floating window of its own, not modal (moved off the bar, the main window still resizable); the marks of a bar after one that fills its line measured from its far end | 3.7; 6.5 |
+| Scrap, list and tree as pages | each a page of its own (view.html), docked in a frame or floating, asking the host itself; following, executing, back and forward, the window's actions and the search bar through the window's page | 3.0; 3.3; 6.12 |
+| Colours across windows | head, ring, branch marks and pane theme as when docked, changing with the window's | 3.3; 6.12 |
+| A floating scrap | drops, its search, its dashed ring; gone after a restart unless pinned (then back empty) | 3.3; 6.12 |
+| Speed after stage 6 | the start, the memory, opening a folder of 5150 items, moving the cursor: main before plan 14 and this branch after stage 6 | 3.0; 6.11 |
 
 ### Not yet built
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| Scrap, list and tree as pages | each a page of its own, docked too (a frame), talking to the host itself; following, executing, back and forward through the window's page | -- | 3.0; 3.3 |
-| Colours across windows | head, ring, branch marks and pane theme as when docked, changing with the window's | Scrap, list and tree as pages | 3.3 |
-| A floating scrap | drops, its search, its dashed ring; gone after a restart unless pinned (then back empty) | Scrap, list and tree as pages | 3.3 |
-| Speed after stage 6 | the three figures of 6.11 again once the tree, the list and the scrap are pages | Scrap, list and tree as pages | 3.0; 6.11 |
+| Stage 6 merged | the start after stage 6 no clearly slower than before plan 14 (6.11) | open question 1 | 3.0; 6.11 |
 
 ## 3. Details
 
@@ -94,12 +97,25 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
   a pane makes it the active one. Floating, a menu of the window's page is drawn by the pane (pane.js paneMenu).
 - Moving a pane between docked and floating loads its page in the new place; what it shows is kept by the window's
   page and handed over (`state()`), so it comes back as it was.
-- The tree, the list and the scrap are pages too, docked as well (a frame each, a process each): they behave as truly
-  separate windows, which may share the host as their common server. Their code runs in their own page and asks the
-  host itself (WebView2's frame messages docked, PaneForm floating), as the window's page does; the window's page keeps
-  the layout and passes what connects them (the focus a child follows, executing, back and forward, the colours).
-  Drag and drop between panes goes between pages (the host's shell drag, as from Explorer). The start and memory with a
-  frame per pane are measured (6.11) before stage 6 is merged.
+- The tree, the list and the scrap are pages too, docked as well (a frame each): they behave as truly separate
+  windows, which may share the host as their common server. Their code runs in their own page and asks the host
+  itself (WebView2's frame messages docked, PaneForm floating), as the window's page does; the host answers the page
+  that asked. Drag and drop between panes goes between pages (the host's shell drag, as from Explorer). The start and
+  memory with a frame per pane are measured (6.11) before stage 6 is merged.
+- Their page is `view.html`: the window's own scripts, showing that one pane (`viewpage.js`). It starts on its window's
+  hello and layout (init), with no question to the host. The window's page keeps the layout, sends it whole to every
+  such page when it changes, and has a stand-in for each such pane (`pagedviews.js`): an object of the view's class,
+  so the window's code uses it as a view of its own. What the stand-in knows (where the pane is, the focused and
+  selected items, a scrap's ids, a tree's focused row and open folders, the pane's own settings) its page tells when it
+  changed; any other method of the view runs in the page, with the pane as the window has it, its answer a promise.
+- What a pane does that concerns the others goes to its window: the focus its children follow, executing, going to a
+  folder, its steps for back and forward, a bookmark opened, typing that becomes the search bar's text, and the
+  window's actions from its keys. A few actions and functions that work on the pane's rows themselves (Rename in
+  place, New folder and file, its view, its thumbnail size) the window runs in the pane's page instead. The host's
+  events that change what a page uses (settings, column sets, bookmarks, file operations, folders changed) go to the
+  pages as well.
+- The click that brings the window back (ignoreActivationClick) is the window's: the keyboard going from one pane's page
+  to another of the same window is no leaving.
 - Where Foldex differs from LexPen: LexPen's editor panes stay in its page and only its tool panes are pages; in
   Foldex every pane is one, the tree and the list too, as the user chose. LexPen's scope of a pane (one document, a
   window, LexPen) is not taken: a Foldex pane belongs to its window's layout.
@@ -189,7 +205,7 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 
 | Window | Now | Can be | First opens | Note |
 |---|---|---|---|---|
-| Tree, list, scrap | docked panes | both | docked | 3.1 |
+| Tree, list, scrap | pane pages (view.html, viewpage.js; pagedviews.js) | both (built) | docked | 3.0; 3.1 |
 | Preview, Info, Log | pane pages | both (built) | docked | 3.1 |
 | F3's preview | pane page (preview.html) | both (built) | floating, beside the window | 3.5 |
 | Manage the bookmarks | modal dialog (bookmarks.js) | both | floating, beside the window | plan 26 3.3: a tab for the bookmarks and one for quick access; its Edit... and New open their dialogs over it |
@@ -209,7 +225,13 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 
 ## 4. Open questions
 
-None.
+1. Merge stage 6 with the start as it is? Measured (6.11), it is slower than before plan 14: the start's median
+   1909 ms against 1713 ms, the memory 367 MB against 280 MB, moving the cursor 3.2 ms a press against 3.0 ms (median);
+   opening a folder is not slower.
+   The extra time is the panes' pages loading the scripts after the window's page has its layout (a hidden page warms
+   them meanwhile, built). Ways to make it less, none tried: a page per pane with only the scripts its pane needs; the
+   window's page making the panes' frames before it has its layout and giving each its pane when it does. Merge now,
+   or make the start faster first (and which)?
 
 ## 6. As built
 
@@ -449,12 +471,37 @@ None.
   back. Tested (UI Automation's Close on the window): the Log closed, gone from the layout; Manage column sets closed
   floating, opened again floating.
 
-### 6.12 Stage 6: started
+### 6.12 Stage 6: the tree, the list and the scrap as pages
 
-- A docked pane's frame talks to the host itself: the host knows each frame by its name, its pane's id (MainForm
-  `FrameCreated`, `frames`; panechannel.js names the frame), gets its messages (`CoreWebView2Frame.WebMessageReceived`)
-  and answers that frame alone (`PostWebMessageAsJson`). Tested: the Log's frame sent `ping` and got `{ event: pong, pane: p7 }`
-  back; the window's page saw nothing of it. Floating, PaneForm is that page's own host already.
+- The host: a frame's message (`CoreWebView2Frame.WebMessageReceived`; MainForm `FrameCreated`) and a floating page's
+  own request (an `op`, PaneForm) go through the same handler as the window page's; `Post` answers the page that asked
+  (an `AsyncLocal` reply target that flows through the awaits of that message, so a listing's parts and its icons go
+  there too), `Tell` is the window's page, for what AppHost tells every window. A floating page's answer that comes
+  before its page has loaded waits in PaneForm's queue. A dialog opened by a pane's page (Rename for several items) is
+  that page's: its messages and answer go back there (PaneForm `TellPage`). Windows' menu asked by a pane's page is
+  placed on the screen (`screen`), as the host does not know where that page is.
+- view.html, viewpage.js and pagedviews.js as 3.0 says. `PagedKinds` are the tree, the list and the scrap; `PageActions`
+  item.rename, folder.new and file.new; `PageFunctions` setPaneView and thumbZoom. The stand-in's head is the window's
+  (a scrap's with its Stop and X); docked, the page hides its own head and ring; floating, it draws them, in the
+  colours of the layout it gets. The window's loops that answer the host's events skip the stand-ins, whose pages get
+  those events themselves. A page tells what it shows only when a cheap key of it changed (not on a scroll): a tree's
+  report costs 2 ms with 49,000 nodes (measured in its page).
+- Start: the window keeps the host's hello as its events change it and gives it with init; a pane's page draws no
+  ribbon, bars, drives or project. A hidden page of no pane loads the scripts in the panes' process while the window
+  waits for its hello, gone once a pane's page reports (6.11: the start's median 2134 ms without it, 1909 ms with).
+- Tested in the test copy (the page's own mouse and keys through the debugging port, not the machine's mouse): the tree
+  clicked and revealed, the list following (also floating, and a floating tree driving a docked list); a list row
+  clicked, Down, Shift+Down, the window's selection and the ribbon's Copy enabled; a folder double-clicked, opened by
+  the tree, the list following; Backspace; Back (Alt+Left); F2 renaming in place in the list's page; Ctrl+A; a delete
+  through the host, the list read again; typing a go-to and, resting, the search bar's filter in the list's page; the
+  list floated (its own head, its focus kept), docked, and back after a restart floating and docked; Details,
+  Thumbnails, a larger thumbnail size, hidden items, a sort by a column title, the shape changed to a tree and back; a
+  tree's Down, Right and Left, Open on a list's folder; Add to scrap, a search into a new scrap and into a floating one,
+  Delete in a scrap (out of it only), a scrap floated and docked with its items, a pinned scrap back empty after a
+  restart and a floating unpinned one gone; New child pane, Ctrl+O, New tab, closing, the presets Dual and Default; a
+  floating list's head and pane theme in its branch's colour, dimmed when another pane is active.
+- Not checked: Windows' menu of an item in a pane's page with the machine's mouse (where it opens), dragging between
+  pages and from Explorer onto a pane's page, and the host's side of a real title-bar drag: `[not yet checked]`.
 
 ### 6.11 Speed
 
@@ -474,3 +521,15 @@ None.
 
 - None is clearly slower; the start's medians are 56 ms apart, within the spread of the runs (one run after took
   3381 ms, its first; the others 2281 - 2678 ms).
+- After stage 6 (`speed6.ps1`, the session's scratch folder: as speed.ps1, the list measured in its own page, the start
+  until its window knows it shows items, and the memory: the private bytes of Foldex and every process below it, 3 s
+  after the start): main at 3b514d8 against this branch at 6729cf0, five runs each, taking turns.
+
+| Figure | Before (median of 5; min - max) | After stage 6 (median of 5; min - max) |
+|---|---|---|
+| Start until the first folder shows | 1713 ms (1631 - 1962) | 1909 ms (1890 - 3459) |
+| Memory, 3 s after the start | 280 MB (279 - 283), 7 processes | 367 MB (362 - 369), 8 processes |
+| Opening a folder of 5150 items | 182 ms (170 - 221) | 164 ms (160 - 190) |
+| Moving the cursor (Down), per press | 3.0 ms median; mean 3.12 ms; worst 9.2 ms | 3.2 ms median; mean 3.41 ms; worst 10.6 ms |
+
+- The start is slower: four of the five runs after took longer than four of the five before. Open question 1.

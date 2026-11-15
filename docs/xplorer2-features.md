@@ -27,7 +27,7 @@ updated whenever a plan is written, built or closed that touches a feature here.
 | Two trees (one per pane) | P+ | built (any number of roots) | 5 | -- |
 | Ribbon or menu bar, quick access toolbar | All | part: ribbon built (basic); the rest as LexPen's (icons, change mode, lists, key tips, height): plan 19; menus, QAT -- | 5 | -- |
 | Drive bar with free space | P+ | built (plan 10, drives bar) | 5 | bars (plan 10) |
-| Detachable, floating, docked panes | P+ | built (plan 12); floating: plan 14, part (the Log floats; the other panes as their stages come) | 4 | -- |
+| Detachable, floating, docked panes | P+ | built (plan 12); floating: plan 14, built (every pane floats, the tree, the list and the scrap too; their stage not merged yet, plan 14 open question 1) | 4 | -- |
 | Miller columns | P+ | built (plan 03, preset "Columns") | 4 | presets (plan 03) |
 | Named window layouts (workspaces) | P+ | built (plan 15): projects, a default layout | 4 | -- |
 | Address bar: breadcrumbs, typed path, autocomplete | P+ | part: the path bar (plan 10), typed; breadcrumbs in a column; autocomplete -- | 4 | bars (plan 10) |
