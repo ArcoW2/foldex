@@ -1830,6 +1830,20 @@ dialog.bm-manage .ask-buttons { margin-top: 10px; }
 .bm-cell { position: relative; padding: 2px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bm-grip { position: absolute; top: 0; right: 0; bottom: 0; width: 6px; cursor: col-resize; border-right: 1px solid var(--border); }
 .bm-row { cursor: default; }
+/* Its handle (bookmarks.js dragManageRow): dragged, the row moves; where it goes a line. */
+.bm-handle {
+  flex: none;
+  width: 8px;
+  height: 14px;
+  margin-right: 2px;
+  cursor: grab;
+  background: radial-gradient(circle, var(--fg-dim) 1px, transparent 1.5px) 0 0 / 4px 4px;
+  opacity: .6;
+}
+.bm-row:hover .bm-handle, .bm-row.selected .bm-handle { opacity: 1; }
+.bm-dragging, .bm-dragging * { cursor: grabbing; }
+.bm-row.bm-drop-before { box-shadow: inset 0 2px 0 var(--accent); }
+.bm-row.bm-drop-after { box-shadow: inset 0 -2px 0 var(--accent); }
 .bm-row.selected { background: var(--select); }
 .bm-name { display: flex; align-items: center; gap: 6px; }
 .bm-name img, .bm-icon-shown img { width: 16px; height: 16px; flex: none; }

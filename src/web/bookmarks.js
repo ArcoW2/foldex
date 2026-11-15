@@ -292,6 +292,7 @@ function buildBookmarkManage() {
     if (!r) return;
     bmManage.at = +r.dataset.i;
     drawBookmarkManage();
+    if (e.button === 0 && e.target.closest('.bm-handle')) dragManageRow(e, +r.dataset.i);
   });
   list.addEventListener('dblclick', e => { if (e.target.closest('[data-i]')) bookmarkManageDo('edit'); });
   el.querySelector('.ask-buttons').addEventListener('click', e => { const b = e.target.closest('[data-do]'); if (b) bookmarkManageDo(b.dataset.do); });
@@ -334,7 +335,8 @@ function drawBookmarkManage() {
     row.className = 'bm-row' + (k === bmManage.at ? ' selected' : '') + (bookmarkMissing(b.location) ? ' missing' : '');
     row.dataset.i = k;
     const name = Object.assign(document.createElement('span'), { className: 'bm-cell bm-name' });
-    name.append(bookmarkIcon(b), Object.assign(document.createElement('span'), { textContent: bookmarkName(b) }));
+    const handle = Object.assign(document.createElement('span'), { className: 'bm-handle', title: 'Drag to move it up or down' });
+    name.append(handle, bookmarkIcon(b), Object.assign(document.createElement('span'), { textContent: bookmarkName(b) }));
     const where = Object.assign(document.createElement('span'), { className: 'bm-cell bm-where', textContent: folderPath(b.location), title: folderPath(b.location) });
     row.append(name, where);
     return row;
@@ -343,6 +345,56 @@ function drawBookmarkManage() {
     textContent: quick ? 'No quick access yet: Add..., or Move to quick access on the Bookmarks tab.' : 'No bookmarks yet: Add... picks a folder.' }));
   box.querySelector('.selected')?.scrollIntoView({ block: 'nearest' });
   for (const b of el.querySelectorAll('[data-do=up], [data-do=down], [data-do=edit], [data-do=to], [data-do=delete]')) b.disabled = !rows.length;
+}
+
+// A row's handle dragged: a line shows where it goes (before the row under the mouse, or after it in its lower
+// half); let go, the entry moves there on its tab, the entries of the other tab keep their places.
+function dragManageRow(e, from) {
+  e.preventDefault();
+  const box = bmManage.el.querySelector('.bm-rows'), list = bmManage.el.querySelector('.bm-list');
+  let to = from;
+  box.classList.add('bm-dragging');
+  const where = ev => {
+    const rows = [...box.querySelectorAll('.bm-row')];
+    if (!rows.length) return from;
+    for (const [k, row] of rows.entries()) {
+      const r = row.getBoundingClientRect();
+      if (ev.clientY < r.top + r.height / 2) return k;
+    }
+    return rows.length;
+  };
+  const show = () => box.querySelectorAll('.bm-row').forEach((row, k) => {
+    row.classList.toggle('bm-drop-before', k === to && to !== from && to !== from + 1);
+    row.classList.toggle('bm-drop-after', k === to - 1 && to === box.children.length && to !== from + 1);
+  });
+  const move = ev => {
+    // Near the list's top or bottom edge it scrolls.
+    const r = list.getBoundingClientRect();
+    if (ev.clientY < r.top + 20) list.scrollTop -= 8;
+    else if (ev.clientY > r.bottom - 20) list.scrollTop += 8;
+    to = where(ev);
+    show();
+  };
+  const up = () => {
+    removeEventListener('mousemove', move);
+    removeEventListener('mouseup', up);
+    box.classList.remove('bm-dragging');
+    if (to === from || to === from + 1) return drawBookmarkManage();
+    moveInTab(from, to);
+  };
+  addEventListener('mousemove', move);
+  addEventListener('mouseup', up);
+}
+
+// The tab's row `from` put before its row `to` (the tab's count: after its last), in the whole list.
+function moveInTab(from, to) {
+  const rows = manageRows(), list = [...bookmarks];
+  const entry = list[rows[from]];
+  const target = to < rows.length ? list[rows[to]] : null, last = list[rows.at(-1)];
+  list.splice(rows[from], 1);
+  list.splice(target ? list.indexOf(target) : list.indexOf(last) + 1, 0, entry);
+  bmManage.at = to > from ? to - 1 : to;
+  saveBookmarks(list);
 }
 
 // Every change goes to the host at once: the whole list.

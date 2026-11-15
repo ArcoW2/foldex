@@ -142,7 +142,9 @@ within it, Del on a shortcut), Add current folder / Remove current folder, Add a
   - Copy to: a copy of it on the other tab, beside it in the list: its own id, the same location, name, icon and way of
     opening, no keys (a key opens one entry). Renaming either later leaves the other as it is.
 - Up and Down move an entry past its neighbour on the same tab; the entries of the other tab keep their places.
-  Delete, Close and their keys as built; every change goes to the host at once.
+- Each row has a handle before its icon: dragged up or down, a line shows where the entry goes, and let go it moves
+  there on its tab (the list scrolls near its edges); the entries of the other tab keep their places.
+- Delete, Close and their keys as built; every change goes to the host at once.
 - Where Foldex differs from LexPen: LexPen's Manage has one row per file with its folder under it, and Change...
   picks another file. Foldex has columns and Edit..., as the user asked.
 
@@ -356,6 +358,9 @@ None.
   an entry of the location on both tabs (Remove from quick access, Remove from bookmarks; on the shortcut also
   Edit...); two shortcuts of one location as two rows in the tree, Del on one taking off only that one; the ids the
   same after a restart; Ctrl+Down on the Quick access tab swapping only with its neighbour there.
+- The row handle (bookmarks.js dragManageRow, moveInTab: mouse events, not the browser's drag): tested with a real
+  mouse drag of the first row below the third and of the last row to the top, the line shown before the drop, the
+  Quick access entries in between keeping their places.
 - Manage is still a modal dialog; as a pane, docked or floating, it is in plan 14 3.7.
 
 ### 6.3 Edit, Change Icon
