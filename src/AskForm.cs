@@ -242,6 +242,17 @@ sealed class AskForm : Form
         }, look) == "yes";
     }
 
+    /// <summary>A question of a page with its own buttons ({ text, lines, buttons: [[value, name], ...] }; a null value is
+    /// Cancel); the value of the button chosen, null for Cancel, Esc or closed.</summary>
+    public static string? Choose(AppHost app, IWin32Window owner, JsonNode msg, JsonObject? look = null)
+    {
+        var text = msg["text"]?.GetValue<string>() ?? "";
+        var lines = msg["lines"]?.AsArray().Select(n => n?.GetValue<string>() ?? "").ToList() ?? [];
+        if (lines.Count > 0) text += "\n\n" + string.Join("\n", lines);
+        var buttons = msg["buttons"]?.AsArray().Select(b => (b![0]?.GetValue<string>(), b[1]!.GetValue<string>(), (string?)null)).ToList() ?? [];
+        return Answer(app, owner, new Question { Text = text, Sign = Sign.Question, Buttons = buttons }, look);
+    }
+
     // A button with its key always underlined: Windows hides them until Alt is pressed.
     sealed class KeyButton : Button
     {

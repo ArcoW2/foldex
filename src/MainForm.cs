@@ -208,6 +208,11 @@ sealed class MainForm : Form
             case "confirm":
                 Post(new JsonObject { ["event"] = "answer", ["req"] = msg["req"]?.DeepClone(), ["yes"] = AskForm.Confirm(app, this, msg) });
                 break;
+            case "choose":
+                // A question with the page's own buttons (docs/plans/executed/27-PLAN-bookmark-folders.md 3.6): the value of the
+                // one chosen, null for Cancel.
+                Post(new JsonObject { ["event"] = "answer", ["req"] = msg["req"]?.DeepClone(), ["choice"] = AskForm.Choose(app, this, msg) });
+                break;
             case "ready":
                 pageReady = true;
                 var (version, commit) = AppHost.Version();
@@ -329,9 +334,9 @@ sealed class MainForm : Form
                 // folder is asked off this thread (a share may not answer).
                 var place = msg["quickAccessAt"]!.GetValue<int>();
                 var folders = await Task.Run(() => files.Where(f => Directory.Exists(f)).ToList());
-                // A shortcut dragged within the area: that one moved, not another made.
-                var moveId = msg["moveId"]?.GetValue<string>();
-                foreach (var f in folders) app.AddToQuickAccess(f, false, place++, folders.Count == 1 ? moveId : null);
+                // Into a quick access folder (plan 27 3.3): among what it holds.
+                var group = msg["quickAccessIn"]?.GetValue<string>();
+                foreach (var f in folders) app.AddToQuickAccess(f, false, place++, group);
                 break;
             }
             case "drop" when msg["scrap"]?.GetValue<bool>() == true:
@@ -444,7 +449,7 @@ sealed class MainForm : Form
             }
             case "bookmarksExist":
             {
-                var all = app.BookmarkList.ToList();
+                var all = Bookmarks.All(app.BookmarkList).Where(b => !b.IsGroup).ToList();
                 var exists = new JsonObject();
                 await Task.WhenAll(all.Select(async b =>
                 {
@@ -846,12 +851,12 @@ sealed class MainForm : Form
     // its entry's id): its Remove takes off only that one, and Edit... edits it.
     List<(string Text, Action Run)> OwnMenu(string location, bool item, string? bookmark)
     {
-        var shortcut = bookmark is null ? null : app.BookmarkList.FirstOrDefault(b => b.Id == bookmark);
+        var shortcut = bookmark is null ? null : Bookmarks.All(app.BookmarkList).FirstOrDefault(b => b.Id == bookmark && !b.IsGroup);
         (string, Action) Tab(bool quick)
         {
             var name = quick ? "quick access" : "bookmarks";
             if (shortcut is not null && shortcut.QuickAccess == quick) return ($"Remove from {name}", () => app.RemoveBookmark(shortcut.Id));
-            return app.BookmarkList.Any(b => b.QuickAccess == quick && Bookmarks.Same(b.Location, location))
+            return Bookmarks.All(app.BookmarkList).Any(b => !b.IsGroup && b.QuickAccess == quick && Bookmarks.Same(b.Location, location))
                 ? ($"Remove from {name}", () => app.RemoveBookmarks(location, quick))
                 : ($"Add to {name}", () => app.AddBookmark(location, item, quick));
         }

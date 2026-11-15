@@ -13,6 +13,9 @@ public class BookmarkKeysTests
             var document = { addEventListener() {} };
             var status = () => {};
             var same = (a, b) => a != null && b != null && a.toLowerCase() === b.toLowerCase();
+            var posted = [];
+            var post = m => posted.push(m);
+            if (typeof structuredClone === 'undefined') var structuredClone = x => JSON.parse(JSON.stringify(x));
             """);
         foreach (var f in new[] { "panes.js", "keys.js", "actions.js", "bookmarks.js" }) engine.Execute(File.ReadAllText(Path.Combine(Web, f)));
         // keys.json: Copy, a chord starting with Ctrl+K, and F6 on its own. C:\A is both a shortcut and a bookmark.
@@ -81,6 +84,67 @@ public class BookmarkKeysTests
         Assert.Equal("false", Eval(e, "keys.prefixes.has('Ctrl+K')"));
         Assert.Equal("false", Eval(e, "keys.bindings.has('F7')"));   // F7 now only starts the bookmark's chord
         Assert.Equal("true", Eval(e, "keys.prefixes.has('F7')"));
+    }
+
+    // Folders (docs/plans/executed/27-PLAN-bookmark-folders.md 3.1, 3.4).
+    static Jint.Engine WithFolders()
+    {
+        var e = Page();
+        e.Execute("""
+            bookmarks = [
+              { id: 'p', folder: 'Projects', items: [
+                { id: 'l', location: 'C:\\LexPen', key: 'Ctrl+B, 7' },
+                { id: 'c', folder: 'Clients', items: [{ id: 'aa', location: 'C:\\ActiveAnts', keyNew: 'Ctrl+B, 8' }] },
+              ] },
+              { id: 'f', location: 'C:\\Foldex' },
+              { id: 'q', location: 'C:\\Q', quickAccess: true },
+            ];
+            buildKeys();
+            """);
+        return e;
+    }
+
+    static string Tree(Jint.Engine e) => Eval(e, "bookmarkPlaces().map(p => '  '.repeat(p.depth) + p.b.id + (p.quick ? '*' : '')).join('|')");
+
+    [Fact]
+    public void TheKeysOfBookmarksInFoldersAtAnyDepthAreInTheKeySet()
+    {
+        var e = WithFolders();
+        Assert.Equal("bookmarks.open l", Eval(e, "keys.bindings.get('Ctrl+B, 7').join(' ')"));
+        Assert.Equal("bookmarks.openNew aa", Eval(e, "keys.bindings.get('Ctrl+B, 8').join(' ')"));
+        Assert.Equal("l|aa|f|q", Eval(e, "actionDef('bookmarks.open').variants.map(v => v[0]).join('|')"));   // folders are no variants
+    }
+
+    [Fact]
+    public void AnEntryMovesIntoAFolderBetweenRowsAndAFolderNotIntoItself()
+    {
+        var e = WithFolders();
+        // Into Clients, at its end.
+        Assert.Equal("true", Eval(e, "moveBookmarkTo('f', 'c', false, Infinity)"));
+        Assert.Equal("p|  l|  c|    aa|    f|q*", Tree(e));
+        // Between LexPen and Clients (at 1 in Projects).
+        Assert.Equal("true", Eval(e, "moveBookmarkTo('f', 'p', false, 1)"));
+        Assert.Equal("p|  l|  f|  c|    aa|q*", Tree(e));
+        // Moved down within its folder: counted as the list was.
+        Assert.Equal("true", Eval(e, "moveBookmarkTo('l', 'p', false, 2)"));
+        Assert.Equal("p|  f|  l|  c|    aa|q*", Tree(e));
+        // A folder into itself or into one inside it: refused, nothing changes.
+        Assert.Equal("false", Eval(e, "moveBookmarkTo('p', 'c', false, 0)"));
+        Assert.Equal("false", Eval(e, "moveBookmarkTo('p', 'p', false, 0)"));
+        // Out to the other tab's top: it and what it holds on quick access.
+        Assert.Equal("true", Eval(e, "moveBookmarkTo('c', null, true, Infinity)"));
+        Assert.Equal("p|  f|  l|q*|c*|  aa*", Tree(e));
+        Assert.Equal("bookmarksSet", Eval(e, "posted.at(-1).op"));
+    }
+
+    [Fact]
+    public void TheTopOfEachTabTakesItsFoldersInListOrder()
+    {
+        var e = WithFolders();
+        Assert.Equal("p|f", Eval(e, "menuBookmarks().map(b => b.id).join('|')"));
+        Assert.Equal("q", Eval(e, "quickAccessList().map(b => b.id).join('|')"));
+        Assert.Equal("aa", Eval(e, @"bookmarkAt('c:\\activeants', false).id"));
+        Assert.Equal("Clients", Eval(e, "bookmarkName(bookmarkById('c'))"));
     }
 
     [Fact]

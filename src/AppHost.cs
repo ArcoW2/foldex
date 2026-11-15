@@ -297,7 +297,7 @@ sealed class AppHost : ApplicationContext
     public JsonObject BookmarksJson()
     {
         var paths = new JsonObject();
-        foreach (var f in bookmarks.Select(b => b.Location).Where(f => f.StartsWith("shell:", StringComparison.OrdinalIgnoreCase)).Distinct())
+        foreach (var f in Bookmarks.All(bookmarks).Where(b => !b.IsGroup).Select(b => b.Location).Where(f => f.StartsWith("shell:", StringComparison.OrdinalIgnoreCase)).Distinct())
             paths[f] = Bookmarks.Resolve(f);
         return new()
         {
@@ -317,12 +317,13 @@ sealed class AppHost : ApplicationContext
 
     public void AddBookmark(string location, bool item, bool quickAccess) => SetBookmarks(Bookmarks.Add(bookmarks, location, item, quickAccess));
 
-    /// <summary>Put into the Quick access area at `at` (counted among its shortcuts); `moveId`: a shortcut moved there.</summary>
-    public void AddToQuickAccess(string location, bool item, int at, string? moveId = null) =>
-        SetBookmarks(Bookmarks.ToQuickAccess(bookmarks, location, item, at, moveId));
+    /// <summary>Put into the Quick access area at `at` (counted among its top-level entries, or in the quick access
+    /// folder `group`).</summary>
+    public void AddToQuickAccess(string location, bool item, int at, string? group = null) =>
+        SetBookmarks(Bookmarks.ToQuickAccess(bookmarks, location, item, at, group));
 
-    /// <summary>One entry taken off, by its id.</summary>
-    public void RemoveBookmark(string id) => SetBookmarks(bookmarks.Where(b => b.Id != id));
+    /// <summary>One entry taken off, by its id, at any depth.</summary>
+    public void RemoveBookmark(string id) => SetBookmarks(Bookmarks.Without(bookmarks, id));
 
     /// <summary>Every entry of a location on one tab taken off (Windows' menu: Remove from quick access, or bookmarks).</summary>
     public void RemoveBookmarks(string location, bool quickAccess) => SetBookmarks(Bookmarks.RemoveFrom(bookmarks, location, quickAccess));

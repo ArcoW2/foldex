@@ -7,14 +7,25 @@ namespace Foldex;
 /// <summary>One bookmark (docs/plans/executed/26-PLAN-bookmarks.md 3.1): a folder or an item (a file), with what it was given.
 /// Each entry stands on its own: the same location can be another entry too (on the other tab, or twice on one), so an
 /// entry is known by its Id. Location and Id are always there; Name and Icon null when not set, Key and KeyNew null
-/// without a key.</summary>
+/// without a key.
+/// A folder of bookmarks (docs/plans/executed/27-PLAN-bookmark-folders.md 3.1) is an entry too: Group its name (never null for
+/// one), Items what it holds, bookmarks and folders, to any depth; no location. Named Group in the code, so it is never
+/// taken for a folder on disk. What a folder holds is on its tab: its QuickAccess is the folder's.</summary>
 sealed class Bookmark
 {
     public string Id = "", Location = "";
     public bool Item, QuickAccess, Root;
-    public string? Name, Icon, Key, KeyNew;
+    public string? Name, Icon, Key, KeyNew, Group;
+    public List<Bookmark>? Items;
 
-    public Bookmark Copy() => (Bookmark)MemberwiseClone();
+    public bool IsGroup => Group is not null;
+
+    public Bookmark Copy()
+    {
+        var c = (Bookmark)MemberwiseClone();
+        c.Items = Items?.Select(i => i.Copy()).ToList();
+        return c;
+    }
 
     /// <summary>A new entry's id: short, and never one the list has.</summary>
     public static string NewId() => Guid.NewGuid().ToString("N")[..12];
@@ -22,6 +33,13 @@ sealed class Bookmark
     /// <summary>As bookmarks.json writes it: only what is set.</summary>
     public JsonObject ToJson()
     {
+        if (IsGroup)
+        {
+            var g = new JsonObject { ["id"] = Id, ["folder"] = Group };
+            if (QuickAccess) g["quickAccess"] = true;
+            g["items"] = new JsonArray((Items ?? []).Select(i => (JsonNode)i.ToJson()).ToArray());
+            return g;
+        }
         var o = new JsonObject { ["id"] = Id, ["location"] = Location };
         if (Item) o["item"] = true;
         if (QuickAccess) o["quickAccess"] = true;
@@ -33,13 +51,21 @@ sealed class Bookmark
         return o;
     }
 
-    /// <summary>An entry of bookmarks.json (or of the page); a plain string is a location. Null without a location.</summary>
+    /// <summary>An entry of bookmarks.json (or of the page); a plain string is a location; an object with `folder` a
+    /// folder with its items. Null without a location (and not a folder).</summary>
     public static Bookmark? From(JsonNode? n)
     {
         if (n is JsonValue v && v.TryGetValue<string>(out var s)) return string.IsNullOrWhiteSpace(s) ? null : new() { Location = s };
-        if (n is not JsonObject o || o["location"]?.GetValue<string>() is not { } location || string.IsNullOrWhiteSpace(location)) return null;
+        if (n is not JsonObject o) return null;
         string? Text(string key) => o[key] is JsonValue t && t.TryGetValue<string>(out var x) && x.Length > 0 ? x : null;
         bool Flag(string key) => o[key] is JsonValue t && t.TryGetValue<bool>(out var x) && x;
+        if (o["folder"] is JsonValue f && f.TryGetValue<string>(out var group))
+            return new()
+            {
+                Id = Text("id") ?? "", Group = group, QuickAccess = Flag("quickAccess"),
+                Items = o["items"] is JsonArray items ? items.Select(From).OfType<Bookmark>().ToList() : [],
+            };
+        if (o["location"]?.GetValue<string>() is not { } location || string.IsNullOrWhiteSpace(location)) return null;
         return new()
         {
             Id = Text("id") ?? "", Location = location, Item = Flag("item"), QuickAccess = Flag("quickAccess"), Root = Flag("root"),
@@ -71,7 +97,7 @@ static class Bookmarks
             var root = JsonNode.Parse(File.ReadAllText(path), documentOptions: Options);
             var read = root?["bookmarks"]?.AsArray().Select(Bookmark.From).OfType<Bookmark>().ToList() ?? [];
             // Entries without an id (a bookmarks.json from before ids) get theirs written once, so they keep them.
-            if (read.Any(b => b.Id == ""))
+            if (All(read).Any(b => b.Id == ""))
                 try { return Save(dataDir, read); }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
             return Clean(read);
@@ -122,21 +148,44 @@ static class Bookmarks
         return list;
     }
 
-    /// <summary>The entries as kept: one without a location left out; each with an id of its own (none, or one that came
-    /// before: a new one); a name that is empty or the location's own name dropped.</summary>
-    public static List<Bookmark> Clean(IEnumerable<Bookmark> bookmarks)
+    /// <summary>The entries as kept: a bookmark without a location left out; each entry with an id of its own (none, or
+    /// one that came before: a new one); a name that is empty or the location's own name dropped; a folder without a
+    /// name called "New folder"; what a folder holds on the folder's tab, at any depth.</summary>
+    public static List<Bookmark> Clean(IEnumerable<Bookmark> bookmarks) => Clean(bookmarks, new HashSet<string>(), null);
+
+    static List<Bookmark> Clean(IEnumerable<Bookmark> bookmarks, HashSet<string> ids, bool? tab)
     {
-        var ids = new HashSet<string>();
         var list = new List<Bookmark>();
         foreach (var b in bookmarks)
         {
-            if (string.IsNullOrWhiteSpace(b.Location)) continue;
+            if (!b.IsGroup && string.IsNullOrWhiteSpace(b.Location)) continue;
             var c = b.Copy();
             if (string.IsNullOrEmpty(c.Id) || !ids.Add(c.Id)) ids.Add(c.Id = Bookmark.NewId());
-            if (string.IsNullOrWhiteSpace(c.Name) || c.Name == OwnName(c.Location)) c.Name = null;
+            if (tab is { } quick) c.QuickAccess = quick;
+            if (c.IsGroup)
+            {
+                if (string.IsNullOrWhiteSpace(c.Group)) c.Group = "New folder";
+                c.Items = Clean(c.Items ?? [], ids, c.QuickAccess);
+            }
+            else if (string.IsNullOrWhiteSpace(c.Name) || c.Name == OwnName(c.Location)) c.Name = null;
             list.Add(c);
         }
         return list;
+    }
+
+    /// <summary>Every entry, at any depth (folders and what they hold), in the order of the list.</summary>
+    public static IEnumerable<Bookmark> All(IEnumerable<Bookmark> list) =>
+        list.SelectMany(b => b.IsGroup ? [b, .. All(b.Items ?? [])] : new[] { b });
+
+    /// <summary>The list without the entry with that id (at any depth; a folder with what it holds).</summary>
+    public static List<Bookmark> Without(List<Bookmark> list, string id) =>
+        list.Where(b => b.Id != id).Select(b => b.IsGroup ? WithItems(b, Without(b.Items ?? [], id)) : b).ToList();
+
+    static Bookmark WithItems(Bookmark b, List<Bookmark> items)
+    {
+        var c = b.Copy();
+        c.Items = items;
+        return c;
     }
 
     /// <summary>A location's own name: the last part of its path (a known folder's where it is now).</summary>
@@ -151,32 +200,39 @@ static class Bookmarks
     public static bool Same(string a, string b) =>
         string.Equals(Resolve(a).TrimEnd('\\'), Resolve(b).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>A location put into the Quick access area at `at` (counted among its shortcuts; past the last: after
-    /// it): a new shortcut, or (`moveId`: a shortcut dragged within the area) that one moved there. The bookmarks of the
-    /// menu keep their places.</summary>
-    public static List<Bookmark> ToQuickAccess(List<Bookmark> list, string location, bool item, int at, string? moveId = null)
+    /// <summary>A location dropped on the Quick access area: a new shortcut at `at`, counted among the area's top-level
+    /// entries (past the last: after it), or (`group`: a quick access folder's id) among what that folder holds. The
+    /// bookmarks of the menu keep their places.</summary>
+    public static List<Bookmark> ToQuickAccess(List<Bookmark> list, string location, bool item, int at, string? group = null)
     {
-        var known = moveId is null ? null : list.FirstOrDefault(b => b.Id == moveId && b.QuickAccess);
-        var entry = known?.Copy() ?? new Bookmark { Id = Bookmark.NewId(), Location = Known(location), Item = item };
-        entry.QuickAccess = true;
-        var rest = list.Where(b => b != known).ToList();
+        var entry = new Bookmark { Id = Bookmark.NewId(), Location = Known(location), Item = item, QuickAccess = true };
+        if (group is not null && All(list).Any(b => b.Id == group && b.IsGroup)) return InGroup(list, group, entry, at);
+        var rest = list.ToList();
         var shortcuts = rest.Where(b => b.QuickAccess).ToList();
-        // Its place counted among the shortcuts as they were: one moved down lands where it was dropped.
-        var before = list.Where(b => b.QuickAccess).Take(Math.Max(0, at)).Count(b => b != known);
-        var index = before < shortcuts.Count ? rest.IndexOf(shortcuts[before])
-            : shortcuts.Count > 0 ? rest.IndexOf(shortcuts[^1]) + 1
-            : known is not null ? list.IndexOf(known) : rest.Count;
+        var index = Math.Max(0, at) < shortcuts.Count ? rest.IndexOf(shortcuts[Math.Max(0, at)])
+            : shortcuts.Count > 0 ? rest.IndexOf(shortcuts[^1]) + 1 : rest.Count;
         rest.Insert(Math.Clamp(index, 0, rest.Count), entry);
         return rest;
     }
+
+    // An entry put into the folder with that id, at `at` among what it holds.
+    static List<Bookmark> InGroup(List<Bookmark> list, string group, Bookmark entry, int at) => list.Select(b =>
+    {
+        if (!b.IsGroup) return b;
+        List<Bookmark> items = b.Id == group ? [.. b.Items ?? []] : InGroup(b.Items ?? [], group, entry, at);
+        if (b.Id == group) items.Insert(Math.Clamp(at, 0, items.Count), entry);
+        return WithItems(b, items);
+    }).ToList();
 
     /// <summary>A location added at the end, as a new entry (a quick access shortcut or a bookmark of the menu).</summary>
     public static List<Bookmark> Add(List<Bookmark> list, string location, bool item, bool quickAccess) =>
         [.. list, new Bookmark { Id = Bookmark.NewId(), Location = Known(location), Item = item, QuickAccess = quickAccess }];
 
-    /// <summary>The entries of a location on one tab (quick access, or the bookmarks of the menu) taken off.</summary>
-    public static List<Bookmark> RemoveFrom(List<Bookmark> list, string location, bool quickAccess) =>
-        list.Where(b => b.QuickAccess != quickAccess || !Same(b.Location, location)).ToList();
+    /// <summary>The bookmarks of a location on one tab (quick access, or the bookmarks of the menu) taken off, inside
+    /// folders too.</summary>
+    public static List<Bookmark> RemoveFrom(List<Bookmark> list, string location, bool quickAccess) => list
+        .Where(b => b.IsGroup || b.QuickAccess != quickAccess || !Same(b.Location, location))
+        .Select(b => b.IsGroup && b.QuickAccess == quickAccess ? WithItems(b, RemoveFrom(b.Items ?? [], location, quickAccess)) : b).ToList();
 
     // The known folders by their shell names; their paths asked of Windows (they can be moved, to OneDrive for one).
     static readonly (string Shell, Guid Id)[] KnownFolders =

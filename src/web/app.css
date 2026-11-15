@@ -941,6 +941,8 @@ body[data-focus-away] :is(.row, .tile).selected.focused {
 .row.missing .name { color: var(--fg-dim); text-decoration: line-through; }
 .row.qa-drop-before { box-shadow: inset 0 2px 0 var(--accent); }
 .row.qa-drop-after { box-shadow: inset 0 -2px 0 var(--accent); }
+/* A quick access folder something would be dropped into (plan 27 3.3): lit. */
+.row.qa-drop-into { background: color-mix(in srgb, var(--accent) 30%, transparent); box-shadow: inset 0 0 0 1px var(--accent); }
 
 .row.focused .guide { --tree-line-colour: currentColor; }
 
@@ -1844,6 +1846,37 @@ dialog.bm-manage .ask-buttons { margin-top: 10px; }
 .bm-dragging, .bm-dragging * { cursor: grabbing; }
 .bm-row.bm-drop-before { box-shadow: inset 0 2px 0 var(--accent); }
 .bm-row.bm-drop-after { box-shadow: inset 0 -2px 0 var(--accent); }
+/* Folders (plan 27 3.4): a folder lit when a row would go into it; the expander (a chevron, as the trees'); the
+   folder icon; Move to folder...'s list, a folder that cannot take the entry greyed out. */
+.bm-row.bm-drop-into { background: color-mix(in srgb, var(--accent) 30%, transparent); box-shadow: inset 0 0 0 1px var(--accent); }
+.bm-twisty { flex: none; width: 12px; height: 12px; position: relative; cursor: default; }
+.bm-twisty.open::before, .bm-twisty.shut::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 2px;
+  width: 4px;
+  height: 4px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+}
+.bm-twisty.open::before { transform: rotate(45deg); top: 1px; }
+.bm-group-icon, .bm-name img.bm-group-icon { width: 16px; height: 16px; }
+dialog.bm-pick { width: min(420px, calc(100vw - 32px)); }
+.bm-pick-list {
+  height: 240px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg);
+  outline: none;
+}
+.bm-pick-list:focus { border-color: var(--accent); }
+.bm-pick-row { display: flex; align-items: center; gap: 6px; padding: 2px 8px; cursor: default; white-space: nowrap; }
+.bm-pick-row img { width: 16px; height: 16px; }
+.bm-pick-row.selected { background: var(--select); }
+.bm-pick-row.off { opacity: .45; }
 .bm-row.selected { background: var(--select); }
 .bm-name { display: flex; align-items: center; gap: 6px; }
 .bm-name img, .bm-icon-shown img { width: 16px; height: 16px; flex: none; }

@@ -110,8 +110,6 @@ public class BookmarksTests
         string Order(List<Bookmark> l) => string.Join(" ", l.Select(b => (b.QuickAccess ? "q" : "m") + b.Location[3..]));
         Assert.Equal(@"qX qA mM qB qC", Order(Bookmarks.ToQuickAccess(list, @"C:\X", false, 0)));
         Assert.Equal(@"qA mM qB qC qX", Order(Bookmarks.ToQuickAccess(list, @"C:\X", false, int.MaxValue)));
-        // A dragged within the area (dropped before C): B, A, C; the menu's M stays where it is.
-        Assert.Equal(@"mM qB qA qC", Order(Bookmarks.ToQuickAccess(list, @"C:\A", false, 2, "a")));
         // A folder dropped from elsewhere, one there already or a bookmark of the menu: another shortcut.
         var again = Bookmarks.ToQuickAccess(list, @"C:\M", false, 1);
         Assert.Equal(@"qA mM qM qB qC", Order(again));
@@ -131,6 +129,56 @@ public class BookmarksTests
         // Remove from quick access: its shortcuts of C:\A go, the bookmark of the menu stays.
         Assert.Equal(["a", "b"], Bookmarks.RemoveFrom(added, @"C:\A", true).Select(b => b.Id));
         Assert.Equal([added[1].Id, added[2].Id], Bookmarks.RemoveFrom(added, @"C:\A", false).Select(b => b.Id));
+    }
+
+    // Folders of bookmarks (docs/plans/executed/27-PLAN-bookmark-folders.md 3.1).
+    static Bookmark G(string name, string id, bool quick, params Bookmark[] items) => new() { Id = id, Group = name, QuickAccess = quick, Items = [.. items] };
+
+    [Fact]
+    public void FoldersAreKeptNestedWithTheirEntriesInOrderAndTheirIds()
+    {
+        var dir = TempDir();
+        try
+        {
+            Bookmarks.Save(dir, [G("Projects", "p", false, B(@"C:\LexPen", id: "l"), G("Clients", "c", false, B(@"C:\ActiveAnts", id: "a")), B(@"C:\Foldex", id: "f")),
+                B(@"C:\Top", id: "t")]);
+            var back = Bookmarks.Load(dir)!;
+            Assert.Equal(["p", "t"], back.Select(b => b.Id));
+            Assert.Equal(("Projects", true), (back[0].Group, back[0].IsGroup));
+            Assert.Equal(["l", "c", "f"], back[0].Items!.Select(b => b.Id));
+            Assert.Equal("Clients", back[0].Items![1].Group);
+            Assert.Equal(@"C:\ActiveAnts", back[0].Items![1].Items![0].Location);
+            Assert.Equal(["p", "l", "c", "a", "f", "t"], Bookmarks.All(back).Select(b => b.Id));
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void WhatAFolderHoldsIsOnItsTabAndAFolderNeedsAName()
+    {
+        var list = Bookmarks.Clean([G("", "q", true, B(@"C:\A", false, "a"), G("Inner", "i", false, B(@"C:\B", false, "b")))]);
+        Assert.Equal("New folder", list[0].Group);
+        Assert.All(Bookmarks.All(list), b => Assert.True(b.QuickAccess));
+    }
+
+    [Fact]
+    public void AFolderAndWhatItHoldsAreTakenOffAndALocationInsideFolders()
+    {
+        List<Bookmark> list = [G("P", "p", false, B(@"C:\A", id: "a"), G("C", "c", false, B(@"C:\A", id: "a2"))), B(@"C:\A", true, "q")];
+        Assert.Equal(["p", "c", "a2", "q"], Bookmarks.All(Bookmarks.Without(list, "a")).Select(b => b.Id));
+        Assert.Equal(["q"], Bookmarks.All(Bookmarks.Without(list, "p")).Select(b => b.Id));
+        // Remove from bookmarks: C:\A everywhere on that tab, the folders stay; quick access keeps its own.
+        Assert.Equal(["p", "c", "q"], Bookmarks.All(Bookmarks.RemoveFrom(list, @"C:\A", false)).Select(b => b.Id));
+    }
+
+    [Fact]
+    public void ADropIntoAQuickAccessFolderGoesAmongWhatItHolds()
+    {
+        List<Bookmark> list = [G("Q", "g", true, B(@"C:\A", true, "a"), B(@"C:\B", true, "b")), B(@"C:\M", false, "m")];
+        var dropped = Bookmarks.ToQuickAccess(list, @"C:\X", false, 1, "g");
+        Assert.Equal([@"C:\A", @"C:\X", @"C:\B"], dropped[0].Items!.Select(b => b.Location));
+        Assert.True(dropped[0].Items![1].QuickAccess);
+        Assert.Equal(2, list[0].Items!.Count);   // the list it came from untouched
     }
 
     [Fact]
