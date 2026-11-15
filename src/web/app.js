@@ -12,6 +12,8 @@ const TreeTop = ['shell:Profile', ThisPC, Network, RecycleBin];
 const UpRowId = '::foldex-up';
 const isUpRow = x => !!x?.up;
 const $ = id => document.getElementById(id);
+// The page of one tree, list or scrap (view.html, viewpage.js; plan 14 3.0, stage 6): that pane's id; null: a window's page.
+const PanePage = new URLSearchParams(location.search).get('pane');
 let settings = {};
 let themes = {};   // every theme, complete (ThemeFile.cs; look.js)
 let version = '';  // Foldex's, for F1 (palette.js)
@@ -40,7 +42,7 @@ function setRowHeight(height) {
   const old = RowHeight;
   RowHeight = height;
   for (const v of views.values()) {
-    if (!v.rows) continue;
+    if (!v.rows || isPaged(v)) continue;   // a pane of a page of its own: its page does it
     const top = v.body.scrollTop * height / old;
     v.render();   // the new height first, so the scroll position fits
     v.body.scrollTop = top;
@@ -187,16 +189,19 @@ function filterTest(pattern) {
 }
 
 // What each kind of pane can be (docs/plans/14-PLAN-floating-panes.md 3.7): docked, floating, or both. A pane of a page
-// of its own (a PreviewView: the previews, Info, and every PageView) can float; the others are docked until they are pages
-// (plan 14 3.0, the stages).
-const PaneCan = { tree: ['docked'], list: ['docked'], scrap: ['docked'], preview: ['docked', 'floating'], log: ['docked', 'floating'],
+// of its own (a PreviewView: the previews, Info, and every PageView; a tree, a list or a scrap of pagedviews.js) can
+// float; the others are docked until they are pages (plan 14 3.0, the stages).
+const PaneCan = { tree: ['docked'], list: ['docked', 'floating'], scrap: ['docked'], preview: ['docked', 'floating'], log: ['docked', 'floating'],
   bookmarks: ['docked', 'floating'], columnsets: ['docked', 'floating'], palette: ['docked', 'floating'],
   settings: ['docked', 'floating'], projects: ['docked', 'floating'] };
-const canFloat = id => (PaneCan[layout.pane(id)?.kind] ?? ['docked']).includes('floating') && views.get(id) instanceof PreviewView;
+const canFloat = id => (PaneCan[layout.pane(id)?.kind] ?? ['docked']).includes('floating')
+  && (views.get(id) instanceof PreviewView || isPaged(views.get(id)));
 
-// The view of a pane as its kind says: a tree, a list or a preview.
+// The view of a pane as its kind says: a tree, a list or a preview; in a window's page, of a kind in PagedKinds, the
+// stand-in of its page (pagedviews.js).
 function makeView(id) {
   const kind = layout.pane(id).kind;
+  if (!PanePage && PagedKinds.has(kind)) return pagedView(id);
   return kind === 'tree' ? new TreeView(id) : kind === 'log' ? new LogView(id) : kind === 'bookmarks' ? new BookmarksView(id)
     : kind === 'columnsets' ? new ColumnSetsView(id) : kind === 'palette' ? new PaletteView(id)
     : kind === 'settings' ? new SettingsView(id) : kind === 'projects' ? new ProjectsView(id)
@@ -300,35 +305,39 @@ function drawHeads() {
   tellLayout();
   // The panes of the active pane's branch (its parents and the children down that branch), for their background.
   const branch = activePane !== null && layout.pane(activePane) ? branchChain(activePane).chain : [];
-  for (const v of views.values()) {
-    const pane = layout.pane(v.id);
-    v.el.classList.toggle('in-branch', v.id !== activePane && branch.includes(v.id));
-    const key = layout.pathColour(v.id);
-    v.el.style.setProperty('--branch', key !== null ? `var(--branch-${key})` : '');
-    // Its pane theme inside it (plan 13 3.4): the page's own variables, so every rule in the pane follows.
-    for (const name of ['bg', 'bg-side', 'select', 'hover', 'accent', 'text', 'text-selected', 'text-focused', 'text-hover'])
-      v.el.style.setProperty(name === 'text' ? '--branch-text' : `--${name}`, key !== null ? `var(--branch-${key}-${name})` : '');
-    v.el.classList.toggle('child', pane.source !== null);
-    v.el.classList.toggle('pinned', pane.pinned);
-    v.el.querySelector('.pin').title = pane.kind === 'scrap'
-      ? pane.pinned ? 'Pinned: comes back (empty) after a restart; click to unpin' : 'Pin: keep this scrap after a restart (it comes back empty)'
-      : pane.pinned ? 'Pinned: click to follow the parent again' : 'Pin: stop following the parent';
-    const marks = v.el.querySelector('.marks');
-    const colours = [...new Set(layout.followers(v.id).map(f => f.colour))];
-    marks.replaceChildren(...colours.map(c => {
-      const dot = document.createElement('span');
-      dot.style.background = `var(--branch-${c})`;
-      dot.classList.toggle('on', c === layout.keyOf(v.id));
-      dot.title = c === layout.keyOf(v.id) ? `Branch ${c + 1}: shown now` : `Switch to branch ${c + 1}`;
-      dot.addEventListener('mousedown', e => {
-        e.stopPropagation();
-        activate(layout.followers(v.id, c)[0].id);
-      });
-      return dot;
-    }));
-  }
+  for (const v of views.values()) drawHead(v, branch);
   drawTabs();
   drawHiddenPanes();
+  sendPagedLayout();   // the panes' pages (pagedviews.js) draw theirs
+}
+
+// A pane's head and its colours (drawHeads); a pane's page draws its own (viewpage.js).
+function drawHead(v, branch) {
+  const pane = layout.pane(v.id);
+  v.el.classList.toggle('in-branch', v.id !== activePane && branch.includes(v.id));
+  const key = layout.pathColour(v.id);
+  v.el.style.setProperty('--branch', key !== null ? `var(--branch-${key})` : '');
+  // Its pane theme inside it (plan 13 3.4): the page's own variables, so every rule in the pane follows.
+  for (const name of ['bg', 'bg-side', 'select', 'hover', 'accent', 'text', 'text-selected', 'text-focused', 'text-hover'])
+    v.el.style.setProperty(name === 'text' ? '--branch-text' : `--${name}`, key !== null ? `var(--branch-${key}-${name})` : '');
+  v.el.classList.toggle('child', pane.source !== null);
+  v.el.classList.toggle('pinned', pane.pinned);
+  v.el.querySelector('.pin').title = pane.kind === 'scrap'
+    ? pane.pinned ? 'Pinned: comes back (empty) after a restart; click to unpin' : 'Pin: keep this scrap after a restart (it comes back empty)'
+    : pane.pinned ? 'Pinned: click to follow the parent again' : 'Pin: stop following the parent';
+  const marks = v.el.querySelector('.marks');
+  const colours = [...new Set(layout.followers(v.id).map(f => f.colour))];
+  marks.replaceChildren(...colours.map(c => {
+    const dot = document.createElement('span');
+    dot.style.background = `var(--branch-${c})`;
+    dot.classList.toggle('on', c === layout.keyOf(v.id));
+    dot.title = c === layout.keyOf(v.id) ? `Branch ${c + 1}: shown now` : `Switch to branch ${c + 1}`;
+    dot.addEventListener('mousedown', e => {
+      e.stopPropagation();
+      activate(layout.followers(v.id, c)[0].id);
+    });
+    return dot;
+  }));
 }
 
 // Followers take what a pane focused once the cursor rests (3.3, debounce): followDelay ms, 0 to 1000.
@@ -2822,7 +2831,7 @@ function newTab(id) {
   }
   if (view instanceof TreeView) return newRootPane(layout.state(id).focus, place);
   const root = layout.add({ kind: pane.kind, content: pane.content });
-  placeView(new ListView(root), place);
+  placeView(makeView(root), place);
   activate(root);
   views.get(root).reveal(view.location);
   drawHeads();
@@ -3087,7 +3096,7 @@ function restoreLayout(saved, path) {
     for (const id of [...docks.panes(), ...floats]) {
       const view = makeView(id);
       views.set(id, view);
-      if (view instanceof PreviewView && layout.pane(id).floating) view.channel.float(layout.pane(id).floating.bounds);
+      if ((view instanceof PreviewView || isPaged(view)) && layout.pane(id).floating) view.channel.float(layout.pane(id).floating.bounds);
       if (view instanceof LogView) logPane = view;
       else if (layout.pane(id).fixed) view.show(layout.pane(id).path ?? null);   // an F3 preview docked: its item
       else if (view instanceof PreviewView && !(view instanceof PageView) && layout.pane(id).source === null) {
@@ -3231,7 +3240,7 @@ function closePane(id) {
   if (OnePanes.has(layout.pane(id)?.kind)) onePaneClosed(id);   // where it was, for when it opens again
   // A pane of a page of its own (a preview too): its Windows preview, its window when it floats, and its channel
   // (plan 14 3.0).
-  if (view instanceof PreviewView) {
+  if (view instanceof PreviewView || isPaged(view)) {
     view.close();
     paneChannels.delete(id);
   }
@@ -3461,6 +3470,7 @@ function tellWatched() {
 // the place cache) where they are, or read it again (no ids: changes lost, or too many), a tree its subfolders.
 function folderChanged(folder, ids = null) {
   for (const v of views.values()) {
+    if (isPaged(v)) continue;   // its page is told (PageEvents)
     if (v instanceof ScrapView) {
       const there = v.all.filter(x => same(folderOf(x.id), folder)).map(x => x.id);
       if (there.length) v.verify(there);
@@ -3754,11 +3764,11 @@ function setSetting(name, value) {
 function settingsChanged(before) {
   applyTheme();
   if (before.showHidden !== settings.showHidden) {
-    for (const v of views.values()) if (layout.pane(v.id)?.hidden === undefined) if (v instanceof TreeView) v.flatten(); else v.refresh();
+    for (const v of views.values()) if (layout.pane(v.id)?.hidden === undefined && !isPaged(v)) if (v instanceof TreeView) v.flatten(); else v.refresh();
   } else if (before.treeExpanders !== settings.treeExpanders) {
-    for (const v of views.values()) if (v instanceof TreeView) v.render();
+    for (const v of views.values()) if (v instanceof TreeView && !isPaged(v)) v.render();
   }
-  if (before.quickAccess !== settings.quickAccess) for (const v of views.values()) if (v instanceof TreeView) v.quickAccessChanged();
+  if (before.quickAccess !== settings.quickAccess) for (const v of views.values()) if (v instanceof TreeView && !isPaged(v)) v.quickAccessChanged();
   ribbonRefresh();
 }
 
@@ -3784,7 +3794,7 @@ for (const type of ['mousedown', 'mouseup', 'auxclick'])
 // Every list read again after something changed files (a file operation `op`, a verb of Explorer's menu): its
 // selection and focus kept, what the operation put there selected (ListView.reread).
 function reloadLists(op = null) {
-  for (const v of views.values()) if (v instanceof ListView && v.location) v.message ? v.load(v.location) : v.reread(op);
+  for (const v of views.values()) if (v instanceof ListView && !isPaged(v) && v.location) v.message ? v.load(v.location) : v.reread(op);
 }
 
 // ---------- Events ----------
@@ -3876,7 +3886,7 @@ const events = {
   },
   ownIcons(m) {
     for (const v of views.values()) {
-      if (!(v instanceof ListView)) continue;
+      if (!(v instanceof ListView) || isPaged(v)) continue;
       const byId = new Map(v.entries.map(x => [x.id, x]));
       for (const [id, icon] of Object.entries(m.icons)) if (byId.has(id) && icon >= 0) byId.get(id).icon = icon;
       v.render();
@@ -3914,6 +3924,7 @@ const events = {
     reloadLists(m.op);
     // A scrap's entries follow what moved and drop what was deleted (plan 06 3.1).
     for (const v of scrapViews()) {
+      if (isPaged(v)) continue;   // its page is told (PageEvents)
       if (m.op.moved?.length) v.follow(m.op.moved);
       if (m.op.ids?.length) v.verify(v.all.map(x => x.id).filter(id => m.op.ids.some(o => same(o, id))));
     }
@@ -3969,9 +3980,12 @@ const events = {
   },
 };
 
-host.addEventListener('message', e => events[e.data.event]?.(e.data));
+host.addEventListener('message', e => {
+  events[e.data.event]?.(e.data);
+  if (!PanePage) sendPagedEvent(e.data);   // the panes' pages too (pagedviews.js)
+});
 // The focus in another window: the active pane's ring and head dimmed (app.css), as LexPen's.
 addEventListener('blur', () => document.body.toggleAttribute('data-focus-away', true));
 addEventListener('focus', () => document.body.toggleAttribute('data-focus-away', false));
 darkQuery.addEventListener('change', applyTheme);
-post({ op: 'ready' });
+if (!PanePage) post({ op: 'ready' });   // a pane's page says it is (viewpage.js)

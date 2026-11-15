@@ -72,7 +72,7 @@ function bookmarksCame(m) {
   bookmarkPaths = m.paths ?? {};
   buildKeys();
   for (const b of allBookmarks()) if (b.icon && b.icon !== 'plain') askFileIcon(b.icon);
-  for (const v of views.values()) if (v instanceof TreeView) v.quickAccessChanged();
+  for (const v of views.values()) if (v instanceof TreeView && !isPaged(v)) v.quickAccessChanged();
   askBookmarksExist();
   askBookmarkEntries();
   ribbonRefresh();
@@ -83,7 +83,7 @@ function bookmarksCame(m) {
 async function askBookmarksExist() {
   const m = await askHost({ op: 'bookmarksExist' });
   bookmarkExists = new Map(Object.entries(m.exists ?? {}).map(([f, on]) => [f.toLowerCase(), on]));
-  for (const v of views.values()) if (v instanceof TreeView && v.qaHead) v.render();
+  for (const v of views.values()) if (v instanceof TreeView && !isPaged(v) && v.qaHead) v.render();
   paneOfKind('bookmarks')?.render();
 }
 
@@ -111,7 +111,7 @@ async function askFileIcon(icon) {
   fileIcons.set(icon, undefined);
   const m = await askHost({ op: 'iconFile', file: place.file, index: place.index });
   fileIcons.set(icon, m.icons?.[0] ?? null);
-  for (const v of views.values()) if (v instanceof TreeView && v.qaHead) v.render();
+  for (const v of views.values()) if (v instanceof TreeView && !isPaged(v) && v.qaHead) v.render();
   paneOfKind('bookmarks')?.render();
 }
 

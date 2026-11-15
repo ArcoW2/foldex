@@ -1,0 +1,57 @@
+<!doctype html>
+<!-- A tree, a list or a scrap as a page of its own (docs/plans/14-PLAN-floating-panes.md 3.0, stage 6; viewpage.js):
+     the window's page and scripts, showing that one pane. -->
+<html lang="en" data-pane-page>
+<head>
+  <meta charset="utf-8">
+  <title>Foldex pane</title>
+  <link rel="stylesheet" href="app.css">
+  <script src="buttons.js" defer></script>
+  <script src="look.js" defer></script>
+  <script src="panes.js" defer></script>
+  <script src="docks.js" defer></script>
+  <script src="menu.js" defer></script>
+  <script src="panechannel.js" defer></script>
+  <script src="projectmenu.js" defer></script>
+  <script src="keys.js" defer></script>
+  <script src="actions.js" defer></script>
+  <script src="palette.js" defer></script>
+  <script src="ribbonmodel.js" defer></script>
+  <script src="ribbon.js" defer></script>
+  <script src="bars.js" defer></script>
+  <script src="search.js" defer></script>
+  <script src="scraps.js" defer></script>
+  <script src="thumbs.js" defer></script>
+  <script src="find.js" defer></script>
+  <script src="rename.js" defer></script>
+  <script src="renamer.js" defer></script>
+  <script src="renamedialog.js" defer></script>
+  <script src="columns.js" defer></script>
+  <script src="bookmarktree.js" defer></script>
+  <script src="bookmarks.js" defer></script>
+  <script src="app.js" defer></script>
+  <script src="pagedviews.js" defer></script>
+  <script src="viewpage.js" defer></script>
+</head>
+<body>
+  <nav id="ribbon" hidden></nav>
+  <!-- The bars of plan 10 at each side of the panes; the panes of plan 03: the root (folders only, left) and its
+       followers. -->
+  <div id="bars-top" class="bars"></div>
+  <div id="middle">
+    <div id="bars-left" class="bars"></div>
+    <main id="panes"></main>
+    <div id="bars-right" class="bars"></div>
+  </div>
+  <div id="bars-bottom" class="bars"></div>
+  <footer>
+    <div id="statusline">
+      <button id="project" tabindex="-1"></button>
+      <button id="hidden-panes" tabindex="-1" hidden title="Panes hidden with Ctrl+O: click to show one again"></button>
+      <button id="log-button" tabindex="-1" title="Log: the status line's messages and the file operations">Log</button>
+      <div id="status"></div>
+      <div id="progress" hidden title="Reading a folder"><div class="track"><div></div></div></div>
+    </div>
+  </footer>
+</body>
+</html>

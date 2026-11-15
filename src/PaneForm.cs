@@ -38,6 +38,9 @@ sealed class PaneForm : Form
         return host;
     }
 
+    /// <summary>Where its page's messages go: its window's page, or the pane's page that opened this dialog (plan 14 stage 6).</summary>
+    public Action<JsonObject>? TellPage;
+
     /// <summary>A dialog's window's answer (its page's `done`; null: cancelled or closed).</summary>
     public JsonNode? Result { get; private set; }
 
@@ -152,12 +155,17 @@ sealed class PaneForm : Form
                 if (IsDisposed || owner.IsDisposed) return;
                 if (JsonNode.Parse(json) is JsonObject { } asked && asked.ContainsKey("op"))
                 {
-                    owner.FromPanePage(json, files, answer => { if (loaded && !IsDisposed) web.CoreWebView2.PostWebMessageAsJson(answer); });
+                    owner.FromPanePage(json, files, answer =>
+                    {
+                        if (IsDisposed) return;
+                        if (loaded) web.CoreWebView2.PostWebMessageAsJson(answer);
+                        else queue.Add(answer);   // asked before its page finished loading
+                    });
                     return;
                 }
                 if (JsonNode.Parse(json)?["fromPane"] is not JsonNode msg) return;
                 if (dialog && Dialog(msg)) return;
-                owner.Tell(new JsonObject { ["event"] = "fromPane", ["pane"] = Id, ["msg"] = msg.DeepClone() });
+                (TellPage ?? owner.Tell)(new JsonObject { ["event"] = "fromPane", ["pane"] = Id, ["msg"] = msg.DeepClone() });
             });
         };
         core.NavigationStarting += (_, n) => { if (!n.Uri.StartsWith(PaneUrl)) n.Cancel = true; };

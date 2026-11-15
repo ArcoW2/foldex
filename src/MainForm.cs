@@ -261,10 +261,16 @@ sealed class MainForm : Form
                 var form = new PaneForm(app, this, id, msg["page"]!.GetValue<string>(), msg["title"]?.GetValue<string>() ?? "Foldex", null, dialog: true, modal: modal);
                 floating[id] = form;
                 var req = msg["req"]?.DeepClone();
+                // Opened by a pane's page (plan 14 stage 6): its messages and its answer go there.
+                var asker = replyTo.Value;
+                if (asker is not null) form.TellPage = m => asker(m.ToJsonString());
                 void Answer()
                 {
                     floating.Remove(id);
-                    if (!IsDisposed) Post(new JsonObject { ["event"] = "answer", ["req"] = req, ["value"] = form.Result?.DeepClone() });
+                    var answer = new JsonObject { ["event"] = "answer", ["req"] = req, ["value"] = form.Result?.DeepClone() };
+                    if (IsDisposed) return;
+                    if (asker is not null) asker(answer.ToJsonString());
+                    else Tell(answer);
                 }
                 if (modal)
                 {
@@ -309,31 +315,18 @@ sealed class MainForm : Form
                 break;
             case "ready":
                 pageReady = true;
-                var (version, commit) = AppHost.Version();
-                Post(new JsonObject
-                {
-                    ["event"] = "hello",
-                    ["version"] = version,
-                    ["commit"] = commit,
-                    ["doubleClickTime"] = SystemInformation.DoubleClickTime,
-                    ["settings"] = SettingsFile.Load(AppHost.DataDir),
-                    ["themes"] = ThemeFile.Load(AppHost.DataDir),
-                    ["keys"] = KeysFile.Load(AppHost.DataDir),
-                    ["ribbon"] = RibbonFile.Load(AppHost.DataDir, Path.Combine(AppHost.DefaultsDir, RibbonFile.Name)),
-                    ["bars"] = BarsFile.Load(AppHost.DataDir, Path.Combine(AppHost.DefaultsDir, BarsFile.Name)),
-                    ["columnSets"] = AppHost.ColumnSets(),
-                    ["paths"] = PathsArray(paths),
-                    ["layout"] = freshLayout ? null : pageLayout?.DeepClone() ?? app.LayoutFor(this),
-                    ["project"] = app.ProjectInfo(this),
-                    ["ops"] = new JsonArray(app.FileOps.All.Select(o => (JsonNode)o.ToJson()).ToArray()),
-                    ["searches"] = SearchesFile.Load(AppHost.DataDir),
-                    ["renames"] = RenamesFile.Load(AppHost.DataDir),
-                    ["bookmarks"] = app.BookmarksJson(),
-                    ["run"] = AppHost.RunId,
-                });
+                var hello = Hello();
+                hello["paths"] = PathsArray(paths);
+                hello["layout"] = freshLayout ? null : pageLayout?.DeepClone() ?? app.LayoutFor(this);
+                Post(hello);
                 foreach (var queued in queue) web.CoreWebView2.PostWebMessageAsJson(queued);
                 queue.Clear();
                 freshLayout = false;
+                break;
+            // The page of a tree, a list or a scrap (plan 14 3.0, stage 6): what the window's page gets, without the
+            // layout, which that page gives it.
+            case "paneReady":
+                Post(Hello());
                 break;
             case "list":
                 // F5: from disk again, not from the cache.
@@ -978,9 +971,38 @@ sealed class MainForm : Form
     // A path on disk or a share (not a shell place).
     static bool IsDiskPath(string path) => path.Length >= 3 && (path[1] == ':' && path[2] == '\\' || path.StartsWith(@"\\"));
 
-    // The page gives positions in its own pixels times devicePixelRatio: the browser's client pixels.
-    Point ToScreen(JsonObject msg) =>
-        web.PointToScreen(new Point((int)msg["x"]!.GetValue<double>(), (int)msg["y"]!.GetValue<double>()));
+    // What a page gets first: the settings, the keys, the bars, ... (the window's page also its paths and layout).
+    JsonObject Hello()
+    {
+        var (version, commit) = AppHost.Version();
+        return new JsonObject
+        {
+            ["event"] = "hello",
+            ["version"] = version,
+            ["commit"] = commit,
+            ["doubleClickTime"] = SystemInformation.DoubleClickTime,
+            ["settings"] = SettingsFile.Load(AppHost.DataDir),
+            ["themes"] = ThemeFile.Load(AppHost.DataDir),
+            ["keys"] = KeysFile.Load(AppHost.DataDir),
+            ["ribbon"] = RibbonFile.Load(AppHost.DataDir, Path.Combine(AppHost.DefaultsDir, RibbonFile.Name)),
+            ["bars"] = BarsFile.Load(AppHost.DataDir, Path.Combine(AppHost.DefaultsDir, BarsFile.Name)),
+            ["columnSets"] = AppHost.ColumnSets(),
+            ["project"] = app.ProjectInfo(this),
+            ["ops"] = new JsonArray(app.FileOps.All.Select(o => (JsonNode)o.ToJson()).ToArray()),
+            ["searches"] = SearchesFile.Load(AppHost.DataDir),
+            ["renames"] = RenamesFile.Load(AppHost.DataDir),
+            ["bookmarks"] = app.BookmarksJson(),
+            ["run"] = AppHost.RunId,
+        };
+    }
+
+    // The page gives positions in its own pixels times devicePixelRatio: the browser's client pixels; a pane's page
+    // (plan 14 stage 6) gives them on the screen (`screen`), as it does not know where its frame or window is.
+    Point ToScreen(JsonObject msg)
+    {
+        var at = new Point((int)msg["x"]!.GetValue<double>(), (int)msg["y"]!.GetValue<double>());
+        return msg["screen"]?.GetValue<bool>() == true ? at : web.PointToScreen(at);
+    }
 
     // Windows' preview of a preview pane (plan 04; plan 14 3.5): docked, a native window of its own over the pane's area
     // in this window; floating, its window's (PaneForm.Preview), over the whole window.

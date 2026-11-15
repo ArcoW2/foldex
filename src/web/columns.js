@@ -129,7 +129,7 @@ const propInfo = new Map();
 function setColumnSets(m) {
   columnSets = m;
   if (m.problems?.length) status(m.problems.join(' '), true);
-  for (const v of views.values()) if (v instanceof ListView && v.location) v.chooseColumns(true);
+  for (const v of views.values()) if (v instanceof ListView && !isPaged(v) && v.location) v.chooseColumns(true);
   paneOfKind('columnsets')?.render();
 }
 
@@ -166,7 +166,7 @@ function propListCame(list) {
   propList = list;
   for (const p of list) propInfo.set(p.name, { id: p.name, title: p.title, kind: p.kind, width: 10 });
   for (const done of propListWaiters.splice(0)) done(list);
-  for (const v of views.values()) if (v instanceof ListView) v.drawHeader();
+  for (const v of views.values()) if (v instanceof ListView && !isPaged(v)) v.drawHeader();
 }
 
 // ---------- Values shown ----------

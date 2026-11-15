@@ -842,6 +842,13 @@ body.connecting, body.connecting * {
 .pane.page > .body > .rows { position: absolute; inset: 0; }
 .pane-frame { display: block; width: 100%; height: 100%; border: 0; background: transparent; }
 
+/* The page of a tree, a list or a scrap (view.html, viewpage.js; plan 14 3.0, stage 6): that pane alone, filling it.
+   Docked, its head and ring are its window's page's; floating, its own. */
+html[data-pane-page] #ribbon, html[data-pane-page] .bars, html[data-pane-page] footer { display: none; }
+html[data-pane-page] #panes > .pane { flex: 1; min-height: 0; }
+html[data-pane-page]:not([data-floating]) #panes > .pane > .head { display: none; }
+html[data-pane-page]:not([data-floating]) .pane.active::after { display: none; }
+
 .row {
   position: absolute;
   left: 0;

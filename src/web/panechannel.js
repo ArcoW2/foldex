@@ -113,7 +113,7 @@ function paneChannel({ id, page, title, view, state, receive, menu }) {
 // Size of a bar). `opened` gets its channel, for what this page tells it while it is open.
 let dialogWindows = 0;
 async function dialogWindow(title, args, calls = null, modal = true, opened = null) {
-  const id = `dialog:${++dialogWindows}`;
+  const id = `dialog:${PanePage ? `${PanePage}:` : ''}${++dialogWindows}`;   // a pane's page's own (plan 14 stage 6) apart
   const ch = paneChannel({ id, page: 'dialog.html', title, view: () => document.body, state: () => new Map([['args', { ...args, kind: 'args' }]]),
     receive: async m => {
       if (m.kind === 'host') ch.send({ kind: 'answer', key: `answer:${m.req}`, req: m.req, value: await askHost(m.msg) });
