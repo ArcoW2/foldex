@@ -89,6 +89,13 @@ function askTextHere(title, value = '', placeholder = '') {
 // What to show, from the window's page: which dialog, and what it needs.
 paneHandlers.args = async m => {
   if (m.what === 'askText') return done(await askTextHere(m.title, m.value, m.placeholder));
+  if (m.what === 'pickFolder') {
+    // Move to folder... (bmpick.js): { folder } (null: the tab's top), or nothing for Cancel.
+    bookmarks = m.bookmarks ?? [];
+    const row = bookmarkPlaces().find(p => p.b.id === m.id);
+    const to = row ? await pickBookmarkFolder({ b: row.b, parent: m.parent }, !!m.quick) : undefined;
+    return done(to === undefined ? null : { folder: to });
+  }
   if (m.what === 'editBookmark') {
     bookmarks = m.bookmarks ?? [];
     bookmarkPaths = m.paths ?? {};

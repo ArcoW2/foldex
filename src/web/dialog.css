@@ -18,3 +18,4 @@ dialog.inline > .find-title { display: none; }
 dialog.inline.ask { width: 380px; }
 dialog.bm-edit { width: 620px; }
 dialog.bm-icons { width: 520px; }
+dialog.bm-pick { width: 420px; }

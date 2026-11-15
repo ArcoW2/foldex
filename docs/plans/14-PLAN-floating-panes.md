@@ -51,14 +51,14 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 | Log as a page | the Log, docked or floating | 3.0; 6.1 |
 | Manage the bookmarks | a pane page (docked or floating), no longer a modal dialog; first floating, then where it was last | 3.0; 3.7; 6.2 |
 | Modal floating windows: the window | `PaneForm` shown modal with a dialog's page (`dialog.html`, `dialogpage.js`), as large as its dialog, its host requests through the window's page | 3.7; 6.3 |
-| Modal floating windows: a name asked, Edit a bookmark | askText; Edit a bookmark with Change Icon inside it | 3.7; 6.3 |
+| Modal floating windows: a name asked, Edit a bookmark | askText; Edit a bookmark with Change Icon inside it; Move to folder... (Manage) | 3.7; 6.3 |
 
 ### Not yet built
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
 | Dock by dragging | a floating pane's window dragged onto its Foldex window docks it there, the places lit as for a docked pane | -- | 3.1 |
-| Modal floating windows: the others | Move to folder... (Manage), the Size of a bar, the Projects window's question, Find, Rename, More columns | -- | 3.7 |
+| Modal floating windows: the others | the Size of a bar, the Projects window's question, Find, Rename, More columns | -- | 3.7 |
 | Panes of their own | Manage column sets, F1, Settings, Projects as pane pages, docked or floating | The floating window | 3.0; 3.7 |
 | Preview and Info as pages | Windows' preview over a frame and over a floating window; Foldex's own preview; Info | The floating window | 3.0 |
 | F3 | a preview in a new floating window | Preview and Info as pages | 3.5 |
@@ -276,3 +276,7 @@ None.
   window; a typed name and Enter answered, Esc answered null; Edit a bookmark in its window with its fields and icon,
   Custom opening Change Icon inside it (the window grown), an icon chosen, a new name, OK: the bookmark saved with both;
   Cancel answered nothing. `dotnet test`: 224 passed.
+- Move to folder... (bmpick.js, out of the Manage page): the Manage page asks its window's page, which opens it in a
+  modal floating window with the bookmarks; the folder chosen goes back to the Manage page (`picked`), which moves the
+  entry. Tested: its window with the tab and its folders, the folder the entry is in selected; Projects chosen (Alpha
+  moved into it, selected in Manage after); Cancel (nothing moved); the tab's top chosen (back at the top).

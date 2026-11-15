@@ -301,6 +301,13 @@ async function bookmarksPageAsks(view, m) {
       await renameBookmarkFolder(m.id);
       return made(m.id);
     case 'close': return closePane(view.id);
+    case 'pickFolder': {
+      // Move to folder... in a modal floating window (plan 14 3.7); the folder chosen goes back.
+      const b = bookmarkById(m.id);
+      if (!b) return;
+      const to = await dialogWindow(`Move "${bookmarkName(b)}" to`, { what: 'pickFolder', bookmarks, id: m.id, parent: m.parent, quick: m.quick });
+      return view.send({ kind: 'picked', id: m.id, quick: m.quick, cancelled: !to, to: to?.folder ?? null });
+    }
   }
 }
 
