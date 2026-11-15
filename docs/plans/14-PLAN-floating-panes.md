@@ -71,7 +71,7 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| Scrap, list and tree as pages | the panes of the layout as pages; following, executing, back and forward through the window's page | -- | 3.0; 3.3 |
+| Scrap, list and tree as pages | the panes of the layout as pages; following, executing, back and forward through the window's page | Open questions 1 | 3.0; 3.3 |
 | Colours across windows | head, ring, branch marks and pane theme as when docked, changing with the window's | Scrap, list and tree as pages | 3.3 |
 | A floating scrap | drops, its search, its dashed ring; gone after a restart unless pinned (then back empty) | Scrap, list and tree as pages | 3.3 |
 | Speed after stage 6 | the three figures of 6.11 again once the tree, the list and the scrap are pages | Scrap, list and tree as pages | 3.0; 6.11 |
@@ -201,7 +201,21 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 
 ## 4. Open questions
 
-None.
+1. How the tree, the list and the scrap become pages (stage 6). They are most of app.js (their drawing, keys, drag and
+   drop between panes, the host's listings streamed to them, rename in place, thumbnails, columns), all sharing the
+   window page's state; LexPen has no model for it (its editor panes stay in its page). Options:
+   (a) Every one a page, docked too: each tree, list and scrap a frame of its own (a process each), its code split out
+       of app.js to run there, talking to the host itself (WebView2's frame messages docked, PaneForm floating); the
+       window's page keeps the layout and passes focus, following and colours between them. The plan as written; the
+       largest change, and every docked pane a frame (the start and memory to be measured), drag and drop between panes
+       across frames to be rebuilt.
+   (b) A page when floating only: docked, they stay in the window's page as now; floated, the pane's window runs a
+       page of its own for that one pane (the same code, one pane), talking to the host itself, the window's page passing
+       focus, following and colours between it and the panes docked. A smaller change, no frame per docked pane (the
+       speed stays as measured in 6.11), drag and drop inside the window unchanged; differs from "every pane a page" for
+       these three kinds.
+   (c) They stay docked only (as now), and the floating scrap is dropped.
+   Recommended: (b).
 
 ## 6. As built
 
