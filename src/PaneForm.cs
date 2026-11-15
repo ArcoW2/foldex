@@ -86,7 +86,7 @@ sealed class PaneForm : Form
         FormClosing += (_, _) => TellBounds();
         FormClosed += (_, _) =>
         {
-            if (!byPage && !dialog && !owner.IsDisposed) owner.Post(new JsonObject { ["event"] = "paneClosed", ["pane"] = Id });
+            if (!byPage && !dialog && !owner.IsDisposed) owner.Tell(new JsonObject { ["event"] = "paneClosed", ["pane"] = Id });
         };
     }
 
@@ -113,7 +113,7 @@ sealed class PaneForm : Form
     void TellBounds()
     {
         if (dialog || WindowState != FormWindowState.Normal || owner.IsDisposed) return;
-        owner.Post(new JsonObject
+        owner.Tell(new JsonObject
         {
             ["event"] = "paneBounds", ["pane"] = Id,
             ["bounds"] = new JsonArray(Bounds.X, Bounds.Y, Bounds.Width, Bounds.Height),
@@ -141,15 +141,23 @@ sealed class PaneForm : Form
         core.Settings.AreBrowserAcceleratorKeysEnabled = false;
         WebFiles.Serve(core);
         core.ContextMenuRequested += (_, m) => WebFiles.BrowserMenu(m);
-        // What the pane says goes to its window's page, as a frame's message would.
+        // What the pane says goes to its window's page, as a frame's message would; what it asks of the host itself (an
+        // `op`, plan 14 stage 6) its window's host answers here.
         core.WebMessageReceived += (_, m) =>
         {
             var json = m.WebMessageAsJson;
+            var files = m.AdditionalObjects?.OfType<Microsoft.Web.WebView2.Core.CoreWebView2File>().Select(x => x.Path).ToArray() ?? [];
             BeginInvoke(() =>
             {
-                if (IsDisposed || owner.IsDisposed || JsonNode.Parse(json)?["fromPane"] is not JsonNode msg) return;
+                if (IsDisposed || owner.IsDisposed) return;
+                if (JsonNode.Parse(json) is JsonObject { } asked && asked.ContainsKey("op"))
+                {
+                    owner.FromPanePage(json, files, answer => { if (loaded && !IsDisposed) web.CoreWebView2.PostWebMessageAsJson(answer); });
+                    return;
+                }
+                if (JsonNode.Parse(json)?["fromPane"] is not JsonNode msg) return;
                 if (dialog && Dialog(msg)) return;
-                owner.Post(new JsonObject { ["event"] = "fromPane", ["pane"] = Id, ["msg"] = msg.DeepClone() });
+                owner.Tell(new JsonObject { ["event"] = "fromPane", ["pane"] = Id, ["msg"] = msg.DeepClone() });
             });
         };
         core.NavigationStarting += (_, n) => { if (!n.Uri.StartsWith(PaneUrl)) n.Cancel = true; };
@@ -222,13 +230,13 @@ sealed class PaneForm : Form
     {
         const int WM_ACTIVATE = 0x0006, WM_MOVING = 0x0216, WM_EXITSIZEMOVE = 0x0232;
         if (m.Msg == WM_ACTIVATE && !owner.IsDisposed)
-            owner.Post(new JsonObject { ["event"] = "paneWindowFocus", ["pane"] = Id, ["active"] = (m.WParam.ToInt64() & 0xFFFF) != 0 });
+            owner.Tell(new JsonObject { ["event"] = "paneWindowFocus", ["pane"] = Id, ["active"] = (m.WParam.ToInt64() & 0xFFFF) != 0 });
         if (!dialog && !owner.IsDisposed && (m.Msg == WM_MOVING || (m.Msg == WM_EXITSIZEMOVE && dragging)))
         {
             var end = m.Msg == WM_EXITSIZEMOVE;
             dragging = !end;
             var (x, y) = owner.PagePoint(Cursor.Position);
-            owner.Post(new JsonObject { ["event"] = end ? "paneDragEnd" : "paneDragMove", ["pane"] = Id, ["x"] = x, ["y"] = y });
+            owner.Tell(new JsonObject { ["event"] = end ? "paneDragEnd" : "paneDragMove", ["pane"] = Id, ["x"] = x, ["y"] = y });
         }
         base.WndProc(ref m);
     }

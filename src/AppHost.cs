@@ -133,7 +133,7 @@ sealed class AppHost : ApplicationContext
     {
         FileOps = new Shell.FileOps(op =>
         {
-            foreach (var w in windows) w.Post(new JsonObject { ["event"] = "fileOp", ["op"] = op.ToJson() });
+            foreach (var w in windows) w.Tell(new JsonObject { ["event"] = "fileOp", ["op"] = op.ToJson() });
         });
         // A cached folder changed: every window showing it asks for the items that changed (names), or reads it again
         // whole (no names).
@@ -143,7 +143,7 @@ sealed class AppHost : ApplicationContext
         {
             var list = ids?.ToList();
             foreach (var w in windows.ToList())
-                if (w.IsHandleCreated) w.BeginInvoke(() => w.Post(new JsonObject
+                if (w.IsHandleCreated) w.BeginInvoke(() => w.Tell(new JsonObject
                 {
                     ["event"] = "folderChanged", ["folder"] = folder, ["ids"] = list is null ? null : new JsonArray([.. list.Select(n => JsonValue.Create(n))]),
                 }));
@@ -158,7 +158,7 @@ sealed class AppHost : ApplicationContext
             Use.Save();
             if (lowMemory != IntPtr.Zero && QueryMemoryResourceNotification(lowMemory, out var low) && low) Cache.Trim(true);
             var cacheInfo = CacheInfo();   // for a Settings pane (its folder cache row)
-            foreach (var w in windows) w.Post((JsonObject)cacheInfo.DeepClone());
+            foreach (var w in windows) w.Tell((JsonObject)cacheInfo.DeepClone());
         };
         cacheTimer.Start();
     }
@@ -260,7 +260,7 @@ sealed class AppHost : ApplicationContext
         if (bars is null) File.Delete(Path.Combine(DataDir, BarsFile.Name));
         else BarsFile.Save(DataDir, bars);
         var message = new JsonObject { ["event"] = "bars", ["bars"] = BarsFile.Load(DataDir, Path.Combine(DefaultsDir, BarsFile.Name)) };
-        foreach (var w in windows) w.Post((JsonObject)message.DeepClone());
+        foreach (var w in windows) w.Tell((JsonObject)message.DeepClone());
     }
 
     /// <summary>The Find dialog's searches.json written (docs/plans/executed/06-PLAN-search-and-scrap.md 3.3); every window gets it
@@ -268,7 +268,7 @@ sealed class AppHost : ApplicationContext
     public void SaveSearches(JsonNode searches)
     {
         var message = new JsonObject { ["event"] = "searches", ["searches"] = SearchesFile.Save(DataDir, searches) };
-        foreach (var w in windows) w.Post((JsonObject)message.DeepClone());
+        foreach (var w in windows) w.Tell((JsonObject)message.DeepClone());
     }
 
     /// <summary>The Rename dialog's renames.json written (docs/plans/executed/21-PLAN-multi-rename.md 3.3); every window gets it
@@ -276,7 +276,7 @@ sealed class AppHost : ApplicationContext
     public void SaveRenames(JsonNode renames)
     {
         var message = new JsonObject { ["event"] = "renames", ["renames"] = RenamesFile.Save(DataDir, renames) };
-        foreach (var w in windows) w.Post((JsonObject)message.DeepClone());
+        foreach (var w in windows) w.Tell((JsonObject)message.DeepClone());
     }
 
     // The bookmarks, quick access among them (docs/plans/executed/26-PLAN-bookmarks.md 3.1), kept here for every window. Without
@@ -312,7 +312,7 @@ sealed class AppHost : ApplicationContext
         bookmarks = Bookmarks.Save(DataDir, list);
         var message = BookmarksJson();
         message["event"] = "bookmarks";
-        foreach (var w in windows) w.Post((JsonObject)message.DeepClone());
+        foreach (var w in windows) w.Tell((JsonObject)message.DeepClone());
     }
 
     public void AddBookmark(string location, bool item, bool quickAccess) => SetBookmarks(Bookmarks.Add(bookmarks, location, item, quickAccess));
@@ -341,7 +341,7 @@ sealed class AppHost : ApplicationContext
         if (mine is not null) ColumnSetsFile.SaveSets(DataDir, mine);
         if (folders is not null) ColumnSetsFile.SaveFolders(DataDir, folders);
         var message = new JsonObject { ["event"] = "columnSets", ["columnSets"] = ColumnSets() };
-        foreach (var w in windows) w.Post((JsonObject)message.DeepClone());
+        foreach (var w in windows) w.Tell((JsonObject)message.DeepClone());
     }
 
     /// <summary>Tells every page the settings and themes as they are now.</summary>
@@ -350,7 +350,7 @@ sealed class AppHost : ApplicationContext
         ConfigureCache();
         var message = Look();
         message["event"] = "settings";
-        foreach (var w in windows) w.Post((JsonObject)message.DeepClone());   // and through each, its Settings and Projects panes
+        foreach (var w in windows) w.Tell((JsonObject)message.DeepClone());   // and through each, its Settings and Projects panes
     }
 
     // Your settings.json or a theme of yours edited by hand (or copied in): every page follows, once the writing rests.
@@ -400,7 +400,7 @@ sealed class AppHost : ApplicationContext
         Watch();
         Folders ??= new Shell.FolderWatch((folder, shown) =>
         {
-            foreach (var window in shown.OfType<MainForm>()) window.Post(new JsonObject { ["event"] = "folderChanged", ["folder"] = folder });
+            foreach (var window in shown.OfType<MainForm>()) window.Tell(new JsonObject { ["event"] = "folderChanged", ["folder"] = folder });
         });
         windows.Add(w);
         recent.Add(w);
@@ -598,8 +598,8 @@ sealed class AppHost : ApplicationContext
         {
             var info = ProjectInfo(w);
             w.ShowProject(info["display"]!.GetValue<string>());
-            w.Post(new JsonObject { ["event"] = "project", ["project"] = info });
-            w.Post(new JsonObject { ["event"] = "projects" });   // for a Manage projects pane in it
+            w.Tell(new JsonObject { ["event"] = "project", ["project"] = info });
+            w.Tell(new JsonObject { ["event"] = "projects" });   // for a Manage projects pane in it
         }
         SaveProjectsSoon();
     }
@@ -651,7 +651,7 @@ sealed class AppHost : ApplicationContext
                     ? windows.FirstOrDefault(w => w.Key == entry.Key) ?? Open([], entry.Key)
                     : Open([], project: p);   // a named project without a window
                 BringToFront(shown);
-                if (msg?["pane"]?.GetValue<string>() is { } pane) shown.Post(new JsonObject { ["event"] = "focusPane", ["pane"] = pane });
+                if (msg?["pane"]?.GetValue<string>() is { } pane) shown.Tell(new JsonObject { ["event"] = "focusPane", ["pane"] = pane });
                 break;
             case "new":
                 BringToFront(Open([], project: projects.NewProject(Name())));

@@ -167,22 +167,21 @@ sealed class MainForm : Form
             var files = m.AdditionalObjects?.OfType<CoreWebView2File>().Select(f => f.Path).ToArray() ?? [];
             BeginInvoke(() => OnMessage(json, files));
         };
-        // A pane's page in a frame of the page (plan 14 3.0, stage 6): it may talk to the host itself; the frame is known by
-        // its name, its pane's id.
+        // A pane's page in a frame of the page (plan 14 3.0, stage 6): it asks the host itself, as the page does, and is
+        // answered in that frame alone; the frame is known by its name, its pane's id.
         core.FrameCreated += (_, f) =>
         {
             var frame = f.Frame;
             var name = frame.Name;
+            var gone = false;
             frames[name] = frame;
-            frame.Destroyed += (_, _) => { if (frames.GetValueOrDefault(name) == frame) frames.Remove(name); };
+            frame.Destroyed += (_, _) => { gone = true; if (frames.GetValueOrDefault(name) == frame) frames.Remove(name); };
+            void Reply(string answer) { if (!gone) frame.PostWebMessageAsJson(answer); }
             frame.WebMessageReceived += (_, m) =>
             {
                 var json = m.WebMessageAsJson;
-                BeginInvoke(() =>
-                {
-                    if (JsonNode.Parse(json) is JsonObject asked && asked["op"]?.GetValue<string>() == "ping")
-                        frame.PostWebMessageAsJson(new JsonObject { ["event"] = "pong", ["pane"] = name, ["req"] = asked["req"]?.DeepClone() }.ToJsonString());
-                });
+                var files = m.AdditionalObjects?.OfType<CoreWebView2File>().Select(x => x.Path).ToArray() ?? [];
+                BeginInvoke(() => OnMessage(json, files, Reply));
             };
         };
         core.ProcessFailed += OnProcessFailed;
@@ -213,8 +212,9 @@ sealed class MainForm : Form
         });
     }
 
-    async void OnMessage(string json, string[] files)
+    async void OnMessage(string json, string[] files, Action<string>? reply = null)
     {
+        replyTo.Value = reply;
         if (JsonNode.Parse(json) is not JsonObject msg) return;
         var ids = msg["ids"]?.AsArray().Select(n => n!.GetValue<string>()).ToList() ?? [];
         switch (msg["op"]?.GetValue<string>())
@@ -1045,12 +1045,27 @@ sealed class MainForm : Form
     }
 
     /// <summary>Tells the page; kept until it is ready.</summary>
-    public void Post(JsonObject msg)
+    public void Tell(JsonObject msg)
     {
         var json = msg.ToJsonString();
         if (pageReady && !IsDisposed && web.CoreWebView2 is { } core) core.PostWebMessageAsJson(json);
         else queue.Add(json);
     }
+
+    // An answer, or what streams from a request (a listing, its icons): to the page that asked (replyTo), else this
+    // window's page. What is told to every window (AppHost) goes through Tell, to the window's page.
+    void Post(JsonObject msg)
+    {
+        if (replyTo.Value is { } reply) reply(msg.ToJsonString());
+        else Tell(msg);
+    }
+
+    // The page whose message is being answered (plan 14 3.0, stage 6): a pane's frame or a floating pane's window; null:
+    // this window's page. It flows with the work of that message, through its awaits.
+    readonly AsyncLocal<Action<string>?> replyTo = new();
+
+    /// <summary>A request to the host of a floating pane's page (PaneForm), answered there (plan 14 3.0, stage 6).</summary>
+    public void FromPanePage(string json, string[] files, Action<string> reply) => OnMessage(json, files, reply);
 
     // The page's layout as it told it last: its window's session (AppHost.SaveSession), given back to a new page after a
     // failure. freshLayout: the next page starts on the page's own default layout (a reset without defaultLayout).
