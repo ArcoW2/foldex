@@ -58,6 +58,7 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 | Modal floating windows: the window | `PaneForm` shown modal with a dialog's page (`dialog.html`, `dialogpage.js`), as large as its dialog, its host requests through the window's page | 3.7; 6.3 |
 | Modal floating windows: a name asked, Edit a bookmark | askText; Edit a bookmark with Change Icon inside it; Move to folder... (Manage) | 3.7; 6.3 |
 | Modal floating windows: Find, Rename, More columns | each in a window of its own; what only the window's page has (the items, the pane's columns) asked of it while open | 3.7; 6.4 |
+| Speed before and after stages 1-5 | the start, opening a folder of 5150 items, moving the cursor: main before plan 14 and this branch after stage 5 | 3.0; 6.11 |
 | Dock by dragging | a floating pane's window dragged by its title bar over its Foldex window: the place lit as for a head's drag; let go there, it docks there | 3.1; 6.10 |
 | Preview and Info as pages | preview.html: Foldex's own preview, its messages and Info drawn by the page; Windows' preview per pane, over the frame docked, over its window floating; both can float | 3.0; 6.9 |
 | F3 | a preview of the focused item in a new floating window that keeps it, beside the window, the keyboard staying; side by side; Esc closes it | 3.5; 6.9 |
@@ -73,7 +74,7 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 | Scrap, list and tree as pages | the panes of the layout as pages; following, executing, back and forward through the window's page | -- | 3.0; 3.3 |
 | Colours across windows | head, ring, branch marks and pane theme as when docked, changing with the window's | Scrap, list and tree as pages | 3.3 |
 | A floating scrap | drops, its search, its dashed ring; gone after a restart unless pinned (then back empty) | Scrap, list and tree as pages | 3.3 |
-| Speed | measured before stage 1 and after each stage | -- | 3.0 |
+| Speed after stage 6 | the three figures of 6.11 again once the tree, the list and the scrap are pages | Scrap, list and tree as pages | 3.0; 6.11 |
 
 ## 3. Details
 
@@ -101,8 +102,8 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
   windows; 4. Manage column sets, F1, Settings and Projects; 5. the preview and Info, then F3; 6. the scrap, the list
   and the tree, with their connections and colours across windows.
 - Speed comes first, as in LexPen (3.2 there): the start until the first folder shows, opening a folder of many
-  items, moving the cursor in a list, measured before stage 1 and after each stage (figures in 6, As built:
-  `[not yet calculated]`); a stage that makes one clearly slower is not merged until it is not.
+  items, moving the cursor in a list, measured before stage 1 and after the stages (figures in 6.11); a stage that makes
+  one clearly slower is not merged until it is not.
 
 ### 3.1 Floating and docking back
 
@@ -237,7 +238,7 @@ None.
   bottom; Dock from the menu; floated again at its place; Close pane while floating closing its window; the frame not
   loaded again after renderDock, a new pane, and the Log moved to the right area. `dotnet test`: 224 passed.
 - Not done in stage 1: docking by dragging the floating window onto its Foldex window (Not yet built, Dock by
-  dragging); the speed figures (3.0) were not measured before this stage: `[not yet calculated]`.
+  dragging); the speed figures (3.0) were not measured before this stage; 6.11 has them for main before plan 14.
 
 ### 6.2 Stage 2: Manage the bookmarks
 
@@ -432,3 +433,21 @@ None.
   outside the window no block, let go there: still floating; let go over the list's right quarter: docked at the list's
   right ({ pane: p2, side: right }), its lines in its frame, no block left. The host's side with a real title bar drag:
   [not yet checked].
+### 6.11 Speed
+
+- Measured on this machine with `speed.ps1` (the session's scratch folder): each run a fresh data folder; the start
+  from the process starting until a list pane shows rows (one connection to the page kept open, asked every few ms);
+  opening a folder of 5150 items in the list (timed in the page from goTo until all items are listed and rows drawn);
+  200 Down presses in that list, each timed in the page with its layout. Five runs per build, the two builds taking
+  turns. Before: main at 3b514d8 (before stage 1, built in a worktree); after: this branch after stage 5 and Dock by
+  dragging (428a9f5).
+- Not measured after each stage separately (stages 1-5 were built before this was measured): `[not yet calculated]`.
+
+| Figure | Before (median of 5; min - max) | After stages 1-5 (median of 5; min - max) |
+|---|---|---|
+| Start until the first folder shows | 2242 ms (2106 - 2495) | 2298 ms (2281 - 3381) |
+| Opening a folder of 5150 items | 170 ms (167 - 182) | 172 ms (155 - 190) |
+| Moving the cursor (Down), per press | 3.0 ms median; mean 3.22 ms; worst 10 ms | 3.1 ms median; mean 3.35 ms; worst 8.9 ms |
+
+- None is clearly slower; the start's medians are 56 ms apart, within the spread of the runs (one run after took
+  3381 ms, its first; the others 2281 - 2678 ms).
