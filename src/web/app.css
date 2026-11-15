@@ -1800,6 +1800,17 @@ dialog.bm-manage[open] { display: flex; flex-direction: column; }
 }
 .bm-tabs button.on { color: var(--fg); background: var(--bg); border-color: var(--border); margin-bottom: -1px; position: relative; z-index: 1; }
 dialog.bm-manage .ask-buttons { margin-top: 10px; }
+/* A button that opens a menu: a small chevron after its text. */
+.bm-menu-button::after {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin: 0 0 3px 8px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+}
 .bm-list {
   height: 280px;
   overflow: auto;

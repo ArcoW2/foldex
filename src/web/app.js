@@ -437,7 +437,9 @@ class TreeView {
       const n = this.nodeAt(e.target);
       if (n?.qa || n?.up) return;   // the Quick access head and its hint, and "..", have no menu
       // A folder or file: Windows' menu with Foldex's own items at its top (quick access, bookmarks; plan 26 3.0).
-      if (n) post({ op: 'menu', ids: [n.id], own: true, item: n.folder === false, x: e.clientX * devicePixelRatio, y: e.clientY * devicePixelRatio, extended: e.shiftKey });
+      // A quick access shortcut: its entry too, so the menu's Remove and Edit... are about that one.
+      if (n) post({ op: 'menu', ids: [n.id], own: true, item: n.folder === false, bookmark: n.parent === this.qaHead && this.qaHead ? n.bm : undefined,
+        x: e.clientX * devicePixelRatio, y: e.clientY * devicePixelRatio, extended: e.shiftKey });
       else openMenu(e.clientX, e.clientY, emptyMenu());   // its empty space: a new folder or file (rename.js)
     });
     dropTarget(this.body, e => {
@@ -460,7 +462,11 @@ class TreeView {
     this.body.addEventListener('dragstart', e => {
       const n = this.nodeAt(e.target);
       e.preventDefault();
-      if (n?.parent === this.qaHead && this.qaHead) post({ op: 'dragOut', ids: [n.id] });
+      // Its entry remembered: dropped back in the area it moves, rather than being added again.
+      if (n?.parent === this.qaHead && this.qaHead) {
+        qaDragging = n.bm;
+        post({ op: 'dragOut', ids: [n.id] });
+      }
     });
     this.qaHead = null;    // the Quick access area's head row, its shortcuts under it (null: not shown)
     this.qaDropAt = null;  // where a folder dragged over the area would go
@@ -499,7 +505,8 @@ class TreeView {
 
   add(entry, parent) {
     const key = entry.id.toLowerCase(), places = this.places.get(key) ?? [];
-    const known = places.find(n => n.parent === parent);
+    // A quick access shortcut is a place of its own per entry (`bm`): one location can be two shortcuts.
+    const known = places.find(n => n.parent === parent && n.bm === entry.bm);
     if (known) {
       if (!known.children) Object.assign(known, { subs: entry.subs, files: entry.files });   // it may have got or lost some
       return known;
@@ -827,7 +834,7 @@ class TreeView {
           name.className = 'name';
           name.textContent = n.name;
           if (n.qa || n.up) cell.append(twisty, name);   // the area's head and hint, "..": no icon
-          else if (n.parent === this.qaHead && this.qaHead && findBookmark(n.id)) cell.append(twisty, bookmarkIcon(findBookmark(n.id), n), name);
+          else if (n.parent === this.qaHead && this.qaHead && bookmarkById(n.bm)) cell.append(twisty, bookmarkIcon(bookmarkById(n.bm), n), name);
           else cell.append(twisty, iconImage(n, missing), name);
           // Two shortcuts with the same name: the folder each is in, dimmed after it (plan 23 3.4).
           if (n.parent === this.qaHead && this.qaHead && this.qaHead.children.some(c => c !== n && c.name.toLowerCase() === n.name.toLowerCase()))
@@ -865,7 +872,7 @@ class TreeView {
     if (n.up) return this.goUpTop();   // "..": the folder above as the top
     // A shortcut that is gone, an item, or Root: opened as its bookmark (a message when gone, the item focused, the
     // folder as the pane's top; plan 26 3.10, 3.12).
-    const shortcut = n.parent === this.qaHead && this.qaHead ? findBookmark(n.id) : null;
+    const shortcut = n.parent === this.qaHead && this.qaHead ? bookmarkById(n.bm) : null;
     if (shortcut && (n.missing || bookmarkMissing(n.id) || shortcut.item || shortcut.root) && !e.target.classList.contains('twisty')) {
       this.select(n.id, true, n);
       return openBookmark(shortcut);
@@ -2374,7 +2381,8 @@ function dropTarget(body, targetOf) {
           status(`${m.entries.length} item(s) added to ${views.get(target.scrap)?.tabTitle() ?? 'the scrap'}.`);
         });
     } else if (target?.quickAccessAt !== undefined) {
-      host.postMessageWithAdditionalObjects({ op: 'drop', quickAccessAt: target.quickAccessAt, types: [...e.dataTransfer.types] }, e.dataTransfer.files);
+      host.postMessageWithAdditionalObjects({ op: 'drop', quickAccessAt: target.quickAccessAt, moveId: qaDragging ?? undefined, types: [...e.dataTransfer.types] }, e.dataTransfer.files);
+      qaDragging = null;
     } else if (target) host.postMessageWithAdditionalObjects({ op: 'drop', target, types: [...e.dataTransfer.types] }, e.dataTransfer.files);
   });
 }
@@ -3603,6 +3611,7 @@ const events = {
   settingFailed(m) { status(`settings.json: ${m.error}`, true); },
   dragDone(m) {
     window.__spike.events.push({ dragDone: m.effect, error: m.error, source: m.source });
+    qaDragging = null;
     if (m.error) status(m.error, true);
     else if (m.effect === 2) reloadLists();
   },
@@ -3630,7 +3639,7 @@ const events = {
   searches(m) { searches = m.searches; },
   // The bookmarks changed (in any window; plan 26 3.1); Edit asked from Windows' menu (3.8); answers to plain questions.
   bookmarks(m) { bookmarksCame(m); },
-  bookmarkEdit(m) { editBookmark(m.location); },
+  bookmarkEdit(m) { editBookmark(m.id); },
   answer(m) { columnReply(m); },
   renames(m) { renames = m.renames; },
   previewShown(m) {

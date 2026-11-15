@@ -5,19 +5,24 @@ using System.Text.Json.Nodes;
 namespace Foldex;
 
 /// <summary>One bookmark (docs/plans/executed/26-PLAN-bookmarks.md 3.1): a folder or an item (a file), with what it was given.
-/// Only Location is always there; Name and Icon null when not set, Key and KeyNew null without a key.</summary>
+/// Each entry stands on its own: the same location can be another entry too (on the other tab, or twice on one), so an
+/// entry is known by its Id. Location and Id are always there; Name and Icon null when not set, Key and KeyNew null
+/// without a key.</summary>
 sealed class Bookmark
 {
-    public string Location = "";
+    public string Id = "", Location = "";
     public bool Item, QuickAccess, Root;
     public string? Name, Icon, Key, KeyNew;
 
     public Bookmark Copy() => (Bookmark)MemberwiseClone();
 
+    /// <summary>A new entry's id: short, and never one the list has.</summary>
+    public static string NewId() => Guid.NewGuid().ToString("N")[..12];
+
     /// <summary>As bookmarks.json writes it: only what is set.</summary>
     public JsonObject ToJson()
     {
-        var o = new JsonObject { ["location"] = Location };
+        var o = new JsonObject { ["id"] = Id, ["location"] = Location };
         if (Item) o["item"] = true;
         if (QuickAccess) o["quickAccess"] = true;
         if (!string.IsNullOrEmpty(Name)) o["name"] = Name;
@@ -37,7 +42,7 @@ sealed class Bookmark
         bool Flag(string key) => o[key] is JsonValue t && t.TryGetValue<bool>(out var x) && x;
         return new()
         {
-            Location = location, Item = Flag("item"), QuickAccess = Flag("quickAccess"), Root = Flag("root"),
+            Id = Text("id") ?? "", Location = location, Item = Flag("item"), QuickAccess = Flag("quickAccess"), Root = Flag("root"),
             Name = Text("name"), Icon = Text("icon"), Key = Text("key"), KeyNew = Text("keyNew"),
         };
     }
@@ -47,8 +52,8 @@ sealed class Bookmark
 /// The bookmarks (docs/plans/executed/26-PLAN-bookmarks.md 3.1): one list in your order, bookmarks.json in Foldex's data folder,
 /// for every project and window; the ones with QuickAccess are the shortcuts of a tree's Quick access area, the others
 /// the Bookmarks menu. Written whole through a temporary file; a file that cannot be read counts as empty. A location
-/// that comes twice (any case, or a known folder by its shell name and by its path) is kept once. Known folders are
-/// kept by their shell names (shell:Downloads), so a moved Documents folder is still found.
+/// may come more than once, each entry with an id of its own. Known folders are kept by their shell names
+/// (shell:Downloads), so a moved Documents folder is still found.
 /// </summary>
 static class Bookmarks
 {
@@ -64,7 +69,12 @@ static class Bookmarks
         try
         {
             var root = JsonNode.Parse(File.ReadAllText(path), documentOptions: Options);
-            return Unique(root?["bookmarks"]?.AsArray().Select(Bookmark.From).OfType<Bookmark>() ?? []);
+            var read = root?["bookmarks"]?.AsArray().Select(Bookmark.From).OfType<Bookmark>().ToList() ?? [];
+            // Entries without an id (a bookmarks.json from before ids) get theirs written once, so they keep them.
+            if (read.Any(b => b.Id == ""))
+                try { return Save(dataDir, read); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+            return Clean(read);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException)
         {
@@ -73,14 +83,14 @@ static class Bookmarks
     }
 
     /// <summary>The first list, when bookmarks.json is not there yet: plan 23's quickaccess.json (each a quick access
-    /// shortcut), then its favourite-folders.json (a folder in both stays one shortcut); neither there either: Explorer's
-    /// pinned folders (`pinned`, asked only then), as shortcuts. Not written here.</summary>
+    /// shortcut), then its favourite-folders.json (each a bookmark of the menu; a folder in both is on both tabs);
+    /// neither there either: Explorer's pinned folders (`pinned`, asked only then), as shortcuts. Not written here.</summary>
     public static List<Bookmark> Start(string dataDir, Func<List<string>> pinned)
     {
         var quick = OldList(dataDir, "quickaccess.json");
         var favourites = OldList(dataDir, "favourite-folders.json");
         if (quick is null && favourites is null) quick = pinned();
-        return Unique((quick ?? []).Select(f => new Bookmark { Location = f, QuickAccess = true })
+        return Clean((quick ?? []).Select(f => new Bookmark { Location = f, QuickAccess = true })
             .Concat((favourites ?? []).Select(f => new Bookmark { Location = f })));
     }
 
@@ -102,7 +112,7 @@ static class Bookmarks
 
     public static List<Bookmark> Save(string dataDir, IEnumerable<Bookmark> bookmarks)
     {
-        var list = Unique(bookmarks);
+        var list = Clean(bookmarks);
         var path = Path.Combine(dataDir, FileName);
         Directory.CreateDirectory(dataDir);
         var json = new JsonObject { ["bookmarks"] = new JsonArray(list.Select(b => (JsonNode)b.ToJson()).ToArray()) };
@@ -112,15 +122,17 @@ static class Bookmarks
         return list;
     }
 
-    /// <summary>Each location once, the first place kept; a name that is empty or the location's own name dropped.</summary>
-    public static List<Bookmark> Unique(IEnumerable<Bookmark> bookmarks)
+    /// <summary>The entries as kept: one without a location left out; each with an id of its own (none, or one that came
+    /// before: a new one); a name that is empty or the location's own name dropped.</summary>
+    public static List<Bookmark> Clean(IEnumerable<Bookmark> bookmarks)
     {
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var ids = new HashSet<string>();
         var list = new List<Bookmark>();
         foreach (var b in bookmarks)
         {
-            if (string.IsNullOrWhiteSpace(b.Location) || !seen.Add(Resolve(b.Location).TrimEnd('\\'))) continue;
+            if (string.IsNullOrWhiteSpace(b.Location)) continue;
             var c = b.Copy();
+            if (string.IsNullOrEmpty(c.Id) || !ids.Add(c.Id)) ids.Add(c.Id = Bookmark.NewId());
             if (string.IsNullOrWhiteSpace(c.Name) || c.Name == OwnName(c.Location)) c.Name = null;
             list.Add(c);
         }
@@ -140,12 +152,12 @@ static class Bookmarks
         string.Equals(Resolve(a).TrimEnd('\\'), Resolve(b).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase);
 
     /// <summary>A location put into the Quick access area at `at` (counted among its shortcuts; past the last: after
-    /// it): a new entry with QuickAccess, or the one there already, given the flag and moved there. The bookmarks of
-    /// the menu keep their places.</summary>
-    public static List<Bookmark> ToQuickAccess(List<Bookmark> list, string location, bool item, int at)
+    /// it): a new shortcut, or (`moveId`: a shortcut dragged within the area) that one moved there. The bookmarks of the
+    /// menu keep their places.</summary>
+    public static List<Bookmark> ToQuickAccess(List<Bookmark> list, string location, bool item, int at, string? moveId = null)
     {
-        var known = list.FirstOrDefault(b => Same(b.Location, location));
-        var entry = known?.Copy() ?? new Bookmark { Location = Known(location), Item = item };
+        var known = moveId is null ? null : list.FirstOrDefault(b => b.Id == moveId && b.QuickAccess);
+        var entry = known?.Copy() ?? new Bookmark { Id = Bookmark.NewId(), Location = Known(location), Item = item };
         entry.QuickAccess = true;
         var rest = list.Where(b => b != known).ToList();
         var shortcuts = rest.Where(b => b.QuickAccess).ToList();
@@ -158,24 +170,13 @@ static class Bookmarks
         return rest;
     }
 
-    /// <summary>A location added at the end (a quick access shortcut or a bookmark of the menu); one there already
-    /// only gets the flag when added to quick access, else stays as it is.</summary>
-    public static List<Bookmark> Add(List<Bookmark> list, string location, bool item, bool quickAccess)
-    {
-        if (list.FirstOrDefault(b => Same(b.Location, location)) is { } known)
-        {
-            if (!quickAccess || known.QuickAccess) return list;
-            return list.Select(b => b == known ? WithFlag(b) : b).ToList();
-        }
-        return [.. list, new Bookmark { Location = Known(location), Item = item, QuickAccess = quickAccess }];
-    }
+    /// <summary>A location added at the end, as a new entry (a quick access shortcut or a bookmark of the menu).</summary>
+    public static List<Bookmark> Add(List<Bookmark> list, string location, bool item, bool quickAccess) =>
+        [.. list, new Bookmark { Id = Bookmark.NewId(), Location = Known(location), Item = item, QuickAccess = quickAccess }];
 
-    static Bookmark WithFlag(Bookmark b)
-    {
-        var c = b.Copy();
-        c.QuickAccess = true;
-        return c;
-    }
+    /// <summary>The entries of a location on one tab (quick access, or the bookmarks of the menu) taken off.</summary>
+    public static List<Bookmark> RemoveFrom(List<Bookmark> list, string location, bool quickAccess) =>
+        list.Where(b => b.QuickAccess != quickAccess || !Same(b.Location, location)).ToList();
 
     // The known folders by their shell names; their paths asked of Windows (they can be moved, to OneDrive for one).
     static readonly (string Shell, Guid Id)[] KnownFolders =

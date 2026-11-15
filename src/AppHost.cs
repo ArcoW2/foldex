@@ -317,10 +317,15 @@ sealed class AppHost : ApplicationContext
 
     public void AddBookmark(string location, bool item, bool quickAccess) => SetBookmarks(Bookmarks.Add(bookmarks, location, item, quickAccess));
 
-    /// <summary>Put into the Quick access area at `at` (counted among its shortcuts).</summary>
-    public void AddToQuickAccess(string location, bool item, int at) => SetBookmarks(Bookmarks.ToQuickAccess(bookmarks, location, item, at));
+    /// <summary>Put into the Quick access area at `at` (counted among its shortcuts); `moveId`: a shortcut moved there.</summary>
+    public void AddToQuickAccess(string location, bool item, int at, string? moveId = null) =>
+        SetBookmarks(Bookmarks.ToQuickAccess(bookmarks, location, item, at, moveId));
 
-    public void RemoveBookmark(string location) => SetBookmarks(bookmarks.Where(b => !Bookmarks.Same(b.Location, location)));
+    /// <summary>One entry taken off, by its id.</summary>
+    public void RemoveBookmark(string id) => SetBookmarks(bookmarks.Where(b => b.Id != id));
+
+    /// <summary>Every entry of a location on one tab taken off (Windows' menu: Remove from quick access, or bookmarks).</summary>
+    public void RemoveBookmarks(string location, bool quickAccess) => SetBookmarks(Bookmarks.RemoveFrom(bookmarks, location, quickAccess));
 
     /// <summary>This run of Foldex: a page that finds another run in its saved layout knows Foldex started again since,
     /// so its scraps go (docs/plans/executed/06-PLAN-search-and-scrap.md 3.2).</summary>

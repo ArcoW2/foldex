@@ -24,9 +24,11 @@ Go; it belongs in Home > Open.
 
 One list of bookmarks, in bookmarks.json. A bookmark is a folder or an item (a file), each with a location, a name,
 an icon, two optional keys, a way of opening (Regular or Root) and a quick access flag: with the flag it shows in the
-Quick access area of a tree without a parent, without it in the Bookmarks menu; switching is Manage's Move button or
-Edit's check box (no menu item of its own: right-click menus stay short). Manage has a tab for the bookmarks and one
-for quick access, each in columns: Name (the icon, then the name) and Location. Edit...
+Quick access area of a tree without a parent, without it in the Bookmarks menu. Every entry stands on its own: one
+location can be on both, or twice on one, each entry with its own name, icon and keys. Manage has a tab for the
+bookmarks and one for quick access, each in columns: Name (the icon, then the name) and Location; its button To quick
+access (or To bookmarks) moves or copies the selected entry to the other tab; Edit has the flag as a check box (no
+menu item of its own: right-click menus stay short). Edit...
 opens a window with all of it; Custom icons come from a Change Icon window (every icon of a dll, exe or ico file,
 SHELL32.dll by default); keys are pressed into key fields as one key or a chord, starting with Ctrl+B by default: one
 opens the bookmark in the active pane, the other in a new pane with a child pane. Regular goes to the folder (from a
@@ -73,7 +75,7 @@ Plan 23's quick access and favourite folders stay and are changed, not made agai
 | Two lists: quickaccess.json and favourite-folders.json, each `folders`, a list of paths | FolderLists.cs, AppHost.cs | one list, bookmarks.json, `bookmarks`, a list of entries (3.1); both old files taken over once |
 | "folderLists" to every window; folderListAdd, folderListRemove, folderListSet per kind | AppHost.cs, MainForm.cs, folderlists.js | the one list of entries; a change sets an entry's flag rather than moving it between lists (3.2) |
 | The word "favourite folders", "Favourites" | ribbon.json, folderlists.js, actions.js, MainForm.cs (Windows' menu items), F1 | "Bookmarks": the ribbon button, the menu, Manage's title, Windows' menu items, the actions (bookmarks.menu, bookmarks.add, bookmarks.manage; the old names still accepted, so a ribbon.json or keys.json of your own keeps working) |
-| Windows' menu: Add to / Remove from quick access, Add to / Remove from favourite folders, for one folder | MainForm.cs (ShellMenu.AddOwn), app.js | for one folder or one file; Add to quick access / Add to bookmarks, or Remove from quick access / Remove from bookmarks for one that is there (3.2) |
+| Windows' menu: Add to / Remove from quick access, Add to / Remove from favourite folders, for one folder | MainForm.cs (ShellMenu.AddOwn), app.js | for one folder or one file, per tab: Add to quick access, or Remove from quick access when it is there; the same for the bookmarks; on a shortcut also Edit... (3.2, 3.8) |
 | Manage: a row of name with its parent folder; Change... picks a folder | folderlists.js (manageFavourites), app.css | every bookmark; columns Name, Location, Quick access; Edit... and Add... open Edit (3.3, 3.4) |
 | The menu: the folder's name | folderlists.js (favouritesMenu), menu.js | the name, icon and key; a right-click menu (3.7, 3.8) |
 | The button in Home > Go | defaults/ribbon.json | in Home > Open (3.9) |
@@ -88,8 +90,11 @@ within it, Del on a shortcut), Add current folder / Remove current folder, Add a
 
 ### 3.1 The list
 
-- bookmarks.json is one list, `bookmarks`, in your order, one entry per bookmark: { location, item, quickAccess, name,
-  icon, key, keyNew, root }. Only location is always there; the rest only when set.
+- bookmarks.json is one list, `bookmarks`, in your order, one entry per bookmark: { id, location, item, quickAccess,
+  name, icon, key, keyNew, root }. Only id and location are always there; the rest only when set.
+- Every entry stands on its own: a location can be on both tabs, or twice on one, each entry with its own name, icon,
+  keys and way of opening. An entry is known by its id (short, made when it is added; an entry without one gets one,
+  written once), never by its location: the keys, Edit, Remove, F2 and Del work on that one entry.
 - item: true when the location is an item (a file) rather than a folder, set when it is added (Windows' menu on a
   file, or Edit finding a file there). It is the one difference between the two: after the folder opens, the item is
   focused (3.12). Kept rather than asked each time, so a file that is gone is still known to be one.
@@ -99,10 +104,9 @@ within it, Del on a shortcut), Add current folder / Remove current folder, Add a
   kept as written). key (Open) and keyNew (Open in a new pane with a child pane): each as keys.json writes one
   ("Ctrl+B, 1"); either can be absent. root: true for Root (3.11); absent is Regular.
 - Taken over once, when bookmarks.json is not there yet: quickaccess.json's folders (quickAccess set), then
-  favourite-folders.json's; a folder in both is one entry, with quickAccess set (it stays where you see it in the
-  tree). Neither file there either: the first list from Explorer's pinned folders, quickAccess set, as built.
-- One entry per location (any case, a known folder by its shell name or path). A location changed in Edit keeps the
-  rest of its entry.
+  favourite-folders.json's; a folder in both is on both tabs. Neither file there either: the first list from
+  Explorer's pinned folders, quickAccess set, as built.
+- A location changed in Edit keeps the rest of its entry.
 - The host keeps the list (FolderLists), writes it whole through a temporary file and sends it to every window after
   a change, as built.
 - Added from Windows' right-click menu or the Bookmarks menu: only location, item for a file, and quickAccess when
@@ -111,31 +115,34 @@ within it, Del on a shortcut), Add current folder / Remove current folder, Add a
 ### 3.2 The quick access flag
 
 - With quickAccess, an entry is a shortcut in the Quick access area at the top of every tree without a parent, in
-  the order of the list; without it, an entry of the Bookmarks menu, in the order of the list. Never both.
-- Switching is one change to the flag; the entry keeps its place in the list, name, icon, keys and the rest:
-  - Manage: Move to quick access on the Bookmarks tab, Move to bookmarks on the Quick access tab (or Space), for
-    the selected row.
-  - Edit: the Quick access check box.
+  the order of the list; without it, an entry of the Bookmarks menu, in the order of the list. One entry is never
+  both; the same location in both is two entries.
+- Moving an entry to the other tab is one change to its flag; it keeps its place in the list, name, icon, keys and the
+  rest: Manage's Move to (3.3), or Edit's Quick access check box. Copying makes another entry: Manage's Copy to.
 - No menu has a switch of its own: right-click menus stay short. Edit is one click away from both (the Bookmarks
   menu's right-click, a shortcut's right-click, Manage).
-- Dragging within the area (as built) moves the entry in the list: it lands before the shortcut it was dropped on,
-  or after the last one; bookmarks of the menu in between keep their places. A folder dropped on the area is added
-  with quickAccess set, or, when it is a bookmark of the menu, gets the flag.
-- Del on a shortcut (as built) takes the entry off the list; nothing on disk changes.
+- Dragging a shortcut within the area moves that entry in the list: it lands before the shortcut it was dropped on,
+  or after the last one; bookmarks of the menu in between keep their places. A folder dropped on the area from
+  elsewhere is a new shortcut, also when the location is a shortcut or a bookmark already.
+- Del on a shortcut takes that entry off the list; nothing on disk changes.
 
 ### 3.3 Manage
 
-- Two tabs: Bookmarks (the entries of the menu) and Quick access (the shortcuts); a location is in one of them. Each
+- Two tabs: Bookmarks (the entries of the menu) and Quick access (the shortcuts); each entry is on one of them. Each
   shows its entries in the order of the list, in two columns with a head: Name (the icon, then the name; the
   location's own name when it has none) and Location (the full path; a missing one struck through). The columns can
   be made wider by dragging their border in the head; no sorting (the order is yours, set with Up and Down).
-- Buttons: Up, Down, Add..., Edit..., Move to quick access (on the Bookmarks tab) or Move to bookmarks (on the Quick
-  access tab), Delete, Close. Edit... (also Enter, F2 and a double click) opens Edit (3.4) for the selected row.
-  Add... opens Edit empty, Quick access checked on the Quick access tab, with the location's Browse... opened at once
-  (Windows' folder picker); a location already in the list is refused there.
-- Up and Down move an entry past its neighbour on the same tab; the entries of the other tab keep their places. Move
-  (and Space) takes the selected entry to the other tab, its place in the list kept. Delete, Close and their keys as
-  built; every change goes to the host at once.
+- Buttons: Up, Down, Add..., Edit..., To quick access (on the Bookmarks tab) or To bookmarks (on the Quick access
+  tab), Delete, Close. Edit... (also Enter, F2 and a double click) opens Edit (3.4) for the selected row. Add... opens
+  Edit empty, Quick access checked on the Quick access tab, with the location's Browse... opened at once (Windows'
+  folder picker).
+- To quick access / To bookmarks has a chevron and opens a menu (its hint: "Move or copy the selected entry to Quick
+  access" or "... to Bookmarks"):
+  - Move to: the selected entry to the other tab, its place in the list kept (also Space).
+  - Copy to: a copy of it on the other tab, beside it in the list: its own id, the same location, name, icon and way of
+    opening, no keys (a key opens one entry). Renaming either later leaves the other as it is.
+- Up and Down move an entry past its neighbour on the same tab; the entries of the other tab keep their places.
+  Delete, Close and their keys as built; every change goes to the host at once.
 - Where Foldex differs from LexPen: LexPen's Manage has one row per file with its folder under it, and Change...
   picks another file. Foldex has columns and Edit..., as the user asked.
 
@@ -146,8 +153,8 @@ within it, Del on a shortcut), Add current folder / Remove current folder, Add a
   - Location: a text box with Browse... (Windows' folder picker at that folder): a folder or a file on disk, a
     network path (`\\server\share\folder`) or a shell folder; a file's path is typed or comes from Windows' menu.
     Other places (FTP and the like) are not part of this plan; the field and the stored location are plain text, so
-    they can come later. A location already another bookmark is refused with a message on OK. One that is not there:
-    asked whether to keep it anyway (a share can be away).
+    they can come later. A location another entry has too is fine. One that is not there: asked whether to keep it
+    anyway (a share can be away).
   - Quick access: a check box (3.2).
   - Open as: Regular or Root (two radio buttons; 3.11).
   - Icon: Plain, Default or Custom (three radio buttons), the icon shown beside them. Custom: the Change Icon button
@@ -180,7 +187,7 @@ within it, Del on a shortcut), Add current folder / Remove current folder, Add a
   else answers it. The shipped keys.json keeps Ctrl+B for the bookmarks: it binds no other key or chord starting with
   Ctrl+B. This is a convention for the shipped keys, not a rule for you: any key can be chosen (a clash, below).
 - The keys live with the bookmarks (3.1), not in keys.json: the page adds them to the key set when the list comes
-  (actions bookmarks.open and bookmarks.openNew, with the location as their parameter), so F1 lists them with the
+  (actions bookmarks.open and bookmarks.openNew, with the entry's id as their parameter), so F1 lists them with the
   rest. keys.json is not written by Foldex (it may hold your own comments).
 - A key field: focused, it takes the next key pressed (with its Ctrl, Alt, Shift) and shows it; a second key
   pressed within it makes a chord of the two; a third starts again. Backspace and Clear empty it. It does not run
@@ -324,25 +331,36 @@ None.
   iconFile; the event bookmarkEdit (Windows' menu's Edit...).
 - The old action names (favourites.menu, .add, .manage) run as the new ones (actions.js ActionAliases); F1 lists
   only the new ones.
-- Windows' menu for one folder or file: Add to quick access and Add to bookmarks; for one that is a bookmark, Remove
-  from quick access (or from bookmarks) and Edit... Edit... is there for every bookmark, not only for a shortcut:
-  still two items.
+- Windows' menu for one folder or file, per tab: Add to quick access, or Remove from quick access when an entry of
+  that location is there (every such entry of that tab goes: Bookmarks.RemoveFrom); the same for the bookmarks. On a
+  quick access shortcut the page sends its entry's id: its Remove from quick access takes off only that one, and
+  Edit... edits it.
+- Every entry has an id (Bookmark.Id, made by Bookmark.NewId or the page's newBookmarkId); Bookmarks.Clean gives one to
+  an entry without (or with one that came before), and Load writes them once. A tree's shortcut row carries its
+  entry's id (`bm`) and is a place of its own per entry (TreeView.add), so one location can be two shortcuts.
 
 ### 6.2 The flag, Manage
 
 - The area and the menu filter the one list (quickAccessList, menuBookmarks). A drop on the area goes through
   Bookmarks.ToQuickAccess: its place counted among the shortcuts, a bookmark of the menu given the flag in its place.
 - Manage: two tabs over one grid with a head (manageRows: the list's entries of the tab shown); a border in the head
-  dragged sizes the column before it (the widths are kept while Foldex runs, not saved). The Move button's text
-  follows the tab, its letter marked again (buttons.js markButtons); Space is Move; Enter, F2 and a double click are
-  Edit... Tested in the test copy: Move to quick access and Move to bookmarks by a click, Space, Ctrl+Down on the
-  Quick access tab swapping only with its neighbour there, the buttons' letters.
+  dragged sizes the column before it (the widths are kept while Foldex runs, not saved). The To button's text and
+  hint follow the tab, its letter marked again (buttons.js markButtons); its menu (Move to, Copy to) is a menu of the
+  page, which menu.js now puts inside the open modal dialog so it is not under it. Space is Move to; Enter, F2 and a
+  double click are Edit...
+- A shortcut dragged within the area: the page remembers its entry's id (qaDragging) and sends it with the drop, so
+  the host moves that entry (Bookmarks.ToQuickAccess moveId); a folder from elsewhere is a new shortcut.
+- Tested in the test copy: the To button's text and hint on both tabs; its menu inside the dialog, on top, closed by a
+  second click on the button; Move to by the menu and by Space; Copy to (the copy on the other tab, beside it, without
+  the keys; renamed in Edit, the original keeps its name and Ctrl+B, 1 still opens the original); Windows' menu with
+  an entry of the location on both tabs (Remove from quick access, Remove from bookmarks; on the shortcut also
+  Edit...); two shortcuts of one location as two rows in the tree, Del on one taking off only that one; the ids the
+  same after a restart; Ctrl+Down on the Quick access tab swapping only with its neighbour there.
 - Manage is still a modal dialog; as a pane, docked or floating, it is in plan 14 3.7.
 
 ### 6.3 Edit, Change Icon
 
-- Edit and Change Icon use the Find dialog's look (dialog.find). A location already a bookmark, an empty one and two
-  equal keys are refused in the status line, the dialog staying open; a location not there or not reachable is
+- Edit and Change Icon use the Find dialog's look (dialog.find). An empty location and two equal keys are refused in the status line, the dialog staying open; a location not there or not reachable is
   asked (Foldex's own question window).
 - Change Icon reads every icon of the file on the host (ShellIcons.AllFromFile, ExtractIconEx, 32 px PNGs); a custom
   icon is asked once per "file,index" (ShellIcons.FromFile, kept) and drawn wherever the bookmark shows.
@@ -390,11 +408,13 @@ None.
 
 ### 6.9 Tests
 
-- Unit: BookmarksTests (entries kept and read back, only what is set written, one entry per location in any case and
-  for a known folder by both names, names dropped, the two plan 23 lists taken over and Explorer asked only without
-  them, ToQuickAccess and Add, an entry from the page, SHELL32's icons and a file without icons) and BookmarkKeysTests
-  in Jint (the area and the menu in list order, the keys in the key set, every kind of clash named, a bookmark's key
-  over a keys.json key, the old action names, F1's variants). `dotnet test`: 217 passed, 0 failed (2026-11-15).
+- Unit: BookmarksTests (entries kept and read back with their ids, only what is set written, a location more than once
+  each with its own id, a known folder by both names, names dropped, the two plan 23 lists taken over and Explorer
+  asked only without them, ToQuickAccess (a new shortcut, a dragged one moved), Add and RemoveFrom, an entry from the
+  page, SHELL32's icons and a file without icons) and BookmarkKeysTests in Jint (the area and the menu in list order,
+  the keys in the key set by id, every kind of clash named, another entry of the same location's key too, a
+  bookmark's key over a keys.json key, the old action names, F1's variants). `dotnet test`: 217 passed, 0 failed
+  (2026-11-15).
 - In the test copy (CDP, real keys and mouse, UI Automation for the question window), with a data folder holding plan
   23's two lists: taken over (a folder in both one shortcut); Bookmarks in Home > Open; the menu with names, icons
   and keys; Edit from the menu with a name and keys pressed into the fields (the offered Ctrl+B, a chord with Shift, a

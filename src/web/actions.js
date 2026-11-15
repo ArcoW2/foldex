@@ -69,7 +69,7 @@ action('item.delete', { title: 'Delete', hint: 'to the Recycle Bin; in a scrap: 
   enabled: anySelected, run: () => {
     // A shortcut in a tree's Quick access area: off the list, nothing on disk (plan 23 3.4).
     const shortcut = activeView() instanceof TreeView && activeView().quickAccessShortcut();
-    if (shortcut) return post({ op: 'bookmarkRemove', location: shortcut.id });
+    if (shortcut) return post({ op: 'bookmarkRemove', id: shortcut.bm });
     return inScrap() ? activeView().takeOut(selectedIds()) : deleteItems(false);
   } });
 action('item.deleteDisk', { title: 'Delete from disk', hint: 'to the Recycle Bin, also in a scrap (and out of it)', group: 'items',
@@ -220,15 +220,15 @@ action('bookmarks.menu', { title: 'Bookmarks', hint: 'the bookmarks; add the cur
 action('bookmarks.add', { title: 'Add the current folder to the bookmarks', hint: 'or take it off when it is one', group: 'folders',
   enabled: () => !!currentFolder(), run: () => toggleCurrentBookmark() });
 action('bookmarks.manage', { title: 'Manage the bookmarks', group: 'folders', run: () => manageBookmarks() });
-const bookmarkOf = params => params[0] ? findBookmark(params[0]) : null;
+const bookmarkOf = params => bookmarkById(params[0]);
 action('bookmarks.open', { title: 'Open a bookmark', hint: 'in the active pane', group: 'folders',
   enabled: params => !!bookmarkOf(params), run: params => openBookmark(bookmarkOf(params)) });
 action('bookmarks.openNew', { title: 'Open a bookmark in a new pane with a child pane', group: 'folders',
   enabled: params => !!bookmarkOf(params), run: params => openBookmark(bookmarkOf(params), 'newChild') });
 for (const [name, how] of [['bookmarks.open', 'Open'], ['bookmarks.openNew', 'Open in a new pane with a child pane:']])
   Object.defineProperties(actions.get(name), {
-    variants: { get: () => bookmarks.map(b => [b.location]) },
-    variantTitles: { get: () => Object.fromEntries(bookmarks.map(b => [b.location, `${how} ${bookmarkName(b)}`])) },
+    variants: { get: () => bookmarks.map(b => [b.id]) },
+    variantTitles: { get: () => Object.fromEntries(bookmarks.map(b => [b.id, `${how} ${bookmarkName(b)}${b.quickAccess ? ' (quick access)' : ''}`])) },
   });
 
 // Views (as xplorer2's ribbon button): in one plain menu (thumbs.js viewsMenu), the view of the active one-folder pane,

@@ -69,7 +69,8 @@ function openMenu(x, y, items, level = 0, back = null) {
     rows.push(row);
     row.item = item;
   }
-  document.body.append(el);
+  // Over a modal dialog it goes inside that dialog (the top layer), else the dialog would cover it.
+  ([...document.querySelectorAll('dialog[open]')].pop() ?? document.body).append(el);
   // Kept inside the window; a submenu that does not fit at the right goes to the left of its menu (back: that left).
   const r = el.getBoundingClientRect();
   const left = back !== null && (openMenus[level - 1].leftward || x + r.width > innerWidth - 2) ? back - r.width

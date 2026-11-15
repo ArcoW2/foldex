@@ -291,12 +291,13 @@ sealed class MainForm : Form
                     Post(new JsonObject { ["event"] = "menuDone", ["error"] = "the network location is not reachable" });
                     break;
                 }
-                ShowMenu(ids, ToScreen(msg), msg["extended"]?.GetValue<bool>() == true, msg["own"]?.GetValue<bool>() == true, msg["item"]?.GetValue<bool>() == true);
+                ShowMenu(ids, ToScreen(msg), msg["extended"]?.GetValue<bool>() == true, msg["own"]?.GetValue<bool>() == true, msg["item"]?.GetValue<bool>() == true,
+                    msg["bookmark"]?.GetValue<string>());
                 break;
             case "menuTexts":
             {
                 var (menu, error) = ShellMenu.Create(ids, false);
-                if (menu is not null && msg["own"]?.GetValue<bool>() == true && ids.Count == 1) menu.AddOwn(OwnMenu(ids[0], msg["item"]?.GetValue<bool>() == true).Select(o => o.Text).ToList());
+                if (menu is not null && msg["own"]?.GetValue<bool>() == true && ids.Count == 1) menu.AddOwn(OwnMenu(ids[0], msg["item"]?.GetValue<bool>() == true, msg["bookmark"]?.GetValue<string>()).Select(o => o.Text).ToList());
                 using (menu)
                     Post(new JsonObject
                     {
@@ -328,7 +329,9 @@ sealed class MainForm : Form
                 // folder is asked off this thread (a share may not answer).
                 var place = msg["quickAccessAt"]!.GetValue<int>();
                 var folders = await Task.Run(() => files.Where(f => Directory.Exists(f)).ToList());
-                foreach (var f in folders) app.AddToQuickAccess(f, false, place++);
+                // A shortcut dragged within the area: that one moved, not another made.
+                var moveId = msg["moveId"]?.GetValue<string>();
+                foreach (var f in folders) app.AddToQuickAccess(f, false, place++, folders.Count == 1 ? moveId : null);
                 break;
             }
             case "drop" when msg["scrap"]?.GetValue<bool>() == true:
@@ -376,7 +379,7 @@ sealed class MainForm : Form
                 app.AddBookmark(msg["location"]!.GetValue<string>(), msg["item"]?.GetValue<bool>() == true, msg["quickAccess"]?.GetValue<bool>() == true);
                 break;
             case "bookmarkRemove":
-                app.RemoveBookmark(msg["location"]!.GetValue<string>());
+                app.RemoveBookmark(msg["id"]!.GetValue<string>());
                 break;
             case "bookmarksSet":
                 app.SetBookmarks(msg["bookmarks"]!.AsArray().Select(Bookmark.From).OfType<Bookmark>());
@@ -819,7 +822,7 @@ sealed class MainForm : Form
         Post(r);
     }
 
-    void ShowMenu(List<string> ids, Point screen, bool extended, bool own, bool item)
+    void ShowMenu(List<string> ids, Point screen, bool extended, bool own, bool item, string? bookmark)
     {
         var (menu, error) = ShellMenu.Create(ids, extended);
         if (menu is null)
@@ -830,7 +833,7 @@ sealed class MainForm : Form
         using (menu)
         {
             // One folder or file: Foldex's own items at the top (plan 23 3.2; plan 26 3.0), quick access and bookmarks.
-            var mine = own && ids.Count == 1 ? OwnMenu(ids[0], item) : [];
+            var mine = own && ids.Count == 1 ? OwnMenu(ids[0], item, bookmark) : [];
             if (mine.Count > 0) menu.AddOwn(mine.Select(o => o.Text).ToList());
             var verb = menu.Show(this, screen, out var chosen);
             if (chosen is { } k) mine[k].Run();
@@ -838,18 +841,23 @@ sealed class MainForm : Form
         }
     }
 
-    // Foldex's own items in Windows' menu for one folder or file (plan 26 3.0, 3.8): Add to quick access and Add to
-    // bookmarks; for one that is a bookmark already, Remove from quick access (or bookmarks) and Edit...
-    List<(string Text, Action Run)> OwnMenu(string location, bool item)
+    // Foldex's own items in Windows' menu for one folder or file (plan 26 3.0, 3.8), per tab: Add to quick access, or
+    // Remove from quick access when it is there; the same for the bookmarks. On a quick access shortcut (`bookmark`,
+    // its entry's id): its Remove takes off only that one, and Edit... edits it.
+    List<(string Text, Action Run)> OwnMenu(string location, bool item, string? bookmark)
     {
-        var known = app.BookmarkList.FirstOrDefault(b => Bookmarks.Same(b.Location, location));
-        if (known is null)
-            return [("Add to quick access", () => app.AddBookmark(location, item, true)), ("Add to bookmarks", () => app.AddBookmark(location, item, false))];
-        return
-        [
-            (known.QuickAccess ? "Remove from quick access" : "Remove from bookmarks", () => app.RemoveBookmark(location)),
-            ("Edit...", () => Post(new JsonObject { ["event"] = "bookmarkEdit", ["location"] = known.Location })),
-        ];
+        var shortcut = bookmark is null ? null : app.BookmarkList.FirstOrDefault(b => b.Id == bookmark);
+        (string, Action) Tab(bool quick)
+        {
+            var name = quick ? "quick access" : "bookmarks";
+            if (shortcut is not null && shortcut.QuickAccess == quick) return ($"Remove from {name}", () => app.RemoveBookmark(shortcut.Id));
+            return app.BookmarkList.Any(b => b.QuickAccess == quick && Bookmarks.Same(b.Location, location))
+                ? ($"Remove from {name}", () => app.RemoveBookmarks(location, quick))
+                : ($"Add to {name}", () => app.AddBookmark(location, item, quick));
+        }
+        List<(string, Action)> items = [Tab(true), Tab(false)];
+        if (shortcut is not null) items.Add(("Edit...", () => Post(new JsonObject { ["event"] = "bookmarkEdit", ["id"] = shortcut.Id })));
+        return items;
     }
 
     // A path on disk or a share (not a shell place).

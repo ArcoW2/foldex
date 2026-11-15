@@ -4,13 +4,15 @@
 // shortcut of the Quick access area at the top of a tree without a parent (TreeView, app.js: its head and shortcuts are
 // rows of the tree); the others are the Bookmarks menu (the ribbon's Bookmarks). Each has a location (a folder, or an
 // item: a file), a name, an icon, two keys and a way of opening (Regular or Root). Added and taken off by Foldex's own
-// items in Windows' right-click menu (the host), by the menu and by Manage; changed in Edit.
+// items in Windows' right-click menu (the host), by the menu and by Manage; changed in Edit. Every entry stands on its
+// own, known by its id: a location can be on both tabs, or twice on one, each with its own name, icon and keys.
 
-let bookmarks = [];                // the entries, in your order: { location, item, quickAccess, name, icon, key, keyNew, root }
+let bookmarks = [];                // the entries, in your order: { id, location, item, quickAccess, name, icon, key, keyNew, root }
 let bookmarkPaths = {};            // a known folder's shell name (shell:Personal) -> its path now (the host tells)
 let bookmarkExists = new Map();    // lower-case location -> whether it was there when last asked
 const bookmarkEntries = new Map(); // lower-case location -> the host's entry for it (its own icon), once asked
 const fileIcons = new Map();       // "file,index" -> a picture (a data URL), or null when the file has none there
+let qaDragging = null;             // the id of a quick access shortcut being dragged (app.js TreeView): a drop in the area moves it
 
 const QaHeadId = '::foldex-quick-access', QaHintId = '::foldex-quick-access-hint';
 const DefaultIconFile = '%SystemRoot%\\System32\\SHELL32.dll';
@@ -24,7 +26,11 @@ const folderName = f => folderPath(f).replace(/\\+$/, '').split('\\').pop() || f
 // The folder a location is in (shown dimmed by two shortcuts with the same name).
 const folderParent = f => folderPath(f).replace(/\\+$/, '').replace(/\\[^\\]*$/, '');
 
-const findBookmark = f => !!f && bookmarks.find(b => same(folderPath(b.location), folderPath(f))) || null;
+const bookmarkById = id => !!id && bookmarks.find(b => b.id === id) || null;
+// The first entry of a location on a tab (quick: true for quick access, false for the menu's bookmarks).
+const bookmarkAt = (f, quick) => !!f && bookmarks.find(b => !!b.quickAccess === quick && same(folderPath(b.location), folderPath(f))) || null;
+// A new entry's id (the host gives one to an entry without).
+const newBookmarkId = () => [...crypto.getRandomValues(new Uint8Array(6))].map(x => x.toString(16).padStart(2, '0')).join('');
 const bookmarkName = b => b.name || folderName(b.location);
 const quickAccessList = () => bookmarks.filter(b => b.quickAccess);
 const menuBookmarks = () => bookmarks.filter(b => !b.quickAccess);
@@ -96,7 +102,8 @@ async function quickAccessEntries(list) {
   return Promise.all(list.map(async b => {
     const f = b.location;
     const [e] = (await askHost({ op: 'entries', ids: [f] })).entries ?? [];
-    const row = e ? { ...e, id: f, name: bookmarkName(b), folder: !b.item } : { id: f, name: bookmarkName(b), folder: !b.item, missing: true };
+    // `bm`: the entry's id, so two shortcuts of one location are two rows (TreeView.add).
+    const row = e ? { ...e, id: f, bm: b.id, name: bookmarkName(b), folder: !b.item } : { id: f, bm: b.id, name: bookmarkName(b), folder: !b.item, missing: true };
     if (b.item) row.files = row.subs = false;   // an item: no expander
     return row;
   }));
@@ -106,7 +113,7 @@ async function quickAccessEntries(list) {
 function renameBookmarkInPlace(tree, node) {
   startRename(tree, node.id, { at: tree.flat.indexOf(node), done: name => {
     const list = bookmarks.map(b => {
-      if (!same(b.location, node.id)) return b;
+      if (b.id !== node.bm) return b;
       const c = { ...b };
       if (name && name !== folderName(b.location)) c.name = name;
       else delete c.name;
@@ -182,7 +189,7 @@ async function openBookmark(b, how = 'here') {
 
 // ---------- The menu (the ribbon's Bookmarks; 3.7, 3.8) ----------
 
-const inBookmarks = f => !!findBookmark(f);
+const inBookmarks = f => !!bookmarkAt(f, false);
 
 function bookmarkMenuItem(b) {
   const missing = bookmarkMissing(b.location);
@@ -195,8 +202,8 @@ function bookmarkMenuItem(b) {
       { label: 'Open in a new pane', run: () => openBookmark(b, 'new') },
       { label: 'Open in a new pane with a child pane', key: b.keyNew ?? '', run: () => openBookmark(b, 'newChild') },
       '-',
-      { label: 'Edit...', run: () => editBookmark(b.location) },
-      { label: 'Remove', run: () => post({ op: 'bookmarkRemove', location: b.location }) },
+      { label: 'Edit...', run: () => editBookmark(b.id) },
+      { label: 'Remove', run: () => post({ op: 'bookmarkRemove', id: b.id }) },
     ],
   };
 }
@@ -216,15 +223,19 @@ function bookmarksMenu() {
 function toggleCurrentBookmark() {
   const current = currentFolder();
   if (!current) return;
-  post(inBookmarks(current) ? { op: 'bookmarkRemove', location: findBookmark(current).location } : { op: 'bookmarkAdd', location: current });
+  // Remove current folder: its every bookmark of the menu (quick access keeps its shortcuts).
+  if (inBookmarks(current)) saveBookmarks(bookmarks.filter(b => b.quickAccess || !same(folderPath(b.location), folderPath(current))));
+  else post({ op: 'bookmarkAdd', location: current });
 }
 
 async function pickFolder(at = '') { return (await askHost({ op: 'pickFolder', at })).folder ?? null; }
 
 // ---------- Manage (3.3): every bookmark in columns, in your order ----------
 
-// Two tabs: the bookmarks of the menu and the quick access shortcuts; each location is in one of them, and Move takes
-// the selected one to the other (its place in the list kept). `at` counts the rows of the tab shown.
+// Two tabs: the bookmarks of the menu and the quick access shortcuts, each entry on one of them. The button To quick
+// access (on Bookmarks) or To bookmarks (on Quick access) opens a menu: Move to takes the selected entry to the other
+// tab (its place in the list kept), Copy to puts a copy of it there (beside it in the list, without its keys: a key
+// opens one entry). `at` counts the rows of the tab shown.
 const bmManage = { el: null, tab: 'bookmarks', at: 0, widths: [200, 320] };
 
 // The list's indexes of the tab shown, in list order.
@@ -246,7 +257,7 @@ function buildBookmarkManage() {
     <div class="ask-buttons">
       <button data-do="up" title="Ctrl+Up">Up</button><button data-do="down" title="Ctrl+Down">Down</button>
       <button data-do="add">Add...</button><button data-do="edit" title="Enter, F2, double click">Edit...</button>
-      <button data-do="move" title="Space"></button>
+      <button data-do="to" class="bm-menu-button"></button>
       <button data-do="delete" title="Del">Delete</button><button data-do="close">Close</button>
     </div>`;
   document.body.append(el);
@@ -309,9 +320,10 @@ function drawBookmarkManage() {
   drawBookmarkWidths();
   const el = bmManage.el, quick = bmManage.tab === 'quick', rows = manageRows();
   for (const t of el.querySelectorAll('[data-tab]')) t.classList.toggle('on', t.dataset.tab === bmManage.tab);
-  const move = el.querySelector('[data-do=move]');
-  if (move.dataset.text !== (quick ? 'Move to bookmarks' : 'Move to quick access')) {
-    move.textContent = move.dataset.text = quick ? 'Move to bookmarks' : 'Move to quick access';
+  const to = el.querySelector('[data-do=to]');
+  if (to.dataset.text !== (quick ? 'To bookmarks' : 'To quick access')) {
+    to.textContent = to.dataset.text = quick ? 'To bookmarks' : 'To quick access';
+    to.title = quick ? 'Move or copy the selected entry to Bookmarks (Space: move)' : 'Move or copy the selected entry to Quick access (Space: move)';
     markButtons(el);   // its letter again (buttons.js)
   }
   const box = el.querySelector('.bm-rows');
@@ -330,7 +342,7 @@ function drawBookmarkManage() {
   if (!rows.length) box.append(Object.assign(document.createElement('div'), { className: 'bm-none',
     textContent: quick ? 'No quick access yet: Add..., or Move to quick access on the Bookmarks tab.' : 'No bookmarks yet: Add... picks a folder.' }));
   box.querySelector('.selected')?.scrollIntoView({ block: 'nearest' });
-  for (const b of el.querySelectorAll('[data-do=up], [data-do=down], [data-do=edit], [data-do=move], [data-do=delete]')) b.disabled = !rows.length;
+  for (const b of el.querySelectorAll('[data-do=up], [data-do=down], [data-do=edit], [data-do=to], [data-do=delete]')) b.disabled = !rows.length;
 }
 
 // Every change goes to the host at once: the whole list.
@@ -356,21 +368,39 @@ async function bookmarkManageDo(what) {
       if (i === undefined) return;
       list.splice(i, 1);
       return saveBookmarks(list);
+    case 'to': {
+      // Its menu, under the button (inside the dialog, menu.js).
+      if (i === undefined) return;
+      const r = bmManage.el.querySelector('[data-do=to]').getBoundingClientRect();
+      return openMenu(r.left, r.bottom, [
+        { label: 'Move to', run: () => bookmarkManageDo('move') },
+        { label: 'Copy to', run: () => bookmarkManageDo('copy') },
+      ]);
+    }
     case 'move':
       // To the other tab: the flag switched, its place in the list kept.
       if (i === undefined) return;
       list[i] = { ...list[i], quickAccess: !list[i].quickAccess };
-      return saveBookmarks(list);
+      saveBookmarks(list);
+      return bmManage.el.querySelector('.bm-list').focus();
+    case 'copy': {
+      // A copy on the other tab, beside it in the list; its own id, no keys.
+      if (i === undefined) return;
+      const { key, keyNew, ...rest } = list[i];
+      list.splice(i + 1, 0, { ...rest, id: newBookmarkId(), quickAccess: !list[i].quickAccess });
+      saveBookmarks(list);
+      return bmManage.el.querySelector('.bm-list').focus();
+    }
     case 'add': {
       // Added on the tab shown: on Quick access a shortcut.
       const made = await editBookmark(null, { quickAccess: bmManage.tab === 'quick' });
-      if (made) bmManage.at = Math.max(0, manageRows().findIndex(k => same(bookmarks[k].location, made.location)));
+      if (made) bmManage.at = Math.max(0, manageRows().findIndex(k => bookmarks[k].id === made.id));
       drawBookmarkManage();
       return bmManage.el.querySelector('.bm-list').focus();
     }
     case 'edit':
       if (i === undefined) return;
-      await editBookmark(list[i].location);
+      await editBookmark(list[i].id);
       drawBookmarkManage();
       return bmManage.el.querySelector('.bm-list').focus();
   }
@@ -378,11 +408,11 @@ async function bookmarkManageDo(what) {
 
 // ---------- Edit (3.4): one bookmark, all of it ----------
 
-// Edit for the bookmark at `location`, or (null) a new one, its Browse... opened at once, starting with `start` (Manage's
+// Edit for the entry with the id, or (null) a new one, its Browse... opened at once, starting with `start` (Manage's
 // Quick access tab: quickAccess). Resolves to the entry kept, or null for Cancel.
-function editBookmark(location, start = {}) {
-  const old = location ? findBookmark(location) : null;
-  if (location && !old) return Promise.resolve(null);
+function editBookmark(id, start = {}) {
+  const old = id ? bookmarkById(id) : null;
+  if (id && !old) return Promise.resolve(null);
   const b = { ...(old ?? { location: '', ...start }) };
   const el = (tag, props = {}, ...kids) => {
     const e = Object.assign(document.createElement(tag), props);
@@ -476,12 +506,6 @@ async function editChecked(old, b, fields) {
     fields.where.focus();
     return null;
   }
-  const other = findBookmark(b.location);
-  if (other && other !== old) {
-    status(`${b.location} is a bookmark already: ${bookmarkName(other)}. Choose another location.`, true);
-    fields.where.focus();
-    return null;
-  }
   const check = await askHost({ op: 'bookmarkCheck', location: b.location, item: false });
   if (check.state !== 'there' && !(await askYes(`${b.location} is ${check.state === 'unreachable' ? 'not reachable' : 'not there'}. Keep it anyway?`))) {
     fields.where.focus();
@@ -497,13 +521,13 @@ async function editChecked(old, b, fields) {
   // A clash with another key is asked; Yes takes the key over (3.6).
   for (const [k, field] of [[b.key, fields.key], [b.keyNew, fields.keyNew]]) {
     if (!k || [old?.key, old?.keyNew].includes(k)) continue;
-    const lines = keyClashes(k, old?.location ?? null, b.location);
+    const lines = keyClashes(k, old?.id ?? null);
     if (lines.length && !(await askYes(`Use ${k} for this bookmark?`, lines))) {
       field.el.focus();
       return null;
     }
   }
-  const entry = { location: old && same(folderPath(old.location), b.location) ? old.location : b.location };
+  const entry = { id: old?.id ?? newBookmarkId(), location: old && same(folderPath(old.location), b.location) ? old.location : b.location };
   if (item) entry.item = true;
   if (b.quickAccess) entry.quickAccess = true;
   if (b.name && b.name !== folderName(entry.location)) entry.name = b.name;
@@ -526,16 +550,16 @@ async function editChecked(old, b, fields) {
 
 // The bookmarks' keys for the key set (keys.js buildKeys): [key, call].
 const bookmarkBindings = () => bookmarks.flatMap(b => [
-  ...(b.key ? [[b.key, ['bookmarks.open', b.location]]] : []),
-  ...(b.keyNew ? [[b.keyNew, ['bookmarks.openNew', b.location]]] : []),
+  ...(b.key ? [[b.key, ['bookmarks.open', b.id]]] : []),
+  ...(b.keyNew ? [[b.keyNew, ['bookmarks.openNew', b.id]]] : []),
 ]);
 
-// What a key would take from others when this bookmark (`self`, null for a new one) gets it: a line per clash.
-function keyClashes(key, self, location) {
+// What a key would take from others when this entry (`self`, its id; null for a new one) gets it: a line per clash.
+function keyClashes(key, self) {
   const lines = [];
   const what = call => call[0].startsWith('bookmarks.open') && call[1]
-    ? `the bookmark ${bookmarkName(findBookmark(call[1]) ?? { location: call[1] })}` : actionTitle(call[0], call.slice(1));
-  const mine = call => call[0].startsWith('bookmarks.open') && call[1] && (self && same(call[1], self) || same(call[1], location));
+    ? `the bookmark ${bookmarkName(bookmarkById(call[1]) ?? { location: '?' })}` : actionTitle(call[0], call.slice(1));
+  const mine = call => call[0].startsWith('bookmarks.open') && !!self && call[1] === self;
   const first = key.includes(', ') ? key.split(', ')[0] : null;
   for (const [k, call] of keys.bindings) {
     if (mine(call)) continue;

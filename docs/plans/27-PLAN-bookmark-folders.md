@@ -31,7 +31,7 @@ Foldex's own grouping, nothing on disk: its bookmarks keep their locations, name
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| The list | folders in bookmarks.json, read and written by the host; a location still once in the whole list | Open questions 1, 2 | 3.1 |
+| The list | folders in bookmarks.json, read and written by the host; each bookmark an entry with its own id | Open questions 1, 2 | 3.1 |
 | The menu | a folder as a submenu; its right-click | Open question 3 | 3.2 |
 | Manage | folders as rows that open and close; New folder...; in and out of a folder | Open questions 3, 4 | 3.3 |
 | Edit | the folder a bookmark is in | Open question 4 | 3.4 |
@@ -43,7 +43,8 @@ Foldex's own grouping, nothing on disk: its bookmarks keep their locations, name
 
 - bookmarks.json's `bookmarks` holds bookmarks (as plan 26 3.1) and folders: { folder: name, items: [...] }, where
   items holds that folder's bookmarks in your order. The name is required; two folders may have the same name.
-- A location is still in the list once, whichever folder it is in (one entry per location, plan 26 3.1).
+- Every bookmark stays an entry of its own with its id (plan 26 3.1): the same location can be in two folders, or
+  twice in one.
 - Added from Windows' right-click menu or with Add current folder: at the top level, at the end, as now.
 - The key set (plan 26 3.6) and F1 take every bookmark, in folders too.
 - In the code the folder is a `group` (`Bookmark` gets Group and Items), so it is never taken for a folder on disk;
@@ -76,7 +77,7 @@ Foldex's own grouping, nothing on disk: its bookmarks keep their locations, name
 
 ### 3.6 Tests
 
-- Unit (BookmarksTests): folders kept and read back with their bookmarks in order; a location once across folders;
+- Unit (BookmarksTests): folders kept and read back with their bookmarks in order, ids kept;
   plan 26's flat bookmarks.json read as before.
 - Page (Jint): the keys of bookmarks in folders in the key set.
 - In the test copy: a folder Projects made in Manage with LexPen, Foldex and ActiveAnts in it; the menu with the
