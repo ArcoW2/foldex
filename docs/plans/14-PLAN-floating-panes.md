@@ -320,6 +320,9 @@ None.
   dialog's page: its size and its answer) is apart from `modal` (how it is shown).
 - bars.js `openSizeWindow`: the fields in the window (dialogpage.js `sizeHere`); each change goes back (`calls`) and
   sizes the bar at once, the marks following; Cancel puts the bar back, OK saves; opened again while open: nothing.
+  Its Maximum % reads "Maximum % of the window (now X%)": the bar's share of the window, sent by the window's page
+  each time it draws the marks (the bar changed, the window resized); `dialogWindow`'s `opened` gives it the channel.
+  Tested: 200 of 2564 px "(now 8%)", Normal 600 "(now 23%)", the main window made half as wide "(now 47%)".
 - The marks: a bar after one that fills the rest of its line keeps its far end and grows towards its start, so its
   marks are measured back from its right end (its bottom in a column); before, they were measured from its start and
   could fall outside the window.

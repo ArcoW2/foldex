@@ -537,7 +537,10 @@ async function openSizeWindow(bar) {
     else bar[name] = name === 'maxShare' ? Math.min(100, v) : v;
     if (name === 'normal' && bar.normal == null) bar.normal = BarDefaults[bar.kind].normal;
     fitBars();
-  }, false);
+  }, false, ch => {
+    sizing.window = ch;
+    drawSizeMarks();   // its share of the window now, for the window
+  });
   const keep = r?.keep === true;
   if (!keep) {
     for (const key of Object.keys(bar)) delete bar[key];
@@ -559,6 +562,8 @@ function drawSizeMarks() {
   const { unit, overhead } = barMeasure(el, row);
   const px = n => buttonBar(sizing.bar) ? overhead + n * unit : n;
   const windowLength = row ? document.documentElement.clientWidth : document.documentElement.clientHeight;
+  // Its share of the window now, shown by the Size window beside Maximum %.
+  sizing.window?.send({ kind: 'share', share: Math.round((row ? r.width : r.height) * 100 / windowLength) });
   // A bar after one that fills the rest of its line keeps its far end (right, or bottom in a column) where it is and
   // grows towards its start: its marks are measured back from that end.
   const fromEnd = [...el.parentElement.children].slice(0, [...el.parentElement.children].indexOf(el)).some(x => x.bar?.fill);

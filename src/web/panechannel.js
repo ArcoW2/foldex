@@ -107,9 +107,9 @@ function paneChannel({ id, page, title, view, state, receive, menu }) {
 // through here (askHost, post, status), and its answer comes back when it closes (null: cancelled). What it asks of this
 // page itself (askWindow there: a change it makes here, what only this page knows) `calls` answers. The keyboard back
 // in the active pane after. `modal` false: a floating window that is not modal, this window usable meanwhile (the
-// Size of a bar).
+// Size of a bar). `opened` gets its channel, for what this page tells it while it is open.
 let dialogWindows = 0;
-async function dialogWindow(title, args, calls = null, modal = true) {
+async function dialogWindow(title, args, calls = null, modal = true, opened = null) {
   const id = `dialog:${++dialogWindows}`;
   const ch = paneChannel({ id, page: 'dialog.html', title, view: () => document.body, state: () => new Map([['args', { ...args, kind: 'args' }]]),
     receive: async m => {
@@ -119,6 +119,7 @@ async function dialogWindow(title, args, calls = null, modal = true) {
       else if (m.kind === 'status') status(m.text, m.warn);
     } });
   Object.assign(ch, { floating: true, floatReady: false, floatQueue: new Map() });
+  opened?.(ch);
   const m = await askHost({ op: 'dialogOpen', pane: id, page: 'dialog.html', title, modal });
   paneChannels.delete(id);
   activeView()?.body.focus();

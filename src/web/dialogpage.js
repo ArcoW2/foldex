@@ -183,7 +183,11 @@ function sizeHere(a) {
     if (name === 'maxShare') input.max = 100;
     input.value = a.values[name] ?? '';
     input.addEventListener('input', () => askWindow({ name, value: input.value }));
-    label.append(swatch, title, input, name === 'maxShare' ? '%' : a.unit);
+    // Maximum %: the bar's share of the window now beside it, as the window's page tells it.
+    const caption = document.createElement('span');
+    caption.textContent = title;
+    if (name === 'maxShare') caption.append(' ', Object.assign(document.createElement('span'), { className: 'size-share' }));
+    label.append(swatch, caption, input, name === 'maxShare' ? '%' : a.unit);
     dialog.querySelector('.fields').append(label);
   }
   let keep = false;
@@ -194,6 +198,11 @@ function sizeHere(a) {
   dialog.querySelector('input').select();
   return new Promise(resolve => dialog.addEventListener('close', () => resolve(keep ? { keep } : null), { once: true }));
 }
+
+paneHandlers.share = m => {
+  const at = document.querySelector('.size-share');
+  if (at) at.textContent = `(now ${m.share}%)`;
+};
 
 // What to show, from the window's page: which dialog, and what it needs.
 paneHandlers.args = async m => {
