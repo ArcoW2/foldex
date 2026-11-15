@@ -1,8 +1,9 @@
 # Plan 14: Floating panes, and every window a pane
 
-Status: not started; see Status.
+Status: partly executed; see Status and 6 (As built).
 
 - 2026-11-11: draft, taken out of plan 12 (its open question 1).
+- 2026-11-15: partly executed: stage 1 (pane pages, the floating window, Float and Dock, the Log as a page).
 
 Builds on plan 12 (docking panes) and plan 03 (connected panes). The number in the file name is the priority; rename to
 reorder.
@@ -40,15 +41,19 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 
 ### Built
 
+| Part | What | Reference |
+|---|---|---|
+| Pane pages | the panes' site, `pane.js` and `panechannel.js` from LexPen, a pane's frame in its dock place, kept loaded while the docks change | 3.0; 3.2; 6.1 |
+| The floating window | `PaneForm` from LexPen: a pane's page in a window of its own, in the window's theme, its place kept | 3.2; 3.4; 6.1 |
+| Float and dock back | Float and Dock in the pane's menu (floating: its page's right-click); its window's own close button docks it back | 3.1; 6.1 |
+| Kinds stated | every pane kind says which it can be (PaneCan); Float and Dock offered only where it can | 3.7; 6.1 |
+| Log as a page | the Log, docked or floating | 3.0; 6.1 |
+
 ### Not yet built
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| Pane pages | the panes' site, `pane.js` and `panechannel.js` from LexPen, a pane's frame in its dock place | -- | 3.0; 3.2 |
-| The floating window | `PaneForm` from LexPen: a pane's page in a window of its own, in the window's theme, its place kept | Pane pages | 3.2; 3.4 |
-| Float and dock back | Float in the pane head's menu; back by its menu, by closing its window, or by dragging onto the window | The floating window | 3.1 |
-| Kinds stated | every pane kind says which it can be (docked, floating, both); Float and Dock offered only where it can | Pane pages | 3.7 |
-| Log as a page | stage 1's first pane: the Log, docked or floating | The floating window | 3.0 |
+| Dock by dragging | a floating pane's window dragged onto its Foldex window docks it there, the places lit as for a docked pane | -- | 3.1 |
 | Manage the bookmarks | a pane page (docked or floating), no longer a modal dialog | The floating window | 3.0; 3.7; plan 26 3.3 |
 | Modal floating windows | the dialogs that ask and wait, each a page modal in a window of its own that can be moved anywhere | The floating window | 3.0; 3.7 |
 | Panes of their own | Manage column sets, F1, Settings, Projects as pane pages, docked or floating | The floating window | 3.0; 3.7 |
@@ -181,3 +186,40 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 ## 4. Open questions
 
 None.
+
+## 6. As built
+
+### 6.1 Stage 1: pane pages, the floating window, the Log
+
+- WebFiles: the panes' site `foldex-panes.example`, the same files as the page's (a debug build: the project's web
+  folder, DenyCors so the page may frame it; a release build: the resources, a filter for every source kind, as
+  LexPen's). The browser environment maps both names to 127.0.0.1 (no DNS wait).
+- `PaneForm.cs` (from LexPen's): the pane's page from the panes' site, its messages to its window's page (`fromPane`)
+  and back (`toPane`); its background and dark caption from the window's look (MainForm.Look, again when the look
+  changes); not modal, owned by its window, not in the taskbar. Its place and size are told to the page after any
+  move or size, once it rests (`paneBounds`); its own close button docks the pane back (`paneClosed`); getting the
+  focus makes its pane the active one (`paneWindowFocus`). MainForm: the ops `paneFloat` (made, or brought forward),
+  `paneSend`, `paneDock`.
+- `pane.js` (from LexPen's, Foldex's names): the pane side of the channel; the window's look (its root's style and
+  marks); keys it does not use to the window; a press makes its pane active; floating, a right-click asks the window
+  for the pane's menu, which the page draws with Foldex's menu.js; ready once its scripts ran (deferred scripts run
+  while the page is already "interactive", so it waits for DOMContentLoaded).
+- `panechannel.js` (from LexPen's, without its following of the focus between windows, which Foldex has no use for
+  yet): the frame, the waiting messages per kind, the state sent whole on ready (the look first), Float, Dock, the menu
+  drawn there and a choice run here, a key dispatched here as if pressed here.
+- app.js: `PageView` (a pane whose content is a page; extends PreviewView, so nothing follows it and it follows
+  nothing, as the Log did); `LogView` is one (log.html, logpane.js, pane.css); `PaneCan` (what each kind can be;
+  only the Log floats until its kind is a page); `floatPane` / `dockPane` (where it was docked kept in the layout,
+  `floating.place`, and its window's place, `floating.bounds`, then `floatBounds` while docked); a floating pane floats
+  again after a restart; Close pane closes its window.
+- renderDock moved every pane's element out of the page and back on each change, which loaded a frame's page again:
+  now each element is parked in a holder that stays in the page and moved into its place with `moveBefore` (the
+  WebView2 here has it); without it, as before.
+- Tests in the test copy (CDP, UI Automation): the Log docked in its frame from the panes' site, its lines there;
+  Float (its window beside the main window, in the dark theme, a line added while floating shown); its right-click
+  menu drawn in its page (Dock, Close pane); Alt+P pressed in it toggling the main window's preview; its window moved,
+  the place kept; after a restart floating again at that place; its window's close button docking it back at the
+  bottom; Dock from the menu; floated again at its place; Close pane while floating closing its window; the frame not
+  loaded again after renderDock, a new pane, and the Log moved to the right area. `dotnet test`: 224 passed.
+- Not done in stage 1: docking by dragging the floating window onto its Foldex window (Not yet built, Dock by
+  dragging); the speed figures (3.0) were not measured before this stage: `[not yet calculated]`.

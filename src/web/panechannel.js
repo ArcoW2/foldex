@@ -1,0 +1,119 @@
+'use strict';
+// A pane's page and this window's page (docs/plans/14-PLAN-floating-panes.md 3.0; as LexPen's panechannel.js): the pane
+// is a frame from the panes' site in its view here (a process of its own), or floats in a window of its own
+// (PaneForm.cs, its messages through the host). Until the page it is shown in says it is ready, the last message of
+// each kind waits (a message with a `key` under that key); when it says so, it gets everything it shows (`state()`), as
+// a frame loads again when it moves. What its page sends goes to `receive(m)`; the channel itself does the common part:
+// ready, a press there (the pane active, this window's menus closed), a key it does not use (this window's), its menu
+// asked for while floating and a choice in it. Loaded after menu.js, before app.js.
+
+const PaneOrigin = 'https://foldex-panes.example';
+const paneChannels = new Map();   // pane id -> channel
+
+// `id`: the pane's id in the layout; `page`: its page; `view()`: the element its frame goes in; `state()`: a Map of
+// kind -> message of what it shows; `menu(x, y)`: its menu's items, floating (drawn by its page).
+function paneChannel({ id, page, title, view, state, receive, menu }) {
+  const ch = { id, page, title, frame: null, ready: false, queue: new Map(), floating: false, floatReady: false, floatQueue: new Map(), runs: null };
+
+  ch.frameEl = () => {
+    if (ch.frame) return ch.frame;
+    const frame = document.createElement('iframe');
+    frame.className = 'pane-frame';
+    frame.title = title;
+    frame.src = `${PaneOrigin}/${page}`;
+    ch.frame = frame;
+    view().append(frame);
+    return frame;
+  };
+
+  ch.send = msg => {
+    const key = msg.key ?? msg.kind;
+    if (ch.floating) {
+      if (!ch.floatReady) return void ch.floatQueue.set(key, msg);
+      return void post({ op: 'paneSend', pane: id, msg });
+    }
+    ch.frameEl();
+    if (!ch.ready) return void ch.queue.set(key, msg);
+    ch.frame.contentWindow.postMessage({ toPane: msg }, PaneOrigin);
+  };
+
+  ch.focus = () => {
+    if (ch.floating) return false;
+    ch.frameEl().focus();
+    return true;
+  };
+
+  // Into a window of its own, where it was last (`bounds`, kept with the layout). Its page there says when it is
+  // ready; then it gets everything it shows.
+  ch.float = bounds => {
+    if (ch.floating) return post({ op: 'paneFloat', pane: id, page, title });
+    ch.floating = true;
+    ch.floatReady = false;
+    ch.floatQueue = new Map();
+    post({ op: 'paneFloat', pane: id, page, title, bounds });
+  };
+
+  // Back in this window (its window closed by the host, or by its own close button): in its frame again, showing what
+  // it shows now.
+  ch.docked = () => {
+    if (!ch.floating) return;
+    ch.floating = false;
+    post({ op: 'paneDock', pane: id });
+    for (const msg of [paneLook(), ...state().values()]) ch.send(msg);
+  };
+
+  // A menu of this page (its items as menu.js has them) drawn by the floating page: a choice runs here.
+  ch.menuThere = (items, x, y) => {
+    const runs = [];
+    const flat = list => list.map(item => item === '-' ? '-' : {
+      label: item.label, checked: !!item.checked, enabled: item.enabled !== false, key: item.key,
+      items: item.items ? flat(item.items) : undefined, id: item.items ? undefined : (runs.push(item.run), runs.length - 1),
+    });
+    const sent = flat(items);
+    ch.runs = runs;
+    ch.send({ kind: 'menu', key: 'menu', x, y, items: sent });
+  };
+
+  ch.receive = (m, from) => {
+    if ((from === 'float') !== ch.floating) return;   // not the one shown now
+    if (m.kind === 'ready') {
+      const waiting = new Map([['look', paneLook()], ...state(), ...(from === 'float' ? ch.floatQueue : ch.queue)]);
+      waiting.delete('menu');
+      if (from === 'float') { ch.floatReady = true; ch.floatQueue = new Map(); }
+      else { ch.ready = true; ch.queue = new Map(); }
+      for (const msg of waiting.values()) ch.send(msg);
+      return;
+    }
+    switch (m.kind) {
+      case 'activate':   // a press in its page: its pane the active one, this window's menus closed
+        closeMenus();
+        return activate(id);
+      case 'menuPick': return ch.runs?.[m.id]?.();
+      case 'menuAsk': return menu && ch.menuThere(menu(), m.x, m.y);
+      case 'key':   // a key the pane does not use: this window's (keys.js), as if pressed here
+        activate(id);
+        return document.dispatchEvent(new KeyboardEvent('keydown', { key: m.key, code: m.code, ctrlKey: m.ctrlKey,
+          shiftKey: m.shiftKey, altKey: m.altKey, metaKey: m.metaKey, bubbles: true, cancelable: true }));
+      default: return receive?.(m);
+    }
+  };
+
+  paneChannels.set(id, ch);
+  return ch;
+}
+
+// The look of this window for every pane's page (applyTheme, app.js): its root's own values and marks.
+function paneLook() {
+  const root = document.documentElement;
+  return { kind: 'look', css: root.style.cssText, data: { ...root.dataset } };
+}
+function sendPaneLooks() {
+  for (const ch of paneChannels.values()) ch.send(paneLook());
+}
+
+// The messages of the panes' pages in frames of this page.
+addEventListener('message', e => {
+  if (e.origin !== PaneOrigin || !e.data?.fromPane) return;
+  for (const ch of paneChannels.values())
+    if (ch.frame && ch.frame.contentWindow === e.source) return void ch.receive(e.data.fromPane, 'frame');
+});

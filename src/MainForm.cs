@@ -24,6 +24,9 @@ sealed class MainForm : Form
     /// applied; Foldex's own windows asking over this one (AskForm) take it.</summary>
     public JsonObject? Look { get; private set; }
 
+    // Its panes floating in windows of their own (plan 14 3.2), by pane id.
+    readonly Dictionary<string, PaneForm> floating = [];
+
     public MainForm(AppHost app, int key, IReadOnlyList<string> paths)
     {
         this.app = app;
@@ -203,10 +206,37 @@ sealed class MainForm : Form
             // The page's look, for Foldex's own windows over this one (AskForm).
             case "look":
                 Look = msg["look"] as JsonObject is { } look ? (JsonObject)look.DeepClone() : null;
+                foreach (var pane in floating.Values) pane.ApplyTheme();   // its floating panes' windows follow
                 break;
             // A yes / no question of the page (askYes), in Foldex's own window, as LexPen's: never behind Windows' preview.
             case "confirm":
                 Post(new JsonObject { ["event"] = "answer", ["req"] = msg["req"]?.DeepClone(), ["yes"] = AskForm.Confirm(app, this, msg) });
+                break;
+            // A pane floating in a window of its own (plan 14 3.0, 3.2): made or brought forward; a message for it; closed
+            // because the page docked it back or closed it.
+            case "paneFloat":
+            {
+                var id = msg["pane"]!.GetValue<string>();
+                var state = "shown";
+                if (!floating.TryGetValue(id, out var form))
+                {
+                    Rectangle? bounds = msg["bounds"] is JsonArray { Count: 4 } b
+                        ? new Rectangle(b[0]!.GetValue<int>(), b[1]!.GetValue<int>(), b[2]!.GetValue<int>(), b[3]!.GetValue<int>()) : null;
+                    form = new PaneForm(app, this, id, msg["page"]!.GetValue<string>(), msg["title"]?.GetValue<string>() ?? "Pane", bounds);
+                    floating[id] = form;
+                    form.FormClosed += (_, _) => { if (floating.GetValueOrDefault(id) == form) floating.Remove(id); };
+                    form.Show(this);
+                    state = "created";
+                }
+                else form.Activate();
+                Post(new JsonObject { ["event"] = "answer", ["req"] = msg["req"]?.DeepClone(), ["state"] = state });
+                break;
+            }
+            case "paneSend":
+                if (floating.TryGetValue(msg["pane"]!.GetValue<string>(), out var toPane)) toPane.Send(msg["msg"]!);
+                break;
+            case "paneDock":
+                if (floating.Remove(msg["pane"]!.GetValue<string>(), out var docked)) docked.CloseByPage();
                 break;
             case "choose":
                 // A question with the page's own buttons (docs/plans/executed/27-PLAN-bookmark-folders.md 3.6): the value of the

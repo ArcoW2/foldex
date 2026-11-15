@@ -177,7 +177,7 @@ sealed class AppHost : ApplicationContext
     {
         // The page is answered locally, but without this rule the browser first waits for a real DNS lookup of the
         // made-up name to fail, on every start (as LexPen).
-        var options = new CoreWebView2EnvironmentOptions($"--host-resolver-rules=\"MAP {WebFiles.Host} 127.0.0.1\"")
+        var options = new CoreWebView2EnvironmentOptions($"--host-resolver-rules=\"MAP {WebFiles.Host} 127.0.0.1, MAP {WebFiles.PaneHost} 127.0.0.1\"")
         {
             ExclusiveUserDataFolderAccess = true,
         };

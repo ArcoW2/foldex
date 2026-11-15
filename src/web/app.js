@@ -28,6 +28,7 @@ function applyTheme() {
   applyLook(settings, themes);
   setRowHeight(paneRowHeight(settings));
   post({ op: 'look', look: hostLook() });   // for Foldex's own windows over this one (AskForm)
+  sendPaneLooks();   // the panes' pages (panechannel.js)
 }
 
 // Rows of another height: every tree and list drawn again, the same rows at the top, the focused one kept in view.
@@ -184,6 +185,11 @@ function filterTest(pattern) {
   const res = parts.map(p => new RegExp('^' + p.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.') + '$', 'i'));
   return x => x.folder !== false || res.some(re => re.test(x.name));
 }
+
+// What each kind of pane can be (docs/plans/14-PLAN-floating-panes.md 3.7): docked, floating, or both. A pane of a page
+// of its own (PageView) can float; the others are docked until they are pages (plan 14 3.0, the stages).
+const PaneCan = { tree: ['docked'], list: ['docked'], scrap: ['docked'], preview: ['docked'], log: ['docked', 'floating'] };
+const canFloat = id => (PaneCan[layout.pane(id)?.kind] ?? ['docked']).includes('floating') && views.get(id) instanceof PageView;
 
 // The view of a pane as its kind says: a tree, a list or a preview.
 function makeView(id) {
@@ -2348,6 +2354,9 @@ function logChanged() {
   logPane?.render();
 }
 
+// The log's lines as the Log pane's page draws them.
+const logLines = () => log.entries.map(e => ({ at: e.at, warn: !!(e.warn || e.op?.error), text: e.kind === 'op' ? opText(e.op) : e.text }));
+
 // The status bar's Log button: lit while the pane is shown; marked when a warning or a failed operation came that
 // the pane has not shown yet.
 function drawLogButton() {
@@ -2368,39 +2377,71 @@ function toggleLog() {
   views.get(activePane)?.body.focus();   // the keyboard stays in the pane that had it
 }
 
-// The Log pane: a line per entry, its time first; a warning or a failure in the warning colour. Kept at its end
-// while it was at its end, so the newest stays in view.
-class LogView extends PreviewView {
-  constructor(id) {
+// ---------- A pane of a page of its own (docs/plans/14-PLAN-floating-panes.md 3.0) ----------
+
+// Its head and tab here as any pane's; its content a page (`page`), in a frame of this pane docked (panechannel.js), or
+// in a window of its own floating (PaneForm). It shows no folder: as the preview, nothing follows it and it follows
+// nothing. What it shows: state() (sent whole when its page is ready); what is done in it: receive().
+class PageView extends PreviewView {
+  constructor(id, kind, page, title) {
     super(id);
-    this.el.classList.add('log');
-    this.el.querySelector('.title').textContent = 'Log';
-    this.render();
+    this.el.classList.add('page', kind);
+    this.pageTitle = title;
+    this.el.querySelector('.title').textContent = title;
+    this.rows.replaceChildren();
+    this.channel = paneChannel({ id, page, title, view: () => this.rows, state: () => this.state(), receive: m => this.receive(m),
+      menu: () => paneMenu(id) });
+    this.channel.frameEl();
+    // The keyboard given to the pane goes into its page.
+    this.body.addEventListener('focus', () => this.channel.focus());
   }
 
+  state() { return new Map(); }
+  receive() { }
+  send(m) { this.channel.send(m); }
   show() { }
-
-  render() {
-    const atEnd = this.body.scrollTop + this.body.clientHeight >= this.body.scrollHeight - 4;
-    if (!log.entries.length) return this.message('Nothing yet: messages and file operations come here.');
-    const time = at => new Date(at).toLocaleTimeString();
-    this.rows.replaceChildren(...log.entries.map(e => {
-      const row = document.createElement('div');
-      row.className = 'log-row' + (e.warn || e.op?.error ? ' warn' : '');
-      row.append(Object.assign(document.createElement('span'), { className: 'log-time', textContent: time(e.at) }),
-        Object.assign(document.createElement('span'), { className: 'log-text', textContent: e.kind === 'op' ? opText(e.op) : e.text }));
-      return row;
-    }));
-    if (atEnd) this.body.scrollTop = this.body.scrollHeight;
-  }
-
-  refresh() { this.render(); }
-
+  refresh() { }
   locationText() { return ''; }
+  tabTitle() { return this.pageTitle; }
+  // No Windows preview to close; floating, its window goes.
+  close() { if (this.channel.floating) post({ op: 'paneDock', pane: this.id }); }
+}
 
-  tabTitle() { return 'Log'; }
+// The Log pane (its page log.html, logpane.js): a line per entry, its time first; a warning or a failure in the
+// warning colour.
+class LogView extends PageView {
+  constructor(id) { super(id, 'log', 'log.html', 'Log'); }
+  state() { return new Map([['entries', { kind: 'entries', entries: logLines() }]]); }
+  render() { this.send({ kind: 'entries', entries: logLines() }); }
+  refresh() { this.render(); }
+}
 
-  close() { }   // no Windows preview to close
+// ---------- Floating and docking back (plan 14 3.1) ----------
+
+// A pane into a window of its own: where it is docked kept, its place there given up; its window where it was last.
+function floatPane(id) {
+  const view = views.get(id), pane = layout.pane(id);
+  if (!canFloat(id) || view.channel.floating) return view?.channel.float();
+  pane.floating = { place: docks.placeOf(id) ?? { area: 'bottom' }, bounds: pane.floating?.bounds ?? pane.floatBounds ?? null };
+  docks.remove(id);
+  view.el.remove();
+  renderDock();
+  view.channel.float(pane.floating.bounds);
+  drawHeads();
+  tellLayout();
+}
+
+// Back where it was docked (its menu's Dock, its window's own close button): in its frame again, as it was.
+function dockPane(id) {
+  const view = views.get(id), pane = layout.pane(id);
+  if (!view?.channel?.floating) return;
+  const place = pane.floating?.place ?? { area: 'bottom' };
+  pane.floatBounds = pane.floating?.bounds ?? null;   // where its window was, for when it floats again
+  delete pane.floating;
+  placeView(view, place.pane != null && docks.find(place.pane) ? place : { area: place.area ?? 'bottom' });
+  view.channel.docked();
+  drawHeads();
+  tellLayout();
 }
 
 // ---------- Dropping files from Explorer onto a pane ----------
@@ -2449,11 +2490,16 @@ function placeView(view, place) {
 
 // The window's panes drawn from the dock model: top, then left | center | right, then bottom; each area its node: a
 // group (its tabs when more than one, the shown pane) or a split (its nodes with splitters between). The panes' own
-// elements are moved, not made again, so what they show stays; their scroll positions are put back.
+// elements are moved, not made again, so what they show stays; their scroll positions are put back. A pane's element
+// never leaves the page while it moves (parked in a holder, then moved into its place with moveBefore): a frame in it
+// (a pane of a page of its own, plan 14 3.0) would load its page again when taken out.
 function renderDock() {
   tellLayout();
   const scrolls = [...views.values()].map(v => [v, v.body.scrollTop]);
   const root = $('panes');
+  const hold = $('pane-hold') ?? document.body.appendChild(Object.assign(document.createElement('div'), { id: 'pane-hold', hidden: true }));
+  const move = (el, parent, before = null) => el.isConnected && parent.isConnected && parent.moveBefore ? parent.moveBefore(el, before) : parent.insertBefore(el, before);
+  for (const v of views.values()) if (v.el.isConnected && v.el.parentElement !== hold) move(v.el, hold);
   const middle = document.createElement('div');
   middle.className = 'dock-middle';
   const area = name => {
@@ -2483,6 +2529,12 @@ function renderDock() {
     middle.append(Object.assign(document.createElement('div'), { className: 'dock-area dock-center dock-empty' }));
     root.replaceChildren(middle);
   }
+  // Each pane from the holder into its place (drawNode left a mark there).
+  for (const mark of root.querySelectorAll('[data-pane-place]')) {
+    const view = views.get(mark.dataset.panePlace);
+    if (view) move(view.el, mark.parentElement, mark);
+    mark.remove();
+  }
   for (const v of views.values()) v.el.hidden = !docks.visible(v.id);
   for (const [v, top] of scrolls) v.body.scrollTop = top;
   drawTabs();
@@ -2498,7 +2550,13 @@ function drawNode(node) {
       tabs.dataset.group = node.panes.join(' ');
       el.append(tabs);
     }
-    for (const id of node.panes) if (views.get(id)) el.append(views.get(id).el);
+    // A mark where each pane goes: renderDock moves it there once the new dock is in the page.
+    for (const id of node.panes) {
+      if (!views.get(id)) continue;
+      const mark = Object.assign(document.createElement('i'), { hidden: true });
+      mark.dataset.panePlace = id;
+      el.append(mark);
+    }
     return el;
   }
   const el = document.createElement('div');
@@ -2680,6 +2738,8 @@ function paneMenu(id) {
       run: () => setPaneHidden(id, !showsHidden(id)) },
     { label: pane.filter ? `Filter: ${pane.filter}...` : 'Filter...', enabled: pane.kind !== 'preview', run: () => askPaneFilter(id) },
     '-',
+    // A pane that can float (plan 14 3.1, 3.7): Float, or (floating) Dock, back where it was.
+    ...(canFloat(id) ? [pane.floating ? { label: 'Dock', run: () => dockPane(id) } : { label: 'Float', run: () => floatPane(id) }] : []),
     { label: 'Close pane', run: () => closePane(id) },
   ];
 }
@@ -2875,10 +2935,13 @@ function restoreLayout(saved, path) {
     Object.assign(layout, { panes: panes.panes, root: panes.root, next: panes.next });
     Object.assign(docks, { areas: placed.areas, sizes: placed.sizes });
     for (const id of placed.panes()) if (!layout.pane(id)) docks.remove(id);
-    for (const id of [...layout.panes.keys()]) if (!docks.find(id) && !layout.pane(id).away) layout.remove(id);
-    for (const id of docks.panes()) {
+    for (const id of [...layout.panes.keys()]) if (!docks.find(id) && !layout.pane(id).away && !layout.pane(id).floating) layout.remove(id);
+    // The floating panes (plan 14 3.4) float again where they were.
+    const floats = [...layout.panes.keys()].filter(id => layout.pane(id).floating);
+    for (const id of [...docks.panes(), ...floats]) {
       const view = makeView(id);
       views.set(id, view);
+      if (view instanceof PageView && layout.pane(id).floating) view.channel.float(layout.pane(id).floating.bounds);
       if (view instanceof LogView) logPane = view;
       else if (view instanceof PreviewView && layout.pane(id).source === null) {
         if (view instanceof InfoView) infoPane = view;
@@ -3020,6 +3083,11 @@ function closePane(id) {
   if (view === logPane) {
     logPane = null;
     queueMicrotask(drawLogButton);
+  }
+  // A pane of a page of its own: its window too when it floats, and its channel (plan 14 3.0).
+  if (view instanceof PageView) {
+    view.close();
+    paneChannels.delete(id);
   }
   view.el.remove();
   views.delete(id);
@@ -3686,6 +3754,17 @@ const events = {
   // The bookmarks changed (in any window; plan 26 3.1); Edit asked from Windows' menu (3.8); answers to plain questions.
   bookmarks(m) { bookmarksCame(m); },
   bookmarkEdit(m) { editBookmark(m.id); },
+  // A floating pane (plan 14 3.2): its page's messages; its window closed by its own close button (docked back);
+  // moved or sized (kept with the layout); got the focus (its pane the active one).
+  fromPane(m) { paneChannels.get(m.pane)?.receive(m.msg, 'float'); },
+  paneClosed(m) { dockPane(m.pane); },
+  paneBounds(m) {
+    const pane = layout.pane(m.pane);
+    if (!pane?.floating) return;
+    pane.floating.bounds = m.bounds;
+    tellLayout();
+  },
+  paneWindowFocus(m) { if (m.active && views.has(m.pane)) activate(m.pane); },
   answer(m) { columnReply(m); },
   renames(m) { renames = m.renames; },
   previewShown(m) {
