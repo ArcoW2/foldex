@@ -109,7 +109,13 @@ sealed class PaneForm : Form
             });
         };
         core.NavigationStarting += (_, n) => { if (!n.Uri.StartsWith(PaneUrl)) n.Cancel = true; };
-        core.NewWindowRequested += (_, n) => n.Handled = true;
+        // A link to the web (About's Buy me a coffee) opens in the browser, as LexPen's; nothing opens a window here.
+        core.NewWindowRequested += (_, n) =>
+        {
+            n.Handled = true;
+            if (Uri.TryCreate(n.Uri, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps && uri.Host != WebFiles.PaneHost && uri.Host != WebFiles.Host)
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true });
+        };
         core.NavigationCompleted += (_, _) =>
         {
             loaded = true;

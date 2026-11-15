@@ -19,3 +19,19 @@ dialog.inline.ask { width: 380px; }
 dialog.bm-edit { width: 620px; }
 dialog.bm-icons { width: 520px; }
 dialog.bm-pick { width: 420px; }
+
+/* About (dialogpage.js aboutHere; as LexPen's .mm-about): the name, a line, by whom, the coffee, the build, a table
+   of what it runs on. */
+dialog.about { width: 540px; padding: 20px 24px; color: var(--fg); background: var(--bg); }
+dialog.about h1 { margin: 0 0 2px; font-size: 20px; font-weight: 600; }
+dialog.about p { margin: 0 0 8px; color: var(--fg-dim); }
+dialog.about .about-line { margin-bottom: 12px; font-size: 12px; }
+dialog.about .about-created { color: var(--fg); }
+dialog.about .about-coffee { margin-bottom: 14px; }
+dialog.about .about-coffee a { color: var(--accent); text-decoration: none; }   /* opens in the browser: PaneForm.NewWindowRequested */
+dialog.about .about-coffee a:hover, dialog.about .about-coffee a:focus-visible { text-decoration: underline; }
+dialog.about table { width: 100%; border-collapse: collapse; }
+dialog.about th { padding: 12px 0 4px; text-align: left; font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--fg-dim); }
+dialog.about td { padding: 2px 0; }
+dialog.about td + td { padding-left: 20px; color: var(--fg-dim); font-family: Consolas, "Cascadia Mono", monospace; }
+dialog.about form { margin-top: 18px; }

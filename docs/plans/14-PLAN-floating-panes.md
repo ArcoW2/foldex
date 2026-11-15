@@ -185,6 +185,7 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 | Edit a bookmark, Change Icon, Move to folder..., the Size of a bar, a name asked (askText), the Projects window's own question | modal dialogs of the page | modal floating window | | each asks one thing and waits for the answer |
 | Foldex's question window (AskForm) | a modal window of its own | modal floating window (as now) | | |
 | The ribbon's Customize (plan 19 3.9) | (not built) | modal floating window | | |
+| About Foldex (View > Foldex, beside Settings; as LexPen's) | modal floating window | modal floating window (built) | | the project, by whom, Buy me a coffee (opens in the browser), the build, what it runs on |
 
 ## 4. Open questions
 

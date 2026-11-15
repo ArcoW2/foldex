@@ -282,3 +282,6 @@ action('layout.preset', { title: 'Preset', hint: 'the panes of this window made 
   run: params => applyPreset(Presets[params[0]] ? params[0] : 'default') });
 action('settings.open', { title: 'Settings', hint: 'every setting, the theme included, in a window of its own', group: 'app',
   run: () => post({ op: 'openSettings' }) });
+// About (as LexPen's): the project, its version and what it runs on, in a modal floating window (plan 14 3.7).
+action('about', { title: 'About Foldex', hint: 'the version, what it runs on, and a coffee for its maker', group: 'app',
+  run: async () => dialogWindow('About Foldex', { what: 'about', info: await askHost({ op: 'about' }) }) });

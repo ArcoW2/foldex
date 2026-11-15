@@ -59,6 +59,7 @@
         { "action": "bars.add", "params": ["drives"], "label": "Add drives bar", "stack": true },
         { "action": "bars.add", "params": ["search"], "label": "Add search bar", "stack": true } ] },
       { "name": "Foldex", "items": [
-        { "action": "settings.open", "size": "large", "label": "Settings" } ] } ] }
+        { "action": "settings.open", "size": "large", "label": "Settings" },
+        { "action": "about", "label": "About" } ] } ] }
   ]
 }

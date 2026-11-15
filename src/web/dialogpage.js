@@ -86,8 +86,44 @@ function askTextHere(title, value = '', placeholder = '') {
   return new Promise(resolve => dialog.addEventListener('close', () => resolve(dialog.returnValue === 'ok' ? box.value.trim() : null), { once: true }));
 }
 
+// About (as LexPen's): what Foldex is, by whom, a coffee for him, this build and what it runs on. OK closes it.
+function aboutHere(info) {
+  const text = (tag, className, value) => Object.assign(document.createElement(tag), { className, textContent: value });
+  const dialog = document.createElement('dialog');
+  dialog.className = 'about';
+  const coffee = text('p', 'about-coffee', '');
+  coffee.append(Object.assign(document.createElement('a'), { href: 'https://ko-fi.com/arcowitter', target: '_blank', textContent: 'Buy me a coffee' }));
+  const built = info.built ? new Date(info.built).toLocaleString() : 'unknown';
+  const table = document.createElement('table');
+  const section = (title, rows) => {
+    const head = table.insertRow();
+    head.append(Object.assign(document.createElement('th'), { colSpan: 2, textContent: title }));
+    for (const [name, value] of rows) {
+      const row = table.insertRow();
+      row.insertCell().textContent = name;
+      row.insertCell().textContent = value ?? '';
+    }
+  };
+  section('Needed to run (installed)', [['Windows 10 or 11, x64', info.os], ['.NET 10 Desktop Runtime', info.dotnet],
+    ['Microsoft Edge WebView2 Runtime', info.webView2]]);
+  section('Included', [['WebView2 SDK', info.webView2Sdk]]);
+  const form = Object.assign(document.createElement('form'), { method: 'dialog' });
+  const buttons = Object.assign(document.createElement('div'), { className: 'ask-buttons' });
+  buttons.append(Object.assign(document.createElement('button'), { value: 'ok', textContent: 'OK' }));
+  form.append(buttons);
+  dialog.append(text('h1', '', 'Foldex'),
+    text('p', 'about-line', 'A file explorer for Windows, with panes that connect into branches.'),
+    text('p', 'about-created', 'Created by Arco Witter'), coffee,
+    text('p', 'about-version', `Version ${info.version}${info.commit ? ` (${info.commit})` : ''}, built ${built}`), table, form);
+  document.body.append(dialog);
+  dialog.showModal();
+  form.querySelector('button').focus();
+  return new Promise(resolve => dialog.addEventListener('close', () => resolve(null), { once: true }));
+}
+
 // What to show, from the window's page: which dialog, and what it needs.
 paneHandlers.args = async m => {
+  if (m.what === 'about') return done(await aboutHere(m.info ?? {}));
   if (m.what === 'askText') return done(await askTextHere(m.title, m.value, m.placeholder));
   if (m.what === 'pickFolder') {
     // Move to folder... (bmpick.js): { folder } (null: the tab's top), or nothing for Cancel.

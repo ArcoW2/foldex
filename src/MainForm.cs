@@ -244,6 +244,23 @@ sealed class MainForm : Form
                 Post(new JsonObject { ["event"] = "answer", ["req"] = msg["req"]?.DeepClone(), ["value"] = form.Result?.DeepClone() });
                 break;
             }
+            case "about":
+            {
+                // What the About window shows (as LexPen's): this build and what it runs on.
+                var (aboutVersion, aboutCommit) = AppHost.Version();
+                var os = Environment.OSVersion.Version;
+                Post(new JsonObject
+                {
+                    ["event"] = "answer", ["req"] = msg["req"]?.DeepClone(),
+                    ["version"] = aboutVersion, ["commit"] = aboutCommit,
+                    ["built"] = System.Reflection.CustomAttributeExtensions.GetCustomAttributes<System.Reflection.AssemblyMetadataAttribute>(typeof(MainForm).Assembly).FirstOrDefault(a => a.Key == "BuildTime")?.Value,
+                    ["os"] = $"Windows {(os.Build >= 22000 ? 11 : 10)} (build {os.Build}), {System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture}",
+                    ["dotnet"] = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription,
+                    ["webView2"] = web.CoreWebView2.Environment.BrowserVersionString,
+                    ["webView2Sdk"] = typeof(Microsoft.Web.WebView2.Core.CoreWebView2).Assembly.GetName().Version!.ToString(),
+                });
+                break;
+            }
             case "paneSend":
                 if (floating.TryGetValue(msg["pane"]!.GetValue<string>(), out var toPane)) toPane.Send(msg["msg"]!);
                 break;
