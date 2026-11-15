@@ -76,7 +76,7 @@ function bookmarksCame(m) {
   askBookmarksExist();
   askBookmarkEntries();
   ribbonRefresh();
-  bookmarksPane?.render();
+  paneOfKind('bookmarks')?.render();
 }
 
 // Whether the locations are there (the host asks off its window's thread, each with a time limit).
@@ -84,7 +84,7 @@ async function askBookmarksExist() {
   const m = await askHost({ op: 'bookmarksExist' });
   bookmarkExists = new Map(Object.entries(m.exists ?? {}).map(([f, on]) => [f.toLowerCase(), on]));
   for (const v of views.values()) if (v instanceof TreeView && v.qaHead) v.render();
-  bookmarksPane?.render();
+  paneOfKind('bookmarks')?.render();
 }
 
 // The host's entry of every location (its own icon), once each.
@@ -95,7 +95,7 @@ async function askBookmarkEntries() {
     const [e] = (await askHost({ op: 'entries', ids: [b.location] })).entries ?? [];
     bookmarkEntries.set(b.location.toLowerCase(), e ?? null);
   }));
-  if (wanted.length) bookmarksPane?.render();
+  if (wanted.length) paneOfKind('bookmarks')?.render();
 }
 
 // "file,index" split; null for anything else.
@@ -112,7 +112,7 @@ async function askFileIcon(icon) {
   const m = await askHost({ op: 'iconFile', file: place.file, index: place.index });
   fileIcons.set(icon, m.icons?.[0] ?? null);
   for (const v of views.values()) if (v instanceof TreeView && v.qaHead) v.render();
-  bookmarksPane?.render();
+  paneOfKind('bookmarks')?.render();
 }
 
 // A bookmark's icon as an <img>: Plain is an empty one (the room kept), Custom its picture (one that is gone falls back
@@ -274,10 +274,8 @@ async function pickFolder(at = '') { return (await askHost({ op: 'pickFolder', a
 // Its screen is its page's (bookmarks.html, bmmanage.js): docked in a frame, or floating, both as any pane of a page
 // can be. This page sends it the bookmarks with what it shows (their paths, whether each is there, each one's icon as
 // a picture) and does for it what needs this page: saving the list it changed, Edit, a new folder's name, removing,
-// closing it. Opened again it comes forward; opened after it was closed, where it was last (docked at its place, or
-// floating where its window was); the first time floating beside the window.
-let bookmarksPane = null;
-let bookmarksPaneHome = null;   // where it was when last closed: { floating, place, bounds }
+// closing it. There is one (app.js openOnePane): opened again it comes forward; opened after it was closed, where it
+// was last; the first time floating beside the window.
 
 // What the Manage page is sent (BookmarksView, app.js).
 function bookmarksForPage() {
@@ -325,38 +323,14 @@ function bookmarkPicture(b) {
 
 function manageBookmarks() {
   askBookmarkEntries();   // icons that were not there at the start
-  if (bookmarksPane) {
-    if (bookmarksPane.channel.floating) return bookmarksPane.channel.float();
-    return showPane(bookmarksPane.id);
-  }
-  const id = layout.add({ kind: 'bookmarks' });
-  const view = bookmarksPane = new BookmarksView(id);
-  views.set(id, view);
-  const home = bookmarksPaneHome ?? { floating: true, place: { area: 'right' } };
-  if (home.floating) {
-    layout.pane(id).floating = { place: home.place ?? { area: 'right' }, bounds: home.bounds ?? null };
-    view.channel.float(home.bounds ?? null);
-    drawHeads();
-    tellLayout();
-  } else {
-    placeView(view, home.place?.pane != null && docks.find(home.place.pane) ? home.place : { area: home.place?.area ?? 'right' });
-    showPane(id);
-  }
-}
-
-// The Manage pane closed: where it was, for when it opens again.
-function bookmarksPaneClosed(id) {
-  const pane = layout.pane(id);
-  bookmarksPaneHome = pane?.floating ? { floating: true, place: pane.floating.place, bounds: pane.floating.bounds }
-    : { floating: false, place: docks.placeOf(id) ?? { area: 'right' }, bounds: pane?.floatBounds ?? null };
-  bookmarksPane = null;
+  openOnePane('bookmarks');
 }
 
 // Every change goes to the host at once: the whole list.
 function saveBookmarks(list) {
   bookmarks = list;
   post({ op: 'bookmarksSet', bookmarks: list });
-  bookmarksPane?.render();
+  paneOfKind('bookmarks')?.render();
 }
 
 // ---------- Edit (3.4): one bookmark, all of it ----------

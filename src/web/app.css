@@ -1178,7 +1178,7 @@ body[data-focus-away] :is(.row, .tile).selected.focused {
   box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--fg) var(--row-line-mix, 8%), transparent);
 }
 
-dialog.more-columns .props, dialog.manage-sets .setcolumns {
+dialog.more-columns .props, .manage-sets .setcolumns {
   max-height: 50vh;
   overflow: auto;
   display: grid;
@@ -1186,36 +1186,79 @@ dialog.more-columns .props, dialog.manage-sets .setcolumns {
   margin: 6px 0;
 }
 
-dialog.manage-sets .manage {
+/* Manage column sets as a pane's page (columnsets.html; plan 14 3.0): the whole frame or window, the sets at the left,
+   the one chosen at the right scrolling in the room left, Close at the bottom. */
+.manage-sets.cs-page {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  box-sizing: border-box;
+  background: var(--bg-bar);
+}
+
+.manage-sets .manage {
   display: grid;
   grid-template-columns: 12em 1fr;
   gap: 12px;
-  min-width: 40em;
+  flex: 1;
+  min-height: 0;
 }
 
-dialog.manage-sets .setlist {
+.manage-sets .setlist {
   display: grid;
   align-content: start;
   gap: 2px;
+  overflow: auto;
 }
 
-dialog.manage-sets .setlist button {
+.manage-sets .setedit {
+  overflow: auto;
+}
+
+.manage-sets .setcolumns {
+  max-height: none;
+}
+
+.manage-sets .setlist button {
   text-align: left;
 }
 
-dialog.manage-sets .setlist button.on {
+.manage-sets .setlist button.on {
   outline: 1px solid var(--accent);
 }
 
-dialog.manage-sets .setcolumns > div {
+.manage-sets .setcolumns > div {
   display: grid;
   grid-template-columns: 1fr 5em auto auto auto;
   gap: 4px;
   align-items: center;
 }
 
-dialog.manage-sets .setedit > * + * {
+.manage-sets .setedit > * + * {
   margin-top: 6px;
+}
+
+.manage-sets .buttons {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* A narrow pane (docked at a side, or a narrow window): the sets above the one chosen. The page is its own document,
+   so the width is the pane's. */
+@media (max-width: 560px) {
+  .manage-sets.cs-page .manage {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(4em, auto) 1fr;
+  }
+  .manage-sets.cs-page .setlist {
+    grid-template-columns: repeat(auto-fill, minmax(8em, 1fr));
+    max-height: 30vh;
+  }
+  .manage-sets.cs-page .setcolumns > div { grid-template-columns: minmax(0, 1fr) 3.5em auto auto auto; gap: 2px; }
+  .manage-sets.cs-page .setcolumns button { padding-left: 5px; padding-right: 5px; }
 }
 
 .message {

@@ -130,7 +130,7 @@ function setColumnSets(m) {
   columnSets = m;
   if (m.problems?.length) status(m.problems.join(' '), true);
   for (const v of views.values()) if (v instanceof ListView && v.location) v.chooseColumns(true);
-  if (manageDialog) drawManage();
+  paneOfKind('columnsets')?.render();
 }
 
 function columnInfo(id) {
@@ -349,126 +349,31 @@ async function moreColumns(view) {
 
 // ---------- Manage sets (3.3) ----------
 
-let manageDialog = null, managed = null;
-
+// Its screen is its page's (columnsets.html, colsmanage.js): a pane there is one of (app.js openOnePane), docked in a
+// frame or floating, both as any pane of a page can be. This page sends it the sets with the columns there are, and
+// does for it what needs this page: saving what it changed, a name or a Yes asked, closing it.
 function openManageSets() {
-  if (manageDialog) return manageDialog.focus();
-  manageDialog = document.createElement('dialog');
-  manageDialog.className = 'ask manage-sets';
-  manageDialog.innerHTML = '<p>Column sets</p><div class="manage"><div class="setlist"></div><div class="setedit"></div></div>' +
-    '<div class="buttons"><button class="ok">Close</button></div>';
-  manageDialog.querySelector('.ok').addEventListener('click', () => { manageDialog.close(); });
-  manageDialog.addEventListener('close', () => { manageDialog.remove(); manageDialog = null; });
-  document.body.append(manageDialog);
-  managed = columnSets.sets[0]?.name ?? null;
-  askPropList().then(() => manageDialog && drawManage());
-  drawManage();
-  manageDialog.show();   // not modal: the panes can be used meanwhile
+  askPropList().then(() => paneOfKind('columnsets')?.render());
+  openOnePane('columnsets');
 }
 
-// The set changed in Manage: written as yours (a shipped one changed becomes yours; Reset brings it back).
-function changeSet(name, change) {
-  const set = copyColumns(setNamed(name));
-  change(set);
-  saveMine([...columnSets.mine.filter(m => m.name.toLowerCase() !== name.toLowerCase()), { name, ...set }]);
+// What the Manage page is sent (ColumnSetsView, app.js): the sets, and every column's title and width.
+function columnSetsForPage() {
+  const titles = {};
+  for (const c of [...OwnColumns, ...InfoOnly, ...propInfo.values()]) titles[c.id] = { title: c.title, width: c.width };
+  return { kind: 'sets', columnSets, titles, own: OwnColumns.map(c => ({ id: c.id, title: c.title })),
+    props: (propList ?? []).map(p => ({ name: p.name, title: p.title })) };
 }
 
-function drawManage() {
-  if (!manageDialog) return;
-  const list = manageDialog.querySelector('.setlist');
-  list.replaceChildren(...columnSets.sets.map(s => {
-    const b = document.createElement('button');
-    b.textContent = s.name + (s.shipped && s.mine ? ' (changed)' : s.shipped ? '' : ' (yours)');
-    b.classList.toggle('on', s.name === managed);
-    b.addEventListener('click', () => { managed = s.name; drawManage(); });
-    return b;
-  }));
-  const set = managed && setNamed(managed);
-  const edit = manageDialog.querySelector('.setedit');
-  if (!set) return edit.replaceChildren();
-  const others = name => columnSets.mine.filter(m => m.name.toLowerCase() !== name.toLowerCase());
-  const button = (text, run, enabled = true) => {
-    const b = document.createElement('button');
-    b.textContent = text;
-    b.disabled = !enabled;
-    b.addEventListener('click', run);
-    return b;
-  };
-  const actions = document.createElement('div');
-  actions.className = 'setactions';
-  actions.append(
-    button('Rename...', async () => {
-      const name = await askText('New name of the set', set.name);
-      if (!name || name === set.name) return;
-      const mine = others(set.name).filter(m => m.name.toLowerCase() !== name.toLowerCase());
-      mine.push({ name, ...copyColumns(set) });
-      if (set.shipped) mine.push({ name: set.name, deleted: true });
-      managed = name;
-      saveMine(mine);
-      const folders = columnSets.folders.map(f => f.set === set.name ? { ...f, set: name } : f);
-      post({ op: 'folderColumnsSave', folders });
-    }),
-    button('Duplicate', async () => {
-      const name = await askText('Name of the copy', `${set.name} (2)`);
-      if (name) { managed = name; saveMine([...others(name), { name, ...copyColumns(set) }]); }
-    }),
-    button('Delete', async () => {
-      if (!await askYes(`Delete the column set ${set.name}?`)) return;
-      saveMine([...others(set.name), ...(set.shipped ? [{ name: set.name, deleted: true }] : [])]);
-      managed = null;
-    }),
-    button('Reset', () => saveMine(others(set.name)), set.shipped && set.mine));
-  // Its columns: order, width, take away; one added from Foldex's own and Windows' properties.
-  const rows = document.createElement('div');
-  rows.className = 'setcolumns';
-  set.columns.forEach((col, k) => {
-    const row = document.createElement('div');
-    const width = document.createElement('input');
-    width.type = 'number';
-    width.min = 2;
-    width.value = col.width ?? columnInfo(col.id).width;
-    width.title = 'Width in em of the pane font';
-    width.addEventListener('change', () => changeSet(set.name, s => { s.columns[k].width = Number(width.value) || columnInfo(col.id).width; }));
-    const title = document.createElement('span');
-    title.textContent = columnInfo(col.id).title;
-    title.title = col.id;
-    row.append(title, width,
-      button('Up', () => changeSet(set.name, s => s.columns.splice(k - 1, 0, ...s.columns.splice(k, 1))), k > 1),
-      button('Down', () => changeSet(set.name, s => s.columns.splice(k + 1, 0, ...s.columns.splice(k, 1))), k > 0 && k < set.columns.length - 1),
-      button('Remove', () => changeSet(set.name, s => s.columns.splice(k, 1)), k > 0));
-    rows.append(row);
-  });
-  const add = document.createElement('select');
-  const choices = [...OwnColumns.map(c => [c.id, c.title]), ...(propList ?? []).map(p => [p.name, `${p.title} (${p.name})`])]
-    .filter(([id]) => !set.columns.some(c => c.id === id));
-  add.append(new Option('Add a column...', ''), ...choices.map(([id, t]) => new Option(t, id)));
-  add.addEventListener('change', () => add.value && changeSet(set.name, s => s.columns.push({ id: add.value, width: columnInfo(add.value).width })));
-  const sort = document.createElement('select');
-  sort.append(new Option('No sort (by name)', ''), ...set.columns.map(c => new Option(`Sort by ${columnInfo(c.id).title}`, c.id)));
-  sort.value = set.sort?.id ?? '';
-  sort.addEventListener('change', () => changeSet(set.name, s => { s.sort = sort.value ? { id: sort.value, desc: !!s.sort?.desc } : null; }));
-  const desc = document.createElement('label');
-  const descBox = document.createElement('input');
-  descBox.type = 'checkbox';
-  descBox.checked = !!set.sort?.desc;
-  descBox.disabled = !set.sort;
-  descBox.addEventListener('change', () => changeSet(set.name, s => { if (s.sort) s.sort.desc = descBox.checked; }));
-  desc.append(descBox, ' Descending');
-  const fit = document.createElement('label');
-  const fitBox = document.createElement('input');
-  fitBox.type = 'checkbox';
-  fitBox.checked = !!set.fit;
-  fitBox.addEventListener('change', () => changeSet(set.name, s => { s.fit = fitBox.checked; }));
-  fit.append(fitBox, ' Fit by themselves');
-  // The folders that use it.
-  const folders = document.createElement('div');
-  folders.className = 'setfolders';
-  const using = columnSets.folders.filter(f => f.set.toLowerCase() === set.name.toLowerCase());
-  folders.append(using.length ? 'Used by:' : 'No folder uses it.', ...using.map(f => {
-    const row = document.createElement('div');
-    row.append(`${f.path}${f.subfolders ? ' and its subfolders' : ''} `,
-      button('Remove', () => post({ op: 'folderColumnsSave', folders: columnSets.folders.filter(x => x !== f) })));
-    return row;
-  }));
-  edit.replaceChildren(actions, rows, add, sort, desc, fit, folders);
+// What the Manage page asks of this page.
+async function columnSetsPageAsks(view, m) {
+  switch (m.kind) {
+    case 'saveMine': return saveMine(m.mine);
+    case 'folders': return post({ op: 'folderColumnsSave', folders: m.folders });
+    case 'close': return closePane(view.id);
+    case 'ask': {
+      const value = m.what === 'yes' ? await askYes(m.title) : await askText(m.title, m.value ?? '');
+      return view.send({ kind: 'answer', key: `answer:${m.req}`, req: m.req, value });
+    }
+  }
 }

@@ -7,6 +7,7 @@ Status: partly executed; see Status and 6 (As built).
 - 2026-11-15: partly executed: stage 2 (Manage the bookmarks as a page).
 - 2026-11-15: partly executed: stage 3 (modal floating windows: a name asked, Edit a bookmark, Move to folder...,
   About, Find, Rename, More columns; the Size of a bar, not modal).
+- 2026-11-15: partly executed: stage 4, first part (Manage column sets as a page).
 
 Builds on plan 12 (docking panes) and plan 03 (connected panes). The number in the file name is the priority; rename to
 reorder.
@@ -55,6 +56,7 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 | Modal floating windows: the window | `PaneForm` shown modal with a dialog's page (`dialog.html`, `dialogpage.js`), as large as its dialog, its host requests through the window's page | 3.7; 6.3 |
 | Modal floating windows: a name asked, Edit a bookmark | askText; Edit a bookmark with Change Icon inside it; Move to folder... (Manage) | 3.7; 6.3 |
 | Modal floating windows: Find, Rename, More columns | each in a window of its own; what only the window's page has (the items, the pane's columns) asked of it while open | 3.7; 6.4 |
+| Manage column sets | a pane page (docked or floating), no longer a dialog; one of it, opened where it was last (shared with Manage the bookmarks) | 3.7; 6.6 |
 | The Size of a bar | a floating window of its own, not modal (moved off the bar, the main window still resizable); the marks of a bar after one that fills its line measured from its far end | 3.7; 6.5 |
 
 ### Not yet built
@@ -62,7 +64,7 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 | Part | What | Waits for | Reference |
 |---|---|---|---|
 | Dock by dragging | a floating pane's window dragged onto its Foldex window docks it there, the places lit as for a docked pane | -- | 3.1 |
-| Panes of their own | Manage column sets, F1, Settings, Projects as pane pages, docked or floating; the Projects pane's question (a name, a copy's name) in a modal floating window as the others | The floating window | 3.0; 3.7 |
+| Panes of their own | F1, Settings, Projects as pane pages, docked or floating; the Projects pane's question (a name, a copy's name) in a modal floating window as the others | -- | 3.0; 3.7 |
 | Preview and Info as pages | Windows' preview over a frame and over a floating window; Foldex's own preview; Info | The floating window | 3.0 |
 | F3 | a preview in a new floating window | Preview and Info as pages | 3.5 |
 | Scrap, list and tree as pages | the panes of the layout as pages; following, executing, back and forward through the window's page | Preview and Info as pages | 3.0; 3.3 |
@@ -178,7 +180,7 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 | Tree, list, scrap, preview, Info, Log | docked panes | both | docked | 3.1 |
 | F3's preview | (not built) | both | floating | 3.5 |
 | Manage the bookmarks | modal dialog (bookmarks.js) | both | floating, beside the window | plan 26 3.3: a tab for the bookmarks and one for quick access; its Edit... and New open their dialogs over it |
-| Manage column sets | modal dialog (columns.js openManageSets) | both | floating | |
+| Manage column sets | pane page (columnsets.html, colsmanage.js; columns.js openManageSets) | both (built) | floating | its sets above the one chosen in a narrow pane |
 | F1, all actions and keys (palette.js) | modal dialog | both, not modal | floating | as LexPen's F1 (plan 19 3.10): stays open while actions run |
 | Settings | a form of the host with its own page (SettingsForm, settings.html) | both | floating | as LexPen's; docked: its page as a pane of the main page |
 | Projects | a form of the host with its own page (ProjectsForm, projects.html) | both | floating | as LexPen's; docked: as Settings |
@@ -327,3 +329,23 @@ None.
   fields, the main window enabled; moved off the window; its marks at 2444 (min 120) and 2364 (normal 200) for the
   bar at 2364-2564; Normal 300: the bar at 2264-2564, the normal mark at 2264; Cancel: back to 200, the marks gone, the
   window closed; Normal 240 and OK: kept and saved in bars.json. `dotnet test`: 224 passed.
+
+### 6.6 Stage 4: Manage column sets
+
+- Panes there is one of (app.js `openOnePane`, `onePaneClosed`, `paneOfKind`, `OnePanes`): opened again it comes
+  forward; after it was closed, where it was last; the first time floating. Where each kind was is kept with the
+  window's layout (`homes`, by kind; a layout saved before reads its `bookmarksHome`). Manage the bookmarks uses it
+  now in place of its own code (bookmarks.js), so F1, Settings and Projects can too.
+- `columnsets.html` / `colsmanage.js`: the screen of the dialog as it was (the sets, Rename..., Duplicate, Delete,
+  Reset, the columns with their widths and order, Add a column, the sort, Fit by themselves, the folders using it),
+  Close at its bottom. The window's page (columns.js `columnSetsForPage`, `columnSetsPageAsks`; app.js
+  `ColumnSetsView`) sends the sets with every column's title and width, again when they change or the properties
+  come; it saves what the page changed, and asks a name (a modal floating window) or a Yes (AskForm) for it.
+- In a narrow pane (the page is its own document, so a width query is the pane's) the sets go above the one chosen and
+  the column rows are tighter.
+- Tests in the test copy (CDP into its page, UI Automation): opened floating with the sets, Generic chosen and its
+  columns; Duplicate asking "Name of the copy" in its window, "Test set" kept and chosen; a width changed there reaching
+  the window's page's set; Delete asking in AskForm, Yes: gone; Dock (right); Close: its place kept; opened again
+  docked there; opened again while shown: still one; Manage the bookmarks opening through the same code; after a
+  restart docked again, both places kept. The docked pane captured at 280 px wide: nothing cut off after the narrow
+  layout. `dotnet test`: 224 passed (the bookmarks keys test stubs `paneOfKind`).

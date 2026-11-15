@@ -9,6 +9,7 @@
 const views = new Map();   // no panes here (code shared with the window's page looks at them)
 const same = (a, b) => a != null && b != null && a.toLowerCase() === b.toLowerCase();
 const activeView = () => null;
+const paneOfKind = () => null;
 const ribbonRefresh = () => {};
 
 // The host, through the window's page: a request and its answer.

@@ -15,6 +15,7 @@ public class BookmarkKeysTests
             var same = (a, b) => a != null && b != null && a.toLowerCase() === b.toLowerCase();
             var posted = [];
             var post = m => posted.push(m);
+            var paneOfKind = () => null;
             if (typeof structuredClone === 'undefined') var structuredClone = x => JSON.parse(JSON.stringify(x));
             """);
         foreach (var f in new[] { "panes.js", "keys.js", "actions.js", "bookmarktree.js", "bookmarks.js" }) engine.Execute(File.ReadAllText(Path.Combine(Web, f)));
