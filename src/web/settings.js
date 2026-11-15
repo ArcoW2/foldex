@@ -7,7 +7,7 @@
 // settings.json and tells every window, this one included (settings). Esc empties the search; a second Esc closes the
 // window.
 
-const host = window.chrome.webview;
+const host = paneHost;   // hostpane.js: through the window's page (a pane, plan 14 3.7)
 const $ = s => document.querySelector(s);
 const ui = { search: $('.st-search'), count: $('.st-count'), problems: $('.st-problems'), tabs: $('.st-tabs'), list: $('.st-list') };
 let look = null;   // { settings: { values, user, defaults, problems }, themes: { themes, problems } }
@@ -173,6 +173,7 @@ document.addEventListener('keydown', e => {
     return stepTab(e.key === 'PageUp' || (e.key === 'Tab' && e.shiftKey) ? -1 : 1);
   }
   if (e.key !== 'Escape') return;
+  e.preventDefault();   // not on to the window (pane.js)
   if (ui.search.value) {
     ui.search.value = '';
     filter();

@@ -7,7 +7,7 @@ Status: partly executed; see Status and 6 (As built).
 - 2026-11-15: partly executed: stage 2 (Manage the bookmarks as a page).
 - 2026-11-15: partly executed: stage 3 (modal floating windows: a name asked, Edit a bookmark, Move to folder...,
   About, Find, Rename, More columns; the Size of a bar, not modal).
-- 2026-11-15: partly executed: stage 4, first part (Manage column sets as a page).
+- 2026-11-15: partly executed: stage 4 (Manage column sets, F1, Settings and Manage projects as pages).
 
 Builds on plan 12 (docking panes) and plan 03 (connected panes). The number in the file name is the priority; rename to
 reorder.
@@ -56,6 +56,7 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 | Modal floating windows: the window | `PaneForm` shown modal with a dialog's page (`dialog.html`, `dialogpage.js`), as large as its dialog, its host requests through the window's page | 3.7; 6.3 |
 | Modal floating windows: a name asked, Edit a bookmark | askText; Edit a bookmark with Change Icon inside it; Move to folder... (Manage) | 3.7; 6.3 |
 | Modal floating windows: Find, Rename, More columns | each in a window of its own; what only the window's page has (the items, the pane's columns) asked of it while open | 3.7; 6.4 |
+| Settings and Manage projects | pane pages (docked or floating) in place of the host's own windows; the Projects question in a modal floating window | 3.7; 6.8 |
 | F1 | a pane page (docked or floating), not modal; it stays open while actions run, on the active pane | 3.7; 6.7 |
 | Manage column sets | a pane page (docked or floating), no longer a dialog; one of it, opened where it was last (shared with Manage the bookmarks) | 3.7; 6.6 |
 | The Size of a bar | a floating window of its own, not modal (moved off the bar, the main window still resizable); the marks of a bar after one that fills its line measured from its far end | 3.7; 6.5 |
@@ -65,7 +66,6 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 | Part | What | Waits for | Reference |
 |---|---|---|---|
 | Dock by dragging | a floating pane's window dragged onto its Foldex window docks it there, the places lit as for a docked pane | -- | 3.1 |
-| Panes of their own | Settings, Projects as pane pages, docked or floating; the Projects pane's question (a name, a copy's name) in a modal floating window as the others | -- | 3.0; 3.7 |
 | Preview and Info as pages | Windows' preview over a frame and over a floating window; Foldex's own preview; Info | The floating window | 3.0 |
 | F3 | a preview in a new floating window | Preview and Info as pages | 3.5 |
 | Scrap, list and tree as pages | the panes of the layout as pages; following, executing, back and forward through the window's page | Preview and Info as pages | 3.0; 3.3 |
@@ -183,13 +183,13 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 | Manage the bookmarks | modal dialog (bookmarks.js) | both | floating, beside the window | plan 26 3.3: a tab for the bookmarks and one for quick access; its Edit... and New open their dialogs over it |
 | Manage column sets | pane page (columnsets.html, colsmanage.js; columns.js openManageSets) | both (built) | floating | its sets above the one chosen in a narrow pane |
 | F1, all actions and keys (palette.js, palette.html, palettepane.js) | pane page | both, not modal (built) | floating | as LexPen's F1 (plan 19 3.10): stays open while actions run |
-| Settings | a form of the host with its own page (SettingsForm, settings.html) | both | floating | as LexPen's; docked: its page as a pane of the main page |
-| Projects | a form of the host with its own page (ProjectsForm, projects.html) | both | floating | as LexPen's; docked: as Settings |
+| Settings | pane page (settings.html; PaneHosts.Settings) | both (built) | floating, in the middle of the window | as LexPen's; one per window, every window following a change |
+| Projects | pane page (projects.html; PaneHosts.Projects) | both (built) | floating, in the middle of the window | as LexPen's; docked: as Settings |
 | More columns (every property, columns.js moreColumns) | modal floating window | modal floating window (built) | | adds columns to the pane it was opened from |
 | Find | modal floating window (find.js) | modal floating window (built) | | fills a scrap |
 | Rename (several items, renamedialog.js) | modal floating window | modal floating window (built) | | renames the items selected when it opened |
 | Edit a bookmark, Change Icon, Move to folder..., a name asked (askText) | modal floating windows | modal floating window (built) | | each asks one thing and waits for the answer |
-| The Projects pane's own question (a name, a copy's name) | a dialog of the Projects window's page | modal floating window | | built with Projects as a pane (stage 4): then it is asked from the main window's page as the others |
+| The Projects pane's own question (a name, a copy's name) | modal floating window | modal floating window (built) | | asked by the window's page for the pane (askText) |
 | The Size of a bar (bars.js) | floating window, not modal | floating window, not modal (built); never docks | | moved off the bar it sizes; the main window stays usable and can be resized meanwhile, the bar's marks following |
 | Foldex's question window (AskForm) | a modal window of its own | modal floating window (as now) | | |
 | The ribbon's Customize (plan 19 3.9) | (not built) | modal floating window | | |
@@ -371,3 +371,22 @@ None.
   "hidden items" found, Enter: Hidden items toggled on the list, F1 still open, the list still the active pane; Esc
   clearing the search; Dock (right); a press in it docked: the list still active; Esc on an empty search closing it, its
   place kept; F1 again: docked there, the keyboard in its search. `dotnet test`: 224 passed.
+### 6.8 Stage 4: Settings and Manage projects
+
+- Their pages (settings.html, projects.html) are pane pages now; the host's windows SettingsForm and ProjectsForm are
+  gone. What a page sent its form goes through `hostpane.js` (`paneHost` in place of chrome.webview) to its window's
+  page (app.js `HostPageView`), on to MainForm's `paneHost`, which does what the form did (`PaneHosts.Settings`,
+  `PaneHosts.Projects`) and answers the same way. What the host told the forms unasked (the settings, the folder
+  cache, "the projects changed") every window is told; its page passes it on to its pane.
+- Closing (Settings' Esc on an empty search) and going back (Manage projects' Esc) are done by the window's page: the
+  pane closes, the keyboard goes back to the active pane. The Projects question (a name, a copy's name) is asked by the
+  window's page in a modal floating window (askText); the page's own dialog for it is gone.
+- One of each per window (a Foldex window is a project's); a change in Settings reaches every window as before. The
+  place of Manage projects is kept with the layout as every pane's (AppState.ProjectsWindow is gone).
+- Floating the first time in the middle of the window at a size of its own (`FirstSizes`: Settings, Manage projects,
+  Manage column sets, which opened too narrow), through paneFloat's `size` and PaneForm's `first`.
+- Tests in the test copy (CDP into the pages): Settings floating at 760x620 with its tabs, 41 rows and the fonts; a
+  setting changed there reaching the window's page and the pane's own look; the folder cache row filled by the host;
+  Dock (right); Esc on an empty search closing it. Manage projects floating at 900x600 with its project; a sort chosen
+  there kept as the setting; New project asking its name in a modal floating window ("Empty: a number"), "Test project"
+  made and opened in a window of its own. `dotnet test`: 224 passed.

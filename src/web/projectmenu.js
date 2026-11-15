@@ -47,7 +47,7 @@ function projectMenuItems(list) {
   };
   // As LexPen's: Manage, New, Rename, then the projects.
   return [
-    { label: 'Manage projects...', run: () => post({ op: 'openProjects' }) },
+    { label: 'Manage projects...', run: () => openOnePane('projects') },
     { label: 'New project...', run: async () => {
       const name = await askText('Name of the new project', '', 'Empty: a number');
       if (name !== null) projectCommand('new', { name });

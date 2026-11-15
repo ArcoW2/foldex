@@ -189,7 +189,8 @@ function filterTest(pattern) {
 // What each kind of pane can be (docs/plans/14-PLAN-floating-panes.md 3.7): docked, floating, or both. A pane of a page
 // of its own (PageView) can float; the others are docked until they are pages (plan 14 3.0, the stages).
 const PaneCan = { tree: ['docked'], list: ['docked'], scrap: ['docked'], preview: ['docked'], log: ['docked', 'floating'],
-  bookmarks: ['docked', 'floating'], columnsets: ['docked', 'floating'], palette: ['docked', 'floating'] };
+  bookmarks: ['docked', 'floating'], columnsets: ['docked', 'floating'], palette: ['docked', 'floating'],
+  settings: ['docked', 'floating'], projects: ['docked', 'floating'] };
 const canFloat = id => (PaneCan[layout.pane(id)?.kind] ?? ['docked']).includes('floating') && views.get(id) instanceof PageView;
 
 // The view of a pane as its kind says: a tree, a list or a preview.
@@ -197,6 +198,7 @@ function makeView(id) {
   const kind = layout.pane(id).kind;
   return kind === 'tree' ? new TreeView(id) : kind === 'log' ? new LogView(id) : kind === 'bookmarks' ? new BookmarksView(id)
     : kind === 'columnsets' ? new ColumnSetsView(id) : kind === 'palette' ? new PaletteView(id)
+    : kind === 'settings' ? new SettingsView(id) : kind === 'projects' ? new ProjectsView(id)
     : kind === 'preview' ? (layout.pane(id).info ? new InfoView(id) : new PreviewView(id))
     : kind === 'scrap' ? new ScrapView(id) : new ListView(id);
 }
@@ -2451,11 +2453,49 @@ class PaletteView extends PageView {
   receive(m) { return palettePageAsks(this, m); }
 }
 
-// ---------- Panes there is one of (plan 14 3.7): Manage the bookmarks, Manage column sets, F1 ----------
+// Settings and Manage projects (their pages settings.html and projects.html, which were the host's own windows): what
+// the page sends the host and what the host sends it pass through here (hostpane.js; MainForm's paneHost). Closing
+// and going back are done here.
+class HostPageView extends PageView {
+  constructor(id, kind, page, title) {
+    super(id, kind, page, title);
+    this.replies = 0;
+  }
+  receive(m) {
+    if (m.kind !== 'host') return;
+    const msg = m.msg;
+    if (msg.op === 'close') return closePane(this.id);
+    if (msg.op === 'back') {   // Manage projects' Esc: the keyboard back in the active pane
+      activeView()?.body.focus();
+      return this.fromHost({ id: msg.id, result: true });
+    }
+    if (msg.op === 'askName')   // Manage projects' question (a name, a copy's name): a modal floating window
+      return void askText(msg.title, msg.value ?? '', msg.placeholder ?? '').then(name => this.fromHost({ id: msg.id, result: name }));
+    post({ op: 'paneHost', pane: this.id, page: this.kindName, msg });
+  }
+  // A message of the host for the page: each answer kept apart while the page is not ready yet, an event by its name.
+  fromHost(msg) { this.send({ kind: 'host', key: msg.event ? `host:${msg.event}` : `host:${++this.replies}`, msg }); }
+}
+class SettingsView extends HostPageView {
+  constructor(id) {
+    super(id, 'settings', 'settings.html', 'Settings');
+    this.kindName = 'settings';
+  }
+}
+class ProjectsView extends HostPageView {
+  constructor(id) {
+    super(id, 'projects', 'projects.html', 'Manage projects');
+    this.kindName = 'projects';
+  }
+}
+
+// ---------- Panes there is one of (plan 14 3.7): Manage the bookmarks, Manage column sets, F1, Settings, Projects ----------
 
 // Opened again it comes forward; opened after it was closed, where it was last (docked at its place, or floating where
 // its window was, kept with the window's layout); the first time floating beside the window.
-const OnePanes = new Set(['bookmarks', 'columnsets', 'palette']);
+const OnePanes = new Set(['bookmarks', 'columnsets', 'palette', 'settings', 'projects']);
+// The first size of a floating one, when the default (narrow, beside the window) is too small for it: CSS px.
+const FirstSizes = { columnsets: [760, 560], settings: [760, 620], projects: [900, 600] };
 const paneHomes = {};   // kind -> where it was when last closed: { floating, place, bounds }
 const paneOfKind = kind => [...views.values()].find(v => layout.pane(v.id)?.kind === kind) ?? null;
 function openOnePane(kind) {
@@ -2467,7 +2507,7 @@ function openOnePane(kind) {
   const home = paneHomes[kind] ?? { floating: true, place: { area: 'right' } };
   if (home.floating) {
     layout.pane(id).floating = { place: home.place ?? { area: 'right' }, bounds: home.bounds ?? null };
-    view.channel.float(home.bounds ?? null);
+    view.channel.float(home.bounds ?? null, FirstSizes[kind]);
     drawHeads();
     tellLayout();
   } else {
@@ -3729,6 +3769,10 @@ const events = {
   // A pane chosen in the Projects menu (plan 15 3.6): the focus to it, its tab shown.
   focusPane(m) { if (views.has(m.pane)) focusPane(m.pane); },
   projectList(m) { projectListCame(m.list); },
+  // The Settings and Manage projects panes (plan 14 3.7): the host's answer to one, and what it tells them unasked.
+  paneHost(m) { views.get(m.pane)?.fromHost?.(m.msg); },
+  projects(m) { paneOfKind('projects')?.fromHost(m); },
+  cacheInfo(m) { paneOfKind('settings')?.fromHost(m); },
   // Settings or themes changed (the settings window, a file edited by hand): every window is told.
   settings(m) {
     const before = settings;
@@ -3737,6 +3781,8 @@ const events = {
     settingsChanged(before);
     setPaneInert();
     settingsProblems(m);
+    paneOfKind('settings')?.fromHost(m);
+    paneOfKind('projects')?.fromHost(m);
   },
   open(m) {
     const tree = views.get(layout.root);

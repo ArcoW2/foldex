@@ -51,12 +51,11 @@ sealed class AppHost : ApplicationContext
     }
 
     /// <summary>What Foldex remembers by itself: the place of the window closed last (for a window without one of its
-    /// own) and of the Manage projects window. Layout: the last closed window's panes and docks from before projects
+    /// own). Layout: the last closed window's panes and docks from before projects
     /// (plan 12 3.4), read once to become project 1 (plan 15 3.8).</summary>
     public sealed class AppState
     {
         public JsonObject? Layout { get; set; }
-        public int[]? ProjectsWindow { get; set; }
         public int X { get; set; }
         public int Y { get; set; }
         public int Width { get; set; }
@@ -158,7 +157,8 @@ sealed class AppHost : ApplicationContext
         {
             Use.Save();
             if (lowMemory != IntPtr.Zero && QueryMemoryResourceNotification(lowMemory, out var low) && low) Cache.Trim(true);
-            settingsForm?.Post(CacheInfo());
+            var cacheInfo = CacheInfo();   // for a Settings pane (its folder cache row)
+            foreach (var w in windows) w.Post((JsonObject)cacheInfo.DeepClone());
         };
         cacheTimer.Start();
     }
@@ -350,9 +350,7 @@ sealed class AppHost : ApplicationContext
         ConfigureCache();
         var message = Look();
         message["event"] = "settings";
-        foreach (var w in windows) w.Post((JsonObject)message.DeepClone());
-        settingsForm?.Post((JsonObject)message.DeepClone());
-        projectsForm?.Post((JsonObject)message.DeepClone());
+        foreach (var w in windows) w.Post((JsonObject)message.DeepClone());   // and through each, its Settings and Projects panes
     }
 
     // Your settings.json or a theme of yours edited by hand (or copied in): every page follows, once the writing rests.
@@ -382,24 +380,6 @@ sealed class AppHost : ApplicationContext
             w.Renamed += (s, e) => changed(s, e);
             w.EnableRaisingEvents = true;
             watchers.Add(w);
-        }
-    }
-
-    // The settings window (docs/plans/executed/07-PLAN-themes.md 3.5): one for Foldex.
-    SettingsForm? settingsForm;
-
-    public void OpenSettings(MainForm from)
-    {
-        if (settingsForm is null || settingsForm.IsDisposed)
-        {
-            settingsForm = new SettingsForm(this, from);
-            settingsForm.FormClosed += (_, _) => settingsForm = null;
-            settingsForm.Show();
-        }
-        else
-        {
-            if (settingsForm.WindowState == FormWindowState.Minimized) settingsForm.WindowState = FormWindowState.Normal;
-            settingsForm.Activate();
         }
     }
 
@@ -519,15 +499,10 @@ sealed class AppHost : ApplicationContext
         SaveState(new AppState
         {
             X = b.X, Y = b.Y, Width = b.Width, Height = b.Height, Maximized = w.WindowState == FormWindowState.Maximized,
-            ProjectsWindow = State?.ProjectsWindow,
         });
         SaveProjects();
         ProjectsChanged();
-        if (windows.Count == 0)
-        {
-            projectsForm?.Close();
-            ExitThread();
-        }
+        if (windows.Count == 0) ExitThread();
     }
 
     // ---------- Projects (ProjectStore; docs/plans/15-PLAN-projects.md) ----------
@@ -624,8 +599,8 @@ sealed class AppHost : ApplicationContext
             var info = ProjectInfo(w);
             w.ShowProject(info["display"]!.GetValue<string>());
             w.Post(new JsonObject { ["event"] = "project", ["project"] = info });
+            w.Post(new JsonObject { ["event"] = "projects" });   // for a Manage projects pane in it
         }
-        projectsForm?.Post(new JsonObject { ["event"] = "projects" });
         SaveProjectsSoon();
     }
 
@@ -695,25 +670,7 @@ sealed class AppHost : ApplicationContext
         ProjectsChanged();
     }
 
-    // ---------- Manage projects (ProjectsForm; plan 15 3.7) ----------
-
-    ProjectsForm? projectsForm;
-
-    /// <summary>The Manage projects window: one for Foldex; opened again, brought to the front.</summary>
-    public void OpenProjects(MainForm from)
-    {
-        if (projectsForm is { IsDisposed: false }) { BringToFront(projectsForm); return; }
-        projectsForm = new ProjectsForm(this, from);
-        projectsForm.FormClosed += (_, _) => projectsForm = null;
-        projectsForm.Show();
-    }
-
-    public void SaveProjectsWindow(int[] bounds)
-    {
-        var s = State ?? new AppState();
-        s.ProjectsWindow = bounds;
-        SaveState(s);
-    }
+    // ---------- Manage projects (a pane of a window, PaneHosts.Projects; plan 15 3.7, plan 14 3.7) ----------
 
     /// <summary>The window worked in last: where the Manage window's questions and Esc go.</summary>
     public MainForm? LastActive => recent.FirstOrDefault(w => !w.IsDisposed);

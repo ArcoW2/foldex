@@ -17,10 +17,10 @@ let lastId = 0;
 function host(op, args) {
   return new Promise((resolve, reject) => {
     pending.set(++lastId, { resolve, reject });
-    chrome.webview.postMessage({ ...args, id: lastId, op });
+    paneHost.postMessage({ ...args, id: lastId, op });
   });
 }
-chrome.webview.addEventListener('message', e => {
+paneHost.addEventListener('message', e => {   // hostpane.js: through the window's page (a pane, plan 14 3.7)
   if (e.data.event) return events[e.data.event]?.(e.data);
   const { id, result, error } = e.data;
   const call = pending.get(id);
@@ -224,9 +224,12 @@ function endRename(keep) {
   view.el.focus();
 }
 
-// A name, or null for Cancel / Esc.
-function askName(title, value = '') {
-  return ask(title, value, []);
+// A name, or null for Cancel / Esc: asked by the window's page in a modal floating window (plan 14 3.7; app.js
+// HostPageView, askText).
+async function askName(title, value = '') {
+  const name = await host('askName', { title, value, placeholder: 'Empty: a number' });
+  view.el.focus();
+  return name;
 }
 // True for Yes; `lines` under the title. Asked in Foldex's own window (AskForm.cs, as LexPen's), in this page's look.
 async function askYes(title, lines) {
@@ -234,26 +237,6 @@ async function askYes(title, lines) {
   view.el.focus();
   return !!yes;
 }
-function ask(title, value, lines) {
-  const dialog = $('.pv-dialog'), input = $('.pv-dialog-input'), text = $('.pv-dialog-text');
-  $('.pv-dialog-label').textContent = title;
-  text.replaceChildren(...lines.map(line => Object.assign(document.createElement('div'), { textContent: line })));
-  text.hidden = !lines.length;
-  input.hidden = value === null;
-  input.value = value ?? '';
-  dialog.returnValue = '';
-  // A question is answered Yes or No (y, n: buttons.js), a name OK or Cancel.
-  const [ok, cancel] = dialog.querySelectorAll('.ask-buttons button');
-  ok.dataset.text = value === null ? 'Yes' : 'OK';
-  cancel.dataset.text = value === null ? 'No' : 'Cancel';
-  dialog.showModal();
-  if (value === null) dialog.querySelector('button[value=ok]').focus(); else input.select();
-  return new Promise(resolve => dialog.addEventListener('close', () => {
-    resolve(dialog.returnValue === 'ok' ? input.value.trim() : null);
-    view.el.focus();
-  }, { once: true }));
-}
-
 // ---------- The menu bar (menu.js) ----------
 const MENUS = [
   ['Project', () => {
@@ -352,7 +335,7 @@ function moveFocus(d) {
   view.el.querySelector('.pv-focus')?.scrollIntoView({ block: 'nearest' });
 }
 document.addEventListener('keydown', e => {
-  if ($('.pv-dialog').open || view.renaming !== null) return;
+  if (view.renaming !== null) return;
   const inSearch = e.target === view.search;
   if (e.ctrlKey && e.key.toLowerCase() === 'f') { e.preventDefault(); view.search.focus(); view.search.select(); return; }
   if (e.key === 'Escape') {

@@ -34,7 +34,10 @@ sealed class PaneForm : Form
     /// middle of its window; its page's `done` is its answer.</param>
     /// <param name="modal">A dialog's window shown with ShowDialog over its window (a modal floating window); false: owned
     /// by its window, which stays usable (the Size of a bar).</param>
-    public PaneForm(AppHost app, MainForm owner, string id, string page, string title, Rectangle? bounds, bool dialog = false, bool modal = true)
+    /// <param name="first">Its size the first time (no <paramref name="bounds"/>), in px at 96 dpi: in the middle of its
+    /// window (Settings, Manage projects, Manage column sets); null: narrow, beside its window's right edge.</param>
+    public PaneForm(AppHost app, MainForm owner, string id, string page, string title, Rectangle? bounds, bool dialog = false, bool modal = true,
+        Size? first = null)
     {
         (this.app, this.owner, Id, this.page, this.dialog) = (app, owner, id, page, dialog);
         Text = dialog ? title : $"{title} - Foldex";
@@ -49,7 +52,10 @@ sealed class PaneForm : Form
             FormBorderStyle = FormBorderStyle.FixedDialog;
         }
         var at = owner.WindowState == FormWindowState.Normal ? owner.Bounds : owner.RestoreBounds;
+        var scale = owner.DeviceDpi / 96.0;
+        var wanted = first is { } f ? new Size(Math.Min((int)(f.Width * scale), at.Width), Math.Min((int)(f.Height * scale), at.Height)) : Size.Empty;
         var fallback = dialog ? new Rectangle(at.X + (at.Width - 420) / 2, at.Y + (at.Height - 240) / 2, 420, 240)
+            : first is not null ? new Rectangle(at.X + (at.Width - wanted.Width) / 2, at.Y + (at.Height - wanted.Height) / 2, wanted.Width, wanted.Height)
             : new Rectangle(at.Right - 420, at.Y + 80, 400, Math.Min(500, Math.Max(200, at.Height - 160)));
         Bounds = bounds is { } b && Screen.AllScreens.Any(s => s.WorkingArea.IntersectsWith(b)) ? b : fallback;
         Controls.Add(web);

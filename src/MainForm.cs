@@ -222,7 +222,8 @@ sealed class MainForm : Form
                 {
                     Rectangle? bounds = msg["bounds"] is JsonArray { Count: 4 } b
                         ? new Rectangle(b[0]!.GetValue<int>(), b[1]!.GetValue<int>(), b[2]!.GetValue<int>(), b[3]!.GetValue<int>()) : null;
-                    form = new PaneForm(app, this, id, msg["page"]!.GetValue<string>(), msg["title"]?.GetValue<string>() ?? "Pane", bounds);
+                    Size? first = msg["size"] is JsonArray { Count: 2 } wh ? new Size(wh[0]!.GetValue<int>(), wh[1]!.GetValue<int>()) : null;
+                    form = new PaneForm(app, this, id, msg["page"]!.GetValue<string>(), msg["title"]?.GetValue<string>() ?? "Pane", bounds, first: first);
                     floating[id] = form;
                     form.FormClosed += (_, _) => { if (floating.GetValueOrDefault(id) == form) floating.Remove(id); };
                     form.Show(this);
@@ -658,18 +659,23 @@ sealed class MainForm : Form
             case "projectCommand":
                 app.ProjectCommand(this, msg["kind"]!.GetValue<string>(), msg);
                 break;
-            case "openProjects":
-                app.OpenProjects(this);
+            // What a Settings or Manage projects pane of this window asks of the host (PaneHosts; plan 14 3.7): the
+            // answers back to that pane through this window's page.
+            case "paneHost":
+            {
+                var pane = msg["pane"]!.GetValue<string>();
+                void Reply(JsonObject answer) { if (!IsDisposed) Post(new JsonObject { ["event"] = "paneHost", ["pane"] = pane, ["msg"] = answer }); }
+                var asked = (JsonObject)msg["msg"]!.DeepClone();
+                if (msg["page"]?.GetValue<string>() == "settings") PaneHosts.Settings(app, this, asked, Reply);
+                else PaneHosts.Projects(app, this, asked, Reply);
                 break;
+            }
             case "watch":
                 var shown = msg["folders"]?.AsArray().Select(n => n!.GetValue<string>()).ToList() ?? [];
                 // The cache watches the folders on disk and on shares and tells of their changes itself (plan 24 3.4);
                 // the others (shell places that are no path) are watched here as before.
                 app.Folders?.Set(this, shown.Where(f => !app.Cache.Caches(f)));
                 app.Cache.Shown(this, shown);   // never let go of while shown (plan 24 3.5)
-                break;
-            case "openSettings":
-                app.OpenSettings(this);
                 break;
             case "copyText":
                 Clipboard.SetText(msg["text"]!.GetValue<string>());

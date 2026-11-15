@@ -247,7 +247,7 @@ action('palette', { title: 'All actions and keys', group: 'app', run: () => open
 action('projects.menu', { title: 'Projects', hint: 'every project and its windows, as at the project in the bottom bar', group: 'projects',
   run: () => projectsMenu() });
 action('projects.manage', { title: 'Manage projects', hint: 'every project in one list: open, close, merge, rename, delete',
-  group: 'projects', run: () => post({ op: 'openProjects' }) });
+  group: 'projects', run: () => openOnePane('projects') });
 action('project.new', { title: 'New project', hint: 'a new project in a window of its own', group: 'projects', run: async () => {
   const name = await askText('Name of the new project', '', 'Empty: a number');
   if (name !== null) projectCommand('new', { name });
@@ -281,7 +281,7 @@ action('layout.preset', { title: 'Preset', hint: 'the panes of this window made 
   variants: Object.keys(Presets).map(p => [p]), variantTitles: Object.fromEntries(Object.entries(Presets).map(([p, t]) => [p, `Preset: ${t}`])),
   run: params => applyPreset(Presets[params[0]] ? params[0] : 'default') });
 action('settings.open', { title: 'Settings', hint: 'every setting, the theme included, in a window of its own', group: 'app',
-  run: () => post({ op: 'openSettings' }) });
+  run: () => openOnePane('settings') });
 // About (as LexPen's): the project, its version and what it runs on, in a modal floating window (plan 14 3.7).
 action('about', { title: 'About Foldex', hint: 'the version, what it runs on, and a coffee for its maker', group: 'app',
   run: async () => dialogWindow('About Foldex', { what: 'about', info: await askHost({ op: 'about' }) }) });
