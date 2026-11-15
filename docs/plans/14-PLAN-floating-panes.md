@@ -9,6 +9,7 @@ Status: partly executed; see Status and 6 (As built).
   About, Find, Rename, More columns; the Size of a bar, not modal).
 - 2026-11-15: partly executed: stage 4 (Manage column sets, F1, Settings and Manage projects as pages).
 - 2026-11-15: partly executed: stage 5 (Preview and Info as pages, F3).
+- 2026-11-15: partly executed: Dock by dragging.
 
 Builds on plan 12 (docking panes) and plan 03 (connected panes). The number in the file name is the priority; rename to
 reorder.
@@ -57,6 +58,7 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 | Modal floating windows: the window | `PaneForm` shown modal with a dialog's page (`dialog.html`, `dialogpage.js`), as large as its dialog, its host requests through the window's page | 3.7; 6.3 |
 | Modal floating windows: a name asked, Edit a bookmark | askText; Edit a bookmark with Change Icon inside it; Move to folder... (Manage) | 3.7; 6.3 |
 | Modal floating windows: Find, Rename, More columns | each in a window of its own; what only the window's page has (the items, the pane's columns) asked of it while open | 3.7; 6.4 |
+| Dock by dragging | a floating pane's window dragged by its title bar over its Foldex window: the place lit as for a head's drag; let go there, it docks there | 3.1; 6.10 |
 | Preview and Info as pages | preview.html: Foldex's own preview, its messages and Info drawn by the page; Windows' preview per pane, over the frame docked, over its window floating; both can float | 3.0; 6.9 |
 | F3 | a preview of the focused item in a new floating window that keeps it, beside the window, the keyboard staying; side by side; Esc closes it | 3.5; 6.9 |
 | Settings and Manage projects | pane pages (docked or floating) in place of the host's own windows; the Projects question in a modal floating window | 3.7; 6.8 |
@@ -68,7 +70,6 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| Dock by dragging | a floating pane's window dragged onto its Foldex window docks it there, the places lit as for a docked pane | -- | 3.1 |
 | Scrap, list and tree as pages | the panes of the layout as pages; following, executing, back and forward through the window's page | -- | 3.0; 3.3 |
 | Colours across windows | head, ring, branch marks and pane theme as when docked, changing with the window's | Scrap, list and tree as pages | 3.3 |
 | A floating scrap | drops, its search, its dashed ring; gone after a restart unless pinned (then back empty) | Scrap, list and tree as pages | 3.3 |
@@ -417,3 +418,17 @@ None.
   Info with its groups; F3 on pic.png and F3 on note.txt: two windows side by side on the other screen, each keeping
   its item while the list's focus moved on (the global preview following it), the list still the active pane, neither
   window in front; Esc in the first: its window gone, the second kept. `dotnet test`: 224 passed.
+### 6.10 Dock by dragging
+
+- PaneForm sees its window dragged by its title bar (WM_MOVING, then WM_EXITSIZEMOVE) and tells its window's page
+  where the mouse is over it, in that page's CSS px (MainForm.PagePoint): `paneDragMove`, `paneDragEnd`. The page
+  lights the place as a head's drag does (`dockPlaceAt`, taken out of dragToDock so both use it) and, let go there,
+  docks the pane at that place (its window closes, its page in its frame as with Dock).
+- Found while testing: while the dragged window has the focus, the main page is inert to the mouse (the setting
+  ignoreActivationClick, app.css body[data-inert]), and an inert page finds no element under a point, so only the
+  window's edges were found. The page answers again during such a drag and goes back as it was after.
+- Tests in the test copy (CDP; the host's messages given to the page, as a real drag of a window would take over the
+  mouse of the machine in use): the Log floating; over the list's right quarter the block at the list's right half;
+  outside the window no block, let go there: still floating; let go over the list's right quarter: docked at the list's
+  right ({ pane: p2, side: right }), its lines in its frame, no block left. The host's side with a real title bar drag:
+  [not yet checked].

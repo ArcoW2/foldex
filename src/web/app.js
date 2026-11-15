@@ -2550,6 +2550,32 @@ function dockPane(id) {
   tellLayout();
 }
 
+// A floating pane's window dragged by its title bar (PaneForm: paneDragMove, paneDragEnd), the mouse at (m.x, m.y) of
+// this page: the place under it lit (dockPlaceAt, the block of a head's drag); let go on one, the pane docks there.
+let floatMark = null;
+function floatDrag(m, end) {
+  const view = views.get(m.pane);
+  setInert(false);   // the dragged window has the focus: this page answers the mouse again, so its places are found
+  const at = view?.channel?.floating && canFloat(m.pane) ? dockPlaceAt(m.pane, m.x, m.y) : null;
+  if (end) setInert(!document.hasFocus());
+  if (!end && at) {
+    if (!floatMark) {
+      floatMark = Object.assign(document.createElement('div'), { className: 'dock-mark' });
+      document.body.append(floatMark);
+      document.body.classList.add('docking');
+    }
+    Object.assign(floatMark.style, { left: `${at.rect[0]}px`, top: `${at.rect[1]}px`, width: `${at.rect[2]}px`, height: `${at.rect[3]}px` });
+    return;
+  }
+  floatMark?.remove();
+  floatMark = null;
+  document.body.classList.remove('docking');
+  if (!end || !at) return;
+  layout.pane(m.pane).floating.place = at.place;
+  dockPane(m.pane);
+  showPane(m.pane);
+}
+
 // ---------- Dropping files from Explorer onto a pane ----------
 
 // A target of { scrap } is a scrap: what is dropped becomes its entries, nothing is copied or moved (plan 06 3.2), so
@@ -2703,45 +2729,48 @@ function drawTabs() {
   }
 }
 
-// Moving a pane by dragging its head or its tab (plan 12 3.1): near an edge of the window, that side's area; over a
-// group, its outer quarter at a side puts the pane beside it there, its middle makes it a tab in it; over an empty
-// center, the center. A block shows where it lands. It starts once the mouse has moved a few pixels, so a click stays
-// a click.
+// Where a pane dragged to (x, y) of the page would land (plan 12 3.1): near an edge of the window, that side's area; over
+// a group, its outer quarter at a side beside it there, its middle a tab in it; over an empty center, the center. Its
+// place and the block that shows it, or null. A floating pane's window dragged over the window too (plan 14 3.1).
+function dockPlaceAt(id, x, y) {
+  const panes = $('panes').getBoundingClientRect();
+  const edge = 28;
+  if (x < panes.left || x > panes.right || y < panes.top || y > panes.bottom) return null;
+  if (x - panes.left < edge) return { place: { area: 'left' }, rect: [panes.left, panes.top, 120, panes.height] };
+  if (panes.right - x < edge) return { place: { area: 'right' }, rect: [panes.right - 120, panes.top, 120, panes.height] };
+  if (y - panes.top < edge) return { place: { area: 'top' }, rect: [panes.left, panes.top, panes.width, 100] };
+  if (panes.bottom - y < edge) return { place: { area: 'bottom' }, rect: [panes.left, panes.bottom - 100, panes.width, 100] };
+  const el = document.elementFromPoint(x, y);
+  if (el?.closest('.dock-empty')) {
+    const r = el.closest('.dock-empty').getBoundingClientRect();
+    return { place: { area: 'center' }, rect: [r.left, r.top, r.width, r.height] };
+  }
+  const groupEl = el?.closest('.dock-group');
+  const target = groupEl && [...groupEl.querySelectorAll(':scope > .pane')].map(p => p.dataset.pane).find(p => views.get(p));
+  if (!target) return null;
+  const own = docks.find(id)?.group;
+  if (own && own.panes.includes(target) && own.panes.length === 1) return null;   // onto itself, alone: nothing to do
+  const r = groupEl.getBoundingClientRect();
+  const fx = (x - r.left) / r.width, fy = (y - r.top) / r.height;
+  const shown = docks.find(target).group.shown ?? target;
+  // The nearest edge wins (low in a group near its right side is below, not right of it); its outer quarter only.
+  const near = [['left', fx], ['right', 1 - fx], ['top', fy], ['bottom', 1 - fy]].sort((a, b) => a[1] - b[1])[0];
+  const rects = {
+    left: [r.left, r.top, r.width / 2, r.height], right: [r.left + r.width / 2, r.top, r.width / 2, r.height],
+    top: [r.left, r.top, r.width, r.height / 2], bottom: [r.left, r.top + r.height / 2, r.width, r.height / 2],
+  };
+  if (near[1] < 0.25) return { place: { pane: shown, side: near[0] }, rect: rects[near[0]] };
+  if (own?.panes.includes(target)) return null;   // a tab into its own group: it is there already
+  return { place: { pane: shown, side: 'tab' }, rect: [r.left, r.top, r.width, r.height] };
+}
+
+// Moving a pane by dragging its head or its tab (plan 12 3.1), to a place of dockPlaceAt. A block shows where it lands.
+// It starts once the mouse has moved a few pixels, so a click stays a click.
 function dragToDock(id, e) {
   if (e.button !== 0) return;
   const x0 = e.clientX, y0 = e.clientY;
   let mark = null, place = null;
-  const placeAt = (x, y) => {
-    const panes = $('panes').getBoundingClientRect();
-    const edge = 28;
-    if (x < panes.left || x > panes.right || y < panes.top || y > panes.bottom) return null;
-    if (x - panes.left < edge) return { place: { area: 'left' }, rect: [panes.left, panes.top, 120, panes.height] };
-    if (panes.right - x < edge) return { place: { area: 'right' }, rect: [panes.right - 120, panes.top, 120, panes.height] };
-    if (y - panes.top < edge) return { place: { area: 'top' }, rect: [panes.left, panes.top, panes.width, 100] };
-    if (panes.bottom - y < edge) return { place: { area: 'bottom' }, rect: [panes.left, panes.bottom - 100, panes.width, 100] };
-    const el = document.elementFromPoint(x, y);
-    if (el?.closest('.dock-empty')) {
-      const r = el.closest('.dock-empty').getBoundingClientRect();
-      return { place: { area: 'center' }, rect: [r.left, r.top, r.width, r.height] };
-    }
-    const groupEl = el?.closest('.dock-group');
-    const target = groupEl && [...groupEl.querySelectorAll(':scope > .pane')].map(p => p.dataset.pane).find(p => views.get(p));
-    if (!target) return null;
-    const own = docks.find(id)?.group;
-    if (own && own.panes.includes(target) && own.panes.length === 1) return null;   // onto itself, alone: nothing to do
-    const r = groupEl.getBoundingClientRect();
-    const fx = (x - r.left) / r.width, fy = (y - r.top) / r.height;
-    const shown = docks.find(target).group.shown ?? target;
-    // The nearest edge wins (low in a group near its right side is below, not right of it); its outer quarter only.
-    const near = [['left', fx], ['right', 1 - fx], ['top', fy], ['bottom', 1 - fy]].sort((a, b) => a[1] - b[1])[0];
-    const rects = {
-      left: [r.left, r.top, r.width / 2, r.height], right: [r.left + r.width / 2, r.top, r.width / 2, r.height],
-      top: [r.left, r.top, r.width, r.height / 2], bottom: [r.left, r.top + r.height / 2, r.width, r.height / 2],
-    };
-    if (near[1] < 0.25) return { place: { pane: shown, side: near[0] }, rect: rects[near[0]] };
-    if (own?.panes.includes(target)) return null;   // a tab into its own group: it is there already
-    return { place: { pane: shown, side: 'tab' }, rect: [r.left, r.top, r.width, r.height] };
-  };
+  const placeAt = (x, y) => dockPlaceAt(id, x, y);
   const move = m => {
     if (!mark) {
       if (Math.abs(m.clientX - x0) + Math.abs(m.clientY - y0) < 6) return;
@@ -3905,6 +3934,10 @@ const events = {
     tellLayout();
   },
   paneWindowFocus(m) { if (m.active && views.has(m.pane)) activate(m.pane); },
+  // A floating pane's window dragged over this window (plan 14 3.1): the place it would dock lit as for a head's drag;
+  // let go there, it docks there.
+  paneDragMove(m) { floatDrag(m, false); },
+  paneDragEnd(m) { floatDrag(m, true); },
   answer(m) { columnReply(m); },
   renames(m) { renames = m.renames; },
   previewShown(m) {

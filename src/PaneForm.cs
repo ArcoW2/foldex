@@ -215,14 +215,24 @@ sealed class PaneForm : Form
         DwmSetWindowAttribute(Handle, 20 /* DWMWA_USE_IMMERSIVE_DARK_MODE */, ref on, sizeof(int));
     }
 
-    /// <summary>Getting or losing the focus is told to its window's page, so its pane is the active one there.</summary>
+    /// <summary>Getting or losing the focus is told to its window's page, so its pane is the active one there. Dragged
+    /// by its title bar (plan 14 3.1): where the mouse is over its Foldex window, as that page's point, while it moves
+    /// (`paneDragMove`) and where it was let go (`paneDragEnd`), so the page lights the place and docks it there.</summary>
     protected override void WndProc(ref Message m)
     {
-        const int WM_ACTIVATE = 0x0006;
+        const int WM_ACTIVATE = 0x0006, WM_MOVING = 0x0216, WM_EXITSIZEMOVE = 0x0232;
         if (m.Msg == WM_ACTIVATE && !owner.IsDisposed)
             owner.Post(new JsonObject { ["event"] = "paneWindowFocus", ["pane"] = Id, ["active"] = (m.WParam.ToInt64() & 0xFFFF) != 0 });
+        if (!dialog && !owner.IsDisposed && (m.Msg == WM_MOVING || (m.Msg == WM_EXITSIZEMOVE && dragging)))
+        {
+            var end = m.Msg == WM_EXITSIZEMOVE;
+            dragging = !end;
+            var (x, y) = owner.PagePoint(Cursor.Position);
+            owner.Post(new JsonObject { ["event"] = end ? "paneDragEnd" : "paneDragMove", ["pane"] = Id, ["x"] = x, ["y"] = y });
+        }
         base.WndProc(ref m);
     }
+    bool dragging;
 
     [DllImport("dwmapi.dll")]
     static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);

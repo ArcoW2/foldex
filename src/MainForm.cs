@@ -976,6 +976,14 @@ sealed class MainForm : Form
     Rectangle PreviewArea(string pane, JsonNode? rect) =>
         floating.TryGetValue(pane, out var f) ? f.ClientRectangle : rect is null ? Rectangle.Empty : AreaOf(rect);
 
+    /// <summary>A point of the screen as a point of this window's page (CSS px; outside it when outside the page).</summary>
+    public (double X, double Y) PagePoint(Point screen)
+    {
+        var at = web.PointToClient(screen);
+        var scale = DeviceDpi / 96.0;
+        return (Math.Round(at.X / scale, 1), Math.Round(at.Y / scale, 1));
+    }
+
     Rectangle AreaOf(JsonNode rect) => new(web.Left + (int)rect["x"]!.GetValue<double>(), web.Top + (int)rect["y"]!.GetValue<double>(),
         (int)rect["width"]!.GetValue<double>(), (int)rect["height"]!.GetValue<double>());
 
