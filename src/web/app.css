@@ -482,6 +482,24 @@ body.bar-dragging .bars {
   border: 1px solid var(--border);
 }
 
+/* F1's close button, at its top right (palette.js). */
+#palette { position: relative; }
+#palette .palette-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  padding: 3px;
+  color: var(--fg-dim);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  cursor: pointer;
+}
+#palette .palette-close:hover { color: var(--fg); border-color: var(--border); }
+#palette .palette-close svg { width: 14px; height: 14px; display: block; fill: currentColor; }
+
 #palette .filter {
   width: 100%;
   box-sizing: border-box;

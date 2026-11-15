@@ -18,9 +18,17 @@ function openPalette() {
   if (!dialog) {
     dialog = document.createElement('dialog');
     dialog.id = 'palette';
-    dialog.innerHTML = '<div class="about"></div><input class="filter" spellcheck="false" placeholder="Type to find an action or a key">' +
+    dialog.innerHTML = '<div class="about"></div><button class="palette-close" title="Close (Esc)">' +
+      '<svg viewBox="0 0 16 16"><path d="M4 3l4 4 4-4 1 1-4 4 4 4-1 1-4-4-4 4-1-1 4-4-4-4z"/></svg></button>' +
+      '<input class="filter" spellcheck="false" placeholder="Type to find an action or a key (Esc closes)">' +
       '<table><tbody></tbody></table>';
     document.body.append(dialog);
+    // Closed by its X, Esc (the dialog's own), or a click outside it (on its backdrop).
+    dialog.querySelector('.palette-close').addEventListener('click', e => { e.stopPropagation(); dialog.close(); });
+    dialog.addEventListener('mousedown', e => {
+      const r = dialog.getBoundingClientRect();
+      if (e.target === dialog && (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom)) dialog.close();
+    });
     dialog.querySelector('.filter').addEventListener('input', () => fill());
     dialog.addEventListener('keydown', e => {
       const rows = [...dialog.querySelectorAll('tbody tr')];
@@ -35,7 +43,7 @@ function openPalette() {
         run(rows[at]);
       }
     });
-    dialog.addEventListener('click', e => { const row = e.target.closest('tr'); if (row) run(row); });
+    dialog.addEventListener('click', e => { const row = e.target.closest('tbody tr'); if (row) run(row); });
   }
   const run = row => {
     dialog.close();
