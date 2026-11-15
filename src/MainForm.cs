@@ -323,11 +323,6 @@ sealed class MainForm : Form
                 queue.Clear();
                 freshLayout = false;
                 break;
-            // The page of a tree, a list or a scrap (plan 14 3.0, stage 6): what the window's page gets, without the
-            // layout, which that page gives it.
-            case "paneReady":
-                Post(Hello());
-                break;
             case "list":
                 // F5: from disk again, not from the cache.
                 if (msg["fresh"]?.GetValue<bool>() == true) app.Cache.Invalidate(msg["location"]!.GetValue<string>());

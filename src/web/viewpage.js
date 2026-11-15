@@ -42,6 +42,7 @@ function takeRecord(record) {
 
 function init(m) {
   if (pageView) return;
+  helloHere({ ...m.hello, paths: [], layout: null });   // the settings, the keys, ... as its window has them
   takeLayout(m.layout, m.active);
   pageView = makeView(PanePage);
   views.set(PanePage, pageView);
@@ -111,6 +112,12 @@ for (const type of ['pointerdown', 'pointermove', 'contextmenu'])
 post = msg => postHere(msg.op === 'menu' && Number.isFinite(msg.x)
   ? { ...msg, x: Math.round(msg.x + screenAt.x * devicePixelRatio), y: Math.round(msg.y + screenAt.y * devicePixelRatio), screen: true } : msg);
 start = () => {};   // the layout is the window's (init)
+// The ribbon, the bars, the drives and the project are the window's: not drawn here.
+setRibbon = () => {};
+setBars = () => {};
+setDrives = () => {};
+showProject = () => {};
+settingsProblems = () => {};   // said by the window
 // Its own head (docked hidden: the window's page draws it there) in the colours of the layout.
 drawHeads = () => {
   if (!pageView) return;
@@ -256,10 +263,6 @@ addEventListener('focus', () => toWindow({ kind: 'back' }));
 addEventListener('pointerdown', () => toWindow({ kind: 'activate' }), true);
 document.documentElement.toggleAttribute('data-floating', pageFloating);
 
-// Ready once the host's hello came (the settings, the keys, ...): then the window gives the layout.
+// Ready (every script has run): the window gives what it starts with (init).
 const helloHere = events.hello;
-events.hello = m => {
-  helloHere({ ...m, paths: [], layout: null });
-  toWindow({ kind: 'ready' });
-};
-post({ op: 'paneReady' });
+toWindow({ kind: 'ready' });

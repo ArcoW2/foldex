@@ -21,6 +21,14 @@ const PageEvents = new Set(['settings', 'columnSets', 'bookmarks', 'searches', '
 
 const isPaged = v => !!v?.paged;
 
+// While this page waits for its hello, a hidden pane's page of no pane loads the scripts in the panes' process, so the
+// pages of the layout's panes load faster; gone once one of them is ready.
+let warmFrame = null;
+if (!PanePage) {
+  warmFrame = Object.assign(document.createElement('iframe'), { src: `${PaneOrigin}/view.html?pane=warm`, hidden: true });
+  document.body.append(warmFrame);
+}
+
 // The stand-in of a pane of a kind in PagedKinds: an object of its view's class (instanceof works as for a view here),
 // without its rows.
 function pagedView(id) {
@@ -36,7 +44,7 @@ function pagedView(id) {
   v.rows.replaceChildren();
   v.channel = paneChannel({ id, page: `view.html?pane=${id}`, title: kind, view: () => v.rows,
     // Its page shows the pane's state, unless methods sent before it was ready say what (they come after this).
-    state: () => new Map([['init', { kind: 'init', layout: layout.toJSON(), active: activePane, record: layout.pane(id),
+    state: () => new Map([['init', { kind: 'init', hello: pageHello, layout: layout.toJSON(), active: activePane, record: layout.pane(id),
       restore: ![...(v.channel.floating ? v.channel.floatQueue : v.channel.queue).keys()].some(k => k.startsWith('call:')) }]]),
     receive: m => pagedReceive(v, m), menu: () => paneMenu(id) });
   v.channel.frameEl();
@@ -88,6 +96,8 @@ const pagedArgs = args => args.map(a => a instanceof Event ? { shiftKey: a.shift
 // What its page says.
 function pagedReceive(v, m) {
   const id = v.id;
+  warmFrame?.remove();
+  warmFrame = null;
   switch (m.kind) {
     case 'sync': {
       const pane = layout.pane(id);
@@ -193,8 +203,30 @@ if (!PanePage) {
   };
 }
 
+// What a pane's page starts with: the host's hello to this page (without its paths and layout), kept as the host's events
+// change it; so a page asks the host nothing to start.
+const pageHello = {};
+if (!PanePage) {
+  const helloHere = events.hello;
+  events.hello = m => {
+    const { paths, layout: saved, ...rest } = m;
+    Object.assign(pageHello, rest, { ops: [] });
+    helloHere(m);
+  };
+}
+function keepForPages(m) {
+  if (m.event === 'settings') Object.assign(pageHello, { settings: m.settings, themes: m.themes });
+  else if (m.event === 'columnSets') pageHello.columnSets = m.columnSets;
+  else if (m.event === 'bookmarks') pageHello.bookmarks = m;
+  else if (m.event === 'searches') pageHello.searches = m.searches;
+  else if (m.event === 'renames') pageHello.renames = m.renames;
+  else if (m.event === 'bars') pageHello.bars = m.bars;
+  else if (m.event === 'project') pageHello.project = m.project;
+}
+
 // An event of the host for the panes' pages too (PageEvents).
 function sendPagedEvent(m) {
+  keepForPages(m);
   if (!PageEvents.has(m.event)) return;
   for (const v of views.values()) if (isPaged(v)) v.channel.send({ kind: 'event', key: `event:${m.event}:${m.op?.id ?? ''}:${m.folder ?? ''}`, msg: m });
 }

@@ -3158,6 +3158,10 @@ function applyPreset(name) {
   for (const v of views.values()) {
     v.el.remove();
     iconUsers.delete(v);
+    if (v instanceof PreviewView || isPaged(v)) {   // a pane of a page of its own: its window when it floats, its channel
+      if (v !== preview) v.close();
+      paneChannels.delete(v.id);
+    }
   }
   views.clear();
   Object.assign(layout, new Layout());
