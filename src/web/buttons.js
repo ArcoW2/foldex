@@ -1,8 +1,9 @@
 'use strict';
 // The buttons at the bottom of every dialog of a page (a question, a name asked, Find, the size of a bar, the column
 // sets): Left and Right go from one to the next, each has a letter (underlined) that presses it at once (with Alt
-// while a text box has the keyboard, so typing still types), the button with the keyboard has its text bold and an
-// outline, and the one Enter presses (the default) its border in the accent colour. Their look is here too, so every
+// while a text box has the keyboard, so typing still types), the button with the keyboard has an outline
+// (its text stays plain: bold would make it wider and move the buttons beside it), and the one Enter presses
+// (the default) its border in the accent colour. Their look is here too, so every
 // page that loads this file gets the same.
 
 const DialogButtons = 'dialog .ask-buttons button, dialog .buttons button';
@@ -81,7 +82,6 @@ if (typeof document !== 'undefined') {
       border-color: var(--accent);
     }
     ${all(':focus')} {
-      font-weight: 700;
       outline: 2px solid var(--accent);
       outline-offset: 1px;
       border-color: var(--accent);
