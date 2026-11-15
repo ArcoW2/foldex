@@ -56,6 +56,7 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 | Modal floating windows: the window | `PaneForm` shown modal with a dialog's page (`dialog.html`, `dialogpage.js`), as large as its dialog, its host requests through the window's page | 3.7; 6.3 |
 | Modal floating windows: a name asked, Edit a bookmark | askText; Edit a bookmark with Change Icon inside it; Move to folder... (Manage) | 3.7; 6.3 |
 | Modal floating windows: Find, Rename, More columns | each in a window of its own; what only the window's page has (the items, the pane's columns) asked of it while open | 3.7; 6.4 |
+| F1 | a pane page (docked or floating), not modal; it stays open while actions run, on the active pane | 3.7; 6.7 |
 | Manage column sets | a pane page (docked or floating), no longer a dialog; one of it, opened where it was last (shared with Manage the bookmarks) | 3.7; 6.6 |
 | The Size of a bar | a floating window of its own, not modal (moved off the bar, the main window still resizable); the marks of a bar after one that fills its line measured from its far end | 3.7; 6.5 |
 
@@ -64,7 +65,7 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 | Part | What | Waits for | Reference |
 |---|---|---|---|
 | Dock by dragging | a floating pane's window dragged onto its Foldex window docks it there, the places lit as for a docked pane | -- | 3.1 |
-| Panes of their own | F1, Settings, Projects as pane pages, docked or floating; the Projects pane's question (a name, a copy's name) in a modal floating window as the others | -- | 3.0; 3.7 |
+| Panes of their own | Settings, Projects as pane pages, docked or floating; the Projects pane's question (a name, a copy's name) in a modal floating window as the others | -- | 3.0; 3.7 |
 | Preview and Info as pages | Windows' preview over a frame and over a floating window; Foldex's own preview; Info | The floating window | 3.0 |
 | F3 | a preview in a new floating window | Preview and Info as pages | 3.5 |
 | Scrap, list and tree as pages | the panes of the layout as pages; following, executing, back and forward through the window's page | Preview and Info as pages | 3.0; 3.3 |
@@ -181,7 +182,7 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 | F3's preview | (not built) | both | floating | 3.5 |
 | Manage the bookmarks | modal dialog (bookmarks.js) | both | floating, beside the window | plan 26 3.3: a tab for the bookmarks and one for quick access; its Edit... and New open their dialogs over it |
 | Manage column sets | pane page (columnsets.html, colsmanage.js; columns.js openManageSets) | both (built) | floating | its sets above the one chosen in a narrow pane |
-| F1, all actions and keys (palette.js) | modal dialog | both, not modal | floating | as LexPen's F1 (plan 19 3.10): stays open while actions run |
+| F1, all actions and keys (palette.js, palette.html, palettepane.js) | pane page | both, not modal (built) | floating | as LexPen's F1 (plan 19 3.10): stays open while actions run |
 | Settings | a form of the host with its own page (SettingsForm, settings.html) | both | floating | as LexPen's; docked: its page as a pane of the main page |
 | Projects | a form of the host with its own page (ProjectsForm, projects.html) | both | floating | as LexPen's; docked: as Settings |
 | More columns (every property, columns.js moreColumns) | modal floating window | modal floating window (built) | | adds columns to the pane it was opened from |
@@ -352,3 +353,21 @@ None.
   docked there; opened again while shown: still one; Manage the bookmarks opening through the same code; after a
   restart docked again, both places kept. The docked pane captured at 280 px wide: nothing cut off after the narrow
   layout. `dotnet test`: 224 passed (the bookmarks keys test stubs `paneOfKind`).
+
+### 6.7 Stage 4: F1
+
+- As LexPen's (commands.html, commands-pane.js): `palette.html` / `palettepane.js` show the rows the window's page sends
+  (palette.js `paletteForPage`: every action with its variants, group, title, keys, hint, and whether it works on the
+  active pane now), searched in the page; Up / Down / PgUp / PgDn select, a click selects, Enter or a double click runs
+  the row there (`run`), Esc clears the search, then closes the pane; the page's focus coming back asks the rows again
+  (`refresh`). A pane there is one of (`openOnePane`), first floating; F1 pressed while it is shown brings it forward
+  with the keyboard in its search.
+- It never becomes the active pane (`PaletteView.passive`, `activate`), so what it runs works on the pane that was
+  active, docked or floating alike.
+- Where it differs from LexPen's: no section list and no marks on the scrollbar (Foldex's F1 had none); the ribbon's
+  parts (Change the ribbon, rows dragged onto it) come with plan 19 3.10. Its close button of the dialog it was is gone:
+  docked, the pane's head closes it; floating, its window's close button docks it, as every pane's; Esc closes it.
+- Tests in the test copy (CDP into its page): F1 floating with its rows, the version and the keyboard in its search;
+  "hidden items" found, Enter: Hidden items toggled on the list, F1 still open, the list still the active pane; Esc
+  clearing the search; Dock (right); a press in it docked: the list still active; Esc on an empty search closing it, its
+  place kept; F1 again: docked there, the keyboard in its search. `dotnet test`: 224 passed.

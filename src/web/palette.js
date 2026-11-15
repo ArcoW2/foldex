@@ -1,5 +1,7 @@
 'use strict';
-// F1 (as LexPen's): every action with its keys, in groups, searchable; Enter or a click runs one.
+// F1 (as LexPen's): every action with its keys, in groups, searchable; Enter or a double click runs one. A pane of its
+// own (palette.html, palettepane.js; plan 14 3.7), docked or floating, not modal: it stays open while actions run, on
+// the active pane (F1 never becomes it: PaletteView.passive).
 
 function paletteRows() {
   const rows = [];
@@ -13,63 +15,25 @@ function paletteRows() {
   return rows;
 }
 
+// What F1's page is sent: the rows, each marked when it does not work on the active pane now.
+function paletteForPage() {
+  return { kind: 'rows', version, rows: paletteRows().map(r => ({ ...r, off: !actionEnabled(r.call[0], r.call.slice(1)) })) };
+}
+
+// F1 pressed: the pane comes (where it was last; the first time floating), its search gets the keyboard.
 function openPalette() {
-  let dialog = document.getElementById('palette');
-  if (!dialog) {
-    dialog = document.createElement('dialog');
-    dialog.id = 'palette';
-    dialog.innerHTML = '<div class="about"></div><button class="palette-close" title="Close (Esc)">' +
-      '<svg viewBox="0 0 16 16"><path d="M4 3l4 4 4-4 1 1-4 4 4 4-1 1-4-4-4 4-1-1 4-4-4-4z"/></svg></button>' +
-      '<input class="filter" spellcheck="false" placeholder="Type to find an action or a key (Esc closes)">' +
-      '<table><tbody></tbody></table>';
-    document.body.append(dialog);
-    // Closed by its X, Esc (the dialog's own), or a click outside it (on its backdrop).
-    dialog.querySelector('.palette-close').addEventListener('click', e => { e.stopPropagation(); dialog.close(); });
-    dialog.addEventListener('mousedown', e => {
-      const r = dialog.getBoundingClientRect();
-      if (e.target === dialog && (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom)) dialog.close();
-    });
-    dialog.querySelector('.filter').addEventListener('input', () => fill());
-    dialog.addEventListener('keydown', e => {
-      const rows = [...dialog.querySelectorAll('tbody tr')];
-      const at = rows.findIndex(r => r.classList.contains('selected'));
-      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-        const next = rows[Math.max(0, Math.min(rows.length - 1, at + (e.key === 'ArrowDown' ? 1 : -1)))];
-        rows.forEach(r => r.classList.toggle('selected', r === next));
-        next?.scrollIntoView({ block: 'nearest' });
-        e.preventDefault();
-      } else if (e.key === 'Enter' && rows[at]) {
-        e.preventDefault();
-        run(rows[at]);
-      }
-    });
-    dialog.addEventListener('click', e => { const row = e.target.closest('tbody tr'); if (row) run(row); });
+  openOnePane('palette');
+  const view = paneOfKind('palette');
+  view.render();
+  view.channel.focus();
+  view.send({ kind: 'focus', key: 'focus' });
+}
+
+// What F1's page asks of this page.
+function palettePageAsks(view, m) {
+  switch (m.kind) {
+    case 'run': return runAction(m.call[0], m.call.slice(1), { from: 'palette' });
+    case 'refresh': return view.render();
+    case 'close': return closePane(view.id);
   }
-  const run = row => {
-    dialog.close();
-    const call = JSON.parse(row.dataset.call);
-    runAction(call[0], call.slice(1), { from: 'palette' });
-  };
-  dialog.querySelector('.about').textContent = `Foldex ${version}`;   // the name and version (plan 10 3.2)
-  const fill = () => {
-    const words = dialog.querySelector('.filter').value.toLowerCase().split(/\s+/).filter(Boolean);
-    const rows = paletteRows().filter(r => words.every(w => `${r.title} ${r.hint} ${r.keys} ${r.group} ${r.call[0]}`.toLowerCase().includes(w)));
-    dialog.querySelector('tbody').replaceChildren(...rows.map((r, i) => {
-      const tr = document.createElement('tr');
-      tr.dataset.call = JSON.stringify(r.call);
-      if (i === 0) tr.classList.add('selected');
-      if (!actionEnabled(r.call[0], r.call.slice(1))) tr.classList.add('disabled');
-      for (const text of [r.group, r.title, r.keys]) {
-        const td = document.createElement('td');
-        td.textContent = text;
-        tr.append(td);
-      }
-      tr.title = r.hint;
-      return tr;
-    }));
-  };
-  dialog.querySelector('.filter').value = '';
-  fill();
-  dialog.showModal();
-  dialog.querySelector('.filter').focus();
 }

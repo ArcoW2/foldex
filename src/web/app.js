@@ -189,14 +189,14 @@ function filterTest(pattern) {
 // What each kind of pane can be (docs/plans/14-PLAN-floating-panes.md 3.7): docked, floating, or both. A pane of a page
 // of its own (PageView) can float; the others are docked until they are pages (plan 14 3.0, the stages).
 const PaneCan = { tree: ['docked'], list: ['docked'], scrap: ['docked'], preview: ['docked'], log: ['docked', 'floating'],
-  bookmarks: ['docked', 'floating'], columnsets: ['docked', 'floating'] };
+  bookmarks: ['docked', 'floating'], columnsets: ['docked', 'floating'], palette: ['docked', 'floating'] };
 const canFloat = id => (PaneCan[layout.pane(id)?.kind] ?? ['docked']).includes('floating') && views.get(id) instanceof PageView;
 
 // The view of a pane as its kind says: a tree, a list or a preview.
 function makeView(id) {
   const kind = layout.pane(id).kind;
   return kind === 'tree' ? new TreeView(id) : kind === 'log' ? new LogView(id) : kind === 'bookmarks' ? new BookmarksView(id)
-    : kind === 'columnsets' ? new ColumnSetsView(id)
+    : kind === 'columnsets' ? new ColumnSetsView(id) : kind === 'palette' ? new PaletteView(id)
     : kind === 'preview' ? (layout.pane(id).info ? new InfoView(id) : new PreviewView(id))
     : kind === 'scrap' ? new ScrapView(id) : new ListView(id);
 }
@@ -280,7 +280,7 @@ function activate(id) {
     docks.show(id);
     renderDock();
   }
-  if (activePane === id) return;
+  if (activePane === id || views.get(id)?.passive) return;   // F1: what it runs works on the pane that was active
   activePane = id;
   queueMicrotask(ribbonRefresh);
   if (!(views.get(id) instanceof PreviewView)) showGlobal(layout.state(id).focus);
@@ -2439,11 +2439,23 @@ class ColumnSetsView extends PageView {
   receive(m) { return columnSetsPageAsks(this, m); }
 }
 
-// ---------- Panes there is one of (plan 14 3.7): Manage the bookmarks, Manage column sets ----------
+// F1, all actions and keys (its page palette.html, palettepane.js; palette.js openPalette): the rows sent, a row run
+// on the active pane. It never becomes the active pane itself (`passive`), so what it runs works on the pane that was.
+class PaletteView extends PageView {
+  constructor(id) {
+    super(id, 'palette', 'palette.html', 'All actions and keys');
+    this.passive = true;
+  }
+  state() { return new Map([['rows', paletteForPage()]]); }
+  render() { this.send(paletteForPage()); }
+  receive(m) { return palettePageAsks(this, m); }
+}
+
+// ---------- Panes there is one of (plan 14 3.7): Manage the bookmarks, Manage column sets, F1 ----------
 
 // Opened again it comes forward; opened after it was closed, where it was last (docked at its place, or floating where
 // its window was, kept with the window's layout); the first time floating beside the window.
-const OnePanes = new Set(['bookmarks', 'columnsets']);
+const OnePanes = new Set(['bookmarks', 'columnsets', 'palette']);
 const paneHomes = {};   // kind -> where it was when last closed: { floating, place, bounds }
 const paneOfKind = kind => [...views.values()].find(v => layout.pane(v.id)?.kind === kind) ?? null;
 function openOnePane(kind) {
