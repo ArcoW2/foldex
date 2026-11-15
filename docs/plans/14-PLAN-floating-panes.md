@@ -51,7 +51,7 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 |---|---|---|
 | Pane pages | the panes' site, `pane.js` and `panechannel.js` from LexPen, a pane's frame in its dock place, kept loaded while the docks change | 3.0; 3.2; 6.1 |
 | The floating window | `PaneForm` from LexPen: a pane's page in a window of its own, in the window's theme, its place kept | 3.2; 3.4; 6.1 |
-| Float and dock back | Float and Dock in the pane's menu (floating: its page's right-click); its window's own close button docks it back | 3.1; 6.1 |
+| Float and dock back | Float and Dock in the pane's menu (floating: its page's right-click); its window's own close button closes the pane | 3.1; 6.1 |
 | Kinds stated | every pane kind says which it can be (PaneCan); Float and Dock offered only where it can | 3.7; 6.1 |
 | Log as a page | the Log, docked or floating | 3.0; 6.1 |
 | Manage the bookmarks | a pane page (docked or floating), no longer a modal dialog; first floating, then where it was last | 3.0; 3.7; 6.2 |
@@ -71,7 +71,7 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| Scrap, list and tree as pages | the panes of the layout as pages; following, executing, back and forward through the window's page | Open questions 1 | 3.0; 3.3 |
+| Scrap, list and tree as pages | each a page of its own, docked too (a frame), talking to the host itself; following, executing, back and forward through the window's page | -- | 3.0; 3.3 |
 | Colours across windows | head, ring, branch marks and pane theme as when docked, changing with the window's | Scrap, list and tree as pages | 3.3 |
 | A floating scrap | drops, its search, its dashed ring; gone after a restart unless pinned (then back empty) | Scrap, list and tree as pages | 3.3 |
 | Speed after stage 6 | the three figures of 6.11 again once the tree, the list and the scrap are pages | Scrap, list and tree as pages | 3.0; 6.11 |
@@ -94,6 +94,12 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
   a pane makes it the active one. Floating, a menu of the window's page is drawn by the pane (pane.js paneMenu).
 - Moving a pane between docked and floating loads its page in the new place; what it shows is kept by the window's
   page and handed over (`state()`), so it comes back as it was.
+- The tree, the list and the scrap are pages too, docked as well (a frame each, a process each): they behave as truly
+  separate windows, which may share the host as their common server. Their code runs in their own page and asks the
+  host itself (WebView2's frame messages docked, PaneForm floating), as the window's page does; the window's page keeps
+  the layout and passes what connects them (the focus a child follows, executing, back and forward, the colours).
+  Drag and drop between panes goes between pages (the host's shell drag, as from Explorer). The start and memory with a
+  frame per pane are measured (6.11) before stage 6 is merged.
 - Where Foldex differs from LexPen: LexPen's editor panes stay in its page and only its tool panes are pages; in
   Foldex every pane is one, the tree and the list too, as the user chose. LexPen's scope of a pane (one document, a
   window, LexPen) is not taken: a Foldex pane belongs to its window's layout.
@@ -109,13 +115,15 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 
 - Any pane can float: a tree, a list, a preview, a scrap (docs/plans/executed/06-PLAN-search-and-scrap.md).
 - The pane head's menu (plan 12 3.2) gets Float; a floating pane's menu gets Dock, back to the place it came from.
-- Dragging a floating pane's head onto a dock mark of its window docks it there (plan 12 3.1).
+- Dragging a floating pane's window by its title bar onto a place of its Foldex window docks it there (plan 12 3.1).
+- Dragging a docked pane's head or tab out of its window and letting go there floats it, its window where it was let
+  go (a pane whose kind can float).
 
 ### 3.2 The floating window
 
 - LexPen's `PaneForm`: a form of its own with its own WebView2, showing the pane's page from the panes' site, in its
-  window's theme (its caption dark in dark mode); not modal, owned by its window, closes with it. Closing it docks the
-  pane back where it was (paneClosed).
+  window's theme (its caption dark in dark mode); not modal, owned by its window, closes with it. Closing it by its
+  own close button closes the pane, as a docked pane's Close does (paneClosed); Dock (3.1) is how it goes back.
 - A modal floating window (3.7) is the same form shown modal over its window, with a dialog's page.
 
 ### 3.3 Connections
@@ -201,21 +209,7 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 
 ## 4. Open questions
 
-1. How the tree, the list and the scrap become pages (stage 6). They are most of app.js (their drawing, keys, drag and
-   drop between panes, the host's listings streamed to them, rename in place, thumbnails, columns), all sharing the
-   window page's state; LexPen has no model for it (its editor panes stay in its page). Options:
-   (a) Every one a page, docked too: each tree, list and scrap a frame of its own (a process each), its code split out
-       of app.js to run there, talking to the host itself (WebView2's frame messages docked, PaneForm floating); the
-       window's page keeps the layout and passes focus, following and colours between them. The plan as written; the
-       largest change, and every docked pane a frame (the start and memory to be measured), drag and drop between panes
-       across frames to be rebuilt.
-   (b) A page when floating only: docked, they stay in the window's page as now; floated, the pane's window runs a
-       page of its own for that one pane (the same code, one pane), talking to the host itself, the window's page passing
-       focus, following and colours between it and the panes docked. A smaller change, no frame per docked pane (the
-       speed stays as measured in 6.11), drag and drop inside the window unchanged; differs from "every pane a page" for
-       these three kinds.
-   (c) They stay docked only (as now), and the floating scrap is dropped.
-   Recommended: (b).
+None.
 
 ## 6. As built
 
@@ -227,7 +221,7 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 - `PaneForm.cs` (from LexPen's): the pane's page from the panes' site, its messages to its window's page (`fromPane`)
   and back (`toPane`); its background and dark caption from the window's look (MainForm.Look, again when the look
   changes); not modal, owned by its window, not in the taskbar. Its place and size are told to the page after any
-  move or size, once it rests (`paneBounds`); its own close button docks the pane back (`paneClosed`); getting the
+  move or size, once it rests (`paneBounds`); its own close button closes the pane (`paneClosed`); getting the
   focus makes its pane the active one (`paneWindowFocus`). MainForm: the ops `paneFloat` (made, or brought forward),
   `paneSend`, `paneDock`.
 - `pane.js` (from LexPen's, Foldex's names): the pane side of the channel; the window's look (its root's style and
@@ -384,7 +378,7 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
   active, docked or floating alike.
 - Where it differs from LexPen's: no section list and no marks on the scrollbar (Foldex's F1 had none); the ribbon's
   parts (Change the ribbon, rows dragged onto it) come with plan 19 3.10. Its close button of the dialog it was is gone:
-  docked, the pane's head closes it; floating, its window's close button docks it, as every pane's; Esc closes it.
+  docked, the pane's head closes it; floating, its window's close button closes it, as every pane's; Esc closes it.
 - Tests in the test copy (CDP into its page): F1 floating with its rows, the version and the keyboard in its search;
   "hidden items" found, Enter: Hidden items toggled on the list, F1 still open, the list still the active pane; Esc
   clearing the search; Dock (right); a press in it docked: the list still active; Esc on an empty search closing it, its
@@ -447,6 +441,14 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
   outside the window no block, let go there: still floating; let go over the list's right quarter: docked at the list's
   right ({ pane: p2, side: right }), its lines in its frame, no block left. The host's side with a real title bar drag:
   [not yet checked].
+- The other way: a docked pane's head or tab dragged out of the window and let go there floats it, its window's top left
+  near where the mouse was let go, at the size it had floating (dragToDock, floatPane's `at`). Tested with the page's
+  own mouse events (CDP, not the machine's mouse): the Log's head pressed, moved and let go past the window's right edge:
+  floating, its window at that point.
+- A floating window's own close button closes the pane (it docked it back before); Dock and the drag are how it goes
+  back. Tested (UI Automation's Close on the window): the Log closed, gone from the layout; Manage column sets closed
+  floating, opened again floating.
+
 ### 6.11 Speed
 
 - Measured on this machine with `speed.ps1` (the session's scratch folder): each run a fresh data folder; the start

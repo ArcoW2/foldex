@@ -2522,10 +2522,13 @@ function onePaneClosed(id) {
 // ---------- Floating and docking back (plan 14 3.1) ----------
 
 // A pane into a window of its own: where it is docked kept, its place there given up; its window where it was last.
-function floatPane(id) {
+// `at`: where its window goes (its top left, screen px: dragged out of the window), at the size it had floating.
+function floatPane(id, at = null) {
   const view = views.get(id), pane = layout.pane(id);
   if (!canFloat(id) || view.channel.floating) return view?.channel.float();
-  pane.floating = { place: docks.placeOf(id) ?? { area: 'bottom' }, bounds: pane.floating?.bounds ?? pane.floatBounds ?? null };
+  let bounds = pane.floating?.bounds ?? pane.floatBounds ?? null;
+  if (at) bounds = [at.x, at.y, bounds?.[2] ?? Math.round(400 * devicePixelRatio), bounds?.[3] ?? Math.round(500 * devicePixelRatio)];
+  pane.floating = { place: docks.placeOf(id) ?? { area: 'bottom' }, bounds };
   if (view.path) post({ op: 'previewClose', pane: id });   // a preview: Windows' preview leaves this window
   docks.remove(id);
   view.el.remove();
@@ -2536,7 +2539,7 @@ function floatPane(id) {
   tellLayout();
 }
 
-// Back where it was docked (its menu's Dock, its window's own close button): in its frame again, as it was.
+// Back where it was docked (its menu's Dock, dragged onto this window): in its frame again, as it was.
 function dockPane(id) {
   const view = views.get(id), pane = layout.pane(id);
   if (!view?.channel?.floating) return;
@@ -2784,12 +2787,15 @@ function dragToDock(id, e) {
     mark.hidden = !at;
     if (at) Object.assign(mark.style, { left: `${at.rect[0]}px`, top: `${at.rect[1]}px`, width: `${at.rect[2]}px`, height: `${at.rect[3]}px` });
   };
-  const up = () => {
+  const up = m => {
     removeEventListener('mousemove', move);
     removeEventListener('mouseup', up);
     if (!mark) return;
     mark.remove();
     document.body.classList.remove('docking');
+    // Let go outside the window: a pane that can float floats there, its window's top left near the mouse (plan 14 3.1).
+    const outside = m.clientX < 0 || m.clientY < 0 || m.clientX >= innerWidth || m.clientY >= innerHeight;
+    if (outside && canFloat(id)) return floatPane(id, { x: Math.round(m.screenX * devicePixelRatio) - 40, y: Math.round(m.screenY * devicePixelRatio) - 12 });
     if (!place) return;
     docks.add(id, place);
     renderDock();
@@ -3922,10 +3928,10 @@ const events = {
   // The bookmarks changed (in any window; plan 26 3.1); Edit asked from Windows' menu (3.8); answers to plain questions.
   bookmarks(m) { bookmarksCame(m); },
   bookmarkEdit(m) { editBookmark(m.id); },
-  // A floating pane (plan 14 3.2): its page's messages; its window closed by its own close button (docked back);
+  // A floating pane (plan 14 3.2): its page's messages; its window closed by its own close button (the pane closed);
   // moved or sized (kept with the layout); got the focus (its pane the active one).
   fromPane(m) { paneChannels.get(m.pane)?.receive(m.msg, 'float'); },
-  paneClosed(m) { dockPane(m.pane); },
+  paneClosed(m) { if (views.has(m.pane)) closePane(m.pane); },
   paneBounds(m) {
     const pane = layout.pane(m.pane);
     if (!pane?.floating) return;

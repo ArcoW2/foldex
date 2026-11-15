@@ -8,7 +8,7 @@ namespace Foldex;
 /// A pane floating in a window of its own (docs/plans/14-PLAN-floating-panes.md 3.0, 3.2; LexPen's PaneForm): the same
 /// page as in its window's frame (log.html, ...), from the panes' site. Its messages go to that window's page (the event
 /// fromPane) and come from it (Send). Owned by its Foldex window, not modal; where it is and how large is told to that
-/// page (paneBounds), which keeps it with the window's layout. Closed by its own close button, it docks back: the page
+/// page (paneBounds), which keeps it with the window's layout. Closed by its own close button, the pane closes: the page
 /// is told (paneClosed); closed by the page (Dock, Close), nothing is told.
 /// </summary>
 sealed class PaneForm : Form

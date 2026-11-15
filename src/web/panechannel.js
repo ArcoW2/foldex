@@ -55,7 +55,7 @@ function paneChannel({ id, page, title, view, state, receive, menu }) {
     post({ op: 'paneFloat', pane: id, page, title, bounds, size, beside, quiet });
   };
 
-  // Back in this window (its window closed by the host, or by its own close button): in its frame again, showing what
+  // Back in this window (Dock, or its window dragged onto this one): in its frame again, showing what
   // it shows now.
   ch.docked = () => {
     if (!ch.floating) return;
