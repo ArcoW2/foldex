@@ -5,7 +5,8 @@ Status: not started; see Status.
 - 2026-11-12: draft.
 
 Builds on plan 01 (the ribbon, actions, F1), plan 10 (the bars' change mode, made as LexPen's) and plan 14 (every
-window a docked pane and/or a floating window). The model is LexPen's ribbon as built:
+window a docked pane and/or a floating window), which is built first: F1 as a pane needs its floating window. The
+model is LexPen's ribbon as built:
 `..\LexPen\docs\plans\executed\PLAN-ribbon.md`, `PLAN-ribbon-drop-down-lists.md` and
 `PLAN-ribbon-height-and-collapse.md` (all three executed). The number in the file name is the priority; rename to
 reorder.
@@ -48,7 +49,7 @@ and only when wanted (Ctrl+F1). Foldex differs only where it has no menu bar and
 | Dragging | buttons, dividers, corners, groups, tabs moved; dragged off: removed; New tab, New group | Change mode | 3.7 |
 | Right-click menus | per part in the change mode; outside it Change the ribbon, Customize..., Reset | Change mode | 3.8 |
 | Customize dialog | the two lists and their buttons, sharing undo and saving with the change mode | Change mode | 3.9 |
-| F1 as a pane | not modal, a pane of its own; rows draggable in the change mode; its Change the ribbon button | question 1 | 3.10 |
+| F1 as a pane | not modal, a pane of its own, docked or floating; rows draggable in the change mode; its Change the ribbon button | plan 14 (The floating window) | 3.10 |
 | Lists on buttons | variants as a list, split arrow, list-only buttons, `dropDown` / `dropDownOnly`, `"open": "dropDown"`; Foldex's menu actions as drop-downs | Ribbon code from LexPen | 3.11 |
 | Drives button | `drives.list`: a drop-down of all drives | Lists on buttons | 3.11 |
 | Key tips | Alt shows a letter per tab, then per button and corner | Ribbon code from LexPen | 3.12 |
@@ -111,7 +112,7 @@ LexPen's paths below are under `..\LexPen`. Its ribbon is `src/web/ribbon.js`, `
   settings; Foldex keeps them with the window's layout in its project (plan 15), where its other per-window state is.
 - **Menu items** from a list use Foldex's menu item shape (`label`, `run`, `items`); LexPen's mnemonics (`&`) are not
   part of Foldex's menus.
-- **F1** first opens floating, as LexPen's; Foldex's floating windows are plan 14 (question 1).
+- **F1** first opens floating, as LexPen's, in plan 14's floating window (plan 14 is built before this plan).
 
 ### 3.3 Icons
 
@@ -227,8 +228,8 @@ As LexPen's `ribbon.js` (Drawing; State of the buttons; Overflow; Clicks):
   Esc closes. The chosen line's tab is shown and its part outlined; the ribbon is shown while it is open (only when
   wanted is off).
 - Every change goes through the same change, undo and save as the change mode.
-- What it can be (plan 14 3.7): a dialog of the ribbon, neither docked nor floating, as LexPen's; it works on the
-  ribbon above it.
+- What it can be (plan 14 3.7): modal, as LexPen's, in a modal floating window: never docked, but moved anywhere, so
+  the ribbon it works on can be seen.
 
 ### 3.10 F1 as a pane
 
@@ -318,8 +319,7 @@ As LexPen's (`..\LexPen\docs\plans\executed\PLAN-ribbon-height-and-collapse.md` 
 
 ## 4. Open questions
 
-1. F1 as a pane first opens floating in LexPen, and Foldex's floating windows are plan 14, not built. Build F1 as a
-   pane after plan 14, or as a docked pane first (and at which side) and floating with plan 14?
+None.
 
 ## 6. As built
 

@@ -27,7 +27,10 @@ would have docked; the messages go through the host, as LexPen's floating panes 
 floating hands over what it shows, so it comes back as it was. F3 opens a preview in a new floating window of its
 own, showing the item the active pane focuses, and keeps showing that item. Foldex's other windows become panes of
 their own kind as 3.7 lists them, Manage the bookmarks first: each can be docked, floating or both, as its row says,
-and moves between the two as any pane does.
+and moves between the two as any pane does; F1, Settings and Projects are such panes, as LexPen has them. The
+dialogs that ask something and wait (Edit a bookmark, Find, Rename, ...) stay modal, but each in a floating window of
+its own that can be moved anywhere, off the main window too, so what is under it can be seen. This plan is built
+before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scrap needs it too.
 
 ## Status
 
@@ -46,7 +49,8 @@ and moves between the two as any pane does.
 | F3 | a preview in a new floating window | The floating window | 3.5 |
 | Kinds stated | every pane kind says which it can be (docked, floating, both); Float and Dock offered only where it can | -- | 3.7 |
 | Manage the bookmarks | a pane (docked or floating), no longer a modal dialog | The floating window | 3.7; plan 26 3.3 |
-| The other windows | each as its row in 3.7 says | Open questions 1-4 | 3.7 |
+| Panes of their own | Manage column sets, F1, Settings, Projects as panes, docked or floating | The floating window | 3.7 |
+| Modal floating windows | the dialogs that ask and wait, each modal in a window of its own that can be moved anywhere | The floating window | 3.7 |
 
 ## 3. Details
 
@@ -104,6 +108,9 @@ and moves between the two as any pane does.
 - Every window of 3.7 that can be both: floated, docked, floated again, each time showing what it showed; Float and
   Dock not offered where its row says it cannot. Manage the bookmarks: opened floating, docked, a bookmark edited
   from it while docked, closed and opened again where it was; opened again while shown: the same one, forward.
+- F1, Settings and Projects: docked and floating; F1 stays open while an action runs.
+- A modal floating window (Find, Edit a bookmark, a name asked): moved off the main window, the panes under it seen;
+  the main window takes no key or click while it is open; Esc and Enter as before; its answer reaches the page.
 
 ### 3.7 Every window a pane: what each can be
 
@@ -113,29 +120,30 @@ and moves between the two as any pane does.
 - A window that becomes a pane keeps what it does and its keys; its buttons stay at its bottom. Opened from its menu
   item or action, it shows where it was last (docked or floating, at its place); the first time as its row says.
   Opened again while it is shown: it comes forward and gets the keyboard, never a second one.
+- A modal floating window: a window of its own (as Foldex's question window, AskForm, is already), shown over the
+  window it came from, which waits for it (no key or click reaches that window meanwhile). It is moved by its title
+  bar anywhere, off the main window and onto another monitor too, so what it covers can be seen; it never docks.
+  Esc, Enter and its letter keys as now. A page dialog becomes one by being shown in a form of its own with its own
+  WebView2 (as the floating window of 3.2), the page code the same; how its answer goes back to the page is through the
+  host, as for a floating pane (3.3).
 - The windows Foldex has, and what each can be:
 
 | Window | Now | Can be | First opens | Note |
 |---|---|---|---|---|
 | Tree, list, scrap, preview, Info, Log | docked panes | both | docked | 3.1 |
 | F3's preview | (not built) | both | floating | 3.5 |
-| Manage the bookmarks | modal dialog (bookmarks.js) | both | floating, beside the window | plan 26 3.3: a tab for the bookmarks and one for quick access; its Edit... and Add... open Edit over it |
+| Manage the bookmarks | modal dialog (bookmarks.js) | both | floating, beside the window | plan 26 3.3: a tab for the bookmarks and one for quick access; its Edit... and New open their dialogs over it |
 | Manage column sets | modal dialog (columns.js openManageSets) | both | floating | |
-| More columns (every property, columns.js moreColumns) | modal dialog | both, or not: question 3 | floating | adds columns to the pane it was opened from |
-| Find | modal dialog (find.js) | both, or not: question 3 | floating | fills a scrap |
-| Rename (several items, renamedialog.js) | modal dialog | both, or not: question 3 | floating | renames the items selected when it opened |
-| F1, all actions and keys (palette.js) | modal dialog | question 2 | | closes when an action runs |
-| Settings | a form of the host with its own page (SettingsForm, settings.html) | both, or not: question 4 | floating | docked: its page as a pane of the main page |
-| Projects | a form of the host with its own page (ProjectsForm, projects.html) | both, or not: question 4 | floating | docked: as Settings |
-| Edit a bookmark, Change Icon, the Size of a bar, a name asked (askText), the Projects window's own question, Foldex's question window (AskForm) | modal dialogs | neither: question 1 | | each asks one thing and waits for the answer |
+| F1, all actions and keys (palette.js) | modal dialog | both, not modal | floating | as LexPen's F1 (plan 19 3.10): stays open while actions run |
+| Settings | a form of the host with its own page (SettingsForm, settings.html) | both | floating | as LexPen's; docked: its page as a pane of the main page |
+| Projects | a form of the host with its own page (ProjectsForm, projects.html) | both | floating | as LexPen's; docked: as Settings |
+| More columns (every property, columns.js moreColumns) | modal dialog | modal floating window | | adds columns to the pane it was opened from |
+| Find | modal dialog (find.js) | modal floating window | | fills a scrap |
+| Rename (several items, renamedialog.js) | modal dialog | modal floating window | | renames the items selected when it opened |
+| Edit a bookmark, Change Icon, Move to folder..., the Size of a bar, a name asked (askText), the Projects window's own question | modal dialogs of the page | modal floating window | | each asks one thing and waits for the answer |
+| Foldex's question window (AskForm) | a modal window of its own | modal floating window (as now) | | |
+| The ribbon's Customize (plan 19 3.9) | (not built) | modal floating window | | |
 
 ## 4. Open questions
 
-1. The dialogs that ask one thing and wait for the answer (Edit a bookmark, Change Icon, the Size of a bar, a name
-   asked, the Projects window's question, Foldex's question window): exceptions, staying modal dialogs that are
-   neither docked nor floating?
-2. F1 (all actions and keys) closes when an action runs: an exception (a modal dialog), or a pane that stays open?
-3. More columns, Find and Rename act on the pane or items they were opened from: panes (both) as well, or modal
-   dialogs as now?
-4. Settings and Projects are windows of their own now (floating only). Docked, their page becomes a pane of the main
-   page: wanted for both, or do they stay floating windows only?
+None.
