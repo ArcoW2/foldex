@@ -5,8 +5,8 @@ Status: partly executed; see Status and 6 (As built).
 - 2026-11-11: draft, taken out of plan 12 (its open question 1).
 - 2026-11-15: partly executed: stage 1 (pane pages, the floating window, Float and Dock, the Log as a page).
 - 2026-11-15: partly executed: stage 2 (Manage the bookmarks as a page).
-- 2026-11-15: partly executed: stage 3, most of it (modal floating windows: a name asked, Edit a bookmark, Move to
-  folder..., About, Find, Rename, More columns).
+- 2026-11-15: partly executed: stage 3 (modal floating windows: a name asked, Edit a bookmark, Move to folder...,
+  About, Find, Rename, More columns; the Size of a bar, not modal).
 
 Builds on plan 12 (docking panes) and plan 03 (connected panes). The number in the file name is the priority; rename to
 reorder.
@@ -55,14 +55,14 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 | Modal floating windows: the window | `PaneForm` shown modal with a dialog's page (`dialog.html`, `dialogpage.js`), as large as its dialog, its host requests through the window's page | 3.7; 6.3 |
 | Modal floating windows: a name asked, Edit a bookmark | askText; Edit a bookmark with Change Icon inside it; Move to folder... (Manage) | 3.7; 6.3 |
 | Modal floating windows: Find, Rename, More columns | each in a window of its own; what only the window's page has (the items, the pane's columns) asked of it while open | 3.7; 6.4 |
+| The Size of a bar | a floating window of its own, not modal (moved off the bar, the main window still resizable); the marks of a bar after one that fills its line measured from its far end | 3.7; 6.5 |
 
 ### Not yet built
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
 | Dock by dragging | a floating pane's window dragged onto its Foldex window docks it there, the places lit as for a docked pane | -- | 3.1 |
-| Modal floating windows: the others | the Size of a bar, the Projects window's question | Open questions 1, 2 | 3.7 |
-| Panes of their own | Manage column sets, F1, Settings, Projects as pane pages, docked or floating | The floating window | 3.0; 3.7 |
+| Panes of their own | Manage column sets, F1, Settings, Projects as pane pages, docked or floating; the Projects pane's question (a name, a copy's name) in a modal floating window as the others | The floating window | 3.0; 3.7 |
 | Preview and Info as pages | Windows' preview over a frame and over a floating window; Foldex's own preview; Info | The floating window | 3.0 |
 | F3 | a preview in a new floating window | Preview and Info as pages | 3.5 |
 | Scrap, list and tree as pages | the panes of the layout as pages; following, executing, back and forward through the window's page | Preview and Info as pages | 3.0; 3.3 |
@@ -185,23 +185,16 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 | More columns (every property, columns.js moreColumns) | modal floating window | modal floating window (built) | | adds columns to the pane it was opened from |
 | Find | modal floating window (find.js) | modal floating window (built) | | fills a scrap |
 | Rename (several items, renamedialog.js) | modal floating window | modal floating window (built) | | renames the items selected when it opened |
-| Edit a bookmark, Change Icon, Move to folder..., the Size of a bar, a name asked (askText), the Projects window's own question | modal dialogs of the page | modal floating window | | each asks one thing and waits for the answer |
+| Edit a bookmark, Change Icon, Move to folder..., a name asked (askText) | modal floating windows | modal floating window (built) | | each asks one thing and waits for the answer |
+| The Projects pane's own question (a name, a copy's name) | a dialog of the Projects window's page | modal floating window | | built with Projects as a pane (stage 4): then it is asked from the main window's page as the others |
+| The Size of a bar (bars.js) | floating window, not modal | floating window, not modal (built); never docks | | moved off the bar it sizes; the main window stays usable and can be resized meanwhile, the bar's marks following |
 | Foldex's question window (AskForm) | a modal window of its own | modal floating window (as now) | | |
 | The ribbon's Customize (plan 19 3.9) | (not built) | modal floating window | | |
 | About Foldex (View > Foldex, beside Settings; as LexPen's) | modal floating window | modal floating window (built) | | the project, by whom, Buy me a coffee (opens in the browser), the build, what it runs on |
 
 ## 4. Open questions
 
-1. The Size of a bar (bars.js openSizeWindow) is not modal now, on purpose: the main window can be resized while it
-   is open, and the bar's limit marks follow, so a maximum % of the window can be tried out. A modal floating window
-   (3.7) blocks the main window, so it could no longer be resized meanwhile. Options: (a) a floating window of its
-   own that is not modal (moved anywhere, the main window still usable; it never docks); (b) modal as 3.7 says, the
-   resizing lost; (c) left as it is, a dialog of the page. Recommended: (a).
-2. The Projects window's question (projects.js ask: a name, a copy's name) belongs to the Projects window, a form of
-   the host with its own page, not to the main window's page, which is where modal floating windows are opened from
-   now. In stage 4 Projects becomes a pane of the main window's page, and its question then goes the same way as
-   the others with nothing of its own. Options: (a) done with stage 4; (b) now, the Projects form opening such a
-   window itself. Recommended: (a).
+None.
 
 ## 6. As built
 
@@ -317,3 +310,20 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
   (Rename 9 items), the tokens with the first item's examples, x_$B giving "9 of 9 renamed", Rename renaming the 9
   files on disk. The layouts checked: nothing wider than the dialog, Find's own title hidden (the window has it).
   `dotnet test`: 224 passed.
+
+### 6.5 The Size of a bar
+
+- A dialog's window that is not modal: `dialogWindow(..., modal false)`; MainForm's `dialogOpen` with `modal` false
+  shows the PaneForm owned by the window (Show, not ShowDialog) and answers when it closes. PaneForm's `dialog` (a
+  dialog's page: its size and its answer) is apart from `modal` (how it is shown).
+- bars.js `openSizeWindow`: the fields in the window (dialogpage.js `sizeHere`); each change goes back (`calls`) and
+  sizes the bar at once, the marks following; Cancel puts the bar back, OK saves; opened again while open: nothing.
+- The marks: a bar after one that fills the rest of its line keeps its far end and grows towards its start, so its
+  marks are measured back from its right end (its bottom in a column); before, they were measured from its start and
+  could fall outside the window.
+- Found while testing: `dialogWindow` sent `{ kind: 'args', ...args }`, so an argument called `kind` (the bar's)
+  replaced the message's kind and the window stayed empty; the message's kind now comes last.
+- Tests in the test copy: the search bar (right of the path bar, which fills) opened: "Size of the search bar" with its
+  fields, the main window enabled; moved off the window; its marks at 2444 (min 120) and 2364 (normal 200) for the
+  bar at 2364-2564; Normal 300: the bar at 2264-2564, the normal mark at 2264; Cancel: back to 200, the marks gone, the
+  window closed; Normal 240 and OK: kept and saved in bars.json. `dotnet test`: 224 passed.

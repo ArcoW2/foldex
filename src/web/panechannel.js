@@ -106,11 +106,12 @@ function paneChannel({ id, page, title, view, state, receive, menu }) {
 // one, which waits for it. `args` say which dialog and what it needs from here; what it asks of the host meanwhile goes
 // through here (askHost, post, status), and its answer comes back when it closes (null: cancelled). What it asks of this
 // page itself (askWindow there: a change it makes here, what only this page knows) `calls` answers. The keyboard back
-// in the active pane after.
+// in the active pane after. `modal` false: a floating window that is not modal, this window usable meanwhile (the
+// Size of a bar).
 let dialogWindows = 0;
-async function dialogWindow(title, args, calls = null) {
+async function dialogWindow(title, args, calls = null, modal = true) {
   const id = `dialog:${++dialogWindows}`;
-  const ch = paneChannel({ id, page: 'dialog.html', title, view: () => document.body, state: () => new Map([['args', { kind: 'args', ...args }]]),
+  const ch = paneChannel({ id, page: 'dialog.html', title, view: () => document.body, state: () => new Map([['args', { ...args, kind: 'args' }]]),
     receive: async m => {
       if (m.kind === 'host') ch.send({ kind: 'answer', key: `answer:${m.req}`, req: m.req, value: await askHost(m.msg) });
       else if (m.kind === 'call') ch.send({ kind: 'answer', key: `answer:${m.req}`, req: m.req, value: await calls?.(m.msg) });
@@ -118,7 +119,7 @@ async function dialogWindow(title, args, calls = null) {
       else if (m.kind === 'status') status(m.text, m.warn);
     } });
   Object.assign(ch, { floating: true, floatReady: false, floatQueue: new Map() });
-  const m = await askHost({ op: 'dialogOpen', pane: id, page: 'dialog.html', title });
+  const m = await askHost({ op: 'dialogOpen', pane: id, page: 'dialog.html', title, modal });
   paneChannels.delete(id);
   activeView()?.body.focus();
   return m.value ?? null;

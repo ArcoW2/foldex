@@ -521,52 +521,32 @@ const SizeFields = [
   ['maxShare', 'Maximum % of the window', 'var(--branch-3)'],
 ];
 
-function openSizeWindow(bar) {
+// A floating window of its own that is not modal (plan 14 3.7; dialogpage.js sizeHere): moved off the bar, and the
+// window can be resized while it is open, the marks following. Each field changed sizes the bar at once; Cancel puts
+// it back as it was. Open already: nothing.
+async function openSizeWindow(bar) {
+  if (sizing) return;
   const before = { ...bar };
-  const dialog = document.createElement('dialog');
-  dialog.className = 'ask size-window';
-  const unit = buttonBar(bar) ? 'drives' : 'px';
-  dialog.innerHTML = `<p>The size of the ${BarKinds[bar.kind].toLowerCase()} bar. Empty: not set.</p><div class="fields"></div>` +
-    '<div class="buttons"><button class="ok">OK</button><button class="cancel">Cancel</button></div>';
-  for (const [name, title, colour] of SizeFields) {
-    const label = document.createElement('label');
-    const swatch = document.createElement('span');
-    swatch.className = 'swatch';
-    swatch.style.background = colour;
-    const input = document.createElement('input');
-    input.type = 'number';
-    input.min = name === 'maxShare' ? 1 : 0;
-    if (name === 'maxShare') input.max = 100;
-    input.value = bar[name] ?? '';
-    input.addEventListener('input', () => {
-      const v = Number(input.value);
-      if (input.value === '' || !(v > 0)) delete bar[name];
-      else bar[name] = name === 'maxShare' ? Math.min(100, v) : v;
-      if (name === 'normal' && bar.normal == null) bar.normal = BarDefaults[bar.kind].normal;
-      fitBars();
-    });
-    label.append(swatch, title, input, name === 'maxShare' ? '%' : unit);
-    dialog.querySelector('.fields').append(label);
-  }
-  const close = keep => {
-    if (!keep) {
-      for (const key of Object.keys(bar)) delete bar[key];
-      Object.assign(bar, before);
-    }
-    sizing = null;
-    document.querySelectorAll('.size-mark').forEach(x => x.remove());
-    dialog.close();
-    dialog.remove();
-    if (keep) saveBars();
-    else fitBars();
-  };
-  dialog.querySelector('.ok').addEventListener('click', () => close(true));
-  dialog.querySelector('.cancel').addEventListener('click', () => close(false));
-  dialog.addEventListener('cancel', e => { e.preventDefault(); close(false); });
-  document.body.append(dialog);
-  dialog.show();   // not modal: the window can be resized while it is open, the marks follow
   sizing = { bar };
   drawSizeMarks();
+  const r = await dialogWindow(`Size of the ${BarKinds[bar.kind].toLowerCase()} bar`, { what: 'barSize',
+    barKind: BarKinds[bar.kind].toLowerCase(), unit: buttonBar(bar) ? 'drives' : 'px', fields: SizeFields,
+    values: Object.fromEntries(SizeFields.map(([name]) => [name, bar[name] ?? null])) }, ({ name, value }) => {
+    const v = Number(value);
+    if (value === '' || !(v > 0)) delete bar[name];
+    else bar[name] = name === 'maxShare' ? Math.min(100, v) : v;
+    if (name === 'normal' && bar.normal == null) bar.normal = BarDefaults[bar.kind].normal;
+    fitBars();
+  }, false);
+  const keep = r?.keep === true;
+  if (!keep) {
+    for (const key of Object.keys(bar)) delete bar[key];
+    Object.assign(bar, before);
+  }
+  sizing = null;
+  document.querySelectorAll('.size-mark').forEach(x => x.remove());
+  if (keep) saveBars();
+  else fitBars();
 }
 
 // The limits as marks on the bar's line, each in its field's colour: where the bar would end at that size (the %
@@ -579,10 +559,14 @@ function drawSizeMarks() {
   const { unit, overhead } = barMeasure(el, row);
   const px = n => buttonBar(sizing.bar) ? overhead + n * unit : n;
   const windowLength = row ? document.documentElement.clientWidth : document.documentElement.clientHeight;
+  // A bar after one that fills the rest of its line keeps its far end (right, or bottom in a column) where it is and
+  // grows towards its start: its marks are measured back from that end.
+  const fromEnd = [...el.parentElement.children].slice(0, [...el.parentElement.children].indexOf(el)).some(x => x.bar?.fill);
   for (const [name, , colour] of SizeFields) {
     const v = sizing.bar[name];
     if (v == null) continue;
-    const at = name === 'maxShare' ? windowLength * v / 100 : px(v);
+    const length = name === 'maxShare' ? windowLength * v / 100 : px(v);
+    const at = fromEnd ? (row ? r.width : r.height) - length : length;
     const mark = document.createElement('div');
     mark.className = 'size-mark';
     mark.style.background = colour;

@@ -24,6 +24,7 @@ dialog.inline.find { width: 560px; border: 0; border-radius: 0; }
 dialog.inline.rename-many { width: 760px; }
 dialog.inline .rn-list { max-height: 360px; }
 dialog.inline.more-columns { width: 420px; }
+dialog.inline.size-window { width: 360px; }
 dialog.inline.more-columns .props { max-height: 420px; }
 
 /* About (dialogpage.js aboutHere; as LexPen's .mm-about): the name, a line, by whom, the coffee, the build, a table

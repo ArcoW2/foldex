@@ -236,12 +236,29 @@ sealed class MainForm : Form
             // for it; its answer (the page's `done`) when it closes. Its page talks to this one's meanwhile (fromPane).
             case "dialogOpen":
             {
+                // A dialog's window (plan 14 3.7): modal (ShowDialog, this window waits), or not (`modal` false: owned
+                // by this window, which stays usable); answered when it closes.
                 var id = msg["pane"]!.GetValue<string>();
-                using var form = new PaneForm(app, this, id, msg["page"]!.GetValue<string>(), msg["title"]?.GetValue<string>() ?? "Foldex", null, modal: true);
+                var modal = msg["modal"]?.GetValue<bool>() != false;
+                var form = new PaneForm(app, this, id, msg["page"]!.GetValue<string>(), msg["title"]?.GetValue<string>() ?? "Foldex", null, dialog: true, modal: modal);
                 floating[id] = form;
-                form.ShowDialog(this);
-                floating.Remove(id);
-                Post(new JsonObject { ["event"] = "answer", ["req"] = msg["req"]?.DeepClone(), ["value"] = form.Result?.DeepClone() });
+                var req = msg["req"]?.DeepClone();
+                void Answer()
+                {
+                    floating.Remove(id);
+                    if (!IsDisposed) Post(new JsonObject { ["event"] = "answer", ["req"] = req, ["value"] = form.Result?.DeepClone() });
+                }
+                if (modal)
+                {
+                    form.ShowDialog(this);
+                    Answer();
+                    form.Dispose();
+                }
+                else
+                {
+                    form.FormClosed += (_, _) => Answer();
+                    form.Show();
+                }
                 break;
             }
             case "about":

@@ -21,33 +21,35 @@ sealed class PaneForm : Form
     readonly string page;
     readonly List<string> queue = [];
     bool loaded, byPage, sized;
-    readonly bool modal;
+    readonly bool dialog;
 
     /// <summary>The pane, by its id in its window's layout.</summary>
     public string Id { get; }
 
-    /// <summary>A modal floating window's answer (its page's `done`; null: cancelled or closed).</summary>
+    /// <summary>A dialog's window's answer (its page's `done`; null: cancelled or closed).</summary>
     public JsonNode? Result { get; private set; }
 
     /// <param name="bounds">Where it was last (kept with the layout); null or off every screen: beside its window's right edge.</param>
-    /// <param name="modal">A modal floating window (plan 14 3.7): a dialog's page, shown with ShowDialog over its window,
-    /// as large as its page says (`size`), in the middle of its window; its page's `done` is its answer.</param>
-    public PaneForm(AppHost app, MainForm owner, string id, string page, string title, Rectangle? bounds, bool modal = false)
+    /// <param name="dialog">A dialog's window (plan 14 3.7): a dialog's page, as large as its page says (`size`), in the
+    /// middle of its window; its page's `done` is its answer.</param>
+    /// <param name="modal">A dialog's window shown with ShowDialog over its window (a modal floating window); false: owned
+    /// by its window, which stays usable (the Size of a bar).</param>
+    public PaneForm(AppHost app, MainForm owner, string id, string page, string title, Rectangle? bounds, bool dialog = false, bool modal = true)
     {
-        (this.app, this.owner, Id, this.page, this.modal) = (app, owner, id, page, modal);
-        Text = modal ? title : $"{title} - Foldex";
+        (this.app, this.owner, Id, this.page, this.dialog) = (app, owner, id, page, dialog);
+        Text = dialog ? title : $"{title} - Foldex";
         Icon = owner.Icon;
-        if (!modal) Owner = owner;   // a modal one is owned by ShowDialog
+        if (!dialog || !modal) Owner = owner;   // a modal one is owned by ShowDialog
         ShowInTaskbar = false;
-        MinimumSize = modal ? new Size(160, 80) : new Size(200, 140);
+        MinimumSize = dialog ? new Size(160, 80) : new Size(200, 140);
         StartPosition = FormStartPosition.Manual;
-        if (modal)
+        if (dialog)
         {
             MinimizeBox = MaximizeBox = false;
             FormBorderStyle = FormBorderStyle.FixedDialog;
         }
         var at = owner.WindowState == FormWindowState.Normal ? owner.Bounds : owner.RestoreBounds;
-        var fallback = modal ? new Rectangle(at.X + (at.Width - 420) / 2, at.Y + (at.Height - 240) / 2, 420, 240)
+        var fallback = dialog ? new Rectangle(at.X + (at.Width - 420) / 2, at.Y + (at.Height - 240) / 2, 420, 240)
             : new Rectangle(at.Right - 420, at.Y + 80, 400, Math.Min(500, Math.Max(200, at.Height - 160)));
         Bounds = bounds is { } b && Screen.AllScreens.Any(s => s.WorkingArea.IntersectsWith(b)) ? b : fallback;
         Controls.Add(web);
@@ -61,14 +63,14 @@ sealed class PaneForm : Form
         FormClosing += (_, _) => TellBounds();
         FormClosed += (_, _) =>
         {
-            if (!byPage && !modal && !owner.IsDisposed) owner.Post(new JsonObject { ["event"] = "paneClosed", ["pane"] = Id });
+            if (!byPage && !dialog && !owner.IsDisposed) owner.Post(new JsonObject { ["event"] = "paneClosed", ["pane"] = Id });
         };
     }
 
     // Its place and size to its window's page, for the layout.
     void TellBounds()
     {
-        if (modal || WindowState != FormWindowState.Normal || owner.IsDisposed) return;
+        if (dialog || WindowState != FormWindowState.Normal || owner.IsDisposed) return;
         owner.Post(new JsonObject
         {
             ["event"] = "paneBounds", ["pane"] = Id,
@@ -104,7 +106,7 @@ sealed class PaneForm : Form
             BeginInvoke(() =>
             {
                 if (IsDisposed || owner.IsDisposed || JsonNode.Parse(json)?["fromPane"] is not JsonNode msg) return;
-                if (modal && Modal(msg)) return;
+                if (dialog && Dialog(msg)) return;
                 owner.Post(new JsonObject { ["event"] = "fromPane", ["pane"] = Id, ["msg"] = msg.DeepClone() });
             });
         };
@@ -125,9 +127,9 @@ sealed class PaneForm : Form
         core.Navigate(PaneUrl + page);
     }
 
-    // A modal floating window's own messages: its answer (`done`, it closes) and its page's size (`size`, in CSS px:
-    // the window made that large inside, the first time in the middle of its window, kept on its screen).
-    bool Modal(JsonNode msg)
+    // A dialog's window's own messages: its answer (`done`, it closes) and its page's size (`size`, in CSS px: the
+    // window made that large inside, the first time in the middle of its window, kept on its screen).
+    bool Dialog(JsonNode msg)
     {
         switch (msg["kind"]?.GetValue<string>())
         {

@@ -164,11 +164,42 @@ function moreColumnsHere(list, shown) {
   return new Promise(resolve => dialog.addEventListener('close', () => resolve(null), { once: true }));
 }
 
+// The Size of a bar (bars.js openSizeWindow; not modal): its limits, each in its colour as its mark on the bar; a
+// change sizes the bar at once. { keep } for OK, null for Cancel.
+function sizeHere(a) {
+  const dialog = document.createElement('dialog');
+  dialog.className = 'ask size-window';
+  dialog.innerHTML = `<p>The size of the ${a.barKind} bar. Empty: not set.</p><div class="fields"></div>` +
+    '<div class="buttons"><button class="ok">OK</button><button class="cancel">Cancel</button></div>';
+  for (const [name, title, colour] of a.fields) {
+    const label = document.createElement('label');
+    const swatch = document.createElement('span');
+    swatch.className = 'swatch';
+    swatch.style.background = colour;
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.min = name === 'maxShare' ? 1 : 0;
+    if (name === 'maxShare') input.max = 100;
+    input.value = a.values[name] ?? '';
+    input.addEventListener('input', () => askWindow({ name, value: input.value }));
+    label.append(swatch, title, input, name === 'maxShare' ? '%' : a.unit);
+    dialog.querySelector('.fields').append(label);
+  }
+  let keep = false;
+  dialog.querySelector('.ok').addEventListener('click', () => { keep = true; dialog.close(); });
+  dialog.querySelector('.cancel').addEventListener('click', () => dialog.close());
+  document.body.append(dialog);
+  dialog.showModal();
+  dialog.querySelector('input').select();
+  return new Promise(resolve => dialog.addEventListener('close', () => resolve(keep ? { keep } : null), { once: true }));
+}
+
 // What to show, from the window's page: which dialog, and what it needs.
 paneHandlers.args = async m => {
   if (m.what === 'about') return done(await aboutHere(m.info ?? {}));
   if (m.what === 'askText') return done(await askTextHere(m.title, m.value, m.placeholder));
   if (m.what === 'find') return done(await findHere(m));
+  if (m.what === 'barSize') return done(await sizeHere(m));
   if (m.what === 'rename') return done(await renameHere(m));
   if (m.what === 'moreColumns') return done(await moreColumnsHere(m.list ?? [], m.shown ?? []));
   if (m.what === 'pickFolder') {
