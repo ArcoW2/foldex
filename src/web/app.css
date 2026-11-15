@@ -1782,9 +1782,24 @@ html[data-scrollbars="slim"] :not(.bars-full)::-webkit-scrollbar-thumb:horizonta
   border-radius: 0;
 }
 
-/* Manage the bookmarks (bookmarks.js): columns with a head whose borders size them (--bm-cols), a row per bookmark,
-   its icon before its name, a missing location struck through. */
+/* Manage the bookmarks (bookmarks.js): a tab for the bookmarks and one for quick access, the one shown joined to the
+   list; columns with a head whose borders size them (--bm-cols), a row per bookmark, its icon before its name, a
+   missing location struck through. */
 dialog.bm-manage { width: min(640px, calc(100vw - 32px)); }
+dialog.bm-manage[open] { display: flex; flex-direction: column; }
+.bm-tabs { display: flex; gap: 2px; }
+.bm-tabs button {
+  color: var(--fg-dim);
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  padding: 4px 14px;
+  font: inherit;
+  cursor: pointer;
+}
+.bm-tabs button.on { color: var(--fg); background: var(--bg); border-color: var(--border); margin-bottom: -1px; position: relative; z-index: 1; }
+dialog.bm-manage .ask-buttons { margin-top: 10px; }
 .bm-list {
   height: 280px;
   overflow: auto;
@@ -1796,7 +1811,7 @@ dialog.bm-manage { width: min(640px, calc(100vw - 32px)); }
 .bm-list:focus { border-color: var(--accent); }
 .bm-head, .bm-row {
   display: grid;
-  grid-template-columns: var(--bm-cols, 200px 260px 90px);
+  grid-template-columns: var(--bm-cols, 200px 320px);
   width: max-content;
   min-width: 100%;
 }
@@ -1809,8 +1824,6 @@ dialog.bm-manage { width: min(640px, calc(100vw - 32px)); }
 .bm-name img, .bm-icon-shown img { width: 16px; height: 16px; flex: none; }
 .bm-where { color: var(--fg-dim); }
 .bm-row.missing .bm-where { text-decoration: line-through; }
-.bm-qa { text-align: center; }
-.bm-qa input { margin: 0; }
 .bm-none { padding: 8px; color: var(--fg-dim); }
 
 /* Edit a bookmark and Change Icon (bookmarks.js): the find dialog's look; the key fields; the panel of icons. */

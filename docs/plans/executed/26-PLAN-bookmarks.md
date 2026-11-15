@@ -24,9 +24,9 @@ Go; it belongs in Home > Open.
 
 One list of bookmarks, in bookmarks.json. A bookmark is a folder or an item (a file), each with a location, a name,
 an icon, two optional keys, a way of opening (Regular or Root) and a quick access flag: with the flag it shows in the
-Quick access area of a tree without a parent, without it in the Bookmarks menu; switching is one check box, in
-Manage or Edit (no menu item of its own: right-click menus stay short). Manage
-shows every bookmark in columns: Name (the icon, then the name), Location and Quick access (a check box). Edit...
+Quick access area of a tree without a parent, without it in the Bookmarks menu; switching is Manage's Move button or
+Edit's check box (no menu item of its own: right-click menus stay short). Manage has a tab for the bookmarks and one
+for quick access, each in columns: Name (the icon, then the name) and Location. Edit...
 opens a window with all of it; Custom icons come from a Change Icon window (every icon of a dll, exe or ico file,
 SHELL32.dll by default); keys are pressed into key fields as one key or a chord, starting with Ctrl+B by default: one
 opens the bookmark in the active pane, the other in a new pane with a child pane. Regular goes to the folder (from a
@@ -113,7 +113,8 @@ within it, Del on a shortcut), Add current folder / Remove current folder, Add a
 - With quickAccess, an entry is a shortcut in the Quick access area at the top of every tree without a parent, in
   the order of the list; without it, an entry of the Bookmarks menu, in the order of the list. Never both.
 - Switching is one change to the flag; the entry keeps its place in the list, name, icon, keys and the rest:
-  - Manage: the Quick access check box of a row (a click, or Space on the selected row).
+  - Manage: Move to quick access on the Bookmarks tab, Move to bookmarks on the Quick access tab (or Space), for
+    the selected row.
   - Edit: the Quick access check box.
 - No menu has a switch of its own: right-click menus stay short. Edit is one click away from both (the Bookmarks
   menu's right-click, a shortcut's right-click, Manage).
@@ -124,14 +125,17 @@ within it, Del on a shortcut), Add current folder / Remove current folder, Add a
 
 ### 3.3 Manage
 
-- Every bookmark, quick access ones too, in the order of the list, in three columns with a head: Name (the icon, then
-  the name; the location's own name when it has none), Location (the full path; a missing one struck through) and
-  Quick access (a check box). The columns can be made wider by dragging their border in the head; no sorting (the
-  order is yours, set with Up and Down).
-- Buttons: Up, Down, Add..., Edit..., Delete, Close. Edit... (also Enter, F2 and a double click) opens Edit (3.4) for
-  the selected row. Add... opens Edit empty, with the location's Browse... opened at once (Windows' folder picker); a
-  location already in the list is refused there.
-- Up, Down, Delete, Close and their keys as built; Space toggles Quick access; every change goes to the host at once.
+- Two tabs: Bookmarks (the entries of the menu) and Quick access (the shortcuts); a location is in one of them. Each
+  shows its entries in the order of the list, in two columns with a head: Name (the icon, then the name; the
+  location's own name when it has none) and Location (the full path; a missing one struck through). The columns can
+  be made wider by dragging their border in the head; no sorting (the order is yours, set with Up and Down).
+- Buttons: Up, Down, Add..., Edit..., Move to quick access (on the Bookmarks tab) or Move to bookmarks (on the Quick
+  access tab), Delete, Close. Edit... (also Enter, F2 and a double click) opens Edit (3.4) for the selected row.
+  Add... opens Edit empty, Quick access checked on the Quick access tab, with the location's Browse... opened at once
+  (Windows' folder picker); a location already in the list is refused there.
+- Up and Down move an entry past its neighbour on the same tab; the entries of the other tab keep their places. Move
+  (and Space) takes the selected entry to the other tab, its place in the list kept. Delete, Close and their keys as
+  built; every change goes to the host at once.
 - Where Foldex differs from LexPen: LexPen's Manage has one row per file with its folder under it, and Change...
   picks another file. Foldex has columns and Edit..., as the user asked.
 
@@ -284,8 +288,9 @@ within it, Del on a shortcut), Add current folder / Remove current folder, Add a
   another bookmark's key, a bookmark's two keys the same); a bookmark's key over a keys.json key runs the bookmark;
   the old action names still run.
 - In the test copy (CDP, real keys and mouse where possible): the word Bookmarks in the ribbon, the menu, Manage and
-  Windows' menu; the old lists taken over (both, a folder in both); Manage's columns with icons and the Quick access
-  check box (a click and Space: the entry moves between the menu and the area at once, in every window); Edit from
+  Windows' menu; the old lists taken over (both, a folder in both); Manage's two tabs, their columns with icons, Move
+  and Space (the entry moves between the tabs, the menu and the area at once, in every window), Up and Down within a
+  tab; Edit from
   the menu's right-click and from a shortcut's right-click, its Quick access box moving the entry; Edit: a name, a location by
   typing, the Quick access box, Plain / Default / Custom, Change Icon (SHELL32's icons, a double click), a key and a
   chord pressed into the key fields, a clash asked (No keeps the old key; Yes on Ctrl+C: the bookmark opens with it,
@@ -327,9 +332,12 @@ None.
 
 - The area and the menu filter the one list (quickAccessList, menuBookmarks). A drop on the area goes through
   Bookmarks.ToQuickAccess: its place counted among the shortcuts, a bookmark of the menu given the flag in its place.
-- Manage: a grid with a head; a border in the head dragged sizes the column before it (the widths are kept while
-  Foldex runs, not saved). A click on a row's check box, or Space, switches the flag; Enter, F2 and a double click
-  are Edit...
+- Manage: two tabs over one grid with a head (manageRows: the list's entries of the tab shown); a border in the head
+  dragged sizes the column before it (the widths are kept while Foldex runs, not saved). The Move button's text
+  follows the tab, its letter marked again (buttons.js markButtons); Space is Move; Enter, F2 and a double click are
+  Edit... Tested in the test copy: Move to quick access and Move to bookmarks by a click, Space, Ctrl+Down on the
+  Quick access tab swapping only with its neighbour there, the buttons' letters.
+- Manage is still a modal dialog; as a pane, docked or floating, it is in plan 14 3.7.
 
 ### 6.3 Edit, Change Icon
 

@@ -223,7 +223,12 @@ async function pickFolder(at = '') { return (await askHost({ op: 'pickFolder', a
 
 // ---------- Manage (3.3): every bookmark in columns, in your order ----------
 
-const bmManage = { el: null, at: 0, widths: [200, 260, 90] };
+// Two tabs: the bookmarks of the menu and the quick access shortcuts; each location is in one of them, and Move takes
+// the selected one to the other (its place in the list kept). `at` counts the rows of the tab shown.
+const bmManage = { el: null, tab: 'bookmarks', at: 0, widths: [200, 320] };
+
+// The list's indexes of the tab shown, in list order.
+const manageRows = () => bookmarks.flatMap((b, i) => !!b.quickAccess === (bmManage.tab === 'quick') ? [i] : []);
 
 function manageBookmarks() {
   if (!bmManage.el) buildBookmarkManage();
@@ -236,19 +241,27 @@ function manageBookmarks() {
 function buildBookmarkManage() {
   const el = bmManage.el = document.createElement('dialog');
   el.className = 'ask bm-manage';
-  el.innerHTML = `<div class="ask-line">Bookmarks</div>
+  el.innerHTML = `<div class="bm-tabs"><button type="button" data-tab="bookmarks">Bookmarks</button><button type="button" data-tab="quick">Quick access</button></div>
     <div class="bm-list" tabindex="0"><div class="bm-head"></div><div class="bm-rows"></div></div>
     <div class="ask-buttons">
       <button data-do="up" title="Ctrl+Up">Up</button><button data-do="down" title="Ctrl+Down">Down</button>
       <button data-do="add">Add...</button><button data-do="edit" title="Enter, F2, double click">Edit...</button>
+      <button data-do="move" title="Space"></button>
       <button data-do="delete" title="Del">Delete</button><button data-do="close">Close</button>
     </div>`;
   document.body.append(el);
+  el.querySelector('.bm-tabs').addEventListener('click', e => {
+    const t = e.target.closest('[data-tab]');
+    if (!t || t.dataset.tab === bmManage.tab) return;
+    bmManage.tab = t.dataset.tab;
+    bmManage.at = 0;
+    drawBookmarkManage();
+    el.querySelector('.bm-list').focus();
+  });
   const list = el.querySelector('.bm-list');
-  // The head: Name, Location, Quick access; a border dragged makes the column before it wider (no sorting: the order
-  // is yours).
+  // The head: Name, Location; a border dragged makes the column before it wider (no sorting: the order is yours).
   const head = el.querySelector('.bm-head');
-  ['Name', 'Location', 'Quick access'].forEach((title, k) => {
+  ['Name', 'Location'].forEach((title, k) => {
     const cell = Object.assign(document.createElement('span'), { className: 'bm-cell', textContent: title });
     const grip = Object.assign(document.createElement('span'), { className: 'bm-grip' });
     grip.addEventListener('mousedown', e => {
@@ -267,23 +280,20 @@ function buildBookmarkManage() {
     const r = e.target.closest('[data-i]');
     if (!r) return;
     bmManage.at = +r.dataset.i;
-    if (e.target.closest('.bm-qa')) {
-      e.preventDefault();
-      bookmarkManageDo('quick');
-    } else drawBookmarkManage();
+    drawBookmarkManage();
   });
-  list.addEventListener('dblclick', e => { if (e.target.closest('[data-i]') && !e.target.closest('.bm-qa')) bookmarkManageDo('edit'); });
+  list.addEventListener('dblclick', e => { if (e.target.closest('[data-i]')) bookmarkManageDo('edit'); });
   el.querySelector('.ask-buttons').addEventListener('click', e => { const b = e.target.closest('[data-do]'); if (b) bookmarkManageDo(b.dataset.do); });
   el.addEventListener('keydown', e => {
     if (e.target.closest('button') && (e.key === 'Enter' || e.key === ' ')) return;
     const key = (e.ctrlKey ? 'Ctrl+' : '') + e.key;
     const what = { 'Ctrl+ArrowUp': 'up', 'Ctrl+ArrowDown': 'down', Delete: 'delete', ArrowUp: 'prev', ArrowDown: 'next',
-      Enter: 'edit', F2: 'edit', ' ': 'quick' }[key];
+      Enter: 'edit', F2: 'edit', ' ': 'move' }[key];
     if (!what) return;
     e.preventDefault();
     e.stopPropagation();
     if (what === 'prev' || what === 'next') {
-      bmManage.at = Math.max(0, Math.min(bookmarks.length - 1, bmManage.at + (what === 'next' ? 1 : -1)));
+      bmManage.at = Math.max(0, Math.min(manageRows().length - 1, bmManage.at + (what === 'next' ? 1 : -1)));
       drawBookmarkManage();
     } else bookmarkManageDo(what);
   });
@@ -297,23 +307,30 @@ function drawBookmarkWidths() {
 
 function drawBookmarkManage() {
   drawBookmarkWidths();
-  const box = bmManage.el.querySelector('.bm-rows');
-  bmManage.at = Math.max(0, Math.min(bmManage.at, bookmarks.length - 1));
-  box.replaceChildren(...bookmarks.map((b, i) => {
+  const el = bmManage.el, quick = bmManage.tab === 'quick', rows = manageRows();
+  for (const t of el.querySelectorAll('[data-tab]')) t.classList.toggle('on', t.dataset.tab === bmManage.tab);
+  const move = el.querySelector('[data-do=move]');
+  if (move.dataset.text !== (quick ? 'Move to bookmarks' : 'Move to quick access')) {
+    move.textContent = move.dataset.text = quick ? 'Move to bookmarks' : 'Move to quick access';
+    markButtons(el);   // its letter again (buttons.js)
+  }
+  const box = el.querySelector('.bm-rows');
+  bmManage.at = Math.max(0, Math.min(bmManage.at, rows.length - 1));
+  box.replaceChildren(...rows.map((i, k) => {
+    const b = bookmarks[i];
     const row = document.createElement('div');
-    row.className = 'bm-row' + (i === bmManage.at ? ' selected' : '') + (bookmarkMissing(b.location) ? ' missing' : '');
-    row.dataset.i = i;
+    row.className = 'bm-row' + (k === bmManage.at ? ' selected' : '') + (bookmarkMissing(b.location) ? ' missing' : '');
+    row.dataset.i = k;
     const name = Object.assign(document.createElement('span'), { className: 'bm-cell bm-name' });
     name.append(bookmarkIcon(b), Object.assign(document.createElement('span'), { textContent: bookmarkName(b) }));
     const where = Object.assign(document.createElement('span'), { className: 'bm-cell bm-where', textContent: folderPath(b.location), title: folderPath(b.location) });
-    const qa = Object.assign(document.createElement('span'), { className: 'bm-cell bm-qa' });
-    qa.append(Object.assign(document.createElement('input'), { type: 'checkbox', checked: !!b.quickAccess, tabIndex: -1 }));
-    row.append(name, where, qa);
+    row.append(name, where);
     return row;
   }));
-  if (!bookmarks.length) box.append(Object.assign(document.createElement('div'), { className: 'bm-none', textContent: 'No bookmarks yet: Add... picks a folder.' }));
+  if (!rows.length) box.append(Object.assign(document.createElement('div'), { className: 'bm-none',
+    textContent: quick ? 'No quick access yet: Add..., or Move to quick access on the Bookmarks tab.' : 'No bookmarks yet: Add... picks a folder.' }));
   box.querySelector('.selected')?.scrollIntoView({ block: 'nearest' });
-  for (const b of bmManage.el.querySelectorAll('[data-do=up], [data-do=down], [data-do=edit], [data-do=delete]')) b.disabled = !bookmarks.length;
+  for (const b of el.querySelectorAll('[data-do=up], [data-do=down], [data-do=edit], [data-do=move], [data-do=delete]')) b.disabled = !rows.length;
 }
 
 // Every change goes to the host at once: the whole list.
@@ -324,33 +341,36 @@ function saveBookmarks(list) {
 }
 
 async function bookmarkManageDo(what) {
-  const list = [...bookmarks], at = bmManage.at;
+  const list = [...bookmarks], rows = manageRows(), at = bmManage.at, i = rows[at];
   switch (what) {
     case 'close': return bmManage.el.close();
     case 'up': case 'down': {
+      // With its neighbour on this tab; the entries of the other tab keep their places.
       const to = at + (what === 'up' ? -1 : 1);
-      if (to < 0 || to >= list.length) return;
-      [list[at], list[to]] = [list[to], list[at]];
+      if (i === undefined || to < 0 || to >= rows.length) return;
+      [list[i], list[rows[to]]] = [list[rows[to]], list[i]];
       bmManage.at = to;
       return saveBookmarks(list);
     }
     case 'delete':
-      if (!list.length) return;
-      list.splice(at, 1);
+      if (i === undefined) return;
+      list.splice(i, 1);
       return saveBookmarks(list);
-    case 'quick':
-      if (!list[at]) return;
-      list[at] = { ...list[at], quickAccess: !list[at].quickAccess };
+    case 'move':
+      // To the other tab: the flag switched, its place in the list kept.
+      if (i === undefined) return;
+      list[i] = { ...list[i], quickAccess: !list[i].quickAccess };
       return saveBookmarks(list);
     case 'add': {
-      const made = await editBookmark(null);
-      if (made) bmManage.at = bookmarks.findIndex(b => same(b.location, made.location));
+      // Added on the tab shown: on Quick access a shortcut.
+      const made = await editBookmark(null, { quickAccess: bmManage.tab === 'quick' });
+      if (made) bmManage.at = Math.max(0, manageRows().findIndex(k => same(bookmarks[k].location, made.location)));
       drawBookmarkManage();
       return bmManage.el.querySelector('.bm-list').focus();
     }
     case 'edit':
-      if (!list[at]) return;
-      await editBookmark(list[at].location);
+      if (i === undefined) return;
+      await editBookmark(list[i].location);
       drawBookmarkManage();
       return bmManage.el.querySelector('.bm-list').focus();
   }
@@ -358,12 +378,12 @@ async function bookmarkManageDo(what) {
 
 // ---------- Edit (3.4): one bookmark, all of it ----------
 
-// Edit for the bookmark at `location`, or (null) a new one, its Browse... opened at once. Resolves to the entry kept,
-// or null for Cancel.
-function editBookmark(location) {
+// Edit for the bookmark at `location`, or (null) a new one, its Browse... opened at once, starting with `start` (Manage's
+// Quick access tab: quickAccess). Resolves to the entry kept, or null for Cancel.
+function editBookmark(location, start = {}) {
   const old = location ? findBookmark(location) : null;
   if (location && !old) return Promise.resolve(null);
-  const b = { ...(old ?? { location: '' }) };
+  const b = { ...(old ?? { location: '', ...start }) };
   const el = (tag, props = {}, ...kids) => {
     const e = Object.assign(document.createElement(tag), props);
     e.append(...kids);
