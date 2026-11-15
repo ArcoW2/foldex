@@ -20,7 +20,14 @@ function askHost(msg) {
   return new Promise(resolve => dialogAnswers.set(req, resolve));
 }
 paneHandlers.answer = m => { dialogAnswers.get(m.req)?.(m.value ?? {}); dialogAnswers.delete(m.req); };
+// The window's page itself (its dialogWindow's `calls`): a change made there, what only it knows.
+function askWindow(msg) {
+  const req = ++dialogReq;
+  toWindow({ kind: 'call', req, msg });
+  return new Promise(resolve => dialogAnswers.set(req, resolve));
+}
 const post = msg => toWindow({ kind: 'post', msg });
+const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });   // as app.js
 const status = (text, warn = false) => toWindow({ kind: 'status', text, warn });
 const askYes = async (title, lines = []) => !!(await askHost({ op: 'confirm', text: title, lines })).yes;
 
@@ -85,6 +92,7 @@ function askTextHere(title, value = '', placeholder = '') {
   box.select();
   return new Promise(resolve => dialog.addEventListener('close', () => resolve(dialog.returnValue === 'ok' ? box.value.trim() : null), { once: true }));
 }
+const askText = askTextHere;   // a name asked over a dialog here (Find's Save, ...)
 
 // About (as LexPen's): what Foldex is, by whom, a coffee for him, this build and what it runs on. OK closes it.
 function aboutHere(info) {
@@ -121,10 +129,48 @@ function aboutHere(info) {
   return new Promise(resolve => dialog.addEventListener('close', () => resolve(null), { once: true }));
 }
 
+// More columns (columns.js moreColumns): every property, `shown` the pane's columns; a click adds or takes one away in
+// the pane at once. Close closes it.
+function moreColumnsHere(list, shown) {
+  shown = new Set(shown);
+  const dialog = document.createElement('dialog');
+  dialog.className = 'ask more-columns';
+  dialog.innerHTML = '<p>More columns: every property Windows has. A click adds or removes one.</p>' +
+    '<input class="filter" spellcheck="false" placeholder="Type to find a property"><div class="props"></div>' +
+    '<div class="buttons"><button class="ok">Close</button></div>';
+  const fill = () => {
+    const words = dialog.querySelector('.filter').value.toLowerCase().split(/\s+/).filter(Boolean);
+    const rows = list.filter(p => words.every(w => `${p.title} ${p.name}`.toLowerCase().includes(w))).slice(0, 300);
+    dialog.querySelector('.props').replaceChildren(...rows.map(p => {
+      const label = document.createElement('label');
+      const box = document.createElement('input');
+      box.type = 'checkbox';
+      box.checked = shown.has(p.name);
+      box.addEventListener('change', () => {
+        if (box.checked) shown.add(p.name); else shown.delete(p.name);
+        askWindow({ name: p.name, on: box.checked });
+      });
+      label.append(box, ` ${p.title}`);
+      label.title = p.name;
+      return label;
+    }));
+  };
+  dialog.querySelector('.filter').addEventListener('input', fill);
+  dialog.querySelector('.ok').addEventListener('click', () => dialog.close());
+  document.body.append(dialog);
+  fill();
+  dialog.showModal();
+  dialog.querySelector('.filter').focus();
+  return new Promise(resolve => dialog.addEventListener('close', () => resolve(null), { once: true }));
+}
+
 // What to show, from the window's page: which dialog, and what it needs.
 paneHandlers.args = async m => {
   if (m.what === 'about') return done(await aboutHere(m.info ?? {}));
   if (m.what === 'askText') return done(await askTextHere(m.title, m.value, m.placeholder));
+  if (m.what === 'find') return done(await findHere(m));
+  if (m.what === 'rename') return done(await renameHere(m));
+  if (m.what === 'moreColumns') return done(await moreColumnsHere(m.list ?? [], m.shown ?? []));
   if (m.what === 'pickFolder') {
     // Move to folder... (bmpick.js): { folder } (null: the tab's top), or nothing for Cancel.
     bookmarks = m.bookmarks ?? [];

@@ -7,15 +7,33 @@
 let searches = { predefined: {}, lookIn: [], named: [] };   // searches.json (SearchesFile.cs): kept for every project
 const SearchListMax = 20;   // earlier folders and names offered (chosen, not measured)
 
-// `again`: a scrap whose search is opened again.
-function openFind({ again = null } = {}) {
+// `again`: a scrap whose search is opened again. The dialog in a modal floating window of its own (plan 14 3.7,
+// findHere); a search saved there is kept here too.
+async function openFind({ again = null } = {}) {
   const active = activeView();
   const saved = again ? layout.pane(again.id).search ?? {} : {};
   const start = { ...SearchDefaults, ...saved };
   // Look in: the active pane's folder, or the active scrap (a search in its items); Search again: what it had.
-  let lookScrap = again ? views.get(saved.lookInScrap) ?? null : active instanceof ScrapView ? active : null;
+  const lookScrap = again ? views.get(saved.lookInScrap) ?? null : active instanceof ScrapView ? active : null;
   if (!again) start.lookIn = lookScrap ? '' : currentFolder() ?? searches.lookIn[0] ?? '';
-  const scrapLabel = v => `Scrap: ${v.tabTitle()}`;
+  const r = await dialogWindow('Find files or folders', { what: 'find', start, defaults: SearchDefaults, searches,
+    lookScrap: lookScrap && { id: lookScrap.id, title: lookScrap.tabTitle() },
+    scraps: scrapViews().map(v => ({ id: v.id, title: v.tabTitle() })), again: again?.id ?? null }, m => {
+    searches = m.searches;
+    post({ op: 'searchesSave', searches });
+  });
+  if (!r) return;
+  remember(r.options);
+  runSearch(r.options, views.get(r.options.lookInScrap) ?? null, r.into ? views.get(r.into) : null, r.clearFirst);
+}
+
+// The dialog itself (dialogpage.js, in its window): `a` from openFind. Its answer: { options, into, clearFirst }, or
+// null for Cancel.
+function findHere(a) {
+  searches = a.searches;
+  const start = a.start, again = a.again ? { id: a.again } : null;
+  let lookScrap = a.lookScrap;
+  const scrapLabel = v => `Scrap: ${v.title}`;
 
   const dialog = document.createElement('dialog');
   dialog.className = 'find';
@@ -51,7 +69,7 @@ function openFind({ again = null } = {}) {
     ...Object.keys(searches.predefined).sort(collator.compare).map(n => el('option', { value: n, textContent: n })));
   const save = el('button', { type: 'button', textContent: 'Save' });
   const into = el('select', {}, el('option', { value: '', textContent: 'New scrap' }),
-    ...scrapViews().map(v => el('option', { value: v.id, textContent: v.tabTitle() })));
+    ...a.scraps.map(v => el('option', { value: v.id, textContent: v.title })));
   into.value = again?.id ?? '';
   const [clearFirst, clearFirstLabel] = check('Clear the scrap first', !!again);
   const clearButton = el('button', { type: 'button', textContent: 'Clear' });
@@ -81,7 +99,7 @@ function openFind({ again = null } = {}) {
   predefined.addEventListener('change', () => {
     const o = searches.predefined[predefined.value];
     if (!o) return;
-    fill({ ...SearchDefaults, ...o });
+    fill({ ...a.defaults, ...o });
     if (o.lookIn) {
       lookIn.value = o.lookIn;
       lookScrap = null;
@@ -99,12 +117,12 @@ function openFind({ again = null } = {}) {
     delete o.lookInScrap;
     if (lookScrap) delete o.lookIn;
     searches.predefined = { ...searches.predefined, [name]: o };
-    post({ op: 'searchesSave', searches });
+    askWindow({ searches });
     if (![...predefined.options].some(x => x.value === name)) predefined.append(el('option', { value: name, textContent: name }));
     predefined.value = name;
   });
   clearButton.addEventListener('click', () => {
-    fill(SearchDefaults);
+    fill(a.defaults);
     predefined.value = '';
     named.focus();
   });
@@ -140,13 +158,10 @@ function openFind({ again = null } = {}) {
       return status('Find: a folder to look in.', true);
     }
   });
-  dialog.addEventListener('close', () => {
+  return new Promise(resolve => dialog.addEventListener('close', () => {
     dialog.remove();
-    if (dialog.returnValue !== 'ok') return activeView()?.body.focus();
-    const o = options();
-    remember(o);
-    runSearch(o, lookScrap, into.value ? views.get(into.value) : null, clearFirst.checked);
-  }, { once: true });
+    resolve(dialog.returnValue === 'ok' ? { options: options(), into: into.value, clearFirst: clearFirst.checked } : null);
+  }, { once: true }));
 }
 
 // The folder and the name go to the front of their lists.
@@ -178,7 +193,7 @@ async function renameScrap(view) {
   tellLayout();
 }
 
-// A name asked while the Find dialog is open: the small dialog on top of it.
+// A name asked while the Find dialog is open: the small dialog on top of it (in its window).
 function askTextOver(dialog, title, value) {
   return askText(title, value).then(name => {
     dialog.querySelector('.find-named')?.focus();

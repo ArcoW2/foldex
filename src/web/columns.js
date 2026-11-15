@@ -336,38 +336,15 @@ function saveMine(mine) {
   post({ op: 'columnSetsSave', mine });
 }
 
-// More columns: every property Windows has for columns, searchable; a click adds or takes away a column.
+// More columns: every property Windows has for columns, searchable; a click adds or takes away a column. In a modal
+// floating window (plan 14 3.7, dialogpage.js moreColumnsHere); each click changes the pane's columns here at once.
 async function moreColumns(view) {
   const list = await askPropList();
-  const dialog = document.createElement('dialog');
-  dialog.className = 'ask more-columns';
-  dialog.innerHTML = '<p>More columns: every property Windows has. A click adds or removes one.</p>' +
-    '<input class="filter" spellcheck="false" placeholder="Type to find a property"><div class="props"></div>' +
-    '<div class="buttons"><button class="ok">Close</button></div>';
-  const fill = () => {
-    const words = dialog.querySelector('.filter').value.toLowerCase().split(/\s+/).filter(Boolean);
-    const rows = list.filter(p => words.every(w => `${p.title} ${p.name}`.toLowerCase().includes(w))).slice(0, 300);
-    dialog.querySelector('.props').replaceChildren(...rows.map(p => {
-      const label = document.createElement('label');
-      const box = document.createElement('input');
-      box.type = 'checkbox';
-      box.checked = view.cols.columns.some(c => c.id === p.name);
-      box.addEventListener('change', () => {
-        if (box.checked) view.cols.columns.push({ id: p.name, width: 10 });
-        else view.cols.columns = view.cols.columns.filter(c => c.id !== p.name);
-        view.columnsChanged();
-      });
-      label.append(box, ` ${p.title}`);
-      label.title = p.name;
-      return label;
-    }));
-  };
-  dialog.querySelector('.filter').addEventListener('input', fill);
-  dialog.querySelector('.ok').addEventListener('click', () => { dialog.close(); dialog.remove(); });
-  dialog.addEventListener('close', () => dialog.remove());
-  document.body.append(dialog);
-  fill();
-  dialog.showModal();
+  await dialogWindow('More columns', { what: 'moreColumns', list, shown: view.cols.columns.map(c => c.id) }, m => {
+    if (m.on) view.cols.columns.push({ id: m.name, width: 10 });
+    else view.cols.columns = view.cols.columns.filter(c => c.id !== m.name);
+    view.columnsChanged();
+  });
 }
 
 // ---------- Manage sets (3.3) ----------

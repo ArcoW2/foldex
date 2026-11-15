@@ -4,6 +4,8 @@
 // case), the tokens picked from a list, and the preview: every item with its new name, live, the ones that would go
 // wrong marked; nothing is renamed before Rename. Companions (the files beside one with the same name and another
 // extension) go along as the setting renameCompanions says. Saved renames are kept for every project (renames.json).
+// The dialog is in a modal floating window of its own (plan 14 3.7, renameHere); the preview and the tokens' examples
+// are made here, where the items are, and asked for by the window.
 
 let renames = { predefined: {} };   // renames.json (RenamesFile.cs)
 
@@ -60,6 +62,70 @@ async function openRenameMany(view, ids) {
   await askPropList();
   const syntax = settings.renameTokens === 'totalcommander' ? 'totalcommander' : 'xplorer2';
   const o = { ...RenameDefaults, syntax, template: syntax === 'totalcommander' ? '[N]' : '$B', companions: settings.renameCompanions !== false };
+
+  // The names in each folder now (for "exists in that folder"): the pane's own items for its folder; for items of
+  // other folders (a scrap) what the host says is there.
+  const existing = new Map();
+  const folderKey = id => id.replace(/\\[^\\]*$/, '').toLowerCase();
+  if (view.location) existing.set(view.location.replace(/\\+$/, '').toLowerCase(), new Set(view.all.map(x => x.name.toLowerCase())));
+
+  // The values the tokens and the date ask for, read for every item once; the preview waits for them.
+  const wanted = ['System.Photo.DateTaken', 'System.Author', 'System.Title', 'System.Photo.CameraModel', 'System.Image.Dimensions'];
+  const lacking = entries.filter(x => wanted.some(n => !(x.props && n in x.props)));
+  const propsRead = lacking.length ? view.askProps(lacking, wanted) : null;
+
+  // Every item with its new name for the settings `s`.
+  const previewOf = s => {
+    const preview = renamePreview(entries.map(renameItem), s, existing);
+    // Companions along: the files beside a file whose name before the extension changes, with that name (3.5).
+    if (s.companions) {
+      const chosen = new Set(entries.map(x => x.id.toLowerCase()));
+      for (const r of [...preview]) {
+        const x = entries.find(e => e.id === r.id);
+        if (!r.changed || r.problem || x.folder || s.target === 'ext') continue;
+        const before = splitName(x.name).base, after = splitName(r.to).base;
+        if (before === after) continue;
+        for (const c of view.all ?? view.entries)
+          if (!c.folder && !chosen.has(c.id.toLowerCase()) && folderKey(c.id) === folderKey(x.id) && splitName(c.name).base.toLowerCase() === before.toLowerCase()) {
+            const to = `${after}.${splitName(c.name).ext}`;
+            preview.push({ id: c.id, name: c.name, to, changed: true, companion: true,
+              problem: existing.get(folderKey(c.id))?.has(to.toLowerCase()) && to.toLowerCase() !== c.name.toLowerCase() ? 'exists in that folder' : null });
+          }
+      }
+    }
+    return preview;
+  };
+  // The token list, each token with what it gives for the first item.
+  const tokensOf = s => {
+    const first = renameItem(entries[0]);
+    const token = (label, t) => ({ label, token: t, sample: expandTokens(t, first, 0, s) });
+    return renameTokens(syntax).map(([label, t]) => Array.isArray(t) ? { label, items: t.map(([l, x]) => token(l, x)) } : token(label, t));
+  };
+
+  const r = await dialogWindow(`Rename ${entries.length} items`, { what: 'rename', o, sample: entries[0].name, renames }, async m => {
+    if (m.renames) {
+      renames = m.renames;
+      return void post({ op: 'renamesSave', renames });
+    }
+    if (propsRead) await propsRead;
+    return { preview: previewOf(m.settings), tokens: tokensOf(m.settings) };
+  });
+  if (!r) return;
+  const todo = previewOf(r.settings).filter(x => x.changed && !x.problem);
+  // A changed extension asks first, once for all (as the rename in place).
+  if (todo.some(x => !entries.find(e => e.id === x.id)?.folder && splitName(x.to).ext.toLowerCase() !== splitName(x.name).ext.toLowerCase())
+    && !await askYes('If you change a file name extension, the file might become unusable. Are you sure you want to change it?'))
+    return view.body.focus();
+  post({ op: 'renameMany', renames: todo.map(x => [x.id, x.to]) });
+  status(`Renaming ${todo.length} items...`);
+  view.body.focus();
+}
+
+// The dialog itself (dialogpage.js, in its window): `a` from openRenameMany. Its answer: { settings }, or null for
+// Cancel.
+function renameHere(a) {
+  renames = a.renames;
+  const o = a.o, syntax = o.syntax;
   const el = (tag, props = {}, ...kids) => {
     const e = Object.assign(document.createElement(tag), props);
     e.append(...kids);
@@ -86,7 +152,7 @@ async function openRenameMany(view, ids) {
   const match = el('input', { value: '', spellcheck: false });
   const [regex, regexLabel] = check('Regular expression', false), [matchCase, caseLabel] = check('Case counts', false);
   // A part: marked in the first item's name, or by position.
-  const sample = el('input', { value: entries[0].name, readOnly: true, spellcheck: false, title: 'Mark the part to change, with the mouse or Shift and the arrows' });
+  const sample = el('input', { value: a.sample, readOnly: true, spellcheck: false, title: 'Mark the part to change, with the mouse or Shift and the arrows' });
   const from = num(1), length = num(1), [fromEnd, fromEndLabel] = check('From the end', false);
   const dateFrom = select({ found: 'The date found in the name', taken: 'The date taken', modified: 'The date modified', created: 'The date created' }, 'found');
   const dateFormat = el('input', { value: 'yyyy-MM-dd', spellcheck: false, style: 'width: 12em' });
@@ -120,7 +186,7 @@ async function openRenameMany(view, ids) {
     el('div', { className: 'find-row' }, count), list,
     el('div', { className: 'ask-buttons' }, el('span', { className: 'find-gap' }), ok, cancel),
     el('datalist', { id: 'rn-formats' }, ...DateFormats.map(f => el('option', { value: f }))));
-  dialog.append(el('div', { className: 'find-title', textContent: `Rename ${entries.length} items` }), form);
+  dialog.append(el('div', { className: 'find-title', textContent: 'Rename' }), form);
   document.body.append(dialog);
 
   // The settings as the fields have them.
@@ -138,41 +204,18 @@ async function openRenameMany(view, ids) {
     counterStart.value = s.counter.start; counterStep.value = s.counter.step; counterDigits.value = s.counter.digits; companions.checked = s.companions;
   };
 
-  // The names in each folder now (for "exists in that folder"): the pane's own items for its folder; for items of
-  // other folders (a scrap) what the host says is there.
-  const existing = new Map();
-  const folderKey = id => id.replace(/\\[^\\]*$/, '').toLowerCase();
-  if (view.location) existing.set(view.location.replace(/\\+$/, '').toLowerCase(), new Set(view.all.map(x => x.name.toLowerCase())));
-
-  // The values the tokens and the date ask for, read for every item once.
-  const wanted = ['System.Photo.DateTaken', 'System.Author', 'System.Title', 'System.Photo.CameraModel', 'System.Image.Dimensions'];
-  const lacking = entries.filter(x => wanted.some(n => !(x.props && n in x.props)));
-  if (lacking.length) view.askProps(lacking, wanted).then(() => update());
-
-  let preview = [];
-  const update = () => {
+  // The preview and the tokens' examples, from the window's page; only the last one asked is shown.
+  let asked = 0;
+  const update = async () => {
     const s = settingsNow();
     for (const [name, el] of Object.entries(rows)) el.hidden = !({
       template: ['pattern', 'part', 'replace', 'replaceAll'], match: ['replace', 'replaceAll'], part: ['part'], date: ['date'],
       counter: syntax === 'totalcommander' ? ['pattern', 'part', 'replace', 'replaceAll'] : [] }[name].includes(s.mode));
     rows.template.querySelector('.find-label').textContent = s.mode === 'pattern' ? 'New name' : 'Put in';
-    preview = renamePreview(entries.map(renameItem), s, existing);
-    // Companions along: the files beside a file whose name before the extension changes, with that name (3.5).
-    if (s.companions) {
-      const chosen = new Set(entries.map(x => x.id.toLowerCase()));
-      for (const r of [...preview]) {
-        const x = entries.find(e => e.id === r.id);
-        if (!r.changed || r.problem || x.folder || s.target === 'ext') continue;
-        const before = splitName(x.name).base, after = splitName(r.to).base;
-        if (before === after) continue;
-        for (const c of view.all ?? view.entries)
-          if (!c.folder && !chosen.has(c.id.toLowerCase()) && folderKey(c.id) === folderKey(x.id) && splitName(c.name).base.toLowerCase() === before.toLowerCase()) {
-            const to = `${after}.${splitName(c.name).ext}`;
-            preview.push({ id: c.id, name: c.name, to, changed: true, companion: true,
-              problem: existing.get(folderKey(c.id))?.has(to.toLowerCase()) && to.toLowerCase() !== c.name.toLowerCase() ? 'exists in that folder' : null });
-          }
-      }
-    }
+    const n = ++asked;
+    const got = await askWindow({ settings: s });
+    if (n !== asked) return;
+    const preview = got.preview ?? [];
     const changed = preview.filter(r => r.changed), wrong = preview.filter(r => r.problem);
     count.textContent = `${changed.length} of ${preview.length} renamed` + (wrong.length ? `; ${wrong.length} cannot be: see the marked lines` : '');
     ok.disabled = !changed.length || wrong.length > 0;
@@ -180,6 +223,9 @@ async function openRenameMany(view, ids) {
       ...preview.map(r => el('div', { className: 'rn-row' + (r.changed ? '' : ' same') + (r.problem ? ' wrong' : '') + (r.companion ? ' companion' : ''),
         title: r.problem ? `Cannot be: ${r.problem}` : r.companion ? 'A companion: renamed along' : '' },
         el('span', { textContent: r.name }), el('span', { textContent: r.to + (r.problem ? `  (${r.problem})` : '') }))));
+    const option = t => el('option', { value: t.token, textContent: `${t.label}   ${t.token}   ${t.sample}` });
+    tokens.replaceChildren(el('option', { value: '', textContent: 'Tokens...' }), ...(got.tokens ?? []).map(t => t.items
+      ? el('optgroup', { label: t.label }, ...t.items.map(option)) : option(t)));
   };
   let timer = 0;
   const later = () => { clearTimeout(timer); timer = setTimeout(update, 80); };
@@ -202,19 +248,9 @@ async function openRenameMany(view, ids) {
   sample.addEventListener('mouseup', marked);
   sample.addEventListener('keyup', marked);
 
-  // The token list filled again when it is opened (the examples follow the settings); the cursor's place in the
-  // pattern kept for it.
+  // The cursor's place in the pattern kept for the token list.
   let cursor = null;
   template.addEventListener('blur', () => { cursor = [template.selectionStart, template.selectionEnd]; });
-  const fillTokens = () => {
-    const first = renameItem(entries[0]);
-    const sampleOf = token => expandTokens(token, first, 0, settingsNow());
-    const option = (label, token) => el('option', { value: token, textContent: `${label}   ${token}   ${sampleOf(token)}` });
-    tokens.replaceChildren(el('option', { value: '', textContent: 'Tokens...' }), ...renameTokens(syntax).map(([label, token]) => Array.isArray(token)
-      ? el('optgroup', { label }, ...token.map(([l, t]) => option(l, t))) : option(label, token)));
-  };
-  tokens.addEventListener('mousedown', fillTokens);
-  tokens.addEventListener('focus', fillTokens);
   tokens.addEventListener('change', () => {
     const token = tokens.value;
     tokens.value = '';
@@ -238,12 +274,12 @@ async function openRenameMany(view, ids) {
     const s = settingsNow();
     delete s.syntax;
     renames = { predefined: { ...renames.predefined, [name]: s } };
-    post({ op: 'renamesSave', renames });
+    askWindow({ renames });
     if (![...predefined.options].some(x => x.value === name)) predefined.append(el('option', { value: name, textContent: name }));
     predefined.value = name;
   });
 
-  fillTokens();
+  ok.disabled = true;
   update();
   dialog.showModal();
   template.select();
@@ -251,16 +287,8 @@ async function openRenameMany(view, ids) {
   form.addEventListener('submit', e => {
     if (e.submitter === ok && ok.disabled) e.preventDefault();
   });
-  dialog.addEventListener('close', async () => {
+  return new Promise(resolve => dialog.addEventListener('close', () => {
     dialog.remove();
-    if (dialog.returnValue !== 'ok') return view.body.focus();
-    const todo = preview.filter(r => r.changed && !r.problem);
-    // A changed extension asks first, once for all (as the rename in place).
-    if (todo.some(r => !entries.find(x => x.id === r.id)?.folder && splitName(r.to).ext.toLowerCase() !== splitName(r.name).ext.toLowerCase())
-      && !await askYes('If you change a file name extension, the file might become unusable. Are you sure you want to change it?'))
-      return view.body.focus();
-    post({ op: 'renameMany', renames: todo.map(r => [r.id, r.to]) });
-    status(`Renaming ${todo.length} items...`);
-    view.body.focus();
-  }, { once: true });
+    resolve(dialog.returnValue === 'ok' ? { settings: settingsNow() } : null);
+  }, { once: true }));
 }
