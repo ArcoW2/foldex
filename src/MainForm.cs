@@ -232,6 +232,18 @@ sealed class MainForm : Form
                 Post(new JsonObject { ["event"] = "answer", ["req"] = msg["req"]?.DeepClone(), ["state"] = state });
                 break;
             }
+            // A modal floating window (plan 14 3.7): a dialog's page in a window of its own over this one, which waits
+            // for it; its answer (the page's `done`) when it closes. Its page talks to this one's meanwhile (fromPane).
+            case "dialogOpen":
+            {
+                var id = msg["pane"]!.GetValue<string>();
+                using var form = new PaneForm(app, this, id, msg["page"]!.GetValue<string>(), msg["title"]?.GetValue<string>() ?? "Foldex", null, modal: true);
+                floating[id] = form;
+                form.ShowDialog(this);
+                floating.Remove(id);
+                Post(new JsonObject { ["event"] = "answer", ["req"] = msg["req"]?.DeepClone(), ["value"] = form.Result?.DeepClone() });
+                break;
+            }
             case "paneSend":
                 if (floating.TryGetValue(msg["pane"]!.GetValue<string>(), out var toPane)) toPane.Send(msg["msg"]!);
                 break;

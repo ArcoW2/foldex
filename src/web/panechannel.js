@@ -87,7 +87,7 @@ function paneChannel({ id, page, title, view, state, receive, menu }) {
     switch (m.kind) {
       case 'activate':   // a press in its page: its pane the active one, this window's menus closed
         closeMenus();
-        return activate(id);
+        return views.has(id) && activate(id);   // a dialog's window has no pane here
       case 'menuPick': return ch.runs?.[m.id]?.();
       case 'menuAsk': return menu && ch.menuThere(menu(), m.x, m.y);
       case 'key':   // a key the pane does not use: this window's (keys.js), as if pressed here
@@ -100,6 +100,26 @@ function paneChannel({ id, page, title, view, state, receive, menu }) {
 
   paneChannels.set(id, ch);
   return ch;
+}
+
+// A modal floating window (plan 14 3.7): a dialog's page (dialog.html, dialogpage.js) in a window of its own over this
+// one, which waits for it. `args` say which dialog and what it needs from here; what it asks of the host meanwhile goes
+// through here (askHost, post, status), and its answer comes back when it closes (null: cancelled). The keyboard back in
+// the active pane after.
+let dialogWindows = 0;
+async function dialogWindow(title, args) {
+  const id = `dialog:${++dialogWindows}`;
+  const ch = paneChannel({ id, page: 'dialog.html', title, view: () => document.body, state: () => new Map([['args', { kind: 'args', ...args }]]),
+    receive: async m => {
+      if (m.kind === 'host') ch.send({ kind: 'answer', key: `answer:${m.req}`, req: m.req, value: await askHost(m.msg) });
+      else if (m.kind === 'post') post(m.msg);
+      else if (m.kind === 'status') status(m.text, m.warn);
+    } });
+  Object.assign(ch, { floating: true, floatReady: false, floatQueue: new Map() });
+  const m = await askHost({ op: 'dialogOpen', pane: id, page: 'dialog.html', title });
+  paneChannels.delete(id);
+  activeView()?.body.focus();
+  return m.value ?? null;
 }
 
 // The look of this window for every pane's page (applyTheme, app.js): its root's own values and marks.

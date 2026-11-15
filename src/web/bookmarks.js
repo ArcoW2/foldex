@@ -293,7 +293,7 @@ async function bookmarksPageAsks(view, m) {
     case 'save': return saveBookmarks(m.bookmarks);
     case 'remove': return removeBookmark(m.id);
     case 'newFolder': return made(await newBookmarkFolder(m.quick, placeOf(m.quick, m.place)));
-    case 'newBookmark': return made((await editBookmark(null, { quickAccess: m.quick }, placeOf(m.quick, m.place)))?.id);
+    case 'newBookmark': return made((await editBookmark(null, { quickAccess: m.quick }, m.place ? { ...m.place, quick: m.quick } : null))?.id);
     case 'edit':
       await editBookmark(m.id);
       return made(m.id);
@@ -354,10 +354,23 @@ function saveBookmarks(list) {
 
 // ---------- Edit (3.4): one bookmark, all of it ----------
 
+// Edit in a modal floating window of its own (plan 14 3.7): its page (dialog.html) runs editBookmarkHere with what it
+// needs from here (the bookmarks, the key set's keys.json part, the bookmark's icon). `place`: { group, at, quick } for
+// a new one (Manage: after the selected row); null: at the end of its tab. Resolves to the entry kept, or null.
+async function editBookmark(id, start = {}, place = null) {
+  const old = id ? bookmarkById(id) : null;
+  if (id && !old) return null;
+  if (old && !isGroup(old) && !(bookmarkEntries.get(old.location.toLowerCase())?.icon >= 0)) await askBookmarkEntries();
+  const pictures = old && !isGroup(old) ? { [old.location.toLowerCase()]: bookmarkPicture(old) } : {};
+  const kept = await dialogWindow(old ? `Edit bookmark: ${bookmarkName(old)}` : 'New bookmark',
+    { what: 'editBookmark', id, start, place, bookmarks, paths: bookmarkPaths, keysFile: keys.file, pictures });
+  return kept ? bookmarkById(kept) ?? { id: kept } : null;
+}
+
 // Edit for the entry with the id, or (null) a new one, its Browse... opened at once, starting with `start` (Manage's
-// Quick access tab: quickAccess). Resolves to the entry kept, or null for Cancel.
+// Quick access tab: quickAccess). Resolves to the entry kept, or null for Cancel. Run in Edit's own window (editBookmark).
 // `place` (tree, entry): where a new one goes (Manage: after the selected row); without, at the end of its tab.
-function editBookmark(id, start = {}, place = null) {
+function editBookmarkHere(id, start = {}, place = null) {
   const old = id ? bookmarkById(id) : null;
   if (id && !old) return Promise.resolve(null);
   const b = { ...(old ?? { location: '', ...start }) };

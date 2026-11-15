@@ -50,13 +50,15 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 | Kinds stated | every pane kind says which it can be (PaneCan); Float and Dock offered only where it can | 3.7; 6.1 |
 | Log as a page | the Log, docked or floating | 3.0; 6.1 |
 | Manage the bookmarks | a pane page (docked or floating), no longer a modal dialog; first floating, then where it was last | 3.0; 3.7; 6.2 |
+| Modal floating windows: the window | `PaneForm` shown modal with a dialog's page (`dialog.html`, `dialogpage.js`), as large as its dialog, its host requests through the window's page | 3.7; 6.3 |
+| Modal floating windows: a name asked, Edit a bookmark | askText; Edit a bookmark with Change Icon inside it | 3.7; 6.3 |
 
 ### Not yet built
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
 | Dock by dragging | a floating pane's window dragged onto its Foldex window docks it there, the places lit as for a docked pane | -- | 3.1 |
-| Modal floating windows | the dialogs that ask and wait, each a page modal in a window of its own that can be moved anywhere | The floating window | 3.0; 3.7 |
+| Modal floating windows: the others | Move to folder... (Manage), the Size of a bar, the Projects window's question, Find, Rename, More columns | -- | 3.7 |
 | Panes of their own | Manage column sets, F1, Settings, Projects as pane pages, docked or floating | The floating window | 3.0; 3.7 |
 | Preview and Info as pages | Windows' preview over a frame and over a floating window; Foldex's own preview; Info | The floating window | 3.0 |
 | F3 | a preview in a new floating window | Preview and Info as pages | 3.5 |
@@ -251,3 +253,26 @@ None.
   new name, the row selected after); Dock (the same rows in its frame, at the right); closed and opened again where it
   was (docked); floated, its Close button (the pane closed, its window gone), opened again floating; floating again
   after a restart. `dotnet test`: 224 passed.
+
+### 6.3 Stage 3: modal floating windows (first part)
+
+- The host: `PaneForm` with `modal`: no owner set (ShowDialog owns it), fixed, no minimize or maximize, its caption
+  the dialog's title; its page's `size` (CSS px, times the screen's scale) makes it that large inside, the first time
+  in the middle of its window, kept on its screen; its page's `done` is its answer and closes it. MainForm's op
+  `dialogOpen` shows it with ShowDialog over the window (which takes no key or click meanwhile) and answers when it
+  closes.
+- The page: `dialog.html` loads what the dialogs need (buttons.js, menu.js, pane.js, panes.js, keys.js, actions.js,
+  bookmarktree.js, bookmarks.js) and `dialogpage.js`, which stands in for what that code takes from the window's page:
+  askHost, post and status through the window's page (its answers back by request), askYes, the icons it was sent, no
+  panes. The dialog's own code runs unchanged: its first `showModal` shows it in place, filling the window (the window
+  itself is modal); a dialog it opens itself (Change Icon over Edit) is modal inside it, and the window grows to hold
+  both. Esc cancels the dialog shown in place.
+- The window's page: `dialogWindow(title, args)` (panechannel.js), a channel of its own for the window's time, passing
+  the dialog's host requests on. `askText` (projectmenu.js) asks in such a window; `editBookmark` (bookmarks.js) opens
+  Edit in one, the dialog itself now `editBookmarkHere`, run there with the bookmarks, keys.json's keys (for the
+  clashes) and the bookmark's icon; a new one's place goes as { group, at, quick }.
+- Tests in the test copy (CDP into the dialog's page, UI Automation, Win32 IsWindowEnabled): a name asked in its own
+  window, the main window disabled while it is open and enabled after; moved to the screen's corner, off the main
+  window; a typed name and Enter answered, Esc answered null; Edit a bookmark in its window with its fields and icon,
+  Custom opening Change Icon inside it (the window grown), an icon chosen, a new name, OK: the bookmark saved with both;
+  Cancel answered nothing. `dotnet test`: 224 passed.

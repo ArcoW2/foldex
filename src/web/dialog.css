@@ -1,0 +1,20 @@
+/* A modal floating window's page (dialog.html; plan 14 3.7), after app.css and pane.css: its dialog fills the window
+   (the window takes the dialog's size), without the frame and the title a dialog over the page has (the window has
+   both). A dialog it opens itself (Change Icon over Edit) is modal inside it, as over the page. The widths are the
+   dialogs' own, not a share of the window (the window follows the dialog, not the other way round). */
+html, body { background: var(--bg-bar); }
+body { overflow: hidden; }
+dialog.inline[open] {
+  position: absolute;
+  inset: 0 auto auto 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  max-width: none;
+  max-height: none;
+  box-sizing: border-box;
+}
+dialog.inline > .find-title { display: none; }
+dialog.inline.ask { width: 380px; }
+dialog.bm-edit { width: 620px; }
+dialog.bm-icons { width: 520px; }
