@@ -191,7 +191,7 @@ function filterTest(pattern) {
 // What each kind of pane can be (docs/plans/14-PLAN-floating-panes.md 3.7): docked, floating, or both. A pane of a page
 // of its own (a PreviewView: the previews, Info, and every PageView; a tree, a list or a scrap of pagedviews.js) can
 // float; the others are docked until they are pages (plan 14 3.0, the stages).
-const PaneCan = { tree: ['docked'], list: ['docked', 'floating'], scrap: ['docked', 'floating'], preview: ['docked', 'floating'], log: ['docked', 'floating'],
+const PaneCan = { tree: ['docked', 'floating'], list: ['docked', 'floating'], scrap: ['docked', 'floating'], preview: ['docked', 'floating'], log: ['docked', 'floating'],
   bookmarks: ['docked', 'floating'], columnsets: ['docked', 'floating'], palette: ['docked', 'floating'],
   settings: ['docked', 'floating'], projects: ['docked', 'floating'] };
 const canFloat = id => (PaneCan[layout.pane(id)?.kind] ?? ['docked']).includes('floating')
@@ -810,6 +810,17 @@ class TreeView {
   toggle(id) {
     const n = this.place(id);
     if (n) this.expand(n, !n.expanded);
+  }
+
+  // Open, the switch (toggleFolder): a folder opened or closed here; romChild: asked in a child, which follows it.
+  async toggleOpen(item, fromChild) {
+    const node = this.place(item.id);
+    if (node?.expanded) return this.expand(node, false);
+    if (fromChild) {
+      await this.reveal(item.id);
+      followNow(this.id, item);
+    }
+    if (this.place(item.id)) await this.expand(this.place(item.id));
   }
 
   flatten() {
@@ -3191,7 +3202,7 @@ function newRootPane(path, place = { area: 'left' }, top = null) {
   const id = layout.add({ kind: 'tree', content: 'folders' });
   layout.pane(id).colour = layout.newColour(drawn);
   if (top) layout.pane(id).top = top;
-  const tree = placeView(new TreeView(id), place);
+  const tree = placeView(makeView(id), place);
   activate(id);
   tree.body.focus();   // the keyboard in it (the arrows, Page Up / Down are the pane's own)
   tree.ready = tree.init().then(() => top ? tree.reveal(top) : path ? tree.reveal(path) : tree.select(ThisPC));
@@ -3732,17 +3743,13 @@ async function toggleFolder(item) {
   if (!item?.folder) return;
   const tree = treeFor(activePane);
   if (!tree) return execute(activePane, item);   // no tree to open it in: as a double-click
-  const node = tree.place(item.id);
-  if (node?.expanded) await tree.expand(node, false);
-  else {
-    // In a child the parent opens it, and the child follows (3.3).
-    if (tree.id !== activePane) {
-      await tree.reveal(item.id);
-      apply(layout.focus(tree.id, item));
-    }
-    if (tree.place(item.id)) await tree.expand(tree.place(item.id));
-  }
+  await tree.toggleOpen(item, tree.id !== activePane);
   ribbonRefresh();
+}
+
+// The children of a pane follow its focus at once (not after followDelay; a pane's page: in its window, viewpage.js).
+function followNow(id, item) {
+  apply(layout.focus(id, item));
 }
 
 // The folder new things go into: the list's folder, the tree's focused folder; only folders on disk.

@@ -172,7 +172,7 @@ let bookmarkItemFocus = null;   // { folder, item }
 function focusItemWhenListed(folder, item) {
   bookmarkItemFocus = { folder, item };
   for (const v of views.values())
-    if (v instanceof ListView && !(v instanceof ScrapView) && same(v.location, folder) && !listeners.has(v.id) && itemListed(v)) return;
+    if (v instanceof ListView && !(v instanceof ScrapView) && !isPaged(v) && same(v.location, folder) && !listeners.has(v.id) && itemListed(v)) return;
 }
 
 // A list that has the folder of the item waiting: the item selected and focused (gone: as it is, at its top). True

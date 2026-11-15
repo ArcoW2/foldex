@@ -48,7 +48,10 @@ function init(m) {
   $('panes').append(pageView.el);
   drawHeads();
   if (m.restore && pageView instanceof ScrapView) pageView.addIds(layout.pane(PanePage).items ?? []);   // a scrap's entries
-  if (m.restore) pageView.restore();   // where the pane is: its folder read
+  if (m.restore && pageView instanceof TreeView) {   // a tree: its tops (a child: its folder), then its focus
+    const focus = layout.state(PanePage).focus;
+    pageView.ready = pageView.init().then(() => pageView.folder ? null : focus ? pageView.reveal(focus, true) : pageView.select(ThisPC, true));
+  } else if (m.restore) pageView.restore();   // where the pane is: its folder read
 }
 
 // ---------- What it shows, to its window (sync) ----------
@@ -74,7 +77,8 @@ function flush() {
   const scrap = v instanceof ScrapView;
   const msg = { kind: 'sync', fields, location: v.location ?? null, name: v.name ?? null, title: v.el.querySelector('.title').textContent,
     text: v.locationText(), message: v.message ?? null, count: v.itemCount?.() ?? 0, entries: shown, selected: [...(v.selected ?? [])],
-    all: v.all?.length ?? 0, allIds: scrap ? v.all.map(x => x.id) : undefined, searching: !!v.searching, watch: watchedHere(v) };
+    all: v.all?.length ?? 0, allIds: scrap ? v.all.map(x => x.id) : undefined, searching: !!v.searching, watch: watchedHere(v),
+    tree: v instanceof TreeView ? treeHere(v) : undefined };
   const text = JSON.stringify(msg);
   if (text === lastSync && !Object.keys(flags).length) return;
   lastSync = text;
@@ -85,7 +89,15 @@ function flush() {
 // entries (up to ScrapWatchMax).
 function watchedHere(v) {
   if (v instanceof ScrapView) return [...new Set(v.all.map(x => folderOf(x.id)))].slice(0, ScrapWatchMax);
+  if (v instanceof TreeView) return [...(v.folder && v.root ? [v.root] : []), ...v.flat.filter(n => n.expanded && !n.qa && !n.bmGroup).map(n => n.id)];
   return v instanceof ListView && v.location ? [v.location] : [];
+}
+
+// Of a tree what its window asks (pagedviews.js): its folder, its focused row, the folders open, a quick access entry focused.
+function treeHere(v) {
+  const row = n => n && { id: n.id, name: n.name, folder: n.folder !== false, expanded: !!n.expanded, bm: n.bm, bmGroup: n.bmGroup };
+  return { folder: v.folder, root: v.root, focus: row(v.focused()), open: v.allNodes().filter(n => n.expanded).map(n => n.id.toLowerCase()),
+    qa: row(v.quickAccessShortcut()) };
 }
 
 // ---------- What goes to the window ----------
@@ -119,6 +131,10 @@ focusItem = (paneId, item) => {
 recordStep = () => { flush(); toWindow({ kind: 'step' }); };
 execute = (paneId, item) => { flush(); toWindow({ kind: 'execute', item }); };
 goTo = (paneId, path) => { flush(); toWindow({ kind: 'goTo', path }); };
+followNow = (paneId, item) => { flush(); toWindow({ kind: 'followNow', item }); };
+// Functions of the window's page (the bookmarks are opened there, in its active pane).
+const WindowFunctions = ['openBookmark'];
+for (const name of WindowFunctions) globalThis[name] = (...args) => { flush(); toWindow({ kind: 'windowFn', fn: name, args }); };
 showGlobal = id => toWindow({ kind: 'global', id });
 status = (text, warn = false) => toWindow({ kind: 'status', text, warn });
 activate = id => { if (activePane !== id) toWindow({ kind: 'activate' }); };
@@ -157,12 +173,20 @@ Object.defineProperties(views, {
   size: { get: () => layout.panes.size },
 });
 
-// Drawn again: the window may want to know what changed.
+// Drawn again: the window may want to know what changed, when something did (not on a scroll: a cheap key first).
+let drawnKey = '';
 for (const C of [ListView, TreeView]) {
   const render = C.prototype.render;
   C.prototype.render = function (...args) {
     const out = render.apply(this, args);
-    if (this === pageView) syncSoon();
+    if (this !== pageView) return out;
+    const s = layout.state(this.id);
+    const key = [s.focus, s.location, this.location, this.root, this.name, this.message, this.selected?.size, this.entries?.length, this.all?.length,
+      this.flat?.length, this.searching, this.el.querySelector('.title').textContent].join('|');
+    if (key !== drawnKey) {
+      drawnKey = key;
+      syncSoon();
+    }
     return out;
   };
 }
@@ -184,6 +208,7 @@ function fromWindow(m) {
       });
     }
     case 'action': return runAction(m.name, m.params, { from: 'window' });
+    case 'global': return globalThis[m.fn](...m.args);   // a function of the window's page here as well
     case 'run':   // a function of the window's page on this pane (PageFunctions)
       takeRecord(m.record);
       return globalThis[m.fn](PanePage, ...m.args);

@@ -8,14 +8,14 @@
 // app.js.
 
 // The kinds of pane whose views are pages of their own.
-const PagedKinds = new Set(['list', 'scrap']);
+const PagedKinds = new Set(['tree', 'list', 'scrap']);
 // What of a pane this page decides (its connections, its place, its history); the rest its page does.
 const WindowFields = ['id', 'source', 'colour', 'pinned', 'activeKey', 'lastKey', 'lastChild', 'away', 'floating', 'floatBounds',
   'histories', 'recall', 'kind', 'fixed', 'info', 'path'];
 // The actions that run in the page of the active pane: they work on its rows themselves.
 const PageActions = new Set(['item.rename', 'folder.new', 'file.new']);
 // The methods of a stand-in answered here, from what its page told: they read the layout and that only.
-const PagedHere = new Set(['ids', 'content', 'iconsView', 'thumbsView', 'shows', 'tabTitle']);
+const PagedHere = new Set(['ids', 'content', 'iconsView', 'thumbsView', 'shows', 'tabTitle', 'showsFiles', 'quickAccessShown', 'topFolder']);
 // The events of the host every pane's page gets as well: what they change is used there too.
 const PageEvents = new Set(['settings', 'columnSets', 'bookmarks', 'searches', 'renames', 'propList', 'fileOp', 'folderChanged']);
 
@@ -43,6 +43,15 @@ function pagedView(id) {
   v.body.addEventListener('focus', () => v.channel.focus());
   v.itemCount = () => v.count;
   v.locationText = () => v.text ?? '';
+  // A tree: whether it shows its parent's folder, and of its rows what this page asks (the focused one, which are open).
+  if (kind === 'tree') {
+    Object.assign(v, { folder: layout.pane(id).source !== null, root: null, flat: [], open: new Set(), focusNode: null, qa: null });
+    v.node = nid => nid != null && v.focusNode && same(v.focusNode.id, nid) ? v.focusNode : null;
+    v.place = nid => nid == null ? null : v.node(nid) ?? (v.open.has(nid.toLowerCase()) ? { id: nid, expanded: true } : null);
+    v.placesOf = nid => v.node(nid) ? [v.node(nid)] : [];
+    v.focused = () => v.focusNode;
+    v.quickAccessShortcut = () => v.qa;
+  }
   // A scrap's head: Stop while it searches, and its X (ScrapView).
   if (kind === 'scrap') {
     v.el.classList.add('scrap');
@@ -89,6 +98,7 @@ function pagedReceive(v, m) {
         selected: new Set(m.selected), all: m.allIds ? m.allIds.map(x => ({ id: x })) : new Array(m.all), searching: m.searching, watch: m.watch });
       v.el.querySelector('.title').textContent = m.title;
       if (v.stopButton) v.stopButton.hidden = !m.searching;
+      if (m.tree) Object.assign(v, { folder: m.tree.folder, root: m.tree.root, focusNode: m.tree.focus, open: new Set(m.tree.open), qa: m.tree.qa });
       if (m.tell) tellLayout();
       if (m.tabs) drawTabs();
       if (m.ribbon) ribbonRefresh();
@@ -115,6 +125,8 @@ function pagedReceive(v, m) {
       activate(id);
       return runAction(m.name, m.params, { from: 'page' });
     case 'callPane': return views.get(m.pane)?.[m.method]?.(...m.args);
+    case 'followNow': return followNow(id, m.item);
+    case 'windowFn': return globalThis[m.fn]?.(...m.args);   // a function of this page asked there (viewpage.js WindowFunctions)
     // Its page lost the focus: to this page or another pane's (nothing), or to another program (the window away, its
     // next press only brings it back: app.js ignoreActivationClick). It has it again: the window is back.
     case 'blurred': {
@@ -170,6 +182,15 @@ if (!PanePage) {
       v.channel.send({ kind: 'run', key: `run:${++runs}`, fn: name, args, record: layout.pane(id) });
     };
   }
+}
+
+// An item of a bookmark opened (bookmarks.js): focused by the list that lists its folder, in its page too.
+if (!PanePage) {
+  const focusWhenListedHere = focusItemWhenListed;
+  focusItemWhenListed = (folder, item) => {
+    for (const v of views.values()) if (isPaged(v) && v instanceof ListView) v.channel.send({ kind: 'global', key: 'focusWhenListed', fn: 'focusItemWhenListed', args: [folder, item] });
+    focusWhenListedHere(folder, item);
+  };
 }
 
 // An event of the host for the panes' pages too (PageEvents).

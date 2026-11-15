@@ -164,7 +164,7 @@ function fileOpDone(op) {
   }
   if (op.kind === 'rename' && op.moved?.length) {
     const [from, to] = op.moved[0];
-    for (const v of views.values()) if (v instanceof TreeView && v.node(from)) treeShows(v, to, false);
+    for (const v of views.values()) if (v instanceof TreeView && !isPaged(v) && v.node(from)) treeShows(v, to, false);   // a tree's page: its own
   }
 }
 
