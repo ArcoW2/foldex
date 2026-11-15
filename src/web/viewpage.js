@@ -170,6 +170,9 @@ function fromWindow(m) {
       takeRecord(m.record);
       return pageView?.[m.method]?.(...m.args);
     case 'action': return runAction(m.name, m.params, { from: 'window' });
+    case 'run':   // a function of the window's page on this pane (PageFunctions)
+      takeRecord(m.record);
+      return globalThis[m.fn](PanePage, ...m.args);
     case 'event':
       events[m.msg.event]?.(m.msg);
       if (m.msg.event === 'settings') pageView?.render();   // what the settings show in it (thumbs.js)

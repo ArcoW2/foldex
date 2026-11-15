@@ -2961,6 +2961,10 @@ function setPaneShape(id, kind) {
   }
   pane.kind = kind;
   iconUsers.delete(old);
+  if (isPaged(old)) {   // its page goes (plan 14 stage 6)
+    old.close();
+    paneChannels.delete(id);
+  }
   const view = makeView(id);
   views.set(id, view);
   renderDock();

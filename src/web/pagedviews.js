@@ -139,6 +139,21 @@ if (!PanePage) {
   };
 }
 
+// Functions of this page that work on a view's rows themselves (its header, its scroll position): for such a pane, run
+// in its page, on the pane as this page has it.
+const PageFunctions = ['setPaneView', 'thumbZoom'];
+if (!PanePage) {
+  let runs = 0;
+  for (const name of PageFunctions) {
+    const here = globalThis[name];
+    globalThis[name] = (id, ...args) => {
+      const v = views.get(id);
+      if (!isPaged(v)) return here(id, ...args);
+      v.channel.send({ kind: 'run', key: `run:${++runs}`, fn: name, args, record: layout.pane(id) });
+    };
+  }
+}
+
 // An event of the host for the panes' pages too (PageEvents).
 function sendPagedEvent(m) {
   if (!PageEvents.has(m.event)) return;
