@@ -26,6 +26,18 @@ sealed class PaneForm : Form
     /// <summary>The pane, by its id in its window's layout.</summary>
     public string Id { get; }
 
+    /// <summary>Windows' preview of a floating preview pane (plan 14 3.5): over the whole window, following its size;
+    /// made when first asked for, unloaded when the window closes.</summary>
+    public Shell.PreviewHost Preview => preview ??= MakePreview();
+    Shell.PreviewHost? preview;
+    Shell.PreviewHost MakePreview()
+    {
+        var host = new Shell.PreviewHost(this);
+        Resize += (_, _) => { if (host.Visible) host.Move(ClientRectangle); };
+        FormClosed += (_, _) => host.Dispose();
+        return host;
+    }
+
     /// <summary>A dialog's window's answer (its page's `done`; null: cancelled or closed).</summary>
     public JsonNode? Result { get; private set; }
 
@@ -36,10 +48,13 @@ sealed class PaneForm : Form
     /// by its window, which stays usable (the Size of a bar).</param>
     /// <param name="first">Its size the first time (no <paramref name="bounds"/>), in px at 96 dpi: in the middle of its
     /// window (Settings, Manage projects, Manage column sets); null: narrow, beside its window's right edge.</param>
+    /// <param name="beside">The first time (no <paramref name="bounds"/>) outside its window: on another screen when
+    /// there is one, else at its window's right (F3's preview, plan 14 3.5).</param>
+    /// <param name="quiet">Shown without taking the keyboard from its window (F3's preview).</param>
     public PaneForm(AppHost app, MainForm owner, string id, string page, string title, Rectangle? bounds, bool dialog = false, bool modal = true,
-        Size? first = null)
+        Size? first = null, bool beside = false, bool quiet = false)
     {
-        (this.app, this.owner, Id, this.page, this.dialog) = (app, owner, id, page, dialog);
+        (this.app, this.owner, Id, this.page, this.dialog, this.quiet) = (app, owner, id, page, dialog, quiet);
         Text = dialog ? title : $"{title} - Foldex";
         Icon = owner.Icon;
         if (!dialog || !modal) Owner = owner;   // a modal one is owned by ShowDialog
@@ -56,6 +71,7 @@ sealed class PaneForm : Form
         var wanted = first is { } f ? new Size(Math.Min((int)(f.Width * scale), at.Width), Math.Min((int)(f.Height * scale), at.Height)) : Size.Empty;
         var fallback = dialog ? new Rectangle(at.X + (at.Width - 420) / 2, at.Y + (at.Height - 240) / 2, 420, 240)
             : first is not null ? new Rectangle(at.X + (at.Width - wanted.Width) / 2, at.Y + (at.Height - wanted.Height) / 2, wanted.Width, wanted.Height)
+            : beside ? Beside(at, scale)
             : new Rectangle(at.Right - 420, at.Y + 80, 400, Math.Min(500, Math.Max(200, at.Height - 160)));
         Bounds = bounds is { } b && Screen.AllScreens.Any(s => s.WorkingArea.IntersectsWith(b)) ? b : fallback;
         Controls.Add(web);
@@ -66,11 +82,31 @@ sealed class PaneForm : Form
         Resize += (_, _) => { rest.Stop(); rest.Start(); };
         FormClosed += (_, _) => rest.Dispose();
         ResizeEnd += (_, _) => TellBounds();
+        Shown += (_, _) => TellBounds();   // where it opened, before any move (F3 opens the next one beside it)
         FormClosing += (_, _) => TellBounds();
         FormClosed += (_, _) =>
         {
             if (!byPage && !dialog && !owner.IsDisposed) owner.Post(new JsonObject { ["event"] = "paneClosed", ["pane"] = Id });
         };
+    }
+
+    readonly bool quiet;
+    protected override bool ShowWithoutActivation => quiet;
+
+    // Beside its window `at`: in the middle of another screen when there is one, else at its window's right on its
+    // screen (inside it when there is no room); a size for a preview (chosen, not measured).
+    static Rectangle Beside(Rectangle at, double scale)
+    {
+        var size = new Size((int)(640 * scale), (int)(520 * scale));
+        var mine = Screen.FromRectangle(at);
+        if (Screen.AllScreens.FirstOrDefault(s => !s.Equals(mine)) is { } other)
+        {
+            var area = other.WorkingArea;
+            return new Rectangle(area.X + (area.Width - size.Width) / 2, area.Y + (area.Height - size.Height) / 2, size.Width, size.Height);
+        }
+        var work = mine.WorkingArea;
+        var x = Math.Min(at.Right, work.Right - size.Width);
+        return new Rectangle(Math.Max(work.X, x), Math.Max(work.Y, at.Y + 80), size.Width, Math.Min(size.Height, work.Height));
     }
 
     // Its place and size to its window's page, for the layout.

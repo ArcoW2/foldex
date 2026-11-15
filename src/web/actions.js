@@ -197,6 +197,9 @@ action('preview.toggle', { title: 'Preview', hint: 'a preview pane showing the i
   checked: () => !!preview, run: () => togglePreview() });
 action('info.toggle', { title: 'Info', hint: 'a pane with everything known of the item of the pane with the keyboard: its image, video and sound fields, its details, the file itself',
   group: 'view', checked: () => !!infoPane, run: () => toggleInfo() });
+action('preview.float', { title: 'Preview in a window', hint: 'the focused item in a new floating preview window that keeps it; F3 again opens another, to compare; Esc there closes it',
+  group: 'view', enabled: () => !!activePane && !(views.get(activePane) instanceof PreviewView) && !!layout.state(activePane).focus,
+  run: () => floatPreview() });
 const ownPreview = info => layout.followers(activePane ?? '').some(f => f.kind === 'preview' && !!f.info === info);
 action('preview.pane', { title: 'Pane preview', hint: 'a preview of the active pane only: its child, following its focused item', group: 'view',
   enabled: () => !!activeView() && !(activeView() instanceof PreviewView), checked: () => ownPreview(false), run: () => togglePanePreview(activePane, false) });

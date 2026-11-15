@@ -36,7 +36,6 @@ sealed class MainForm : Form
         Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
         StartPosition = FormStartPosition.Manual;   // AppHost.Place
         AddBrowser();
-        preview = new PreviewHost(this);
         // Drives that come or go (plan 10 3.2): Windows' device messages (WndProc) for sticks and cards; a drive mapped
         // or made with subst sends none, so the letters are also looked at every few seconds.
         drivesSoon.Tick += (_, _) =>
@@ -68,7 +67,6 @@ sealed class MainForm : Form
         Post(new JsonObject { ["event"] = "drives", ["drives"] = list });
     }
 
-    readonly PreviewHost preview;
     const int PictureSize = 1600;   // px, the longer side of Windows' picture of a file in the preview (chosen, not measured)
 
     /// <summary>Its window in the projects (ProjectStore.Window.Key).</summary>
@@ -223,7 +221,8 @@ sealed class MainForm : Form
                     Rectangle? bounds = msg["bounds"] is JsonArray { Count: 4 } b
                         ? new Rectangle(b[0]!.GetValue<int>(), b[1]!.GetValue<int>(), b[2]!.GetValue<int>(), b[3]!.GetValue<int>()) : null;
                     Size? first = msg["size"] is JsonArray { Count: 2 } wh ? new Size(wh[0]!.GetValue<int>(), wh[1]!.GetValue<int>()) : null;
-                    form = new PaneForm(app, this, id, msg["page"]!.GetValue<string>(), msg["title"]?.GetValue<string>() ?? "Pane", bounds, first: first);
+                    form = new PaneForm(app, this, id, msg["page"]!.GetValue<string>(), msg["title"]?.GetValue<string>() ?? "Pane", bounds, first: first,
+                        beside: msg["beside"]?.GetValue<bool>() == true, quiet: msg["quiet"]?.GetValue<bool>() == true);
                     floating[id] = form;
                     form.FormClosed += (_, _) => { if (floating.GetValueOrDefault(id) == form) floating.Remove(id); };
                     form.Show(this);
@@ -687,7 +686,8 @@ sealed class MainForm : Form
             case "preview":
             {
                 var path = msg["path"]!.GetValue<string>();
-                var (handler, error) = preview.Show(path, AreaOf(msg["rect"]!));
+                var pane = msg["pane"]?.GetValue<string>() ?? "";
+                var (handler, error) = PreviewOf(pane).Show(path, PreviewArea(pane, msg["rect"]));
                 // No Windows preview: Foldex's own for an image, a video, a sound or text (Shell/OwnPreview.cs; a file of
                 // an extension it does not know is looked at, and shown when it is text).
                 JsonObject? own = null;
@@ -703,7 +703,7 @@ sealed class MainForm : Form
                 if (error is not null && own is null && !Directory.Exists(path) && await NetworkGuard.Reachable(path)
                     && await StaWorker.Once("previewPicture", () => Shell.Thumbnails.Picture(path, PictureSize)) is string picture)
                     own = new JsonObject { ["kind"] = "image", ["url"] = picture };
-                Post(new JsonObject { ["event"] = "previewShown", ["path"] = path, ["handler"] = handler, ["error"] = error, ["own"] = own });
+                Post(new JsonObject { ["event"] = "previewShown", ["pane"] = pane, ["path"] = path, ["handler"] = handler, ["error"] = error, ["own"] = own });
                 break;
             }
             case "previewPicture":
@@ -724,17 +724,27 @@ sealed class MainForm : Form
                 break;
             }
             case "previewMove":
-                preview.Move(AreaOf(msg["rect"]!));
+            {
+                var pane = msg["pane"]?.GetValue<string>() ?? "";
+                PreviewOf(pane).Move(PreviewArea(pane, msg["rect"]));
                 break;
+            }
+            // The docked previews of this window as pictures while a dialog or menu of the page lies over them, and
+            // back after (the page's previewCoverCheck).
             case "previewSnapshot":
-                Post(new JsonObject { ["event"] = "previewSnapshot", ["url"] = preview.Snapshot() });
+                foreach (var (pane, host) in previews)
+                    if (host.Visible) Post(new JsonObject { ["event"] = "previewSnapshot", ["pane"] = pane, ["url"] = host.Snapshot() });
                 break;
             case "previewRestore":
-                preview.Restore();
+                foreach (var host in previews.Values) host.Restore();
                 break;
             case "previewClose":
-                preview.Unload();
+            {
+                var pane = msg["pane"]?.GetValue<string>() ?? "";
+                if (floating.TryGetValue(pane, out var f)) f.Preview.Unload();
+                else if (previews.TryGetValue(pane, out var host)) host.Unload();
                 break;
+            }
             case "nativeList":
                 Post(await NativeListYardstick(msg["location"]!.GetValue<string>()));
                 break;
@@ -953,6 +963,18 @@ sealed class MainForm : Form
     // The page gives positions in its own pixels times devicePixelRatio: the browser's client pixels.
     Point ToScreen(JsonObject msg) =>
         web.PointToScreen(new Point((int)msg["x"]!.GetValue<double>(), (int)msg["y"]!.GetValue<double>()));
+
+    // Windows' preview of a preview pane (plan 04; plan 14 3.5): docked, a native window of its own over the pane's area
+    // in this window; floating, its window's (PaneForm.Preview), over the whole window.
+    readonly Dictionary<string, PreviewHost> previews = [];
+    PreviewHost PreviewOf(string pane)
+    {
+        if (floating.TryGetValue(pane, out var f)) return f.Preview;
+        if (!previews.TryGetValue(pane, out var host)) previews[pane] = host = new PreviewHost(this);
+        return host;
+    }
+    Rectangle PreviewArea(string pane, JsonNode? rect) =>
+        floating.TryGetValue(pane, out var f) ? f.ClientRectangle : rect is null ? Rectangle.Empty : AreaOf(rect);
 
     Rectangle AreaOf(JsonNode rect) => new(web.Left + (int)rect["x"]!.GetValue<double>(), web.Top + (int)rect["y"]!.GetValue<double>(),
         (int)rect["width"]!.GetValue<double>(), (int)rect["height"]!.GetValue<double>());

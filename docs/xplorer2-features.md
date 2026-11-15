@@ -122,7 +122,7 @@ updated whenever a plan is written, built or closed that touches a feature here.
 | Enter archive (7z, RAR via plugins) | U | -- | 3 | Total Commander plugins (WCX) |
 | Replace Explorer (Win+E, folder opening) | P+ | -- | 3 | -- |
 | UNC paths, map network drive | P+ | part: UNC listed, cached, a share that does not answer not waited for (plan 24); Network shows nothing here [not yet checked why] | 3 | -- |
-| Peek preview (large popup) | P+ | plan 14 (F3: a preview in a floating window) | 2 | Own viewers |
+| Peek preview (large popup) | P+ | built (plan 14: F3, a preview in a floating window) | 2 | Own viewers |
 
 ## Customisation and automation
 

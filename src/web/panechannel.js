@@ -45,13 +45,14 @@ function paneChannel({ id, page, title, view, state, receive, menu }) {
 
   // Into a window of its own, where it was last (`bounds`, kept with the layout). Its page there says when it is
   // ready; then it gets everything it shows. `size`: [w, h] in CSS px for a first time (no `bounds`), in the middle of
-  // the window; without it, narrow beside the window's right edge.
-  ch.float = (bounds, size = null) => {
+  // the window; without it, narrow beside the window's right edge. `beside`: the first time outside the window (on
+  // another screen when there is one); `quiet`: shown without taking the keyboard (F3's preview).
+  ch.float = (bounds, size = null, { beside = false, quiet = false } = {}) => {
     if (ch.floating) return post({ op: 'paneFloat', pane: id, page, title });
     ch.floating = true;
     ch.floatReady = false;
     ch.floatQueue = new Map();
-    post({ op: 'paneFloat', pane: id, page, title, bounds, size });
+    post({ op: 'paneFloat', pane: id, page, title, bounds, size, beside, quiet });
   };
 
   // Back in this window (its window closed by the host, or by its own close button): in its frame again, showing what

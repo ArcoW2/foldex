@@ -8,6 +8,7 @@ Status: partly executed; see Status and 6 (As built).
 - 2026-11-15: partly executed: stage 3 (modal floating windows: a name asked, Edit a bookmark, Move to folder...,
   About, Find, Rename, More columns; the Size of a bar, not modal).
 - 2026-11-15: partly executed: stage 4 (Manage column sets, F1, Settings and Manage projects as pages).
+- 2026-11-15: partly executed: stage 5 (Preview and Info as pages, F3).
 
 Builds on plan 12 (docking panes) and plan 03 (connected panes). The number in the file name is the priority; rename to
 reorder.
@@ -56,6 +57,8 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 | Modal floating windows: the window | `PaneForm` shown modal with a dialog's page (`dialog.html`, `dialogpage.js`), as large as its dialog, its host requests through the window's page | 3.7; 6.3 |
 | Modal floating windows: a name asked, Edit a bookmark | askText; Edit a bookmark with Change Icon inside it; Move to folder... (Manage) | 3.7; 6.3 |
 | Modal floating windows: Find, Rename, More columns | each in a window of its own; what only the window's page has (the items, the pane's columns) asked of it while open | 3.7; 6.4 |
+| Preview and Info as pages | preview.html: Foldex's own preview, its messages and Info drawn by the page; Windows' preview per pane, over the frame docked, over its window floating; both can float | 3.0; 6.9 |
+| F3 | a preview of the focused item in a new floating window that keeps it, beside the window, the keyboard staying; side by side; Esc closes it | 3.5; 6.9 |
 | Settings and Manage projects | pane pages (docked or floating) in place of the host's own windows; the Projects question in a modal floating window | 3.7; 6.8 |
 | F1 | a pane page (docked or floating), not modal; it stays open while actions run, on the active pane | 3.7; 6.7 |
 | Manage column sets | a pane page (docked or floating), no longer a dialog; one of it, opened where it was last (shared with Manage the bookmarks) | 3.7; 6.6 |
@@ -66,9 +69,7 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 | Part | What | Waits for | Reference |
 |---|---|---|---|
 | Dock by dragging | a floating pane's window dragged onto its Foldex window docks it there, the places lit as for a docked pane | -- | 3.1 |
-| Preview and Info as pages | Windows' preview over a frame and over a floating window; Foldex's own preview; Info | The floating window | 3.0 |
-| F3 | a preview in a new floating window | Preview and Info as pages | 3.5 |
-| Scrap, list and tree as pages | the panes of the layout as pages; following, executing, back and forward through the window's page | Preview and Info as pages | 3.0; 3.3 |
+| Scrap, list and tree as pages | the panes of the layout as pages; following, executing, back and forward through the window's page | -- | 3.0; 3.3 |
 | Colours across windows | head, ring, branch marks and pane theme as when docked, changing with the window's | Scrap, list and tree as pages | 3.3 |
 | A floating scrap | drops, its search, its dashed ring; gone after a restart unless pinned (then back empty) | Scrap, list and tree as pages | 3.3 |
 | Speed | measured before stage 1 and after each stage | -- | 3.0 |
@@ -178,8 +179,9 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 
 | Window | Now | Can be | First opens | Note |
 |---|---|---|---|---|
-| Tree, list, scrap, preview, Info, Log | docked panes | both | docked | 3.1 |
-| F3's preview | (not built) | both | floating | 3.5 |
+| Tree, list, scrap | docked panes | both | docked | 3.1 |
+| Preview, Info, Log | pane pages | both (built) | docked | 3.1 |
+| F3's preview | pane page (preview.html) | both (built) | floating, beside the window | 3.5 |
 | Manage the bookmarks | modal dialog (bookmarks.js) | both | floating, beside the window | plan 26 3.3: a tab for the bookmarks and one for quick access; its Edit... and New open their dialogs over it |
 | Manage column sets | pane page (columnsets.html, colsmanage.js; columns.js openManageSets) | both (built) | floating | its sets above the one chosen in a narrow pane |
 | F1, all actions and keys (palette.js, palette.html, palettepane.js) | pane page | both, not modal (built) | floating | as LexPen's F1 (plan 19 3.10): stays open while actions run |
@@ -390,3 +392,28 @@ None.
   Dock (right); Esc on an empty search closing it. Manage projects floating at 900x600 with its project; a sort chosen
   there kept as the setting; New project asking its name in a modal floating window ("Empty: a number"), "Test project"
   made and opened in a window of its own. `dotnet test`: 224 passed.
+### 6.9 Stage 5: Preview and Info as pages, F3
+
+- `preview.html` / `previewpane.js`: the page of every preview and Info pane. The window's page decides what it shows
+  and sends it (`show`: a message, Foldex's own preview, a still, Info's groups), kept so a page loaded again (floated,
+  docked) shows it too; a player that cannot play its file asks for a still. `PreviewView` holds the frame and the
+  channel that PageView had (every pane of a page extends it).
+- Windows' preview: one per preview pane now (MainForm `previews`, by pane; it was one per window, so two previews
+  could not both show Windows' preview). Docked, over the pane's area in the window as before; floating, over its
+  whole window (`PaneForm.Preview`), following its size. Floating a preview closes it here and shows it there; docking
+  back the other way round (`moved`). The picture shown while a menu of the page lies over a preview covers every
+  docked preview it touches.
+- A preview and Info pane can float (PaneCan). Closing any pane of a page closes its window and its Windows preview
+  (closePane looked only at PageView, so an F3 window stayed open after Esc).
+- F3 (`preview.float`, F3 in the shipped keys.json): a preview pane `fixed` on the focused item (it follows nothing, is
+  never the global preview, its item kept in the layout), floating; the first time beside the window (on another
+  screen when there is one, else at its right; PaneForm `beside`), after that where the last one was; an F3 window
+  already there: the new one at its right. Shown without taking the keyboard (`quiet`). Esc in it closes it. They do
+  not come back after a restart; their last place does (`homes.f3`). A floating window tells its place once shown, so
+  the next F3 knows where the open ones are.
+- Tests in the test copy (CDP into the pages, UI Automation, EnumWindows): the global preview docked on note.txt with
+  Windows' handler (the text previewer, local server) and on notes.xyz with Foldex's own text; floated: its window,
+  its page showing the text, note.txt with Windows' handler in it; docked again with Windows' handler, no window left;
+  Info with its groups; F3 on pic.png and F3 on note.txt: two windows side by side on the other screen, each keeping
+  its item while the list's focus moved on (the global preview following it), the list still the active pane, neither
+  window in front; Esc in the first: its window gone, the second kept. `dotnet test`: 224 passed.

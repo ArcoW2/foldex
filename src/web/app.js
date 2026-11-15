@@ -187,11 +187,12 @@ function filterTest(pattern) {
 }
 
 // What each kind of pane can be (docs/plans/14-PLAN-floating-panes.md 3.7): docked, floating, or both. A pane of a page
-// of its own (PageView) can float; the others are docked until they are pages (plan 14 3.0, the stages).
-const PaneCan = { tree: ['docked'], list: ['docked'], scrap: ['docked'], preview: ['docked'], log: ['docked', 'floating'],
+// of its own (a PreviewView: the previews, Info, and every PageView) can float; the others are docked until they are pages
+// (plan 14 3.0, the stages).
+const PaneCan = { tree: ['docked'], list: ['docked'], scrap: ['docked'], preview: ['docked', 'floating'], log: ['docked', 'floating'],
   bookmarks: ['docked', 'floating'], columnsets: ['docked', 'floating'], palette: ['docked', 'floating'],
   settings: ['docked', 'floating'], projects: ['docked', 'floating'] };
-const canFloat = id => (PaneCan[layout.pane(id)?.kind] ?? ['docked']).includes('floating') && views.get(id) instanceof PageView;
+const canFloat = id => (PaneCan[layout.pane(id)?.kind] ?? ['docked']).includes('floating') && views.get(id) instanceof PreviewView;
 
 // The view of a pane as its kind says: a tree, a list or a preview.
 function makeView(id) {
@@ -2151,40 +2152,71 @@ function scrapItemMenu(view, ids) {
 
 // ---------- A preview (plan 04): Windows' preview handler in the host, over this pane's area ----------
 
+// A pane whose content is a page of its own (docs/plans/14-PLAN-floating-panes.md 3.0): its head and tab here as any
+// pane's, its page in a frame of this pane docked (panechannel.js), or in a window of its own floating (PaneForm). It
+// shows no folder: nothing follows it. What it shows: state() (sent whole when its page is ready); what is done in it:
+// receive(). The preview is one (preview.html, previewpane.js): Foldex's own preview and its messages are drawn by its
+// page, Windows' preview is the host's window over the pane's area docked, over its whole window floating; the Info
+// pane is one too (InfoView). Every other pane of a page extends it (PageView).
 class PreviewView {
-  constructor(id) {
+  constructor(id, kind = 'preview', page = 'preview.html', title = 'Preview') {
     this.id = id;
     this.path = null;
-    this.el = paneElement(id, 'preview', 'Preview');
+    this.el = paneElement(id, 'preview', title);
+    this.el.classList.add('page', kind);
     this.body = this.el.querySelector('.body');
     this.rows = this.el.querySelector('.rows');
-    // Windows' preview lies over this pane's area: it moves with it, goes when the pane is a tab not shown, and comes
-    // back when it is shown again.
+    this.pageTitle = title;
+    this.rows.replaceChildren();
+    this.channel = paneChannel({ id, page, title, view: () => this.rows, state: () => this.state(), receive: m => this.receive(m),
+      menu: () => paneMenu(id) });
+    this.channel.frameEl();
+    // The keyboard given to the pane goes into its page.
+    this.body.addEventListener('focus', () => this.channel.focus());
+    if (kind !== 'preview') return;
+    this.shown = { kind: 'show', what: 'message', text: '' };
+    // Windows' preview lies over this pane's area docked: it moves with it, goes when the pane is a tab not shown, and
+    // comes back when it is shown again. Floating, it fills the pane's window (the host).
     new ResizeObserver(() => {
-      if (!this.path || this.info) return;   // the Info pane has no Windows preview to move
+      if (!this.path || this.info || this.channel.floating) return;   // the Info pane has no Windows preview to move
       const r = this.body.getBoundingClientRect();
       if (r.width === 0 || r.height === 0) {
-        if (!this.away) post({ op: 'previewClose' });
+        if (!this.away) post({ op: 'previewClose', pane: this.id });
         this.away = true;
       } else if (this.away) {
         this.away = false;
-        post({ op: 'preview', path: this.path, rect: this.rect() });
-      } else post({ op: 'previewMove', rect: this.rect() });
+        post({ op: 'preview', pane: this.id, path: this.path, rect: this.rect() });
+      } else post({ op: 'previewMove', pane: this.id, rect: this.rect() });
     }).observe(this.body);
     this.message('Select a file to preview it.');
   }
 
   rect() {
+    if (this.channel.floating) return null;   // the host: its whole window
     const r = this.body.getBoundingClientRect();
     const d = devicePixelRatio;
     return { x: r.left * d, y: r.top * d, width: r.width * d, height: r.height * d };
   }
 
-  message(text) {
-    const msg = document.createElement('div');
-    msg.className = 'message';
-    msg.textContent = text;
-    this.rows.replaceChildren(msg);
+  state() { return new Map([['show', this.shown]]); }
+  send(m) { this.channel.send(m); }
+  // What its page shows: kept, so a page loaded again (docked, floating) shows it too.
+  showing(m) {
+    this.shown = { kind: 'show', ...m };
+    this.send(this.shown);
+  }
+  message(text) { this.showing({ what: 'message', text }); }
+
+  receive(m) {
+    if (m.kind === 'still') this.still(m.withPlayer);
+    if (m.kind === 'close' && layout.pane(this.id)?.fixed) closePane(this.id);   // Esc in F3's preview
+  }
+
+  // Floated or docked again (app.js floatPane, dockPane): Windows' preview where the pane is now.
+  moved() {
+    if (!this.path || this.info) return;
+    this.away = false;
+    post({ op: 'preview', pane: this.id, path: this.path, rect: this.rect() });
   }
 
   show(path) {
@@ -2192,50 +2224,29 @@ class PreviewView {
     const x = path && itemShown(path, views.get(layout.pane(this.id).source));
     if (!path || x?.folder || !isDiskPath(path)) {
       this.path = null;
-      post({ op: 'previewClose' });
+      post({ op: 'previewClose', pane: this.id });
       this.message(path ? x?.folder || !isDiskPath(path) ? 'A folder.' : '' : 'Select a file to preview it.');
       return;
     }
     this.path = path;
+    if (layout.pane(this.id).fixed) layout.pane(this.id).path = path;   // F3's: its item kept with the layout
     this.el.querySelector('.title').textContent = x?.name ?? path;
     this.message('');
-    post({ op: 'preview', path, rect: this.rect() });
+    if (this.away && !this.channel.floating) return;   // a tab not shown: when it is (the ResizeObserver)
+    post({ op: 'preview', pane: this.id, path, rect: this.rect() });
   }
 
-  // Foldex's own preview, when Windows has none for the file (Shell/OwnPreview.cs): an image (a GIF moving), a video
-  // or a sound in the page's own players, text as text.
-  showOwn(own) {
-    const kind = own.kind;
-    const el = document.createElement(kind === 'image' ? 'img' : kind === 'text' ? 'pre' : kind);
-    el.className = `own own-${kind}`;
-    if (kind === 'text') el.textContent = own.text + (own.cut ? '\n\n[Only the start of the file is shown.]' : '');
-    else {
-      el.src = own.url;
-      el.addEventListener('error', () => kind === 'image' ? this.message('This item cannot be previewed.') : this.still(own));
-      // A video whose sound plays but whose picture the player cannot decode (no error, no width): the still, its
-      // player kept under it for the sound.
-      if (kind === 'video') el.addEventListener('loadedmetadata', () => { if (!el.videoWidth) this.still(own, el); });
-      if (kind !== 'image') {
-        el.controls = true;
-        el.preload = 'metadata';
-      }
-    }
-    this.rows.replaceChildren(el);
-  }
+  // Foldex's own preview, when Windows has none for the file (Shell/OwnPreview.cs): drawn by its page.
+  showOwn(own) { this.showing({ what: 'own', own }); }
 
-  // A video or sound the page's player cannot play (a codec it lacks): the picture Windows makes of it (a frame of a
+  // A video or sound its page's player cannot play (a codec it lacks): the picture Windows makes of it (a frame of a
   // video), said to be a still, else that it cannot be previewed.
-  still(own, player = null) {
+  still(withPlayer) {
     const path = this.path;
+    if (!path) return;
     askHost({ op: 'previewPicture', path }).then(m => {
       if (!same(this.path, path)) return;
-      if (!m.url && !player) return this.message('This item cannot be previewed.');
-      const note = Object.assign(document.createElement('div'), { className: 'own-note',
-        textContent: player ? 'The picture of this video cannot be played here; a still of it, and its sound.'
-          : `This ${own.kind === 'video' ? 'video' : 'sound'} cannot be played here; a still of it.` });
-      const img = m.url ? Object.assign(document.createElement('img'), { className: 'own own-image', src: m.url }) : null;
-      if (player) player.classList.add('own-sound');
-      this.rows.replaceChildren(...[note, img, player].filter(Boolean));
+      this.showing({ what: 'still', url: m.url ?? null, withPlayer: !!withPlayer, media: this.shown.own?.kind });
     });
   }
 
@@ -2247,30 +2258,35 @@ class PreviewView {
 
   locationText() { return this.path ?? ''; }
 
-  tabTitle() { return 'Preview'; }
+  tabTitle() { return this.pageTitle; }
 
-  close() { post({ op: 'previewClose' }); }
+  close() {
+    post({ op: 'previewClose', pane: this.id });
+    if (this.channel.floating) post({ op: 'paneDock', pane: this.id });
+  }
 }
-
 // Windows' preview is a window of its own lying over the page, so a dialog or a menu of the page would be hidden behind
 // it. While a dialog is open, or a menu lies over the preview, the preview is a picture of itself (the host's
 // snapshot, the window hidden); when they are gone the window is shown again.
-const previewCover = { on: false, img: null };
-const nativePreview = () => [...views.values()].find(v => v instanceof PreviewView && v.native && v.path);
+const previewCover = { on: false, imgs: [] };
+// The docked previews of this window that Windows shows now (a floating one is in a window of its own).
+const nativePreviews = () => [...views.values()].filter(v => v instanceof PreviewView && v.native && v.path && !v.channel.floating && !v.away);
 
 function previewCoverCheck() {
-  const v = nativePreview();
-  const r = v?.body.getBoundingClientRect();
-  const over = !!v && [...document.querySelectorAll('dialog[open], .menu')].some(e => {
+  const shown = nativePreviews();
+  const over = shown.length > 0 && [...document.querySelectorAll('dialog[open], .menu')].some(e => {
     if (e.tagName === 'DIALOG') return true;   // modal: over the whole window
     const b = e.getBoundingClientRect();
-    return b.left < r.right && b.right > r.left && b.top < r.bottom && b.bottom > r.top;
+    return shown.some(v => {
+      const r = v.body.getBoundingClientRect();
+      return b.left < r.right && b.right > r.left && b.top < r.bottom && b.bottom > r.top;
+    });
   });
   if (over === previewCover.on) return;
   previewCover.on = over;
   if (over) return post({ op: 'previewSnapshot' });
-  previewCover.img?.remove();
-  previewCover.img = null;
+  for (const img of previewCover.imgs) img.remove();
+  previewCover.imgs = [];
   post({ op: 'previewRestore' });
 }
 new MutationObserver(previewCoverCheck).observe(document.body, { childList: true });   // menus and dialogs come and go here
@@ -2279,13 +2295,13 @@ new MutationObserver(previewCoverCheck).observe(document.body, { attributes: tru
 // ---------- The Info pane: everything Windows knows of an item (Shell/FileDetails.cs) ----------
 
 // A preview pane of its own kind: it follows the list's focused item as the preview does, and lists its properties
-// in groups (the image's, the video's and sound's, the other details, the file itself), a line between them.
+// in groups (the image's, the video's and sound's, the other details, the file itself), a line between them, drawn by
+// its page (preview.html).
 class InfoView extends PreviewView {
   constructor(id) {
-    super(id);
+    super(id, 'preview', 'preview.html', 'Info');
     this.info = true;
     this.el.classList.add('info');
-    this.el.querySelector('.title').textContent = 'Info';
     this.message('Select an item to see what is known of it.');
   }
 
@@ -2298,24 +2314,13 @@ class InfoView extends PreviewView {
     askHost({ op: 'fileInfo', path }).then(m => {
       if (!same(this.path, path)) return;   // another item meanwhile
       if (!m.groups?.length) return this.message(m.error ?? 'Nothing is known of this item.');
-      const list = Object.assign(document.createElement('div'), { className: 'info-list' });
-      m.groups.forEach((g, k) => {
-        if (k) list.append(Object.assign(document.createElement('hr'), { className: 'info-split' }));
-        list.append(Object.assign(document.createElement('div'), { className: 'info-group', textContent: g.title }));
-        for (const [name, value] of g.rows) {
-          const row = Object.assign(document.createElement('div'), { className: 'info-row' });
-          row.append(Object.assign(document.createElement('span'), { className: 'info-name', textContent: name, title: name }),
-            Object.assign(document.createElement('span'), { className: 'info-value', textContent: value }));
-          list.append(row);
-        }
-      });
-      this.rows.replaceChildren(list);
+      this.showing({ what: 'info', groups: m.groups });
     });
   }
-
   tabTitle() { return 'Info'; }
 
-  close() { }   // no Windows preview to close
+  close() { if (this.channel.floating) post({ op: 'paneDock', pane: this.id }); }   // no Windows preview to close
+  moved() { }
 }
 
 // ---------- The log: the status line's messages and the file operations, kept ----------
@@ -2388,21 +2393,12 @@ function toggleLog() {
 // nothing. What it shows: state() (sent whole when its page is ready); what is done in it: receive().
 class PageView extends PreviewView {
   constructor(id, kind, page, title) {
-    super(id);
-    this.el.classList.add('page', kind);
-    this.pageTitle = title;
-    this.el.querySelector('.title').textContent = title;
-    this.rows.replaceChildren();
-    this.channel = paneChannel({ id, page, title, view: () => this.rows, state: () => this.state(), receive: m => this.receive(m),
-      menu: () => paneMenu(id) });
-    this.channel.frameEl();
-    // The keyboard given to the pane goes into its page.
-    this.body.addEventListener('focus', () => this.channel.focus());
+    super(id, kind, page, title);   // the frame and the channel (PreviewView)
   }
 
   state() { return new Map(); }
   receive() { }
-  send(m) { this.channel.send(m); }
+  moved() { }
   show() { }
   refresh() { }
   locationText() { return ''; }
@@ -2530,10 +2526,12 @@ function floatPane(id) {
   const view = views.get(id), pane = layout.pane(id);
   if (!canFloat(id) || view.channel.floating) return view?.channel.float();
   pane.floating = { place: docks.placeOf(id) ?? { area: 'bottom' }, bounds: pane.floating?.bounds ?? pane.floatBounds ?? null };
+  if (view.path) post({ op: 'previewClose', pane: id });   // a preview: Windows' preview leaves this window
   docks.remove(id);
   view.el.remove();
   renderDock();
   view.channel.float(pane.floating.bounds);
+  view.moved();   // a preview: Windows' preview in its window now
   drawHeads();
   tellLayout();
 }
@@ -2547,6 +2545,7 @@ function dockPane(id) {
   delete pane.floating;
   placeView(view, place.pane != null && docks.find(place.pane) ? place : { area: place.area ?? 'bottom' });
   view.channel.docked();
+  view.moved();   // a preview: Windows' preview over its place here now
   drawHeads();
   tellLayout();
 }
@@ -3046,14 +3045,17 @@ function restoreLayout(saved, path) {
     Object.assign(docks, { areas: placed.areas, sizes: placed.sizes });
     for (const id of placed.panes()) if (!layout.pane(id)) docks.remove(id);
     for (const id of [...layout.panes.keys()]) if (!docks.find(id) && !layout.pane(id).away && !layout.pane(id).floating) layout.remove(id);
+    // F3's previews (plan 14 3.5) do not come back after a restart; their last place does (paneHomes.f3).
+    for (const id of [...layout.panes.keys()]) if (layout.pane(id).fixed && !docks.find(id)) layout.remove(id);
     // The floating panes (plan 14 3.4) float again where they were.
     const floats = [...layout.panes.keys()].filter(id => layout.pane(id).floating);
     for (const id of [...docks.panes(), ...floats]) {
       const view = makeView(id);
       views.set(id, view);
-      if (view instanceof PageView && layout.pane(id).floating) view.channel.float(layout.pane(id).floating.bounds);
+      if (view instanceof PreviewView && layout.pane(id).floating) view.channel.float(layout.pane(id).floating.bounds);
       if (view instanceof LogView) logPane = view;
-      else if (view instanceof PreviewView && layout.pane(id).source === null) {
+      else if (layout.pane(id).fixed) view.show(layout.pane(id).path ?? null);   // an F3 preview docked: its item
+      else if (view instanceof PreviewView && !(view instanceof PageView) && layout.pane(id).source === null) {
         if (view instanceof InfoView) infoPane = view;
         else preview = view;
       }
@@ -3185,18 +3187,16 @@ function followParent(id) {
 function closePane(id) {
   const view = views.get(id);
   if (!view) return;
-  if (view === preview) {
-    preview.close();
-    preview = null;
-  }
+  if (view === preview) preview = null;
   if (view === infoPane) infoPane = null;
   if (view === logPane) {
     logPane = null;
     queueMicrotask(drawLogButton);
   }
   if (OnePanes.has(layout.pane(id)?.kind)) onePaneClosed(id);   // where it was, for when it opens again
-  // A pane of a page of its own: its window too when it floats, and its channel (plan 14 3.0).
-  if (view instanceof PageView) {
+  // A pane of a page of its own (a preview too): its Windows preview, its window when it floats, and its channel
+  // (plan 14 3.0).
+  if (view instanceof PreviewView) {
     view.close();
     paneChannels.delete(id);
   }
@@ -3272,7 +3272,7 @@ function unhidePane(id) {
     const view = makeView(p);
     if (view instanceof LogView) logPane ??= view;
     else if (view instanceof InfoView && pane.source === null) infoPane ??= view;
-    else if (view instanceof PreviewView && pane.source === null && !preview) preview = view;
+    else if (view instanceof PreviewView && !(view instanceof PageView) && !pane.fixed && pane.source === null && !preview) preview = view;
     placeView(view, place.pane != null && docks.find(place.pane) ? place : { area: place.area ?? 'center' });
     shown.push(view);
   }
@@ -3337,6 +3337,28 @@ function globalPane(info) {
   drawHeads();
   views.get(activePane)?.body.focus();   // the keyboard stays in the pane that had it
   return view;
+}
+
+// F3 (plan 14 3.5): the item the active pane focuses in a new preview, floating in a window of its own beside this
+// one (the first time; then as the last one was), the keyboard staying here. It keeps that item: it follows nothing
+// (`fixed`), and F3 again opens another, so two items can be compared side by side. Esc in its window closes it.
+function floatPreview() {
+  const item = activePane && !(views.get(activePane) instanceof PreviewView) ? layout.state(activePane).focus : null;
+  if (!item) return status('F3: no item has the focus.', true);
+  const id = layout.add({ kind: 'preview' });
+  Object.assign(layout.pane(id), { fixed: true, path: item });
+  const view = new PreviewView(id);
+  views.set(id, view);
+  // Where the last one was; an F3 window open there already: the new one at its right.
+  const open = [...layout.panes.values()].filter(p => p.fixed && p.id !== id && p.floating?.bounds).map(p => p.floating.bounds);
+  let bounds = paneHomes.f3?.bounds ?? open.at(-1) ?? null;
+  while (bounds && open.some(b => b[0] === bounds[0] && b[1] === bounds[1])) bounds = [bounds[0] + bounds[2], bounds[1], bounds[2], bounds[3]];
+  layout.pane(id).floating = { place: { area: 'right' }, bounds };
+  view.channel.float(bounds, null, { beside: true, quiet: true });
+  view.show(item);
+  drawHeads();
+  tellLayout();
+  views.get(activePane)?.body.focus();   // the keyboard stays in the pane that had it
 }
 
 // A preview or Info pane of one pane (the pane menu's New child pane, the ribbon's Pane preview and Pane info): its
@@ -3879,6 +3901,7 @@ const events = {
     const pane = layout.pane(m.pane);
     if (!pane?.floating) return;
     pane.floating.bounds = m.bounds;
+    if (pane.fixed) paneHomes.f3 = { bounds: m.bounds };   // the next F3 opens as this one is now (plan 14 3.5)
     tellLayout();
   },
   paneWindowFocus(m) { if (m.active && views.has(m.pane)) activate(m.pane); },
@@ -3886,9 +3909,9 @@ const events = {
   renames(m) { renames = m.renames; },
   previewShown(m) {
     window.__spike.events.push({ previewShown: m.path, handler: m.handler, error: m.error });
-    // Every preview showing that file (another file meanwhile: nothing).
-    for (const v of views.values()) {
-      if (!(v instanceof PreviewView) || v instanceof InfoView || !same(m.path, v.path)) continue;
+    // The preview it was asked for (another file meanwhile: nothing).
+    const v = views.get(m.pane);
+    if (v instanceof PreviewView && !(v instanceof InfoView) && same(m.path, v.path)) {
       v.native = !!m.handler && !m.error;   // Windows' own window over the pane (previewCoverCheck)
       if (m.own) v.showOwn(m.own);
       else if (m.error) v.message('This item cannot be previewed.');
@@ -3899,11 +3922,11 @@ const events = {
   },
   // The picture of Windows' preview while a dialog or menu is over it (previewCoverCheck).
   previewSnapshot(m) {
-    const v = nativePreview();
+    const v = views.get(m.pane);
     if (!previewCover.on || !m.url || !v) return;
-    previewCover.img?.remove();
-    previewCover.img = Object.assign(document.createElement('img'), { className: 'preview-cover', src: m.url });
-    v.body.append(previewCover.img);
+    const img = Object.assign(document.createElement('img'), { className: 'preview-cover', src: m.url });
+    previewCover.imgs.push(img);
+    v.body.append(img);
   },
 };
 
