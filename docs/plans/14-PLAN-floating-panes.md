@@ -1,4 +1,4 @@
-# Plan 14: Floating panes
+# Plan 14: Floating panes, and every window a pane
 
 Status: not started; see Status.
 
@@ -12,6 +12,12 @@ reorder.
 A Foldex pane docks in its window (plan 12) but cannot float as a window of its own, for instance on another
 monitor. LexPen's panes can (LexPen `docs/plans/executed/PLAN-docking.md` 3.3, 3.5).
 
+Foldex's other windows are each something else: a modal dialog of the page (Manage the bookmarks, Manage column sets,
+Find, ...) or a form of the host (Settings, Projects). None can be docked, and the dialogs cannot be moved off the
+window. The rule (CLAUDE.md, Windows): every window is a docked pane and/or a floating window, unless the user says
+otherwise for that window; a floating one can always be docked and a docked one set floating again; and for every
+window it is stated which it can be.
+
 ## 2. The solution, in brief
 
 Any pane can float, a scrap included: it is shown in a window of its own, a form with its own WebView2, and docks back
@@ -19,7 +25,9 @@ from its menu or by dragging. It stays connected exactly as when docked: a float
 floating parent still drives its children, and its colours (head, ring, branch marks, pane theme) are the ones it
 would have docked; the messages go through the host, as LexPen's floating panes do. Moving a pane between docked and
 floating hands over what it shows, so it comes back as it was. F3 opens a preview in a new floating window of its
-own, showing the item the active pane focuses, and keeps showing that item.
+own, showing the item the active pane focuses, and keeps showing that item. Foldex's other windows become panes of
+their own kind as 3.7 lists them, Manage the bookmarks first: each can be docked, floating or both, as its row says,
+and moves between the two as any pane does.
 
 ## Status
 
@@ -36,6 +44,9 @@ own, showing the item the active pane focuses, and keeps showing that item.
 | A floating scrap | drops, its search, its dashed ring; gone after a restart unless pinned (then back empty) | -- | 3.3 |
 | Kept | a floating pane's place and size with the window's layout | -- | 3.4 |
 | F3 | a preview in a new floating window | The floating window | 3.5 |
+| Kinds stated | every pane kind says which it can be (docked, floating, both); Float and Dock offered only where it can | -- | 3.7 |
+| Manage the bookmarks | a pane (docked or floating), no longer a modal dialog | The floating window | 3.7; plan 26 3.3 |
+| The other windows | each as its row in 3.7 says | Open questions 1-4 | 3.7 |
 
 ## 3. Details
 
@@ -90,7 +101,41 @@ own, showing the item the active pane focuses, and keeps showing that item.
   window; a floating tree driving a docked list; a scrap floated, files dropped on it, a search into it.
 - F3 on an image, a video and a file without a preview: the floating window with its preview, the keyboard still in
   the list; another item focused: the window keeps its item; F3 again: a second window with the new item; Esc closes it; its place and size after a restart.
+- Every window of 3.7 that can be both: floated, docked, floated again, each time showing what it showed; Float and
+  Dock not offered where its row says it cannot. Manage the bookmarks: opened floating, docked, a bookmark edited
+  from it while docked, closed and opened again where it was; opened again while shown: the same one, forward.
+
+### 3.7 Every window a pane: what each can be
+
+- Each pane kind states which it can be: docked, floating or both (a field of the kind in app.js, beside makeView).
+  The pane head's menu offers Float only for a docked pane that can float, and Dock only for a floating one that can
+  dock. A new window or pane kind gets its row here, and its plan says the same.
+- A window that becomes a pane keeps what it does and its keys; its buttons stay at its bottom. Opened from its menu
+  item or action, it shows where it was last (docked or floating, at its place); the first time as its row says.
+  Opened again while it is shown: it comes forward and gets the keyboard, never a second one.
+- The windows Foldex has, and what each can be:
+
+| Window | Now | Can be | First opens | Note |
+|---|---|---|---|---|
+| Tree, list, scrap, preview, Info, Log | docked panes | both | docked | 3.1 |
+| F3's preview | (not built) | both | floating | 3.5 |
+| Manage the bookmarks | modal dialog (bookmarks.js) | both | floating, beside the window | plan 26 3.3: a tab for the bookmarks and one for quick access; its Edit... and Add... open Edit over it |
+| Manage column sets | modal dialog (columns.js openManageSets) | both | floating | |
+| More columns (every property, columns.js moreColumns) | modal dialog | both, or not: question 3 | floating | adds columns to the pane it was opened from |
+| Find | modal dialog (find.js) | both, or not: question 3 | floating | fills a scrap |
+| Rename (several items, renamedialog.js) | modal dialog | both, or not: question 3 | floating | renames the items selected when it opened |
+| F1, all actions and keys (palette.js) | modal dialog | question 2 | | closes when an action runs |
+| Settings | a form of the host with its own page (SettingsForm, settings.html) | both, or not: question 4 | floating | docked: its page as a pane of the main page |
+| Projects | a form of the host with its own page (ProjectsForm, projects.html) | both, or not: question 4 | floating | docked: as Settings |
+| Edit a bookmark, Change Icon, the Size of a bar, a name asked (askText), the Projects window's own question, Foldex's question window (AskForm) | modal dialogs | neither: question 1 | | each asks one thing and waits for the answer |
 
 ## 4. Open questions
 
-None.
+1. The dialogs that ask one thing and wait for the answer (Edit a bookmark, Change Icon, the Size of a bar, a name
+   asked, the Projects window's question, Foldex's question window): exceptions, staying modal dialogs that are
+   neither docked nor floating?
+2. F1 (all actions and keys) closes when an action runs: an exception (a modal dialog), or a pane that stays open?
+3. More columns, Find and Rename act on the pane or items they were opened from: panes (both) as well, or modal
+   dialogs as now?
+4. Settings and Projects are windows of their own now (floating only). Docked, their page becomes a pane of the main
+   page: wanted for both, or do they stay floating windows only?
