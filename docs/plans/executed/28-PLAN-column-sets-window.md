@@ -130,7 +130,7 @@ with the set's settings for it. The menu also has the fits and the sets. Ctrl+R 
 - Every column's text has the same colour, the name's too (Settings, Columns: Columns), so no column is made to look
   more important than another; the columns sorted on have theirs (Sort columns).
 - The columns sorted on have a background of their own (Settings, Contents, Columns): Sort columns background, a
-  slider from 0 to 50 %, and Sort columns colour, the theme's text colour unless you choose one. It lies over what the
+  slider from 0 to 50 %, and Sort columns background: own colour (Use this colour; off: the theme's text colour). It lies over what the
   row shows (its stripe, the selection, the focus, the hover), which shows through, blended with it.
 - A click on a title:
   - the sort is of one column (or none): sort by this column alone; when it is that column already, the other way
@@ -263,7 +263,7 @@ None.
   list, "This pane's columns", chosen; its changes go to that pane (`setOwnColumns`, run in its page). The line
   between the parts is kept with the Manage pane in the layout (`split`). Stacked below 720 px of width. Floating, it
   first opens 980 x 620.
-- Settings: Sort columns background (0 to 50 %, default 6) and Sort columns colour (Settings' new kind 'colour': Own
+- Settings: Sort columns background (0 to 50 %, default 6) and Sort columns background: own colour (Settings' new kind 'colour': Use this
   colour on or off, and a colour box), a tint over the cell that the row's own background shows through; the cells are
   as high as the row, so the tint is one block. Columns (otherColumnsIntensity, default 160) and Sort columns
   (sortColumnIntensity, default 200) now cover every column, the name's too; before, the name had the full text colour.

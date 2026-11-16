@@ -59,13 +59,13 @@ function control(def) {
     return { el: box, show: v => { input.value = v; value.textContent = input.value + def.unit; } };
   }
   // A colour of your own or the default (docs/plans/executed/28-PLAN-column-sets-window.md 3.4): '' the default (the hint says
-  // which), else #rrggbb; Own colour on takes the colour box's.
+  // which), else #rrggbb; Use this colour on takes the colour box's.
   if (def.kind === 'colour') {
     const box = document.createElement('span');
     box.className = 'st-colour';
     const own = Object.assign(document.createElement('input'), { type: 'checkbox' });
     const label = document.createElement('label');
-    label.append(own, ' Own colour');
+    label.append(own, ' Use this colour');
     const input = Object.assign(document.createElement('input'), { type: 'color' });
     input.addEventListener('change', () => { own.checked = true; set(def.name, input.value); });
     own.addEventListener('change', () => set(def.name, own.checked ? input.value : ''));
