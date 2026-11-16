@@ -20,20 +20,26 @@ for what it shows.
 
 ## 2. The solution, in brief
 
+### 2.1 The column sets window
+
 The window gets two parts side by side, split by a line that can be dragged. At the left, the sets as a list in the
 look of Manage the bookmarks: a row per set, a grip per row to drag it to another place, a narrow strip with an arrow
 up and an arrow down at the left of the list, and the buttons (New, Rename, Duplicate, Delete, Reset) under it. The
 order of the sets is kept and used in every list of sets. At the right, under a label naming the set chosen,
 everything of that set: its columns as a list in the same look (strip with arrows, a grip per row, Remove and Add a
 column under it), each column on two lines. The first line has its title, whether it is shown, its width and its sort
-cell; the second its Fit mode (never, manual, auto-enlarge, auto-shrink, auto-both) with a minimum and an optional
-maximum width in em, which also hold when the column is resized by hand. A set sorts on several columns in order; in
-a list's header a sorted column shows its arrow, and its number when more than one column sorts. A click on a title
-sorts by it or turns it the other way; Ctrl+click adds it to the sort; the Sort window shows the whole order to drag,
-turn and remove. A column of a set that is not shown can be shown in a pane from the header's right-click menu,
-with the set's settings for it. Ctrl+R fits the columns that fit, Ctrl+Shift+R every column. All buttons are the
-theme's. Floating, the window opens wide enough to show both parts without scrolling sideways; where they do not fit
-side by side, the sets' part comes first and the set chosen under it.
+cell; a set sorts on several columns in order. The second line has its Fit mode (never, manual, auto-enlarge,
+auto-shrink, auto-both) with a minimum and an optional maximum width in em, which also hold when the column is
+resized by hand. All buttons are the theme's. Floating, the window opens wide enough to show both parts without
+scrolling sideways; where they do not fit side by side, the sets' part comes first and the set chosen under it.
+
+### 2.2 Sorting and columns from a pane's header
+
+In a list's header a sorted column shows its arrow, and its number when more than one column sorts. A click on a
+title sorts by it or turns it the other way, without undoing a sort of several columns; Ctrl+click adds it to the
+sort; the Sort window shows the whole order to drag, turn and remove. The header's right-click menu, as xplorer2's,
+holds Select columns..., where a column of the set that is not shown can be shown in the pane with the set's settings
+for it, the fits and the sets. Ctrl+R fits the columns whose Fit says so, Ctrl+Shift+R every column.
 
 ## Status
 
