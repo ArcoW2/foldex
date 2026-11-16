@@ -57,7 +57,7 @@ with the set's settings for it. The menu also has the fits and the sets. Ctrl+R 
 | Theme buttons | every button of the page in the theme's look | -- | 3.1 |
 | Two parts | sets left, the set chosen right, a draggable line between, a label naming the set; wide enough when floating; stacked (sets first) when narrow | -- | 3.1 |
 | The sets' list | rows, grip, arrow strip, buttons under it; the order kept and used in every list of sets | -- | 3.2 |
-| The columns' list | two lines per column (shown or not), grip, arrow strip, Remove and Add under it | -- | 3.3 |
+| The columns' list | two lines per column (shown or not), grip, arrow strip, Remove and Add under it; any column first, Name too | -- | 3.3 |
 | Sort on several columns | the sort cells in the editor; the lists sort that way | -- | 3.4 |
 | The header's sort | numbers beside the arrows; click, Ctrl+click; the Sort window | -- | 3.4; 3.5 |
 | Fit per column | never, manual, auto-enlarge, auto-shrink, auto-both; minimum and maximum, also when resizing by hand; Ctrl+R and Ctrl+Shift+R | -- | 3.6 |
@@ -104,7 +104,12 @@ with the set's settings for it. The menu also has the fits and the sets. Ctrl+R 
   entered: each box has `em` after it, and its tip says "em: the width of the pane font's letter M; the column grows
   and shrinks with the font size".
 - The strip at the left holds an arrow up and an arrow down: they move the selected column one place. The grip drags
-  a column to another place. The Name column stays first: it cannot be moved, hidden or removed (as now).
+  a column to another place. Every column can go anywhere, the Name column too (e.g. the Git status first); the Name
+  column cannot be hidden or removed. Dragging a title in a list's header moves a column the same way, Name included.
+- The item's icon and a link's mark stay with the Name column wherever it is; in a tree, its lines and expanders too
+  (plan 18 3.3). Fitting the columns to the pane still makes the Name column give way first, wherever it is. The code
+  now takes the first column as the Name column (app.js: a list's and a tree's rows, fitting; columns.js moveColumn
+  keeps it first): each of those goes by the column's id instead.
 - Under the list: Remove (the selected column) and Add a column... (Foldex's own columns and Windows' properties, as
   now).
 
