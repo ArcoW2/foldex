@@ -73,14 +73,13 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 | Colours across windows | head, ring, branch marks and pane theme as when docked, changing with the window's | 3.3; 6.12 |
 | A floating scrap | drops, its search, its dashed ring; gone after a restart unless pinned (then back empty) | 3.3; 6.12 |
 | Speed after stage 6 | the start, the memory, opening a folder of 5150 items, moving the cursor: main before plan 14 and this branch after stage 6 | 3.0; 6.11 |
-| Stage 6 merged | on main as it is, the start slower; made faster after it | 3.0; 6.11 |
+| Stage 6 merged | on main as it is | 3.0; 6.11 |
 
 ### Not yet built
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| Faster start: scripts per kind | a pane's page loads only the scripts its kind uses | -- | 3.0; 6.11 |
-| Faster start: pages made early | the panes' pages loaded and running before the window's page has its layout, each given its pane when it has | -- | 3.0; 6.11 |
+| Faster start: scripts per kind | a pane's page loads only the scripts its kind uses | open question 1 | 3.0; 6.11 |
 
 ## 3. Details
 
@@ -105,10 +104,8 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
   itself (WebView2's frame messages docked, PaneForm floating), as the window's page does; the host answers the page
   that asked. Drag and drop between panes goes between pages (the host's shell drag, as from Explorer). The start and
   memory with a frame per pane are measured (6.11).
-- The start with these pages is made faster in two ways. A pane's page loads only the scripts its kind uses, not all of
-  the window's. And the panes' pages are loaded before the window's page knows its layout: pages of no pane yet, their
-  scripts run, waiting; when the layout is there, each pane takes one of them and gives it its pane (init), so a pane
-  does not wait for its page to load.
+- A pane's page may load only the scripts its kind uses, not all of the window's (open question 1). The panes' pages
+  are not loaded before the window's page knows its layout: built and measured, that made the start no faster (6.11).
 - Their page is `view.html`: the window's own scripts, showing that one pane (`viewpage.js`). It starts on its window's
   hello and layout (init), with no question to the host. The window's page keeps the layout, sends it whole to every
   such page when it changes, and has a stand-in for each such pane (`pagedviews.js`): an object of the view's class,
@@ -132,7 +129,8 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
   and the tree, with their connections and colours across windows.
 - Speed comes first, as in LexPen (3.2 there): the start until the first folder shows, opening a folder of many
   items, moving the cursor in a list, measured before stage 1 and after the stages (figures in 6.11); a stage that makes
-  one clearly slower is not merged until it is not, except stage 6: merged with its slower start, made faster after it.
+  one clearly slower is not merged until it is not, except stage 6: merged as it is, its start measured again after it
+  (6.11).
 
 ### 3.1 Floating and docking back
 
@@ -232,7 +230,8 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 
 ## 4. Open questions
 
-None.
+1. Scripts per kind: a CPU profile of the panes' renderer shows their scripts cost little, and stage 6's start is
+   not clearly slower than main's (6.11). Build it, or drop it? Suggestion: drop it.
 
 ## 6. As built
 
@@ -533,5 +532,22 @@ None.
 | Opening a folder of 5150 items | 182 ms (170 - 221) | 164 ms (160 - 190) |
 | Moving the cursor (Down), per press | 3.0 ms median; mean 3.12 ms; worst 9.2 ms | 3.2 ms median; mean 3.41 ms; worst 10.6 ms |
 
-- The start is slower: four of the five runs after took longer than four of the five before. Merged as it is, the start
-  made faster after it (3.0).
+- The start is slower: four of the five runs after took longer than four of the five before. Merged as it is (3.0).
+- After the merge (`speed7.ps1`, the session's scratch folder: speed6.ps1 for three builds taking turns, five rounds,
+  2026-11-16): main at 3b514d8, stage 6 merged (c4c2637), and stage 6 with the panes' pages loaded early (hidden pages
+  of no pane started at the top of the window's page, as many as the layout's docked trees, lists and scraps, each
+  taken by a pane and given its pane with init). This machine was slower than in the series above, so these figures
+  compare with each other only.
+
+| Figure (median of 5; min - max) | Main 3b514d8 | Stage 6 c4c2637 | Pages loaded early |
+|---|---|---|---|
+| Start until the first folder shows | 2832 ms (2254 - 4001) | 2380 ms (2256 - 3159) | 2321 ms (2277 - 4644) |
+| Memory, 3 s after the start | 313 MB (311 - 321) | 396 MB (393 - 401) | 390 MB (385 - 391) |
+| Opening a folder of 5150 items | 286 ms (234 - 320) | 255 ms (200 - 281) | 284 ms (250 - 333) |
+| Moving the cursor (Down), median per press | 4.0 ms | 4.8 ms | 4.6 ms |
+
+- Loading the pages early made the start no faster: its median is within the spread of stage 6's runs. It was not
+  taken. Stage 6's start is not clearly slower than main's in this series. A pane's page loads in about 100 - 155 ms
+  (single runs, test copy); the scripts in it cost little (a CPU profile of the panes' renderer).
+- Not addressed: a floating pane in the saved layout held the docked frames' loading about 470 ms while its window was
+  made (one run); each pane's page asks the host again at init what its window has (drives, bookmarks, entries, look).
