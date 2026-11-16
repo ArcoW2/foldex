@@ -60,15 +60,20 @@ addEventListener('keydown', e => {
   }
 });
 
-// The window as large as what is open: the dialog, and one opened over it.
+// The window as large as what is open: the dialog, and one opened over it. A dialog marked `resizable` (Select
+// columns): its own size once, then the window is yours to resize and the dialog fills it (dialog.css .fills).
 function fitWindow() {
+  const resizable = document.querySelector('dialog.inline.resizable[open]');
+  if (resizable?.classList.contains('fills')) return;
   let w = 0, h = 0;
   for (const d of document.querySelectorAll('dialog[open]')) {
     const inline = d.classList.contains('inline');
     w = Math.max(w, inline ? d.offsetWidth : d.offsetWidth + 32);
     h = Math.max(h, inline ? d.offsetHeight : d.offsetHeight + 32);
   }
-  if (w && h) toWindow({ kind: 'size', w, h });
+  if (!w || !h) return;
+  toWindow({ kind: 'size', w, h, resizable: !!resizable });
+  resizable?.classList.add('fills');
 }
 new ResizeObserver(fitWindow).observe(document.documentElement);
 new MutationObserver(() => requestAnimationFrame(fitWindow)).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['open'] });
@@ -137,7 +142,7 @@ function selectColumnsHere(a) {
   const titles = new Map([...a.all, ...a.shown].map(c => [c.id, c.title]));
   let shown = a.shown.map(c => c.id);
   const dialog = document.createElement('dialog');
-  dialog.className = 'ask select-columns';
+  dialog.className = 'ask select-columns resizable';
   dialog.innerHTML = '<div class="sc-lists"><div class="sc-side"><label class="sc-filter"><input type="checkbox"> <span></span></label>' +
     '<input class="sc-search" spellcheck="false" placeholder="Type to find a column"><select class="sc-left" multiple></select></div>' +
     '<div class="sc-arrows"><button class="sc-show" title="Show the columns selected at the left">-&gt;</button>' +

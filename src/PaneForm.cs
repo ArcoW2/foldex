@@ -196,6 +196,14 @@ sealed class PaneForm : Form
                 CloseByPage();
                 return true;
             case "size":
+                // A dialog you can resize (Select columns, docs/plans/executed/28-PLAN-column-sets-window.md 3.7): its
+                // first size the page's, then a sizable window that the page fills.
+                if (FormBorderStyle == FormBorderStyle.Sizable) return true;
+                if (msg["resizable"]?.GetValue<bool>() == true)
+                {
+                    FormBorderStyle = FormBorderStyle.Sizable;
+                    MaximizeBox = true;
+                }
                 var scale = DeviceDpi / 96.0;
                 var size = new Size((int)Math.Ceiling(msg["w"]!.GetValue<double>() * scale), (int)Math.Ceiling(msg["h"]!.GetValue<double>() * scale));
                 if (size == ClientSize) return true;

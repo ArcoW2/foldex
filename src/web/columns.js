@@ -314,7 +314,8 @@ function drawColumnHeader(view) {
     const cell = document.createElement('div');
     cell.className = 'colcell' + (RightAligned.has(info.kind) ? ' right' : '');
     cell.style.width = `${(col.width ?? info.width) * fontPx}px`;
-    cell.textContent = info.title;
+    // The title in a part of its own (it gives way, with ...), the sort's arrow and place after it, never over it.
+    cell.append(Object.assign(document.createElement('span'), { className: 'coltitle', textContent: info.title }));
     cell.title = info.title + (info.id.includes('.') ? ` (${info.id})` : '');
     const at = sort.findIndex(s => s.id === col.id);
     if (at >= 0) {

@@ -1072,19 +1072,29 @@ body[data-focus-away] :is(.row, .tile).selected.focused {
   text-align: right;
 }
 
-/* The arrow and its number at the right, clear of the edge's grip (.colgrip); the title keeps out of their way, also
-   when it is right-aligned. */
-.colcell.asc::after, .colcell.desc::after {
-  position: absolute;
-  right: 7px;
-  font-size: 0.75em;
-  top: 50%;
-  transform: translateY(-50%);
-  pointer-events: none;
+/* The title and, after it in the same row, the arrow and its number (columns.js drawColumnHeader): the title gives
+   way (with ...) before they would overlap, also when it is right-aligned; clear of the edge's grip (.colgrip). */
+.colcell {
+  display: flex;
+  align-items: center;
 }
 
-.colcell.asc, .colcell.desc {
-  padding-right: 22px;
+.colcell .coltitle {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.colcell.right .coltitle {
+  text-align: right;
+}
+
+.colcell.asc::after, .colcell.desc::after {
+  flex: none;
+  margin: 0 2px 0 4px;
+  font-size: 0.75em;
+  pointer-events: none;
 }
 
 /* Its place in the sort beside the arrow, when more than one column sorts (columns.js drawColumnHeader; plan 28 3.4). */
@@ -1214,8 +1224,8 @@ body[data-focus-away] :is(.row, .tile).selected.focused {
 
 /* Select columns (dialogpage.js selectColumnsHere; plan 28 3.7): two lists, the arrows between them. */
 .sc-lists { display: flex; gap: 8px; align-items: stretch; }
-.sc-side { display: flex; flex-direction: column; gap: 4px; width: 16em; }
-.sc-side select { flex: 1; height: 18em; }
+.sc-side { display: flex; flex-direction: column; gap: 4px; width: 22em; }
+.sc-side select { flex: 1 1 auto; height: 26em; }
 .sc-label { color: var(--fg-dim); padding: 2px 0; }
 .sc-arrows { display: flex; flex-direction: column; justify-content: center; gap: 6px; }
 .sc-arrows button, .sort-line button {

@@ -23,9 +23,14 @@ dialog.bm-pick { width: 420px; }
 dialog.inline.find { width: 560px; border: 0; border-radius: 0; }
 dialog.inline.rename-many { width: 760px; }
 dialog.inline .rn-list { max-height: 360px; }
-dialog.inline.more-columns { width: 420px; }
 dialog.inline.size-window { width: 420px; }
-dialog.inline.more-columns .props { max-height: 420px; }
+dialog.inline.select-columns { width: auto; }
+/* A window you can resize (Select columns; dialogpage.js fitWindow): its first size the dialog's own, then the dialog
+   fills the window, its lists taking the room. */
+dialog.inline.fills[open] { inset: 0; width: auto; height: auto; display: flex; flex-direction: column; }
+dialog.inline.fills .sc-lists { flex: 1; min-height: 0; }
+dialog.inline.fills .sc-side { flex: 1; width: auto; min-width: 10em; }
+dialog.inline.fills .sc-side select { height: auto; min-height: 6em; }
 
 /* About (dialogpage.js aboutHere; as LexPen's .mm-about): the name, a line, by whom, the coffee, the build, a table
    of what it runs on. */
