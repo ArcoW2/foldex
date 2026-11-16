@@ -1072,16 +1072,24 @@ body[data-focus-away] :is(.row, .tile).selected.focused {
   text-align: right;
 }
 
+/* The arrow and its number at the right, clear of the edge's grip (.colgrip); the title keeps out of their way, also
+   when it is right-aligned. */
 .colcell.asc::after, .colcell.desc::after {
   position: absolute;
-  right: 3px;
+  right: 7px;
   font-size: 0.75em;
   top: 50%;
   transform: translateY(-50%);
+  pointer-events: none;
 }
 
-.colcell.asc::after { content: "^"; }
-.colcell.desc::after { content: "v"; }
+.colcell.asc, .colcell.desc {
+  padding-right: 22px;
+}
+
+/* Its place in the sort beside the arrow, when more than one column sorts (columns.js drawColumnHeader; plan 28 3.4). */
+.colcell.asc::after { content: "^" attr(data-place); }
+.colcell.desc::after { content: "v" attr(data-place); }
 
 .colcell.dragging {
   outline: 1px dashed var(--accent);
@@ -1118,17 +1126,34 @@ body[data-focus-away] :is(.row, .tile).selected.focused {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--column-text, var(--fg-dim));   /* the settings otherColumnsIntensity, sortColumnIntensity (look.js) */
+  /* As high as the row, its text in the middle: a sorted column's background is one block from row to row (plan 28
+     3.4). */
+  align-self: stretch;
+  line-height: var(--row-height, 22px);
 }
 
 .row .cell.sorted {
   color: var(--sort-column-text, var(--fg-dim));
+  /* Over the row's own background, which shows through (look.js applyHighlights; plan 28 3.4). */
+  background-color: var(--sort-cell-bg, transparent);
 }
 
+/* The first column's cell, whichever column (plan 28 3.3): what marks the item, then its value. Every column's text in
+   the same colour, the name's too (otherColumnsIntensity); the columns sorted on in theirs (sortColumnIntensity). */
 .row .cell.first {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: inherit;
+}
+
+.row .cell.first .value {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.row .cell.first.right .value {
+  text-align: right;
 }
 
 .row .cell.right {
@@ -1187,16 +1212,33 @@ body[data-focus-away] :is(.row, .tile).selected.focused {
   box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--fg) var(--row-line-mix, 8%), transparent);
 }
 
-dialog.more-columns .props, .manage-sets .setcolumns {
-  max-height: 50vh;
-  overflow: auto;
-  display: grid;
-  gap: 2px;
-  margin: 6px 0;
+/* Select columns (dialogpage.js selectColumnsHere; plan 28 3.7): two lists, the arrows between them. */
+.sc-lists { display: flex; gap: 8px; align-items: stretch; }
+.sc-side { display: flex; flex-direction: column; gap: 4px; width: 16em; }
+.sc-side select { flex: 1; height: 18em; }
+.sc-label { color: var(--fg-dim); padding: 2px 0; }
+.sc-arrows { display: flex; flex-direction: column; justify-content: center; gap: 6px; }
+.sc-arrows button, .sort-line button {
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 10px;
 }
+.sc-arrows button:hover, .sort-line button:hover { border-color: var(--accent); }
+dialog.select-columns .ask-buttons, dialog.sort-window .ask-buttons { margin-top: 10px; }
 
-/* Manage column sets as a pane's page (columnsets.html; plan 14 3.0): the whole frame or window, the sets at the left,
-   the one chosen at the right scrolling in the room left, Close at the bottom. */
+/* The Sort window (dialogpage.js sortHere; plan 28 3.5): a line per column of the sort. */
+.sort-lines { display: grid; gap: 4px; margin: 6px 0; min-width: 22em; }
+.sort-line { display: flex; align-items: center; gap: 8px; padding: 2px 4px; border-radius: 3px; }
+.sort-line:hover .bm-handle { opacity: 1; }
+.sort-line.dragging { outline: 1px dashed var(--accent); }
+.sort-line .sort-title { flex: 1; }
+.sort-line .sort-dir { width: 2.2em; padding: 2px 0; }
+
+/* Manage column sets as a pane's page (columnsets.html, colsmanage.js; plan 28 3.1): the whole frame or window; the
+   sets at the left, the set chosen at the right, a line to drag between them; Close at the bottom. Lists and arrows
+   as Manage the bookmarks' (.bm-body, .bm-arrows, .bm-handle). */
 .manage-sets.cs-page {
   position: absolute;
   inset: 0;
@@ -1207,67 +1249,54 @@ dialog.more-columns .props, .manage-sets .setcolumns {
   box-sizing: border-box;
   background: var(--bg-bar);
 }
-
-.manage-sets .manage {
-  display: grid;
-  grid-template-columns: 12em 1fr;
-  gap: 12px;
-  flex: 1;
-  min-height: 0;
+.cs-parts { flex: 1; min-height: 0; display: flex; }
+.cs-sets { flex: none; width: var(--cs-left, 15em); display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+.cs-set { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+.cs-split { flex: none; width: 11px; cursor: col-resize; background: linear-gradient(var(--border), var(--border)) center / 1px 100% no-repeat; }
+.cs-split:hover { background-size: 3px 100%; }
+.cs-label { color: var(--fg-dim); font-weight: 600; }
+.cs-parts .bm-body { flex: 1; min-height: 0; }
+.cs-list { flex: 1; min-width: 0; overflow: auto; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); outline: none; }
+.cs-list:focus { border-color: var(--accent); }
+.cs-row { padding: 3px 6px; cursor: default; }
+.cs-row.selected { background: var(--select); }
+.cs-row.dragging { outline: 1px dashed var(--accent); outline-offset: -1px; }
+.cs-row:hover .bm-handle, .cs-row.selected .bm-handle { opacity: 1; }
+.cs-setrow { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.cs-setrow .cs-name { overflow: hidden; text-overflow: ellipsis; }
+.cs-colrow { border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent); }
+.cs-line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; min-height: 26px; }
+.cs-fitline { padding-left: 14px; }
+.cs-title { flex: 1; min-width: 6em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cs-size { display: inline-flex; align-items: center; gap: 3px; }
+.cs-size input { width: 4.5em; }
+.cs-unit, .cs-caption { color: var(--fg-dim); }
+.cs-shown { white-space: nowrap; }
+.cs-list button, .manage-sets .setfolders button {
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
 }
+.cs-list button:hover, .manage-sets .setfolders button:hover { border-color: var(--accent); }
+.cs-sort { width: 2.8em; }
+.manage-sets .ask-buttons { flex-wrap: wrap; justify-content: flex-start; }
+.manage-sets .ask-buttons select { min-width: 0; max-width: 100%; }
+.manage-sets > .ask-buttons { justify-content: flex-end; }
+.manage-sets .setfolders { color: var(--fg-dim); max-height: 8em; overflow: auto; }
+.manage-sets .setfolders button { margin-left: 6px; }
 
-.manage-sets .setlist {
-  display: grid;
-  align-content: start;
-  gap: 2px;
-  overflow: auto;
-}
-
-.manage-sets .setedit {
-  overflow: auto;
-}
-
-.manage-sets .setcolumns {
-  max-height: none;
-}
-
-.manage-sets .setlist button {
-  text-align: left;
-}
-
-.manage-sets .setlist button.on {
-  outline: 1px solid var(--accent);
-}
-
-.manage-sets .setcolumns > div {
-  display: grid;
-  grid-template-columns: 1fr 5em auto auto auto;
-  gap: 4px;
-  align-items: center;
-}
-
-.manage-sets .setedit > * + * {
-  margin-top: 6px;
-}
-
-.manage-sets .buttons {
-  display: flex;
-  justify-content: flex-end;
-}
-
-/* A narrow pane (docked at a side, or a narrow window): the sets above the one chosen. The page is its own document,
-   so the width is the pane's. */
-@media (max-width: 560px) {
-  .manage-sets.cs-page .manage {
-    grid-template-columns: 1fr;
-    grid-template-rows: minmax(4em, auto) 1fr;
-  }
-  .manage-sets.cs-page .setlist {
-    grid-template-columns: repeat(auto-fill, minmax(8em, 1fr));
-    max-height: 30vh;
-  }
-  .manage-sets.cs-page .setcolumns > div { grid-template-columns: minmax(0, 1fr) 3.5em auto auto auto; gap: 2px; }
-  .manage-sets.cs-page .setcolumns button { padding-left: 5px; padding-right: 5px; }
+/* Too narrow for both side by side (a pane docked at a side, a narrow window): stacked, the whole sets' part first and
+   the set chosen under it, the page scrolling; no line between them. The page is its own document, so the width is
+   the pane's. */
+@media (max-width: 720px) {
+  .cs-parts { flex-direction: column; overflow: auto; gap: 10px; }
+  .cs-sets { width: auto; }
+  .cs-sets .cs-list { max-height: 30vh; min-height: 6em; }
+  .cs-set, .cs-set .bm-body { flex: none; }
+  .cs-set .cs-list { overflow: visible; }
+  .cs-split { display: none; }
 }
 
 .message {

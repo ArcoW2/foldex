@@ -335,10 +335,10 @@ sealed class AppHost : ApplicationContext
     /// <summary>The column sets and the folders' choices (docs/plans/executed/11-PLAN-columns.md 3.3), shipped and yours.</summary>
     public static JsonObject ColumnSets() => ColumnSetsFile.Load(DataDir, Path.Combine(DefaultsDir, ColumnSetsFile.SetsName));
 
-    /// <summary>Your column sets and/or the folders' choices written; every window gets them again.</summary>
-    public void SaveColumns(JsonNode? mine, JsonNode? folders)
+    /// <summary>Your column sets, their order and/or the folders' choices written; every window gets them again.</summary>
+    public void SaveColumns(JsonNode? mine, JsonNode? folders, JsonNode? order = null)
     {
-        if (mine is not null) ColumnSetsFile.SaveSets(DataDir, mine);
+        if (mine is not null || order is not null) ColumnSetsFile.SaveSets(DataDir, mine, order);
         if (folders is not null) ColumnSetsFile.SaveFolders(DataDir, folders);
         var message = new JsonObject { ["event"] = "columnSets", ["columnSets"] = ColumnSets() };
         foreach (var w in windows) w.Tell((JsonObject)message.DeepClone());

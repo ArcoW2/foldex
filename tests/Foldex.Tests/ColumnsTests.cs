@@ -49,7 +49,9 @@ public class ColumnsTests : IDisposable
         Assert.True(git["shipped"]!.GetValue<bool>() && git["mine"]!.GetValue<bool>());
         Assert.Equal(5, git["columns"]![1]!["width"]!.GetValue<double>());
         var mine = r["sets"]!.AsArray().Last()!;
-        Assert.True(mine["sort"]!["desc"]!.GetValue<bool>() && mine["fit"]!.GetValue<bool>() && !mine["shipped"]!.GetValue<bool>());
+        // Written before plan 28: its sort a list of one, "fit": true every column fitting both ways (3.9).
+        Assert.True(mine["sort"]![0]!["desc"]!.GetValue<bool>() && mine["columns"]![0]!["fit"]!.GetValue<string>() == "both"
+            && !mine["shipped"]!.GetValue<bool>());
     }
 
     [Fact]
@@ -118,12 +120,102 @@ public class ColumnsTests : IDisposable
             "b file10 file1 file2 v w", "b w v file1 file2 file10"], r.EnumerateArray().Select(x => x.GetString()));
     }
 
+    // Fitting all (Ctrl+Shift+R; docs/plans/executed/28-PLAN-column-sets-window.md 3.6): needs of 30, 8 and 12 em; room enough:
+    // as needed; 10 too little: the name 20; far too little: the name at NameMinEm (8), the rest scrolls.
     [Fact]
     public void FittingLetsTheNameGiveWayFirst()
     {
-        var r = Run("[fitWidths([300, 80, 120], 600, 100), fitWidths([300, 80, 120], 400, 100), fitWidths([300, 80, 120], 250, 100)]");
-        // Room: as needed; 100 too much: the name 200; far too little: the name at its minimum, the rest scrolls.
-        Assert.Equal("[[300,80,120],[200,80,120],[100,80,120]]", r.GetRawText());
+        var r = Run("""
+            (() => {
+              const cols = [{ id: 'name', width: 22 }, { id: 'size', width: 7 }, { id: 'type', width: 12 }];
+              return [60, 40, 25].map(room => fittedWidths(cols, [30, 8, 12], 'all', room));
+            })()
+            """);
+        Assert.Equal("[[30,8,12],[20,8,12],[8,8,12]]", r.GetRawText());
+    }
+
+    // Fit per column: Ctrl+R fits manual and auto columns (the name alone when all are never), within min and max;
+    // auto-enlarge only widens, auto-shrink only narrows; the name can be anywhere.
+    [Fact]
+    public void EachColumnFitsAsItsFitSays()
+    {
+        var r = Run("""
+            (() => {
+              const cols = [{ id: 'git', width: 8, fit: 'enlarge' }, { id: 'name', width: 22, fit: 'never' },
+                { id: 'size', width: 7, fit: 'shrink' }, { id: 'type', width: 12, fit: 'manual', min: 10, max: 11 }];
+              const never = cols.map(c => ({ ...c, fit: 'never' }));
+              return [fittedWidths(cols, [6, 30, 5, 20], 'fit', 100), fittedWidths(cols, [6, 30, 5, 20], 'auto', 100),
+                fittedWidths(cols, [10, 30, 9, 4], 'auto', 100), fittedWidths(never, [6, 30, 5, 20], 'fit', 100)];
+            })()
+            """);
+        Assert.Equal("[[6,22,5,11],[8,22,5,12],[10,22,7,12],[8,30,7,12]]", r.GetRawText());
+    }
+
+    // Sorting on several columns (3.4): by the first, then the second where the first is equal; folders first, empty
+    // values last, by name at the end.
+    [Fact]
+    public void SortingOnSeveralColumns()
+    {
+        var r = Run("""
+            (() => {
+              const items = [
+                { name: 'c', type: 'Text', size: 5, folder: false }, { name: 'a', type: 'Text', size: 9, folder: false },
+                { name: 'b', type: 'Image', size: 9, folder: false }, { name: 'd', folder: false, size: 1 },
+                { name: 'z', folder: true, type: 'Folder' } ];
+              const by = sort => [...items].sort(sortComparer(sort)).map(x => x.name).join(' ');
+              return [by([{ id: 'type', desc: false }, { id: 'size', desc: true }]), by([{ id: 'size', desc: true }, { id: 'type', desc: false }]),
+                by([{ id: 'size', desc: false }, { id: 'name', desc: true }])];
+            })()
+            """);
+        Assert.Equal(["z b a c d", "z b a c d", "z d c b a"], r.EnumerateArray().Select(x => x.GetString()));
+    }
+
+    // A click on a title (3.4): one column (or none) sorts by it, again the other way; several: only that one turned,
+    // or null (the Sort window) for a column not in the sort.
+    [Fact]
+    public void AClickOnATitle()
+    {
+        var r = Run("""
+            (() => {
+              const two = [{ id: 'type', desc: false }, { id: 'size', desc: false }];
+              return [sortAfterClick([], 'size'), sortAfterClick([{ id: 'size', desc: false }], 'size'),
+                sortAfterClick([{ id: 'size', desc: false }], 'name'), sortAfterClick(two, 'size'), sortAfterClick(two, 'name')];
+            })()
+            """);
+        Assert.Equal("""[[{"id":"size","desc":false}],[{"id":"size","desc":true}],[{"id":"name","desc":false}],[{"id":"type","desc":false},{"id":"size","desc":true}],null]""",
+            r.GetRawText());
+    }
+
+    // Written before (3.9): one sort as a list of one, "fit": true as every column fitting both ways.
+    [Fact]
+    public void OldColumnsAreReadAsMeant()
+    {
+        var r = Run("""normalColumns({ columns: [{ id: 'name', width: 20 }, { id: 'size' }], sort: { id: 'size', desc: true }, fit: true })""");
+        Assert.Equal("""{"columns":[{"id":"name","width":20,"fit":"both"},{"id":"size","fit":"both"}],"sort":[{"id":"size","desc":true}]}""", r.GetRawText());
+    }
+
+    // The host (3.9): an old set read into the new form; the new fields and your order written and read back.
+    [Fact]
+    public void TheHostKeepsTheNewFieldsAndTheOrder()
+    {
+        var problems = new JsonArray();
+        var old = ColumnSetsFile.Sets(JsonNode.Parse("""
+            { "sets": [ { "name": "Old", "columns": [ { "id": "name" }, { "id": "size" } ], "sort": { "id": "size", "desc": true }, "fit": true } ] }
+            """), problems, "yours");
+        Assert.Equal("""{"name":"Old","columns":[{"id":"name","fit":"both"},{"id":"size","fit":"both"}],"sort":[{"id":"size","desc":true}]}""",
+            old[0].ToJsonString());
+        ColumnSetsFile.SaveSets(dir, JsonNode.Parse("""
+            [ { "name": "Mine", "columns": [ { "id": "git", "fit": "enlarge", "min": 4, "max": 9 }, { "id": "name" }, { "id": "ext", "hidden": true } ],
+                "sort": [ { "id": "git" }, { "id": "name", "desc": true } ] } ]
+            """)!, JsonNode.Parse("""[ "Git", "Mine" ]"""));
+        var r = ColumnSetsFile.Load(dir, Shipped);
+        Assert.Empty(r["problems"]!.AsArray());
+        Assert.Equal(["Git", "Mine", "Generic", "Dates", "Pictures", "Music", "Films", "Documents"], Names(r));
+        Assert.Equal("""[{"id":"git","min":4,"max":9,"fit":"enlarge"},{"id":"name"},{"id":"ext","hidden":true}]""", r["sets"]![1]!["columns"]!.ToJsonString());
+        Assert.Equal("""[{"id":"git","desc":false},{"id":"name","desc":true}]""", r["sets"]![1]!["sort"]!.ToJsonString());
+        // Your sets written again without an order keep it.
+        ColumnSetsFile.SaveSets(dir, JsonNode.Parse("""[ { "name": "Mine", "columns": [ { "id": "name" } ] } ]""")!);
+        Assert.Equal("Git", Names(ColumnSetsFile.Load(dir, Shipped))[0]);
     }
 
     // ---------- The host ----------

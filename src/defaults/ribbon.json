@@ -50,7 +50,7 @@
         { "action": "layout.preset", "params": ["columns"], "label": "Columns", "stack": true },
         { "action": "layout.preset", "params": ["preview"], "label": "With preview", "stack": true } ] },
       { "name": "Columns", "items": [
-        { "action": "columns.fit", "label": "Fit columns" },
+        { "action": "columns.fit", "label": "Fit all columns" },
         { "action": "columns.manage", "label": "Manage sets", "stack": true } ] },
       { "name": "Bars", "items": [
         { "action": "bars.change", "label": "Change bars" },

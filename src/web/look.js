@@ -148,12 +148,19 @@ function highlightShares(settings) {
 
 function applyHighlights(settings) {
   const root = document.documentElement.style;
-  // The text of the columns after the name (sortColumnIntensity for the one the pane is sorted on, otherColumnsIntensity
-  // for the rest), 0 to 200 %: 100 the theme's dim text, lower toward the background, higher toward the full text.
-  for (const [name, variable, otherwise] of [['otherColumnsIntensity', '--column-text', 100], ['sortColumnIntensity', '--sort-column-text', 150]]) {
+  // The text of the columns, the name's too (sortColumnIntensity for those the pane is sorted on, otherColumnsIntensity
+  // for the rest; plan 28 3.4), 0 to 200 %: 100 the theme's dim text, lower toward the background, higher toward the
+  // full text.
+  for (const [name, variable, otherwise] of [['otherColumnsIntensity', '--column-text', 160], ['sortColumnIntensity', '--sort-column-text', 200]]) {
     const p = between(Number(settings[name]), 0, 200, otherwise);
     root.setProperty(variable, p <= 100 ? `color-mix(in srgb, var(--fg-dim) ${p}%, var(--bg))` : `color-mix(in srgb, var(--fg) ${p - 100}%, var(--fg-dim))`);
   }
+  // The sort columns' background (docs/plans/executed/28-PLAN-column-sets-window.md 3.4): their colour (sortColumnBackgroundColour;
+  // empty: the theme's text colour) at sortColumnBackground % over what the row shows, so it blends with the stripes,
+  // the selection and the focus.
+  const tint = between(Number(settings.sortColumnBackground), 0, 50, 6);
+  const tintColour = /^#[0-9a-f]{6}$/i.test(settings.sortColumnBackgroundColour ?? '') ? settings.sortColumnBackgroundColour : 'var(--fg)';
+  root.setProperty('--sort-cell-bg', `color-mix(in srgb, ${tintColour} ${tint}%, transparent)`);
   for (const [kind, { keep, up }] of Object.entries(highlightShares(settings))) {
     root.setProperty(`--${kind}-keep`, `${keep}%`);
     root.setProperty(`--${kind}-up`, `${up}%`);

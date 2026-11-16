@@ -1,10 +1,12 @@
 // The column sets of Foldex (docs/plans/executed/11-PLAN-columns.md 3.3). A columnsets.json in your data folder replaces a set
 // here by its name, adds sets, or takes one away ({ "name": "Films", "deleted": true }); Manage sets writes it.
 //
-// A set: "name"; "columns", each { "id", "width" } (the width in em of the pane font; the first is always the name);
-// "sort": { "id", "desc" }; "fit": true (the columns fitted to their content after every listing). An id is one of
-// Foldex's own columns (name, size, type, modified, created, accessed, attributes, ext, target, path, total, free,
-// git) or a property of Windows by its canonical name (System.Media.Duration).
+// A set (docs/plans/executed/28-PLAN-column-sets-window.md 3.9): "name"; "columns", each { "id", "width", "hidden", "fit", "min",
+// "max" } (widths in em of the pane font; any column in any place, the name too; "hidden": true keeps it in the set
+// without showing it; "fit": "never", "manual", "enlarge", "shrink" or "both", without it the name manual and the
+// others never); "sort": [{ "id", "desc" }, ...], sorted by the first, then the second, ... An id is one of Foldex's
+// own columns (name, size, type, modified, created, accessed, attributes, ext, target, path, total, free, git, gps) or
+// a property of Windows by its canonical name (System.Media.Duration). Your order of the sets: "order" in yours.
 {
   "sets": [
     { "name": "Generic", "columns": [

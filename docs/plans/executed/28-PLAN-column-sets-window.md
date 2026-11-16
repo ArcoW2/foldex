@@ -1,8 +1,9 @@
 # Plan 28: Manage column sets: a clear window, sorting on several columns, Fit per column
 
-Status: not started; see Status.
+Status: executed; see Status and 6 (As built).
 
 - 2026-11-15: draft.
+- 2026-11-16: executed.
 
 Builds on plan 11 (columns and column sets, executed) and plan 14 (Manage column sets as a pane page, stage 4). The
 number in the file name is the priority; rename to reorder.
@@ -49,21 +50,19 @@ with the set's settings for it. The menu also has the fits and the sets. Ctrl+R 
 
 | Part | What | Reference |
 |---|---|---|
+| Theme buttons | every button of the page in the theme's look | 3.1; 6 |
+| Two parts | sets left, the set chosen right, a draggable line between, a label naming the set; wide enough when floating; stacked (sets first) when narrow | 3.1; 6 |
+| The sets' list | rows, grip, arrow strip, buttons under it; the order kept and used in every list of sets | 3.2; 6 |
+| The columns' list | two lines per column (shown or not), grip, arrow strip, Remove and Add under it; any column first, Name too | 3.3; 6 |
+| Sort on several columns | the sort cells in the editor; the lists sort that way | 3.4; 6 |
+| The header's sort | numbers beside the arrows; click, Ctrl+click; the Sort window; the sort columns' background (a setting) | 3.4; 3.5; 6 |
+| Column text | every column's text the same colour, the name's too; the sort columns their own | 3.4; 6 |
+| Fit per column | never, manual, auto-enlarge, auto-shrink, auto-both; minimum and maximum, also when resizing by hand; Ctrl+R and Ctrl+Shift+R | 3.6; 6 |
+| Columns not shown | a set's columns kept but not shown; Select columns... (not shown left, "Selected" right, arrows, the set's filter), in the pane only; More columns goes | 3.7; 6 |
+| The header's menu | Select columns..., the fits, the sets, Columns... for a pane's own columns | 3.8; 6 |
+| Host | columnsets.json: the sets' order, a sort of several columns, per column shown, Fit and its limits; older files read | 3.9; 6 |
 
 ### Not yet built
-
-| Part | What | Waits for | Reference |
-|---|---|---|---|
-| Theme buttons | every button of the page in the theme's look | -- | 3.1 |
-| Two parts | sets left, the set chosen right, a draggable line between, a label naming the set; wide enough when floating; stacked (sets first) when narrow | -- | 3.1 |
-| The sets' list | rows, grip, arrow strip, buttons under it; the order kept and used in every list of sets | -- | 3.2 |
-| The columns' list | two lines per column (shown or not), grip, arrow strip, Remove and Add under it; any column first, Name too | -- | 3.3 |
-| Sort on several columns | the sort cells in the editor; the lists sort that way | -- | 3.4 |
-| The header's sort | numbers beside the arrows; click, Ctrl+click; the Sort window | -- | 3.4; 3.5 |
-| Fit per column | never, manual, auto-enlarge, auto-shrink, auto-both; minimum and maximum, also when resizing by hand; Ctrl+R and Ctrl+Shift+R | -- | 3.6 |
-| Columns not shown | a set's columns kept but not shown; Select columns... (not shown left, "Selected" right, arrows, the set's filter), in the pane only; More columns goes | -- | 3.7 |
-| The header's menu | Select columns..., the fits, the sets, Columns... for a pane's own columns | -- | 3.8 |
-| Host | columnsets.json: the sets' order, a sort of several columns, per column shown, Fit and its limits; older files read | -- | 3.9 |
 
 ## 3. Details
 
@@ -127,7 +126,12 @@ with the set's settings for it. The menu also has the fits and the sets. Ctrl+R 
   column shows its place in the sort (1, 2, 3, ...) beside its direction. A column turned on becomes the last of the
   sort; one turned off leaves, and the ones after it move up.
 - In a list's header, a sorted column shows its arrow; beside it its place in the sort (1, 2, ...), only when more
-  than one column sorts.
+  than one column sorts. The title keeps clear of them, also when it is right-aligned.
+- Every column's text has the same colour, the name's too (Settings, Columns: Columns), so no column is made to look
+  more important than another; the columns sorted on have theirs (Sort columns).
+- The columns sorted on have a background of their own (Settings, Contents, Columns): Sort columns background, a
+  slider from 0 to 50 %, and Sort columns colour, the theme's text colour unless you choose one. It lies over what the
+  row shows (its stripe, the selection, the focus, the hover), which shows through, blended with it.
 - A click on a title:
   - the sort is of one column (or none): sort by this column alone; when it is that column already, the other way
     (as now);
@@ -236,3 +240,46 @@ with the set's settings for it. The menu also has the fits and the sets. Ctrl+R 
 ## 4. Open questions
 
 None.
+
+## 6. As built
+
+- Host (ColumnSetsFile.cs): a column keeps `width`, `min`, `max`, `hidden` and `fit`; a set's `sort` is a list; your
+  file has `order`, the names of all sets in your order (written with `columnSetsSave` and `order`; your sets written
+  without one keep it). A set written before is read as 3.9 says. The shipped columnsets.json's header says the form.
+- The page (columns.js): `normalColumns` makes a set's or a pane's columns this form (a pane's own columns once, when
+  first used); `sortComparer` sorts by a list; `fittedWidths` is the rule of 3.6, `fitViewColumns` measures a list or a
+  tree for it; `sortAfterClick` is the rule of a click on a title. A list and a tree draw only the shown columns; the
+  first column's cell holds the item's marks (a tree's indent and expander, the icon, a link's mark when the name is
+  elsewhere) before its value; the name's cell is wherever the Name column is. The header finds its column by its id
+  when used (the view's columns can be taken again from the window's layout after it was drawn).
+- Auto Fit runs after a listing, items coming in or changing, values of Windows' properties read, the pane resized, and
+  a tree's rows changing (once per frame).
+- Keys: Ctrl+R stays `columns.fitName` and Ctrl+Shift+R `columns.fit` (ids kept, so keys.json and ribbon.json written
+  before still work); their titles are Fit columns and Fit all columns. The ribbon's button is Fit all columns.
+- The Sort window and Select columns are modal floating windows (dialogpage.js `sortHere`, `selectColumnsHere`). The
+  Sort window opens where the other modal floating windows open, not under the title clicked: the host's `dialogOpen`
+  takes no place `[not yet built]`. More columns is gone (columns.js `moreColumns`, dialogpage.js `moreColumnsHere`).
+- The Manage window (columnsets.html, colsmanage.js): a pane opened with Columns... is the first row of the sets'
+  list, "This pane's columns", chosen; its changes go to that pane (`setOwnColumns`, run in its page). The line
+  between the parts is kept with the Manage pane in the layout (`split`). Stacked below 720 px of width. Floating, it
+  first opens 980 x 620.
+- Settings: Sort columns background (0 to 50 %, default 6) and Sort columns colour (Settings' new kind 'colour': Own
+  colour on or off, and a colour box), a tint over the cell that the row's own background shows through; the cells are
+  as high as the row, so the tint is one block. Columns (otherColumnsIntensity, default 160) and Sort columns
+  (sortColumnIntensity, default 200) now cover every column, the name's too; before, the name had the full text colour.
+- Tested: `dotnet test` (231 passed; new: the host's new fields and order, old files, sorting on two columns, fitting
+  per Fit, a click on a title). In the test copy, through the debugging port (the list's page's own mouse): a click on
+  Size sorting ascending and again descending; Ctrl+click on Type opening the Sort window with Size and Type; its
+  direction button; Remove all (the sort gone, the window closed); two sorts shown as 1 and 2 in the header; a click on
+  a title outside them opening the Sort window with it added; As the set (the set's sort back, the window closed);
+  Size dragged before Name, its cell holding the icon; Ctrl+R fitting only the name, Ctrl+Shift+R every column; a
+  minimum of 9 em holding when dragged 180 px narrower; auto-enlarge widening the name when a long name came in (6 to
+  29.4 em); Select columns: a hidden column of a set shown with the set's width, the filter off and Authors found and
+  shown, Size hidden in the pane only, Name not hideable; Manage: floating 966 x 583 with both parts and nothing
+  sideways, its buttons in the theme, Generic moved down twice (the window's sets in that order), a column's Fit and
+  two sort cells written to the set, Columns... with the pane's own columns, a width changed there reaching the pane,
+  the window made 520 px wide by Windows (stacked, sets first, no line, nothing sideways), the line dragged 120 px and
+  kept after a restart; screenshots of the header (arrows and numbers clear of right-aligned titles) and of the sort
+  columns' background in grey and in a colour of one's own.
+- Not checked: a tree with its columns moved (the Name elsewhere) and Columns... for a tree; the Sort window and Select
+  columns opened from a floating list; dragging a set by its grip (the arrows were used): `[not yet checked]`.

@@ -553,7 +553,7 @@ class TreeView {
     new ResizeObserver(() => {
       const before = height;
       height = this.body.clientHeight;
-      if (this.cols.fit && this.flat.length) this.fitColumns();
+      if (this.flat.length) this.autoFit();
       if (height >= before) return;
       const i = this.flat.indexOf(this.focused());
       const top = i * RowHeight - this.body.scrollTop;
@@ -892,6 +892,7 @@ class TreeView {
     const guides = treeGuides(this.flat.map(n => n.depth));
     this.flat.forEach((n, i) => { n.guides = guides[i]; });
     this.render();
+    this.autoFit();
     tellWatched();
   }
 
@@ -908,7 +909,8 @@ class TreeView {
 
   render() {
     const fontPx = this.fontPx();
-    const cols = this.cols.columns.map(c => ({ ...columnInfo(c.id), width: (c.width ?? columnInfo(c.id).width) * fontPx }));
+    const cols = shownColumns(this.cols).map(c => ({ ...columnInfo(c.id), width: (c.width ?? columnInfo(c.id).width) * fontPx }));
+    const sorted = new Set(this.cols.sort.map(s => s.id));
     this.rows.style.height = `${this.flat.length * RowHeight}px`;
     this.rows.style.width = `${cols.reduce((a, c) => a + c.width, 0)}px`;
     const [first, last] = visibleRange(this.body, this.flat.length);
@@ -928,13 +930,11 @@ class TreeView {
       if (this.qaDrop?.node === n) row.classList.add({ before: 'qa-drop-before', after: 'qa-drop-after', into: 'qa-drop-into' }[this.qaDrop.where]);
       row.style.top = `${i * RowHeight}px`;
       row.dataset.index = i;
+      // What marks the node stays at the left of the row, at the start of the first column's cell whichever column that
+      // is (plan 28 3.3): its indent, its expander, its icon (and a link's mark when the name is elsewhere).
       cols.forEach((c, k) => {
-        const cell = document.createElement('span');
-        cell.className = k === 0 ? 'cell first' : 'cell' + (RightAligned.has(c.kind) ? ' right' : '') + (c.id === 'git' && n.git ? ` git-${n.git === '!' ? 'conflict' : n.git}` : '')
-          + (c.id === this.cols.sort?.id ? ' sorted' : '');
-        cell.style.width = `${c.width}px`;
-        if (k > 0) cell.textContent = n.qa || n.up ? '' : columnText(n, c.id);
-        else {
+        const cell = columnCell(c, k, n, sorted);
+        if (k === 0) {
           cell.style.paddingLeft = `${8 + n.depth * 14}px`;
           const twisty = document.createElement('span');
           const leaf = !this.hasItems(n);
@@ -944,22 +944,22 @@ class TreeView {
             twisty.className = 'twisty';
             twisty.textContent = leaf ? '' : n.expanded ? '-' : '+';
           }
+          cell.append(twisty);
+          if (n.qa || n.up) { /* the area's head and hint, "..": no icon */ }
+          else if (n.bm && bookmarkById(n.bm)) cell.append(bookmarkIcon(bookmarkById(n.bm), n));
+          else cell.append(iconImage(n, missing));
+          if (n.link && c.id !== 'name') cell.append(linkMark());
+        }
+        if (c.id === 'name') {
           const name = document.createElement('span');
           name.className = 'name';
           name.textContent = n.name;
-          if (n.qa || n.up) cell.append(twisty, name);   // the area's head and hint, "..": no icon
-          else if (n.bm && bookmarkById(n.bm)) cell.append(twisty, bookmarkIcon(bookmarkById(n.bm), n), name);
-          else cell.append(twisty, iconImage(n, missing), name);
+          cell.append(name);
           // Two shortcuts with the same name side by side: the folder each is in, dimmed after it (plan 23 3.4).
           if (n.bm && !n.bmGroup && n.parent.children.some(c => c !== n && !c.bmGroup && c.name.toLowerCase() === n.name.toLowerCase()))
             name.after(Object.assign(document.createElement('span'), { className: 'qa-where', textContent: folderParent(n.id) }));
-          if (n.link) {
-            const link = document.createElement('span');
-            link.className = 'link';
-            link.textContent = 'link';
-            cell.append(link);
-          }
-        }
+          if (n.link && k === 0) cell.append(linkMark());
+        } else columnValue(cell, k, n.qa || n.up ? '' : columnText(n, c.id));
         row.append(cell);
       });
       // Its tree lines: the expander of level k is centred at 14 + 14k px (padding 8 + 14 per level, 12 wide).
@@ -1204,17 +1204,25 @@ class TreeView {
     tellLayout();
   }
 
-  comparer() {
-    const sort = this.cols.sort;
-    return sort ? columnComparer(sort.id, columnInfo(sort.id).kind, sort.desc) : byName;
+  // Its own columns changed in Manage column sets (Columns... in its header; plan 28 3.8).
+  setOwnColumns(columns) {
+    layout.pane(this.id).columns = normalColumns(columns);
+    this.cols = paneColumns(this.id);
+    this.columnsChanged();
+    this.sortEntries();
   }
 
-  // Sorted again: every level read so far.
+  // By the sort's columns in turn (plan 28 3.4); without a sort as always (drives first).
+  comparer() {
+    return this.cols.sort.length ? sortComparer(this.cols.sort) : byName;
+  }
+
+  // Sorted again: every level read so far; Windows' properties sorted by are read first.
   async sortEntries() {
-    const sort = this.cols.sort;
-    if (sort && propsFor(sort.id).length) {
-      const missing = this.allNodes().filter(n => !(n.props && propsFor(sort.id).every(p => p in n.props)) && /^[A-Za-z]:\\|^\\\\/.test(n.id));
-      if (missing.length) await this.askProps(missing, propsFor(sort.id));
+    const names = this.cols.sort.flatMap(s => propsFor(s.id));
+    if (names.length) {
+      const missing = this.allNodes().filter(n => !(n.props && names.every(p => p in n.props)) && /^[A-Za-z]:\\|^\\\\/.test(n.id));
+      if (missing.length) await this.askProps(missing, names);
     }
     const compare = this.comparer();
     if (this.folder) this.top.sort(compare);
@@ -1224,7 +1232,7 @@ class TreeView {
 
   // The Git status of the folders read so far (once each), when the Git column is there.
   askColumnValues() {
-    if (!this.cols.columns.some(c => c.id === 'git')) return;
+    if (!wantsGit(this.cols)) return;
     const top = this.folder && this.root && this.gitRootAsked !== this.root ? [{ id: this.root, top: true }] : [];
     for (const f of [...top, ...this.allNodes().filter(n => n.children)]) {
       if (f.gitAsked || !/^[A-Za-z]:\\|^\\\\/.test(f.id)) continue;
@@ -1240,25 +1248,24 @@ class TreeView {
 
   askProps(items, names) { return ListView.prototype.askProps.call(this, items, names); }
 
-  // Fit columns: as a list's, the name column counting each row's indent and expander.
-  fitColumns(nameOnly = false) {
-    const measure = document.createElement('canvas').getContext('2d');
-    const style = getComputedStyle(this.body);
-    measure.font = `${style.fontSize} ${style.fontFamily}`;
-    const fontPx = this.fontPx(), pad = 14;
-    const rows = this.flat.slice(0, 5000);
-    const needs = this.cols.columns.map((col, k) => {
-      let widest = measure.measureText(columnInfo(col.id).title).width + 16;
-      for (const n of rows) widest = Math.max(widest, k === 0
-        ? measure.measureText(n.name).width + n.depth * 14 + 12 + iconSize + 12 + (n.link ? measure.measureText(' link').width : 0)
-        : measure.measureText(columnText(n, col.id)).width);
-      return widest + pad;
-    });
-    const widths = nameOnly ? [Math.ceil(needs[0])] : fitWidths(needs, this.body.clientWidth - 2, NameMinEm * fontPx);
-    this.cols.columns.forEach((col, k) => { if (k < widths.length) col.width = Math.round(widths[k] / fontPx * 10) / 10; });
+  // Fit columns (plan 28 3.6; `which` as fittedWidths): as a list's, the first column counting each row's indent,
+  // expander and icon.
+  fitColumns(which = 'all') {
+    const marks = (n, measure) => n.depth * 14 + 12 + iconSize + 12 + (n.link ? measure.measureText(' link').width : 0);
+    if (!fitViewColumns(this, this.flat.slice(0, 5000), marks, which)) return;
     this.drawHeader();
     this.render();
     tellLayout();
+  }
+
+  // The columns whose Fit is auto, fitted once the rows changed (rows shown, values read, the pane resized).
+  autoFit() {
+    if (this.autoFitting || !hasAutoFit(this.cols)) return;
+    this.autoFitting = true;
+    requestAnimationFrame(() => {
+      this.autoFitting = false;
+      this.fitColumns('auto');
+    });
   }
 }
 
@@ -1324,7 +1331,7 @@ class ListView {
     dropTarget(this.body, e => this.dropAt(e));
     new ResizeObserver(() => {
       this.render();
-      if (this.cols.fit && this.entries.length) this.fitColumns();
+      if (this.entries.length) this.autoFit();
     }).observe(this.body);
     iconUsers.add(this);
   }
@@ -1369,10 +1376,19 @@ class ListView {
     if (!this.cols.set) tellLayout();
   }
 
-  // The ".." row (plan 26 3.11) first whatever the sort.
+  // Its own columns changed in Manage column sets (Columns... in its header; plan 28 3.8); shown when no folder's set
+  // is.
+  setOwnColumns(columns) {
+    layout.pane(this.id).columns = normalColumns(columns);
+    if (this.cols.set) return tellLayout();
+    this.cols = paneColumns(this.id);
+    this.columnsChanged();
+    this.sortEntries();
+  }
+
+  // By the sort's columns in turn (plan 28 3.4); the ".." row (plan 26 3.11) first whatever the sort.
   comparer() {
-    const sort = this.cols.sort;
-    const by = sort ? columnComparer(sort.id, columnInfo(sort.id).kind, sort.desc) : byName;
+    const by = this.cols.sort.length ? sortComparer(this.cols.sort) : byName;
     return (a, b) => (isUpRow(b) - isUpRow(a)) || by(a, b);
   }
 
@@ -1386,14 +1402,14 @@ class ListView {
   // Its items, without the ".." row.
   itemCount() { return this.entries.filter(x => !x.up).length; }
 
-  // Sorted again (a click on a title): by a property of Windows, its value is read for every item first.
+  // Sorted again (a click on a title): by properties of Windows, their values are read for every item first.
   async sortEntries() {
-    const sort = this.cols.sort;
-    if (sort && propsFor(sort.id).length) {
-      const missing = this.entries.filter(x => !(x.props && propsFor(sort.id).every(p => p in x.props)) && !x.propsAll);
+    const by = this.cols.sort.filter(s => propsFor(s.id).length), names = by.flatMap(s => propsFor(s.id));
+    if (names.length) {
+      const missing = this.entries.filter(x => !(x.props && names.every(p => p in x.props)) && !x.propsAll);
       if (missing.length) {
-        status(`Reading ${columnInfo(sort.id).title} of ${missing.length} items to sort by it...`);
-        await this.askProps(missing, propsFor(sort.id));
+        status(`Reading ${by.map(s => columnInfo(s.id).title).join(', ')} of ${missing.length} items to sort by it...`);
+        await this.askProps(missing, names);
         for (const x of missing) x.propsAll = true;
         status(`${this.name ?? ''}: ${this.entries.length} items`);
       }
@@ -1405,13 +1421,13 @@ class ListView {
   // The values that are not in the listing: the Git status of the folder's items, Windows' properties for the rows in
   // view (as they come).
   askColumnValues() {
-    if (this.cols.columns.some(c => c.id === 'git') && this.location && !this.gitAsked && /^[A-Za-z]:\\|^\\\\/.test(this.location)) {
+    if (wantsGit(this.cols) && this.location && !this.gitAsked && /^[A-Za-z]:\\|^\\\\/.test(this.location)) {
       this.gitAsked = true;
       const at = this.location;
       askHost({ op: 'git', folder: at }).then(m => {
         if (this.location !== at || !m.status) return;
         for (const x of this.entries) x.git = m.status[x.name] ?? null;
-        if (this.cols.sort?.id === 'git') this.entries.sort(this.comparer());
+        if (this.cols.sort.some(s => s.id === 'git')) this.entries.sort(this.comparer());
         this.render();
       });
     }
@@ -1427,28 +1443,28 @@ class ListView {
         if (x) x.props = { ...x.props, ...Object.fromEntries(names.map(n => [n, values[n] ?? null])) };
       }
       this.render();
+      this.autoFit();   // an auto column widens as the values come (plan 28 3.6)
     }));
     return Promise.all(batches);
   }
 
-  // Fit columns (3.4): each column as wide as its widest value here; too wide, the name gives way first. `nameOnly`
-  // (Ctrl+R): only the name column, its whole width (the pane scrolling sideways when it is wider than the pane).
-  fitColumns(nameOnly = false) {
-    const measure = document.createElement('canvas').getContext('2d');
-    const style = getComputedStyle(this.body);
-    measure.font = `${style.fontSize} ${style.fontFamily}`;
-    const fontPx = this.fontPx(), pad = 14;
-    const entries = this.entries.slice(0, 5000);
-    const needs = this.cols.columns.map((col, k) => {
-      let widest = measure.measureText(columnInfo(col.id).title).width + 16;
-      for (const x of entries) widest = Math.max(widest, measure.measureText(k === 0 ? x.name : columnText(x, col.id)).width);
-      return widest + pad + (k === 0 ? iconSize + 14 + measure.measureText(' link').width : 0);
-    });
-    const widths = nameOnly ? [Math.ceil(needs[0])] : fitWidths(needs, this.body.clientWidth - 2, NameMinEm * fontPx);
-    this.cols.columns.forEach((col, k) => { if (k < widths.length) col.width = Math.round(widths[k] / fontPx * 10) / 10; });
+  // Fit columns (plan 28 3.6; `which` as fittedWidths): the first column counting the icon and a link's mark.
+  fitColumns(which = 'all') {
+    const marks = (x, measure) => iconSize + 14 + (x.link ? measure.measureText(' link').width : 0);
+    if (!fitViewColumns(this, this.entries.slice(0, 5000), marks, which)) return;
     this.drawHeader();
     this.render();
     if (!this.cols.set) tellLayout();
+  }
+
+  // The columns whose Fit is auto, fitted once the rows changed (a listing, values read, the pane resized).
+  autoFit() {
+    if (this.autoFitting || !hasAutoFit(this.cols) || this.iconsView() || this.thumbsView()) return;
+    this.autoFitting = true;
+    requestAnimationFrame(() => {
+      this.autoFitting = false;
+      this.fitColumns('auto');
+    });
   }
 
   load(location, elevated = false, fresh = false) {
@@ -1702,6 +1718,7 @@ class ListView {
       }
       if (focus && offset !== null) this.body.scrollTop = this.entries.indexOf(focus) * RowHeight - offset;
       this.render();
+      this.autoFit();   // an item come in or changed: an auto column follows (plan 28 3.6)
       if (activePane === this.id && $('status').textContent.startsWith(`${this.name}: `))
         status(`${this.name}: ${this.entries.length} items`);
     });
@@ -1712,6 +1729,7 @@ class ListView {
     this.all = this.all.concat(entries);
     this.entries = this.entries.concat(entries.filter(this.passes())).sort(this.comparer());
     this.render();
+    this.autoFit();
     status(`${this.itemCount()} items so far...`);
   }
 
@@ -1766,8 +1784,8 @@ class ListView {
     if (this.id === activePane && now) showGlobal(now);
     this.backDone();
     this.askColumnValues();
-    if (this.cols.sort && propsFor(this.cols.sort.id).length) this.sortEntries();
-    if (this.cols.fit) this.fitColumns();
+    if (this.cols.sort.some(s => propsFor(s.id).length)) this.sortEntries();
+    this.autoFit();
     // A new folder or file made here (F8, F7; rename.js): focused and renamed in place.
     const made = this.renameOnLoad && this.entries.find(x => same(x.id, this.renameOnLoad));
     if (made) {
@@ -1803,10 +1821,11 @@ class ListView {
       this.rows.replaceChildren(msg);
       return;
     }
-    // The rows as wide as the columns (a scroll bar sideways when wider than the pane), each column a cell at its
-    // width; the first holds the icon, the name and a link's mark.
+    // The rows as wide as the columns (a scroll bar sideways when wider than the pane), each column shown a cell at its
+    // width; the first holds the icon (and a link's mark) before its value, whichever column it is (plan 28 3.3).
     const fontPx = this.fontPx();
-    const cols = this.cols.columns.map(c => ({ ...columnInfo(c.id), width: (c.width ?? columnInfo(c.id).width) * fontPx }));
+    const cols = shownColumns(this.cols).map(c => ({ ...columnInfo(c.id), width: (c.width ?? columnInfo(c.id).width) * fontPx }));
+    const sorted = new Set(this.cols.sort.map(s => s.id));
     this.rows.style.height = `${this.entries.length * RowHeight}px`;
     this.rows.style.width = `${cols.reduce((a, c) => a + c.width, 0)}px`;
     const [first, last] = visibleRange(this.body, this.entries.length);
@@ -1824,22 +1843,16 @@ class ListView {
       row.dataset.index = i;
       row.draggable = true;
       cols.forEach((c, k) => {
-        const cell = document.createElement('span');
-        cell.className = k === 0 ? 'cell first' : 'cell' + (RightAligned.has(c.kind) ? ' right' : '') + (c.id === 'git' && x.git ? ` git-${x.git === '!' ? 'conflict' : x.git}` : '')
-          + (c.id === this.cols.sort?.id ? ' sorted' : '');
-        cell.style.width = `${c.width}px`;
-        if (k === 0) {
+        const cell = columnCell(c, k, x, sorted);
+        if (k === 0) cell.append(iconImage(x, missing));
+        if (k === 0 && x.link && c.id !== 'name') cell.append(linkMark());
+        if (c.id === 'name') {
           const name = document.createElement('span');
           name.className = 'name';
           name.textContent = x.name;
-          cell.append(iconImage(x, missing), name);
-          if (x.link) {
-            const link = document.createElement('span');
-            link.className = 'link';
-            link.textContent = 'link';
-            cell.append(link);
-          }
-        } else cell.textContent = columnText(x, c.id);
+          cell.append(name);
+          if (x.link && k === 0) cell.append(linkMark());
+        } else columnValue(cell, k, columnText(x, c.id));
         row.append(cell);
       });
       nodes.push(row);
@@ -2518,8 +2531,8 @@ class BookmarksView extends PageView {
 // there are sent, what it asks done there.
 class ColumnSetsView extends PageView {
   constructor(id) { super(id, 'columnsets', 'columnsets.html', 'Column sets'); }
-  state() { return new Map([['sets', columnSetsForPage()]]); }
-  render() { this.send(columnSetsForPage()); }
+  state() { return new Map([['sets', columnSetsForPage(this.id)]]); }
+  render() { this.send(columnSetsForPage(this.id)); }
   receive(m) { return columnSetsPageAsks(this, m); }
 }
 
@@ -2577,7 +2590,7 @@ class ProjectsView extends HostPageView {
 // its window was, kept with the window's layout); the first time floating beside the window.
 const OnePanes = new Set(['bookmarks', 'columnsets', 'palette', 'settings', 'projects']);
 // The first size of a floating one, when the default (narrow, beside the window) is too small for it: CSS px.
-const FirstSizes = { columnsets: [760, 560], settings: [760, 620], projects: [900, 600] };
+const FirstSizes = { columnsets: [980, 620], settings: [760, 620], projects: [900, 600] };
 const paneHomes = {};   // kind -> where it was when last closed: { floating, place, bounds }
 const paneOfKind = kind => [...views.values()].find(v => layout.pane(v.id)?.kind === kind) ?? null;
 function openOnePane(kind) {

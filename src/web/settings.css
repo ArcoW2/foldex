@@ -76,6 +76,10 @@
   max-width: 340px;
 }
 
+/* A colour of your own or the default (settings.js, kind 'colour'). */
+.st-colour { display: inline-flex; align-items: center; gap: 8px; }
+.st-colour input[type=color] { width: 3em; height: 1.6em; padding: 0; border: 1px solid var(--border); background: none; }
+
 .st-range {
   display: flex;
   align-items: center;

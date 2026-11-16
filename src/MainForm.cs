@@ -641,7 +641,7 @@ sealed class MainForm : Form
             }
             case "columnSetsSave":
             case "folderColumnsSave":
-                try { app.SaveColumns(msg["op"]!.GetValue<string>() == "columnSetsSave" ? msg["mine"] : null, msg["folders"]); }
+                try { app.SaveColumns(msg["op"]!.GetValue<string>() == "columnSetsSave" ? msg["mine"] : null, msg["folders"], msg["order"]); }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
                     Post(new JsonObject { ["event"] = "columnsFailed", ["error"] = ex.Message });

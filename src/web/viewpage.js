@@ -139,8 +139,9 @@ recordStep = () => { flush(); toWindow({ kind: 'step' }); };
 execute = (paneId, item) => { flush(); toWindow({ kind: 'execute', item }); };
 goTo = (paneId, path) => { flush(); toWindow({ kind: 'goTo', path }); };
 followNow = (paneId, item) => { flush(); toWindow({ kind: 'followNow', item }); };
-// Functions of the window's page (the bookmarks are opened there, in its active pane).
-const WindowFunctions = ['openBookmark'];
+// Functions of the window's page (the bookmarks are opened there, in its active pane; Manage column sets is a pane of
+// the window).
+const WindowFunctions = ['openBookmark', 'openManageSets'];
 for (const name of WindowFunctions) globalThis[name] = (...args) => { flush(); toWindow({ kind: 'windowFn', fn: name, args }); };
 showGlobal = id => toWindow({ kind: 'global', id });
 status = (text, warn = false) => toWindow({ kind: 'status', text, warn });

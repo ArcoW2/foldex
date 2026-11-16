@@ -41,6 +41,10 @@ static class ColumnSetsFile
             s["mine"] = true;
             merged.Add(s);
         }
+        // Your order of the sets (plan 28 3.2): the ones named in it first, in that order; the others after, as they came.
+        var order = File.Exists(minePath) ? Order(Read(minePath, new JsonArray(), "")) : [];
+        int Place(JsonNode? s) { var k = order.FindIndex(n => Same((JsonObject)s!, n)); return k < 0 ? order.Count : k; }
+        merged = new JsonArray(merged.Select((s, k) => (s, k)).OrderBy(x => Place(x.s)).ThenBy(x => x.k).Select(x => x.s!.DeepClone()).ToArray());
         var foldersPath = Path.Combine(dataDir, FoldersName);
         var folders = File.Exists(foldersPath) ? Folders(Read(foldersPath, problems, "your " + FoldersName), problems) : [];
         return new JsonObject
@@ -54,6 +58,13 @@ static class ColumnSetsFile
 
     static bool Same(JsonObject set, string name) => string.Equals(set["name"]!.GetValue<string>(), name, StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>The order of the sets in your file: their names.</summary>
+    static List<string> Order(JsonNode? root) =>
+        root?["order"] is JsonArray order ? [.. order.Where(n => n?.GetValueKind() == JsonValueKind.String).Select(n => n!.GetValue<string>())] : [];
+
+    /// <summary>The ways a column fits (plan 28 3.6).</summary>
+    public static readonly string[] FitModes = ["never", "manual", "enlarge", "shrink", "both"];
+
     static JsonNode? Read(string path, JsonArray problems, string source)
     {
         try { return JsonNode.Parse(File.ReadAllText(path), documentOptions: Options); }
@@ -64,7 +75,9 @@ static class ColumnSetsFile
         }
     }
 
-    /// <summary>The sets of a file, cleaned: a name, columns of { id, width (em) }, a sort { id, desc }, fit.</summary>
+    /// <summary>The sets of a file, cleaned: a name, columns of { id, width, hidden, fit, min, max } (widths in em), a sort
+    /// [{ id, desc }] (plan 28 3.9). Written before: a sort { id, desc } is a list of one, "fit": true makes every column
+    /// fit both ways, a column without a fit has none (the page's default).</summary>
     public static List<JsonObject> Sets(JsonNode? root, JsonArray problems, string source, bool mine = false)
     {
         var clean = new List<JsonObject>();
@@ -92,6 +105,7 @@ static class ColumnSetsFile
                 problems.Add($"{source}: set \"{name}\" needs its columns.");
                 continue;
             }
+            var fitAll = set["fit"]?.GetValueKind() == JsonValueKind.True;
             var cols = new JsonArray();
             foreach (var col in columns)
             {
@@ -101,13 +115,20 @@ static class ColumnSetsFile
                     continue;
                 }
                 var c = new JsonObject { ["id"] = col["id"]!.GetValue<string>() };
-                if (col["width"]?.GetValueKind() == JsonValueKind.Number && col["width"]!.GetValue<double>() > 0) c["width"] = col["width"]!.GetValue<double>();
+                foreach (var size in new[] { "width", "min", "max" })
+                    if (col[size]?.GetValueKind() == JsonValueKind.Number && col[size]!.GetValue<double>() > 0) c[size] = col[size]!.GetValue<double>();
+                if (col["hidden"]?.GetValueKind() == JsonValueKind.True) c["hidden"] = true;
+                var fit = col["fit"]?.GetValueKind() == JsonValueKind.String ? col["fit"]!.GetValue<string>() : fitAll ? "both" : null;
+                if (fit is not null && FitModes.Contains(fit)) c["fit"] = fit;
                 cols.Add(c);
             }
             var s = new JsonObject { ["name"] = name, ["columns"] = cols };
-            if (set["sort"] is JsonObject sort && sort["id"]?.GetValueKind() == JsonValueKind.String)
-                s["sort"] = new JsonObject { ["id"] = sort["id"]!.GetValue<string>(), ["desc"] = sort["desc"]?.GetValueKind() == JsonValueKind.True };
-            if (set["fit"]?.GetValueKind() == JsonValueKind.True) s["fit"] = true;
+            var sorts = set["sort"] switch { JsonArray list => list.ToArray(), JsonObject one => [one], _ => [] };
+            var sort = new JsonArray();
+            foreach (var by in sorts)
+                if (by?["id"]?.GetValueKind() == JsonValueKind.String)
+                    sort.Add(new JsonObject { ["id"] = by["id"]!.GetValue<string>(), ["desc"] = by["desc"]?.GetValueKind() == JsonValueKind.True });
+            if (sort.Count > 0) s["sort"] = sort;
             clean.Add(s);
         }
         return clean;
@@ -135,13 +156,19 @@ static class ColumnSetsFile
         return clean;
     }
 
-    /// <summary>Your sets written (cleaned first): the sets you made or changed, and the shipped ones you deleted.</summary>
-    public static void SaveSets(string dataDir, JsonNode mine)
+    /// <summary>Your sets written (cleaned first): the sets you made or changed, the shipped ones you deleted, and the
+    /// order of all sets (plan 28 3.2; null: as it was).</summary>
+    public static void SaveSets(string dataDir, JsonNode? mine, JsonNode? order = null)
     {
         var problems = new JsonArray();
-        var clean = Sets(new JsonObject { ["sets"] = mine.DeepClone() }, problems, "your sets", true);
-        Write(Path.Combine(dataDir, SetsName), "// Your column sets (docs/plans/executed/11-PLAN-columns.md 3.3): they replace shipped ones by name.",
-            new JsonObject { ["sets"] = new JsonArray(clean.Select(s => (JsonNode)s).ToArray()) });
+        var path = Path.Combine(dataDir, SetsName);
+        var before = File.Exists(path) ? Read(path, problems, "") : null;
+        var clean = Sets(new JsonObject { ["sets"] = (mine ?? before?["sets"] ?? new JsonArray()).DeepClone() }, problems, "your sets", true);
+        var names = order is not null ? Order(new JsonObject { ["order"] = order.DeepClone() }) : Order(before);
+        var content = new JsonObject { ["sets"] = new JsonArray(clean.Select(s => (JsonNode)s).ToArray()) };
+        if (names.Count > 0) content["order"] = new JsonArray(names.Select(n => (JsonNode)n).ToArray());
+        Write(path, "// Your column sets (docs/plans/executed/11-PLAN-columns.md 3.3; docs/plans/executed/28-PLAN-column-sets-window.md 3.9): they replace shipped ones by name; \"order\": the order of all sets.",
+            content);
     }
 
     /// <summary>The folders' choices written.</summary>

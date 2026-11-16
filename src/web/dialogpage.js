@@ -130,38 +130,109 @@ function aboutHere(info) {
   return new Promise(resolve => dialog.addEventListener('close', () => resolve(null), { once: true }));
 }
 
-// More columns (columns.js moreColumns): every property, `shown` the pane's columns; a click adds or takes one away in
-// the pane at once. Close closes it.
-function moreColumnsHere(list, shown) {
-  shown = new Set(shown);
+// Select columns (columns.js selectColumns; plan 28 3.7): the columns not shown at the left, the "Selected" ones at the
+// right, -> and <- between them. Above the left list the set's filter: on, only the set's columns not shown; off (or
+// without a set), every column there is, with a search box. Each move changes the pane at once; Close closes it.
+function selectColumnsHere(a) {
+  const titles = new Map([...a.all, ...a.shown].map(c => [c.id, c.title]));
+  let shown = a.shown.map(c => c.id);
   const dialog = document.createElement('dialog');
-  dialog.className = 'ask more-columns';
-  dialog.innerHTML = '<p>More columns: every property Windows has. A click adds or removes one.</p>' +
-    '<input class="filter" spellcheck="false" placeholder="Type to find a property"><div class="props"></div>' +
-    '<div class="buttons"><button class="ok">Close</button></div>';
+  dialog.className = 'ask select-columns';
+  dialog.innerHTML = '<div class="sc-lists"><div class="sc-side"><label class="sc-filter"><input type="checkbox"> <span></span></label>' +
+    '<input class="sc-search" spellcheck="false" placeholder="Type to find a column"><select class="sc-left" multiple></select></div>' +
+    '<div class="sc-arrows"><button class="sc-show" title="Show the columns selected at the left">-&gt;</button>' +
+    '<button class="sc-hide" title="Hide the columns selected at the right">&lt;-</button></div>' +
+    '<div class="sc-side"><div class="sc-label">Selected</div><select class="sc-right" multiple></select></div></div>' +
+    '<div class="ask-buttons"><button class="ok">Close</button></div>';
+  const filter = dialog.querySelector('.sc-filter input'), search = dialog.querySelector('.sc-search');
+  const left = dialog.querySelector('.sc-left'), right = dialog.querySelector('.sc-right');
+  dialog.querySelector('.sc-filter span').textContent = `Columns of set ${a.setName ?? ''}`;
+  dialog.querySelector('.sc-filter').hidden = !a.setIds;
+  filter.checked = !!a.setIds;
+  const option = id => Object.assign(new Option(titles.get(id) ?? id, id), { title: id });
   const fill = () => {
-    const words = dialog.querySelector('.filter').value.toLowerCase().split(/\s+/).filter(Boolean);
-    const rows = list.filter(p => words.every(w => `${p.title} ${p.name}`.toLowerCase().includes(w))).slice(0, 300);
-    dialog.querySelector('.props').replaceChildren(...rows.map(p => {
-      const label = document.createElement('label');
-      const box = document.createElement('input');
-      box.type = 'checkbox';
-      box.checked = shown.has(p.name);
-      box.addEventListener('change', () => {
-        if (box.checked) shown.add(p.name); else shown.delete(p.name);
-        askWindow({ name: p.name, on: box.checked });
-      });
-      label.append(box, ` ${p.title}`);
-      label.title = p.name;
-      return label;
-    }));
+    const onlySet = filter.checked && a.setIds;
+    search.hidden = !!onlySet;
+    const words = onlySet ? [] : search.value.toLowerCase().split(/\s+/).filter(Boolean);
+    const ids = (onlySet ? a.setIds : [...titles.keys()]).filter(id => !shown.includes(id))
+      .filter(id => words.every(w => `${titles.get(id)} ${id}`.toLowerCase().includes(w))).slice(0, 400);
+    left.replaceChildren(...ids.map(option));
+    right.replaceChildren(...shown.map(option));
+    for (const o of right.options) o.disabled = o.value === 'name';   // the name column is always shown
   };
-  dialog.querySelector('.filter').addEventListener('input', fill);
+  const moved = async change => {
+    shown = await askWindow(change) ?? shown;
+    fill();
+  };
+  dialog.querySelector('.sc-show').addEventListener('click', () => moved({ show: [...left.selectedOptions].map(o => o.value) }));
+  dialog.querySelector('.sc-hide').addEventListener('click', () => moved({ hide: [...right.selectedOptions].map(o => o.value) }));
+  left.addEventListener('dblclick', () => moved({ show: [...left.selectedOptions].map(o => o.value) }));
+  right.addEventListener('dblclick', () => moved({ hide: [...right.selectedOptions].map(o => o.value) }));
+  filter.addEventListener('change', fill);
+  search.addEventListener('input', fill);
   dialog.querySelector('.ok').addEventListener('click', () => dialog.close());
   document.body.append(dialog);
   fill();
   dialog.showModal();
-  dialog.querySelector('.filter').focus();
+  left.focus();
+  return new Promise(resolve => dialog.addEventListener('close', () => resolve(null), { once: true }));
+}
+
+// The Sort window (columns.js openSortWindow; plan 28 3.5): a line per column of the pane's sort, in its order: a grip
+// to drag it, its direction (a click turns it), Remove. The last line removed: "Name, ascending" in its place. As the
+// set (when the pane uses one) and Remove all change the sort and close it; each other change sorts the pane at once.
+function sortHere(a) {
+  let sort = a.sort.length ? a.sort.map(s => ({ ...s })) : [{ id: 'name', desc: false }];
+  const dialog = document.createElement('dialog');
+  dialog.className = 'ask sort-window';
+  dialog.innerHTML = '<p>Sorted by, in this order:</p><div class="sort-lines"></div>' +
+    '<div class="ask-buttons"><button class="sort-set">As the set</button><button class="sort-none">Remove all</button>' +
+    '<button class="ok">Close</button></div>';
+  const lines = dialog.querySelector('.sort-lines');
+  const apply = () => { askWindow({ sort }); draw(); };
+  const draw = () => lines.replaceChildren(...sort.map((s, k) => {
+    const line = document.createElement('div');
+    line.className = 'sort-line';
+    const grip = Object.assign(document.createElement('span'), { className: 'bm-handle', title: 'Drag to another place' });
+    grip.addEventListener('mousedown', e => dragLine(e, k));
+    const turn = Object.assign(document.createElement('button'), { className: 'sort-dir', textContent: s.desc ? 'v' : '^',
+      title: s.desc ? 'Descending; a click: ascending' : 'Ascending; a click: descending' });
+    turn.addEventListener('click', () => { s.desc = !s.desc; apply(); });
+    const remove = Object.assign(document.createElement('button'), { textContent: 'Remove' });
+    remove.addEventListener('click', () => {
+      sort.splice(k, 1);
+      if (!sort.length) sort = [{ id: 'name', desc: false }];
+      apply();
+    });
+    line.append(grip, Object.assign(document.createElement('span'), { className: 'sort-title', textContent: `${k + 1}. ${a.titles[s.id] ?? s.id}` }), turn, remove);
+    return line;
+  }));
+  // A line dragged by its grip: it goes before the line whose middle is below the mouse when let go.
+  const dragLine = (e, k) => {
+    e.preventDefault();
+    const rows = [...lines.children];
+    rows[k].classList.add('dragging');
+    const up = m => {
+      removeEventListener('mouseup', up);
+      rows[k].classList.remove('dragging');
+      let to = rows.findIndex(r => { const b = r.getBoundingClientRect(); return m.clientY < b.top + b.height / 2; });
+      if (to < 0) to = rows.length;
+      if (to === k || to === k + 1) return;
+      const [s] = sort.splice(k, 1);
+      sort.splice(to > k ? to - 1 : to, 0, s);
+      apply();
+    };
+    addEventListener('mouseup', up);
+  };
+  const setButton = dialog.querySelector('.sort-set');
+  setButton.hidden = !a.setSort;
+  setButton.addEventListener('click', () => { askWindow({ sort: a.setSort }); dialog.close(); });
+  dialog.querySelector('.sort-none').addEventListener('click', () => { askWindow({ sort: [] }); dialog.close(); });
+  dialog.querySelector('.ok').addEventListener('click', () => dialog.close());
+  document.body.append(dialog);
+  draw();
+  dialog.showModal();
+  dialog.querySelector('.ok').focus();
   return new Promise(resolve => dialog.addEventListener('close', () => resolve(null), { once: true }));
 }
 
@@ -211,7 +282,8 @@ paneHandlers.args = async m => {
   if (m.what === 'find') return done(await findHere(m));
   if (m.what === 'barSize') return done(await sizeHere(m));
   if (m.what === 'rename') return done(await renameHere(m));
-  if (m.what === 'moreColumns') return done(await moreColumnsHere(m.list ?? [], m.shown ?? []));
+  if (m.what === 'selectColumns') return done(await selectColumnsHere(m));
+  if (m.what === 'sort') return done(await sortHere(m));
   if (m.what === 'pickFolder') {
     // Move to folder... (bmpick.js): { folder } (null: the tab's top), or nothing for Cancel.
     bookmarks = m.bookmarks ?? [];

@@ -1,30 +1,42 @@
 'use strict';
-// Manage column sets, the page of its pane (docs/plans/executed/14-PLAN-floating-panes.md 3.0, 3.7; the screen of plan 05's
-// Manage sets, columns.js): docked in a frame of its window's page, or floating. Its window's page sends the sets with
-// the columns there are (`sets`); a change made here goes back whole (`saveMine`, `folders`), and the sets come again.
-// A name and a question are asked of the window's page (`ask`), which answers (`answer`).
+// Manage column sets, the page of its pane (docs/plans/executed/14-PLAN-floating-panes.md 3.0, 3.7; docs/plans/executed/28-PLAN-column-sets-window.md
+// 3.1 - 3.3): docked in a frame of its window's page, or floating. Its window's page sends the sets with the columns
+// there are (`sets`); a change made here goes back whole (`saveMine`, `order`, `folders`), and the sets come again. A
+// name and a question are asked of the window's page (`ask`), which answers (`answer`). Opened from a pane's header
+// (Columns...), the list starts with that pane's own columns (`pane`), changed there (`paneColumns`).
 //
-// The sets at the left, the one chosen at the right: Rename..., Duplicate, Delete, Reset; its columns (order, width,
-// take away), a column added, its sort, Fit by themselves, the folders that use it.
+// Two parts side by side, a line between them to drag (stacked, the sets first, where they do not fit): at the left the
+// sets as a list (a grip per row, arrows, New, Rename, Duplicate, Delete, Reset); at the right the set chosen: its
+// columns, each on two lines (title, shown, width, sort; Fit, minimum, maximum), arrows, Remove, Add a column, and the
+// folders that use it.
 
 let columnSets = { sets: [], mine: [], folders: [] };
 let columnTitles = {};   // id -> { title, width }: Foldex's own columns and Windows' properties
 let ownColumns = [], propList = [];
-let managed = null;
+let managed = null;      // the set chosen by its name; PaneEntry: the pane's own columns
+let paneCols = null;     // { id, title, columns, sort }: the pane the window was opened from (Columns...)
+let chosenColumn = 0;    // the column chosen in the right part (its index)
 
+const PaneEntry = ':pane';
 const manageEl = document.getElementById('manage');
 const columnInfo = id => columnTitles[id] ?? { title: id.split('.').pop().replace(/([a-z])([A-Z])/g, '$1 $2'), width: 10 };
-const copyColumns = c => JSON.parse(JSON.stringify({ columns: c.columns, sort: c.sort ?? null, fit: !!c.fit }));
+const copyColumns = c => JSON.parse(JSON.stringify({ columns: c.columns, sort: Array.isArray(c.sort) ? c.sort : c.sort?.id ? [c.sort] : [] }));
 const setNamed = name => columnSets.sets.find(s => s.name.toLowerCase() === name.toLowerCase());
 const saveMine = mine => toWindow({ kind: 'saveMine', mine });
 const saveFolders = folders => toWindow({ kind: 'folders', folders });
+const FitModes = [['never', 'never'], ['manual', 'manual'], ['enlarge', 'auto-enlarge'], ['shrink', 'auto-shrink'], ['both', 'auto-both']];
+const fitOf = col => FitModes.some(([m]) => m === col.fit) ? col.fit : col.id === 'name' ? 'manual' : 'never';
+const EmTip = 'em: the width of the pane font\'s letter M; the column grows and shrinks with the font size';
 
 paneHandlers.sets = m => {
   columnSets = m.columnSets ?? columnSets;
   columnTitles = m.titles ?? {};
   ownColumns = m.own ?? [];
   propList = m.props ?? [];
-  if (managed === null || !setNamed(managed)) managed = columnSets.sets[0]?.name ?? null;
+  paneCols = m.pane ?? null;
+  if (m.pane && m.paneFirst) managed = PaneEntry;
+  if (managed === PaneEntry && !paneCols || managed !== PaneEntry && (managed === null || !setNamed(managed))) managed = columnSets.sets[0]?.name ?? null;
+  if (m.split) manageEl.style.setProperty('--cs-left', `${m.split}px`);
   drawManage();
 };
 
@@ -47,29 +59,84 @@ function changeSet(name, change) {
   saveMine([...columnSets.mine.filter(m => m.name.toLowerCase() !== name.toLowerCase()), { name, ...set }]);
 }
 
-function drawManage() {
-  const list = manageEl.querySelector('.setlist');
-  list.replaceChildren(...columnSets.sets.map(s => {
-    const b = document.createElement('button');
-    b.textContent = s.name + (s.shipped && s.mine ? ' (changed)' : s.shipped ? '' : ' (yours)');
-    b.classList.toggle('on', s.name === managed);
-    b.addEventListener('click', () => { managed = s.name; drawManage(); });
-    return b;
-  }));
-  const set = managed && setNamed(managed);
-  const edit = manageEl.querySelector('.setedit');
-  if (!set) return edit.replaceChildren();
-  const others = name => columnSets.mine.filter(m => m.name.toLowerCase() !== name.toLowerCase());
-  const button = (text, run, enabled = true) => {
-    const b = document.createElement('button');
-    b.textContent = text;
-    b.disabled = !enabled;
-    b.addEventListener('click', run);
-    return b;
+// What the right part shows changed: the set chosen, or the pane's own columns (sent to that pane).
+function changeChosen(change) {
+  if (managed !== PaneEntry) return changeSet(managed, change);
+  const c = copyColumns(paneCols);
+  change(c);
+  Object.assign(paneCols, c);
+  toWindow({ kind: 'paneColumns', id: paneCols.id, columns: c });
+  drawManage();
+}
+
+const button = (text, run, enabled = true, title = '') => {
+  const b = Object.assign(document.createElement('button'), { textContent: text, disabled: !enabled, title });
+  b.addEventListener('click', run);
+  return b;
+};
+
+// A row of a list dragged by its handle: it goes before the row whose middle is below the mouse when let go.
+function dragRow(e, list, k, moved) {
+  e.preventDefault();
+  const rows = [...list.children].filter(r => r.dataset.movable);
+  const row = rows.find(r => +r.dataset.i === k);
+  row.classList.add('dragging');
+  const up = m => {
+    removeEventListener('mouseup', up);
+    row.classList.remove('dragging');
+    const at = rows.findIndex(r => { const b = r.getBoundingClientRect(); return m.clientY < b.top + b.height / 2; });
+    const to = at < 0 ? +rows[rows.length - 1].dataset.i + 1 : +rows[at].dataset.i;
+    if (to !== k && to !== k + 1) moved(k, to > k ? to - 1 : to);
   };
-  const actions = document.createElement('div');
-  actions.className = 'setactions';
-  actions.append(
+  addEventListener('mouseup', up);
+}
+const moveIn = (list, from, to) => list.splice(to, 0, ...list.splice(from, 1));
+
+function drawManage() {
+  drawSets();
+  drawChosen();
+}
+
+// ---------- The sets (3.2) ----------
+
+function drawSets() {
+  const list = manageEl.querySelector('.cs-setlist');
+  const rows = [];
+  if (paneCols) {
+    const row = Object.assign(document.createElement('div'), { className: 'cs-row cs-setrow' + (managed === PaneEntry ? ' selected' : '') });
+    row.append(Object.assign(document.createElement('span'), { className: 'cs-name', textContent: `This pane's columns (${paneCols.title})` }));
+    row.addEventListener('click', () => { managed = PaneEntry; chosenColumn = 0; drawManage(); });
+    rows.push(row);
+  }
+  columnSets.sets.forEach((s, k) => {
+    const row = Object.assign(document.createElement('div'), { className: 'cs-row cs-setrow' + (s.name === managed ? ' selected' : '') });
+    row.dataset.i = k;
+    row.dataset.movable = '1';
+    const handle = Object.assign(document.createElement('span'), { className: 'bm-handle', title: 'Drag to move the set' });
+    handle.addEventListener('mousedown', e => dragRow(e, list, k, moveSet));
+    row.append(handle, Object.assign(document.createElement('span'), { className: 'cs-name',
+      textContent: s.name + (s.shipped && s.mine ? ' (changed)' : s.shipped ? '' : ' (yours)') }));
+    row.addEventListener('click', e => {
+      if (e.target.closest('.bm-handle')) return;
+      managed = s.name;
+      chosenColumn = 0;
+      drawManage();
+    });
+    rows.push(row);
+  });
+  list.replaceChildren(...rows);
+  const at = columnSets.sets.findIndex(s => s.name === managed);
+  manageEl.querySelector('.cs-sets .up').disabled = at <= 0;
+  manageEl.querySelector('.cs-sets .down').disabled = at < 0 || at >= columnSets.sets.length - 1;
+  const set = managed !== PaneEntry && managed && setNamed(managed);
+  const others = name => columnSets.mine.filter(m => m.name.toLowerCase() !== name.toLowerCase());
+  manageEl.querySelector('.cs-setbuttons').replaceChildren(
+    button('New...', async () => {
+      const name = await askText('Name of the new column set', '');
+      if (!name) return;
+      managed = name;
+      saveMine([...others(name), { name, columns: [{ id: 'name', width: columnInfo('name').width }], sort: [] }]);
+    }),
     button('Rename...', async () => {
       const name = await askText('New name of the set', set.name);
       if (!name || name === set.name) return;
@@ -79,70 +146,181 @@ function drawManage() {
       managed = name;
       saveMine(mine);
       saveFolders(columnSets.folders.map(f => f.set === set.name ? { ...f, set: name } : f));
-    }),
-    button('Duplicate', async () => {
+    }, !!set),
+    button('Duplicate...', async () => {
       const name = await askText('Name of the copy', `${set.name} (2)`);
       if (name) { managed = name; saveMine([...others(name), { name, ...copyColumns(set) }]); }
-    }),
-    button('Delete', async () => {
+    }, !!set),
+    button('Delete...', async () => {
       if (!await askYes(`Delete the column set ${set.name}?`)) return;
       saveMine([...others(set.name), ...(set.shipped ? [{ name: set.name, deleted: true }] : [])]);
       managed = null;
-    }),
-    button('Reset', () => saveMine(others(set.name)), set.shipped && set.mine));
-  // Its columns: order, width, take away; one added from Foldex's own and Windows' properties.
-  const rows = document.createElement('div');
-  rows.className = 'setcolumns';
-  set.columns.forEach((col, k) => {
-    const row = document.createElement('div');
-    const width = document.createElement('input');
-    width.type = 'number';
-    width.min = 2;
-    width.value = col.width ?? columnInfo(col.id).width;
-    width.title = 'Width in em of the pane font';
-    width.addEventListener('change', () => changeSet(set.name, s => { s.columns[k].width = Number(width.value) || columnInfo(col.id).width; }));
-    const title = document.createElement('span');
-    title.textContent = columnInfo(col.id).title;
-    title.title = col.id;
-    row.append(title, width,
-      button('Up', () => changeSet(set.name, s => s.columns.splice(k - 1, 0, ...s.columns.splice(k, 1))), k > 1),
-      button('Down', () => changeSet(set.name, s => s.columns.splice(k + 1, 0, ...s.columns.splice(k, 1))), k > 0 && k < set.columns.length - 1),
-      button('Remove', () => changeSet(set.name, s => s.columns.splice(k, 1)), k > 0));
-    rows.append(row);
-  });
+    }, !!set),
+    button('Reset', () => saveMine(others(set.name)), !!set && set.shipped && set.mine, 'The set back as shipped'));
+}
+
+// The sets in another order (a grip, the arrows): kept, and used in every list of sets.
+function moveSet(from, to) {
+  const names = columnSets.sets.map(s => s.name);
+  moveIn(names, from, to);
+  columnSets.sets = names.map(setNamed);
+  drawSets();
+  toWindow({ kind: 'order', order: names });
+}
+
+// ---------- The set chosen (3.3) ----------
+
+function drawChosen() {
+  const pane = managed === PaneEntry;
+  const set = pane ? paneCols : managed && setNamed(managed);
+  const label = manageEl.querySelector('.cs-setname'), list = manageEl.querySelector('.cs-columns');
+  if (!set) {
+    label.textContent = 'No set chosen';
+    list.replaceChildren();
+    manageEl.querySelector('.cs-columnbuttons').replaceChildren();
+    manageEl.querySelector('.setfolders').replaceChildren();
+    return;
+  }
+  label.textContent = pane ? `Columns of this pane (${paneCols.title})`
+    : `Set: ${set.name}${set.shipped && set.mine ? ' (changed)' : set.shipped ? '' : ' (yours)'}`;
+  chosenColumn = Math.min(chosenColumn, set.columns.length - 1);
+  const sort = Array.isArray(set.sort) ? set.sort : [];
+  list.replaceChildren(...set.columns.map((col, k) => columnRow(set, sort, col, k, list)));
+  manageEl.querySelector('.cs-set .up').disabled = chosenColumn <= 0;
+  manageEl.querySelector('.cs-set .down').disabled = chosenColumn >= set.columns.length - 1;
+  // Remove the column chosen (not the name); a column added, from Foldex's own and Windows' properties.
+  const chosen = set.columns[chosenColumn];
   const add = document.createElement('select');
   const choices = [...ownColumns.map(c => [c.id, c.title]), ...propList.map(p => [p.name, `${p.title} (${p.name})`])]
     .filter(([id]) => !set.columns.some(c => c.id === id));
   add.append(new Option('Add a column...', ''), ...choices.map(([id, t]) => new Option(t, id)));
-  add.addEventListener('change', () => add.value && changeSet(set.name, s => s.columns.push({ id: add.value, width: columnInfo(add.value).width })));
-  const sort = document.createElement('select');
-  sort.append(new Option('No sort (by name)', ''), ...set.columns.map(c => new Option(`Sort by ${columnInfo(c.id).title}`, c.id)));
-  sort.value = set.sort?.id ?? '';
-  sort.addEventListener('change', () => changeSet(set.name, s => { s.sort = sort.value ? { id: sort.value, desc: !!s.sort?.desc } : null; }));
-  const desc = document.createElement('label');
-  const descBox = document.createElement('input');
-  descBox.type = 'checkbox';
-  descBox.checked = !!set.sort?.desc;
-  descBox.disabled = !set.sort;
-  descBox.addEventListener('change', () => changeSet(set.name, s => { if (s.sort) s.sort.desc = descBox.checked; }));
-  desc.append(descBox, ' Descending');
-  const fit = document.createElement('label');
-  const fitBox = document.createElement('input');
-  fitBox.type = 'checkbox';
-  fitBox.checked = !!set.fit;
-  fitBox.addEventListener('change', () => changeSet(set.name, s => { s.fit = fitBox.checked; }));
-  fit.append(fitBox, ' Fit by themselves');
+  add.addEventListener('change', () => add.value && changeChosen(s => {
+    s.columns.push({ id: add.value, width: columnInfo(add.value).width });
+    chosenColumn = s.columns.length - 1;
+  }));
+  manageEl.querySelector('.cs-columnbuttons').replaceChildren(
+    button('Remove', () => changeChosen(s => s.columns.splice(chosenColumn, 1)), !!chosen && chosen.id !== 'name',
+      'The column chosen out of the set (the name column stays)'), add);
   // The folders that use it.
-  const folders = document.createElement('div');
-  folders.className = 'setfolders';
+  const folders = manageEl.querySelector('.setfolders');
+  if (pane) return folders.replaceChildren();
   const using = columnSets.folders.filter(f => f.set.toLowerCase() === set.name.toLowerCase());
-  folders.append(using.length ? 'Used by:' : 'No folder uses it.', ...using.map(f => {
+  folders.replaceChildren(using.length ? 'Used by:' : 'No folder uses it.', ...using.map(f => {
     const row = document.createElement('div');
     row.append(`${f.path}${f.subfolders ? ' and its subfolders' : ''} `,
       button('Remove', () => saveFolders(columnSets.folders.filter(x => x !== f))));
     return row;
   }));
-  edit.replaceChildren(actions, rows, add, sort, desc, fit, folders);
 }
+
+// A column on two lines: the grip, its title, Shown, its width and its sort cell; its Fit, minimum and maximum.
+function columnRow(set, sort, col, k, list) {
+  const row = Object.assign(document.createElement('div'), { className: 'cs-row cs-colrow' + (k === chosenColumn ? ' selected' : '') });
+  row.dataset.i = k;
+  row.dataset.movable = '1';
+  row.addEventListener('mousedown', e => {
+    if (e.target.closest('input, select, button, .bm-handle') || k === chosenColumn) return;
+    chosenColumn = k;
+    for (const r of list.children) r.classList.toggle('selected', +r.dataset.i === k);
+    manageEl.querySelector('.cs-set .up').disabled = k <= 0;
+    manageEl.querySelector('.cs-set .down').disabled = k >= set.columns.length - 1;
+    manageEl.querySelector('.cs-columnbuttons button').disabled = col.id === 'name';
+  });
+  const handle = Object.assign(document.createElement('span'), { className: 'bm-handle', title: 'Drag to move the column' });
+  handle.addEventListener('mousedown', e => dragRow(e, list, k, (from, to) => changeChosen(s => {
+    moveIn(s.columns, from, to);
+    chosenColumn = to;
+  })));
+  const number = (value, change, title, empty = false, caption = '') => {
+    const box = Object.assign(document.createElement('input'), { type: 'number', min: 1, step: 0.5, value: value ?? '', title,
+      placeholder: empty ? 'none' : '' });
+    box.addEventListener('change', () => changeChosen(s => change(s.columns[k], box.value === '' ? null : Number(box.value))));
+    const unit = Object.assign(document.createElement('span'), { className: 'cs-unit', textContent: 'em', title: EmTip });
+    const wrap = Object.assign(document.createElement('span'), { className: 'cs-size' });   // kept together when lines wrap
+    if (caption) wrap.append(Object.assign(document.createElement('span'), { className: 'cs-caption', textContent: caption }));
+    wrap.append(box, unit);
+    return wrap;
+  };
+  const shown = Object.assign(document.createElement('label'), { className: 'cs-shown', title: col.id === 'name'
+    ? 'The name column is always shown' : 'Off: kept in the set, not shown; Select columns... in a pane shows it' });
+  const box = Object.assign(document.createElement('input'), { type: 'checkbox', checked: !col.hidden, disabled: col.id === 'name' });
+  box.addEventListener('change', () => changeChosen(s => { if (box.checked) delete s.columns[k].hidden; else s.columns[k].hidden = true; }));
+  shown.append(box, ' Shown');
+  // The sort cell: none, ascending, descending, none again; its place in the sort when more than one column sorts.
+  const at = sort.findIndex(s => s.id === col.id);
+  const sortCell = button(at < 0 ? '-' : `${sort[at].desc ? 'v' : '^'}${sort.length > 1 ? at + 1 : ''}`, () => changeChosen(s => {
+    const i = s.sort.findIndex(x => x.id === col.id);
+    if (i < 0) s.sort.push({ id: col.id, desc: false });
+    else if (!s.sort[i].desc) s.sort[i].desc = true;
+    else s.sort.splice(i, 1);
+  }), true, at < 0 ? 'Not sorted by; a click: ascending' : sort[at].desc ? 'Descending; a click: not sorted by' : 'Ascending; a click: descending');
+  sortCell.className = 'cs-sort';
+  const first = Object.assign(document.createElement('div'), { className: 'cs-line' });
+  first.append(handle, Object.assign(document.createElement('span'), { className: 'cs-title', textContent: columnInfo(col.id).title, title: col.id }),
+    shown, number(col.width ?? columnInfo(col.id).width, (c, v) => { c.width = v ?? columnInfo(col.id).width; }, `Width (${EmTip})`), sortCell);
+  const fit = document.createElement('select');
+  fit.title = 'How the column fits its values: never; manual (Ctrl+R); auto: as soon as the values change';
+  fit.append(...FitModes.map(([value, text]) => new Option(text, value)));
+  fit.value = fitOf(col);
+  fit.addEventListener('change', () => changeChosen(s => { s.columns[k].fit = fit.value; }));
+  const second = Object.assign(document.createElement('div'), { className: 'cs-line cs-fitline' });
+  second.append(Object.assign(document.createElement('span'), { className: 'cs-caption', textContent: 'Fit' }), fit,
+    number(col.min, (c, v) => { if (v) c.min = v; else delete c.min; }, `Minimum width (${EmTip})`, false, 'min'),
+    number(col.max, (c, v) => { if (v) c.max = v; else delete c.max; }, `Maximum width, empty: none (${EmTip})`, true, 'max'));
+  row.append(first, second);
+  return row;
+}
+
+// ---------- The arrows, the keys, the line between the parts ----------
+
+manageEl.querySelector('.cs-sets .up').addEventListener('click', () => {
+  const at = columnSets.sets.findIndex(s => s.name === managed);
+  if (at > 0) moveSet(at, at - 1);
+});
+manageEl.querySelector('.cs-sets .down').addEventListener('click', () => {
+  const at = columnSets.sets.findIndex(s => s.name === managed);
+  if (at >= 0 && at < columnSets.sets.length - 1) moveSet(at, at + 1);
+});
+manageEl.querySelector('.cs-set .up').addEventListener('click', () => {
+  if (chosenColumn > 0) changeChosen(s => { moveIn(s.columns, chosenColumn, chosenColumn - 1); chosenColumn--; });
+});
+manageEl.querySelector('.cs-set .down').addEventListener('click', () => changeChosen(s => {
+  if (chosenColumn < s.columns.length - 1) { moveIn(s.columns, chosenColumn, chosenColumn + 1); chosenColumn++; }
+}));
+for (const bar of manageEl.querySelectorAll('.bm-arrows')) bar.addEventListener('mousedown', e => e.preventDefault());
+
+// Up and Down in the sets' list choose the set above or below; in the columns' list, the column.
+manageEl.querySelector('.cs-setlist').addEventListener('keydown', e => {
+  if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+  e.preventDefault();
+  const names = [...(paneCols ? [PaneEntry] : []), ...columnSets.sets.map(s => s.name)];
+  const at = names.indexOf(managed) + (e.key === 'ArrowUp' ? -1 : 1);
+  if (at < 0 || at >= names.length) return;
+  managed = names[at];
+  chosenColumn = 0;
+  drawManage();
+});
+manageEl.querySelector('.cs-columns').addEventListener('keydown', e => {
+  if (e.target !== e.currentTarget || e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+  e.preventDefault();
+  const count = manageEl.querySelectorAll('.cs-colrow').length;
+  chosenColumn = Math.max(0, Math.min(count - 1, chosenColumn + (e.key === 'ArrowUp' ? -1 : 1)));
+  drawChosen();
+});
+
+// The line between the parts dragged: the sets' part wider or narrower; where it is, kept with the pane.
+manageEl.querySelector('.cs-split').addEventListener('mousedown', e => {
+  e.preventDefault();
+  const left = manageEl.querySelector('.cs-sets'), x0 = e.clientX, w0 = left.getBoundingClientRect().width;
+  const width = x => Math.round(Math.max(160, Math.min(manageEl.clientWidth - 320, w0 + x - x0)));
+  const move = m => manageEl.style.setProperty('--cs-left', `${width(m.clientX)}px`);
+  const up = m => {
+    removeEventListener('mousemove', move);
+    removeEventListener('mouseup', up);
+    toWindow({ kind: 'split', at: width(m.clientX) });
+  };
+  addEventListener('mousemove', move);
+  addEventListener('mouseup', up);
+});
 
 manageEl.querySelector('.close').addEventListener('click', () => toWindow({ kind: 'close' }));

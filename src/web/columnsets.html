@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <title>Column sets</title>
-  <!-- Manage column sets as a pane's page (docs/plans/executed/14-PLAN-floating-panes.md 3.0, 3.7): docked in a frame of its
-       window's page, or floating. -->
+  <!-- Manage column sets as a pane's page (docs/plans/executed/14-PLAN-floating-panes.md 3.0, 3.7; docs/plans/executed/28-PLAN-column-sets-window.md
+       3.1): docked in a frame of its window's page, or floating; the sets at the left, the one chosen at the right. -->
   <link rel="stylesheet" href="app.css">
   <link rel="stylesheet" href="pane.css">
   <script src="menu.js" defer></script>
@@ -13,8 +13,29 @@
 </head>
 <body>
   <div id="manage" class="manage-sets cs-page">
-    <div class="manage"><div class="setlist"></div><div class="setedit"></div></div>
-    <div class="buttons"><button class="close">Close</button></div>
+    <div class="cs-parts">
+      <section class="cs-sets">
+        <div class="cs-label">Column sets</div>
+        <div class="bm-body">
+          <div class="bm-arrows"><button class="up" title="Move the set chosen up"><svg viewBox="0 0 10 10"><path d="M1 7l4-4 4 4"/></svg></button>
+            <button class="down" title="Move the set chosen down"><svg viewBox="0 0 10 10"><path d="M1 3l4 4 4-4"/></svg></button></div>
+          <div class="cs-list cs-setlist" tabindex="0"></div>
+        </div>
+        <div class="ask-buttons cs-setbuttons"></div>
+      </section>
+      <div class="cs-split" title="Drag to give one part more room"></div>
+      <section class="cs-set">
+        <div class="cs-label cs-setname"></div>
+        <div class="bm-body">
+          <div class="bm-arrows"><button class="up" title="Move the column chosen up"><svg viewBox="0 0 10 10"><path d="M1 7l4-4 4 4"/></svg></button>
+            <button class="down" title="Move the column chosen down"><svg viewBox="0 0 10 10"><path d="M1 3l4 4 4-4"/></svg></button></div>
+          <div class="cs-list cs-columns" tabindex="0"></div>
+        </div>
+        <div class="ask-buttons cs-columnbuttons"></div>
+        <div class="setfolders"></div>
+      </section>
+    </div>
+    <div class="ask-buttons"><button class="close">Close</button></div>
   </div>
 </body>
 </html>

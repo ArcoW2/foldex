@@ -262,10 +262,12 @@ action('layout.resetDefault', { title: 'Reset layout to default', group: 'projec
   hint: 'this window back to the default layout, at the folder it shows', run: () => post({ op: 'layoutReset', path: currentFolder() }) });
 // Columns (docs/plans/executed/11-PLAN-columns.md 3.4): fitted to their content; the column sets.
 const activeColumns = () => { const v = views.get(activePane); return v?.fitColumns ? v : null; };   // a list or a tree
-action('columns.fit', { title: 'Fit columns', hint: 'every column as wide as its widest value here; the name gives way first',
-  group: 'view', enabled: () => !!activeColumns(), run: () => activeColumns().fitColumns() });
-action('columns.fitName', { title: 'Fit the name column', hint: 'the name column as wide as its widest name here, the other columns as they are',
-  group: 'view', enabled: () => !!activeColumns(), run: () => activeColumns().fitColumns(true) });
+// Plan 28 3.6: Ctrl+Shift+R (columns.fit) every column; Ctrl+R (columns.fitName, its id kept for keys.json and
+// ribbon.json written before) the columns whose Fit is manual or auto, the name column when every one is never.
+action('columns.fit', { title: 'Fit all columns', hint: 'every column as wide as its widest value here, within its minimum and maximum; the name gives way first',
+  group: 'view', enabled: () => !!activeColumns(), run: () => activeColumns().fitColumns('all') });
+action('columns.fitName', { title: 'Fit columns', hint: 'the columns whose Fit is manual or auto as wide as their widest value here; the name column when none is',
+  group: 'view', enabled: () => !!activeColumns(), run: () => activeColumns().fitColumns('fit') });
 action('columns.manage', { title: 'Manage column sets', hint: 'rename, delete, duplicate and edit the column sets; which folders use them',
   group: 'view', run: () => openManageSets() });
 // Bars (docs/plans/executed/10-PLAN-bars.md 3.3; bars.js): added from here too, so a window without bars can get one back.
