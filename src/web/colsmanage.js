@@ -1,5 +1,5 @@
 'use strict';
-// Manage column sets, the page of its pane (docs/plans/14-PLAN-floating-panes.md 3.0, 3.7; the screen of plan 05's
+// Manage column sets, the page of its pane (docs/plans/executed/14-PLAN-floating-panes.md 3.0, 3.7; the screen of plan 05's
 // Manage sets, columns.js): docked in a frame of its window's page, or floating. Its window's page sends the sets with
 // the columns there are (`sets`); a change made here goes back whole (`saveMine`, `folders`), and the sets come again.
 // A name and a question are asked of the window's page (`ask`), which answers (`answer`).

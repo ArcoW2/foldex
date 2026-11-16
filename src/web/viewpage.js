@@ -1,5 +1,5 @@
 'use strict';
-// The page of a tree, a list or a scrap (docs/plans/14-PLAN-floating-panes.md 3.0, stage 6; view.html): the scripts of
+// The page of a tree, a list or a scrap (docs/plans/executed/14-PLAN-floating-panes.md 3.0, stage 6; view.html): the scripts of
 // a window's page (app.js and the rest), showing one pane, PanePage. It asks the host itself (post) and is answered
 // here. The layout is its window's (init, layout); what this pane does that concerns the others (its focus for its
 // children, executing, going to a folder, its steps, an action of the window) goes there, and what it shows (sync), so

@@ -5,7 +5,7 @@ using Microsoft.Web.WebView2.WinForms;
 namespace Foldex;
 
 /// <summary>
-/// A pane floating in a window of its own (docs/plans/14-PLAN-floating-panes.md 3.0, 3.2; LexPen's PaneForm): the same
+/// A pane floating in a window of its own (docs/plans/executed/14-PLAN-floating-panes.md 3.0, 3.2; LexPen's PaneForm): the same
 /// page as in its window's frame (log.html, ...), from the panes' site. Its messages go to that window's page (the event
 /// fromPane) and come from it (Send). Owned by its Foldex window, not modal; where it is and how large is told to that
 /// page (paneBounds), which keeps it with the window's layout. Closed by its own close button, the pane closes: the page

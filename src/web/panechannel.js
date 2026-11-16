@@ -1,5 +1,5 @@
 'use strict';
-// A pane's page and this window's page (docs/plans/14-PLAN-floating-panes.md 3.0; as LexPen's panechannel.js): the pane
+// A pane's page and this window's page (docs/plans/executed/14-PLAN-floating-panes.md 3.0; as LexPen's panechannel.js): the pane
 // is a frame from the panes' site in its view here (a process of its own), or floats in a window of its own
 // (PaneForm.cs, its messages through the host). Until the page it is shown in says it is ready, the last message of
 // each kind waits (a message with a `key` under that key); when it says so, it gets everything it shows (`state()`), as

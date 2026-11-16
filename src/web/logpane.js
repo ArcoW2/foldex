@@ -1,5 +1,5 @@
 'use strict';
-// The Log pane's page (docs/plans/14-PLAN-floating-panes.md 3.0; the log itself: app.js logStatus, logOp): a line per
+// The Log pane's page (docs/plans/executed/14-PLAN-floating-panes.md 3.0; the log itself: app.js logStatus, logOp): a line per
 // entry its window's page keeps, its time first; a warning or a failure in the warning colour. Kept at its end while it
 // was at its end, so the newest stays in view.
 

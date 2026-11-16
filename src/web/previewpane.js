@@ -1,5 +1,5 @@
 'use strict';
-// A preview or Info pane's page (preview.html; docs/plans/14-PLAN-floating-panes.md 3.0, 3.5): what its window's page
+// A preview or Info pane's page (preview.html; docs/plans/executed/14-PLAN-floating-panes.md 3.0, 3.5): what its window's page
 // sends (`show`): a message; Foldex's own preview (plan 04: an image, a GIF moving, a video or a sound in the page's
 // own players, text as text); a still of a video or sound the player cannot play; or Info's groups of what Windows
 // knows of an item. Windows' own preview, when the file has one, is a window the host lays over this page.

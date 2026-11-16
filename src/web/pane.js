@@ -1,5 +1,5 @@
 'use strict';
-// A pane's page (docs/plans/14-PLAN-floating-panes.md 3.0; as LexPen's pane.js): a frame in its window's page, from the
+// A pane's page (docs/plans/executed/14-PLAN-floating-panes.md 3.0; as LexPen's pane.js): a frame in its window's page, from the
 // panes' site, so it runs in a process of its own; or floating, a window of its own (PaneForm.cs), where the host passes
 // its messages. Either way it talks to its window's page only: what it shows comes from there (paneHandlers), what is
 // done in it goes there (toWindow). The window gives it its look, and gets every key the pane does not use itself, so

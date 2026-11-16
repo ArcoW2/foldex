@@ -1,5 +1,5 @@
 'use strict';
-// Manage the bookmarks, the page of its pane (docs/plans/14-PLAN-floating-panes.md 3.0, 3.7; the screen of
+// Manage the bookmarks, the page of its pane (docs/plans/executed/14-PLAN-floating-panes.md 3.0, 3.7; the screen of
 // docs/plans/executed/26-PLAN-bookmarks.md 3.3 and executed/27-PLAN-bookmark-folders.md 3.4): docked in a frame of its
 // window's page, or floating. Its window's page sends the bookmarks with what they show (their paths, whether each is
 // there, each one's icon as a picture); a change made here is saved whole by that page (`save`). What needs that page

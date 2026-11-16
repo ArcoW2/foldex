@@ -188,7 +188,7 @@ function filterTest(pattern) {
   return x => x.folder !== false || res.some(re => re.test(x.name));
 }
 
-// What each kind of pane can be (docs/plans/14-PLAN-floating-panes.md 3.7): docked, floating, or both. A pane of a page
+// What each kind of pane can be (docs/plans/executed/14-PLAN-floating-panes.md 3.7): docked, floating, or both. A pane of a page
 // of its own (a PreviewView: the previews, Info, and every PageView; a tree, a list or a scrap of pagedviews.js) can
 // float; the others are docked until they are pages (plan 14 3.0, the stages).
 const PaneCan = { tree: ['docked', 'floating'], list: ['docked', 'floating'], scrap: ['docked', 'floating'], preview: ['docked', 'floating'], log: ['docked', 'floating'],
@@ -2191,7 +2191,7 @@ function scrapItemMenu(view, ids) {
 
 // ---------- A preview (plan 04): Windows' preview handler in the host, over this pane's area ----------
 
-// A pane whose content is a page of its own (docs/plans/14-PLAN-floating-panes.md 3.0): its head and tab here as any
+// A pane whose content is a page of its own (docs/plans/executed/14-PLAN-floating-panes.md 3.0): its head and tab here as any
 // pane's, its page in a frame of this pane docked (panechannel.js), or in a window of its own floating (PaneForm). It
 // shows no folder: nothing follows it. What it shows: state() (sent whole when its page is ready); what is done in it:
 // receive(). The preview is one (preview.html, previewpane.js): Foldex's own preview and its messages are drawn by its
@@ -2425,7 +2425,7 @@ function toggleLog() {
   views.get(activePane)?.body.focus();   // the keyboard stays in the pane that had it
 }
 
-// ---------- A pane of a page of its own (docs/plans/14-PLAN-floating-panes.md 3.0) ----------
+// ---------- A pane of a page of its own (docs/plans/executed/14-PLAN-floating-panes.md 3.0) ----------
 
 // Its head and tab here as any pane's; its content a page (`page`), in a frame of this pane docked (panechannel.js), or
 // in a window of its own floating (PaneForm). It shows no folder: as the preview, nothing follows it and it follows

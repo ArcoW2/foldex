@@ -12,7 +12,7 @@ static class WebFiles
 {
     public const string Host = "foldex.example";
     // The same files for the panes' pages in their frames, as another site, so the browser runs a pane in a process of
-    // its own (docs/plans/14-PLAN-floating-panes.md 3.0; as LexPen's).
+    // its own (docs/plans/executed/14-PLAN-floating-panes.md 3.0; as LexPen's).
     public const string PaneHost = "foldex-panes.example";
     const string Prefix = "web\\";   // the resource names: web\app.css (Foldex.csproj)
 

@@ -1,6 +1,6 @@
 # Plan 14: Floating panes, and every window a pane
 
-Status: partly executed; see Status and 6 (As built).
+Status: executed; see Status and 6 (As built).
 
 - 2026-11-11: draft, taken out of plan 12 (its open question 1).
 - 2026-11-15: partly executed: stage 1 (pane pages, the floating window, Float and Dock, the Log as a page).
@@ -13,6 +13,7 @@ Status: partly executed; see Status and 6 (As built).
 - 2026-11-15: partly executed: stage 6 (the tree, the list and the scrap as pages; their colours across windows; a
   floating scrap; the speed measured).
 - 2026-11-16: partly executed: stage 6 merged.
+- 2026-11-16: executed.
 
 Builds on plan 12 (docking panes) and plan 03 (connected panes). The number in the file name is the priority; rename to
 reorder.
@@ -77,9 +78,6 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 
 ### Not yet built
 
-| Part | What | Waits for | Reference |
-|---|---|---|---|
-| Faster start: scripts per kind | a pane's page loads only the scripts its kind uses | open question 1 | 3.0; 6.11 |
 
 ## 3. Details
 
@@ -104,8 +102,9 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
   itself (WebView2's frame messages docked, PaneForm floating), as the window's page does; the host answers the page
   that asked. Drag and drop between panes goes between pages (the host's shell drag, as from Explorer). The start and
   memory with a frame per pane are measured (6.11).
-- A pane's page may load only the scripts its kind uses, not all of the window's (open question 1). The panes' pages
-  are not loaded before the window's page knows its layout: built and measured, that made the start no faster (6.11).
+- A pane's page loads all of the window's scripts, not only those its kind uses: they cost little (6.11). The panes'
+  pages are not loaded before the window's page knows its layout: built and measured, that made the start no faster
+  (6.11).
 - Their page is `view.html`: the window's own scripts, showing that one pane (`viewpage.js`). It starts on its window's
   hello and layout (init), with no question to the host. The window's page keeps the layout, sends it whole to every
   such page when it changes, and has a stand-in for each such pane (`pagedviews.js`): an object of the view's class,
@@ -230,8 +229,7 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 
 ## 4. Open questions
 
-1. Scripts per kind: a CPU profile of the panes' renderer shows their scripts cost little, and stage 6's start is
-   not clearly slower than main's (6.11). Build it, or drop it? Suggestion: drop it.
+None.
 
 ## 6. As built
 

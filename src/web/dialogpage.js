@@ -1,5 +1,5 @@
 'use strict';
-// A modal floating window's page (docs/plans/14-PLAN-floating-panes.md 3.7): a dialog of the window's page in a window
+// A modal floating window's page (docs/plans/executed/14-PLAN-floating-panes.md 3.7): a dialog of the window's page in a window
 // of its own (PaneForm, modal), so it can be moved anywhere and what it covers seen. The dialog's own code runs here
 // (bookmarks.js editBookmarkHere, ...), with what it needs from the window's page as it was when it opened (`args`).
 // What that code asks of the host or tells the page goes through the window's page (askHost, post, status: the same

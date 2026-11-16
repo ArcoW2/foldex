@@ -5,7 +5,7 @@ using System.Text.Json.Nodes;
 namespace Foldex;
 
 /// <summary>
-/// What the Settings and Manage projects panes ask of the host (docs/plans/14-PLAN-floating-panes.md 3.7): their pages
+/// What the Settings and Manage projects panes ask of the host (docs/plans/executed/14-PLAN-floating-panes.md 3.7): their pages
 /// (settings.html, projects.html) were the host's own windows (SettingsForm, ProjectsForm) and are panes of a Foldex
 /// window now, docked or floating; their messages come through that window's page (MainForm's paneHost) and the
 /// answers go back the same way (`reply`). What the host tells them unasked (the settings, the folder cache, "the

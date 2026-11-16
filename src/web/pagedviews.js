@@ -1,5 +1,5 @@
 'use strict';
-// A tree, a list or a scrap whose code runs in a page of its own (docs/plans/14-PLAN-floating-panes.md 3.0, stage 6):
+// A tree, a list or a scrap whose code runs in a page of its own (docs/plans/executed/14-PLAN-floating-panes.md 3.0, stage 6):
 // view.html, with the same scripts as this page, showing that one pane (viewpage.js); it asks the host itself. Here
 // are its head and tab, its frame docked (its window floating, PaneForm) and a stand-in this page uses as it uses a
 // view of its own: what the stand-in knows (where it is, the focused and selected items, its pane's own settings) its
