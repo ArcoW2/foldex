@@ -277,9 +277,55 @@ function paneElement(id, kind, title) {
     if (!e.target.closest('.connector, .pin, .filtered, .marks span, .scrap-button')) dragToDock(id, e);
   });
   el.querySelector('.head').addEventListener('contextmenu', e => openPaneMenu(id, e));
+  // A part of the path in the title (plan 29): the pane goes there, as a path typed; "..." the parts left out, in a menu.
+  const titleEl = el.querySelector('.title');
+  titleEl.addEventListener('click', e => {
+    const part = e.target.closest('.crumb');
+    if (!part || part.classList.contains('here')) return;
+    if (!part.classList.contains('more')) return goTo(id, part.dataset.path);
+    const r = part.getBoundingClientRect();
+    openMenu(r.left, r.bottom, [...titleEl.querySelectorAll('.crumb[hidden]')].map(c => ({ label: c.textContent, run: () => goTo(id, c.dataset.path) })));
+  });
+  new ResizeObserver(() => fitCrumbs(titleEl)).observe(titleEl);
   el.addEventListener('mousedown', e => { if (e.button < 3) activate(id); }, true);   // not the mouse's back and forward
   el.addEventListener('focusin', () => activate(id));
   return el;
+}
+
+// What a pane's head names (plan 29): a folder's path as its parts, each a button but the last (the folder shown), the
+// whole path in the tooltip; else the text as it is (a link and its target, a location not on disk).
+function headTitle(el, text, path = null) {
+  const title = el.querySelector('.title');
+  const crumbs = path && onDiskPath(path);
+  if (crumbs && title.dataset.path === path) return;   // as it is (a page's sync tells it again and again)
+  title.dataset.path = crumbs ? path : '';
+  title.title = crumbs ? path : '';
+  if (!crumbs) return void (title.textContent = text);
+  const more = Object.assign(document.createElement('span'), { className: 'crumb more', textContent: '...', title: 'The folders before' });
+  const parts = pathSegments(path).map((s, k, all) => {
+    const part = Object.assign(document.createElement('span'), { className: 'crumb' + (k === all.length - 1 ? ' here' : ''), textContent: s.name });
+    part.dataset.path = s.id;
+    return part;
+  });
+  title.replaceChildren(more, ...parts.flatMap((p, k) => k ? [Object.assign(document.createElement('span'), { className: 'crumb-sep', textContent: '\\' }), p] : [p]));
+  fitCrumbs(title);
+}
+
+// The parts at the start give way to "..." while the head is too narrow for all (bars.js crumbsLeftOut); the last
+// part always shows, cut off at its end when even it does not fit.
+function fitCrumbs(title) {
+  if (!title.dataset.path || !title.clientWidth) return;
+  const parts = [...title.querySelectorAll('.crumb:not(.more)')], more = title.querySelector('.crumb.more');
+  for (const x of title.children) x.hidden = false;
+  more.hidden = true;
+  const widths = parts.map((p, k) => p.offsetWidth + (k ? p.previousElementSibling.offsetWidth : 0));
+  more.hidden = false;
+  const out = crumbsLeftOut(widths, title.clientWidth, more.offsetWidth + (parts[1]?.previousElementSibling.offsetWidth ?? 0));
+  more.hidden = !out;
+  parts.forEach((p, k) => {
+    p.hidden = k < out;
+    if (k && k <= out) p.previousElementSibling.hidden = k < out;   // the separator after "...", and those of the parts left out
+  });
 }
 
 // A pane activated: the panes above it show their state for its branch (3.1).
@@ -710,7 +756,7 @@ class TreeView {
     this.clear();
     this.top = [];
     this.flatten();
-    this.el.querySelector('.title').textContent = location ?? '';
+    headTitle(this.el, location ?? '', location);
     if (activePane === this.id) showLocation(this.locationText());
     if (!location) return Promise.resolve();
     return new Promise(done => {
@@ -719,7 +765,7 @@ class TreeView {
         if (this.root !== location) return done();
         this.top = kids.concat(m.entries).sort(this.comparer()).map(e => this.add(e, null));
         this.name = m.name;
-        this.el.querySelector('.title').textContent = m.name;
+        headTitle(this.el, m.name, location);
         if (m.error) status(`${m.name}: ${m.error}`, true);
         this.flatten();
         drawTabs();
@@ -1420,7 +1466,7 @@ class ListView {
     this.body.scrollTop = 0;
     this.gitAsked = false;
     this.chooseColumns();
-    this.el.querySelector('.title').textContent = location ?? '';
+    headTitle(this.el, location ?? '', location);
     if (activePane === this.id) showLocation(location ?? '');
     this.render();
     tellWatched();
@@ -1694,7 +1740,7 @@ class ListView {
   done(m, first) {
     this.take(m.entries, first);
     // A link that may not be listed itself shows its target's contents (plan 05 3.1).
-    this.el.querySelector('.title').textContent = m.target ? `${m.name} -> ${m.target}` : m.name;
+    headTitle(this.el, m.target ? `${m.name} -> ${m.target}` : m.name, m.target ? null : this.location);
     this.name = m.name;
     if (m.denied && !m.elevated) this.message = 'denied';
     else if (m.error) this.message = m.error;

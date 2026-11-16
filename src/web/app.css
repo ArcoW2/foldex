@@ -698,6 +698,22 @@ body[data-focus-away] .pane.active > .head {
   text-overflow: ellipsis;
 }
 
+/* The title as a path (app.js headTitle; plan 29): each folder before the one shown a button, "..." the ones left out. */
+.pane > .head .crumb:not(.here) {
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+.pane > .head .crumb:not(.here):hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.pane > .head .crumb-sep {
+  padding: 0 2px;
+  opacity: 0.6;
+}
+
 /* The connector (drag it onto another pane to follow that one) and the pin (a child stops following), app.js. */
 .pane > .head .connector {
   width: 8px;

@@ -200,7 +200,7 @@ function drawBar(bar, side, l, b) {
 function fillBar(el, bar, side) {
   const body = el.querySelector('.bar-body');
   const items = bar.kind === 'drives' ? drives.map(d => driveButton(d, bar)) : bar.kind === 'search' ? [searchBox()]
-    : across(side) ? [pathBox()] : pathSegments().map(s => segmentButton(s));
+    : across(side) ? [pathBox()] : pathSegments(barLocation).map(s => segmentButton(s));
   body.replaceChildren(...items);
   if (bar.overflow === 'scroll') {
     body.classList.add('scrolls');
@@ -264,11 +264,25 @@ function typedLocation(text) {
   return known ? known[0] : text;
 }
 
-// The path in a column: its folders one under the other, each a button to go there.
-function pathSegments() {
-  if (!onDiskPath(barLocation)) return barLocation ? [{ name: shownLocation(barLocation), id: barLocation }] : [];
-  const parts = barLocation.split('\\').filter(x => x);
+// The folders of a path, each with the path to go there: the path in a column, a pane's head (plan 29 3.1). A drive
+// is `C:` (for `C:\`), a share `\\server\share`; a location not on disk one part, by its name.
+function pathSegments(path) {
+  if (!onDiskPath(path)) return path ? [{ name: shownLocation(path), id: path }] : [];
+  const unc = path.startsWith('\\\\');
+  const parts = path.split('\\').filter(x => x);
+  if (unc && parts.length >= 2) parts.splice(0, 2, `\\\\${parts[0]}\\${parts[1]}`);
+  else if (unc) parts[0] = '\\\\' + parts[0];
   return parts.map((name, k) => ({ name, id: k === 0 && /^[A-Za-z]:$/.test(name) ? name + '\\' : parts.slice(0, k + 1).join('\\') }));
+}
+
+// How many of a path's parts at its start give way to "..." in a room (plan 29 3.1): none when all fit; else the
+// fewest that leave the rest and the "..." in it; never the last. `widths`: each part with its separator.
+function crumbsLeftOut(widths, room, more) {
+  const sum = from => widths.slice(from).reduce((a, b) => a + b, 0);
+  if (sum(0) <= room) return 0;
+  let k = 1;
+  while (k < widths.length - 1 && more + sum(k) > room) k++;
+  return Math.min(k, widths.length - 1);
 }
 
 function segmentButton(s) {

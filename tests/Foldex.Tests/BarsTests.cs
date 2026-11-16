@@ -137,6 +137,25 @@ public class BarsTests : IDisposable
         Assert.Equal("""[{"lengths":[140,120],"hidden":[]},{"lengths":[100,0],"hidden":[1]}]""", r.GetRawText());
     }
 
+    // A pane's head as a breadcrumb (docs/plans/executed/29-PLAN-head-breadcrumbs.md 3.1): the parts of a path, each with where it goes.
+    [Fact]
+    public void APathsPartsStartWithItsDriveOrShare()
+    {
+        var r = Run("""["C:\\", "C:\\Myfolder\\Myproject\\Thisproject", "\\\\srv\\share\\a", "\\\\srv"].map(p => pathSegments(p))""");
+        Assert.Equal("""
+            [[{"name":"C:","id":"C:\\"}],[{"name":"C:","id":"C:\\"},{"name":"Myfolder","id":"C:\\Myfolder"},{"name":"Myproject","id":"C:\\Myfolder\\Myproject"},{"name":"Thisproject","id":"C:\\Myfolder\\Myproject\\Thisproject"}],[{"name":"\\\\srv\\share","id":"\\\\srv\\share"},{"name":"a","id":"\\\\srv\\share\\a"}],[{"name":"\\\\srv","id":"\\\\srv"}]]
+            """.Trim(), r.GetRawText());
+    }
+
+    // Parts of 30, 50, 40, 60 (200 in all), "..." 20: all fit in 200; in 170 the first goes ("..." and the rest are 170);
+    // in 150 two; in 40 all but the last, which never goes.
+    [Fact]
+    public void TheStartOfAPathGivesWayFirst()
+    {
+        var r = Run("[200, 170, 150, 40].map(room => crumbsLeftOut([30, 50, 40, 60], room, 20))");
+        Assert.Equal("[0,1,2,3]", r.GetRawText());
+    }
+
     [Fact]
     public void WhatDoesNotFitGoesBehindTheMoreButton()
     {

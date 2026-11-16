@@ -106,7 +106,7 @@ function pagedReceive(v, m) {
       // What it holds: a scrap's ids (its watched folders, a search in it), else how many.
       Object.assign(v, { location: m.location, name: m.name, message: m.message, count: m.count, entries: m.entries, text: m.text,
         selected: new Set(m.selected), all: m.allIds ? m.allIds.map(x => ({ id: x })) : new Array(m.all), searching: m.searching, watch: m.watch });
-      v.el.querySelector('.title').textContent = m.title;
+      headTitle(v.el, m.title, m.crumbs);
       if (v.stopButton) v.stopButton.hidden = !m.searching;
       if (m.tree) Object.assign(v, { folder: m.tree.folder, root: m.tree.root, focusNode: m.tree.focus, open: new Set(m.tree.open), qa: m.tree.qa });
       if (m.tell) tellLayout();
