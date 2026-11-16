@@ -1472,6 +1472,39 @@ body[data-focus-away] .pane.scrap.active::after {
 .pane.scrap > .head .title { min-width: 3em; }
 .pane > .head .scrap-button[hidden] { display: none; }
 
+/* Its foot: its count, and while it searches a running bar after it (as the status line's #progress without a
+   count). */
+.pane > .scrap-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 6px;
+  background: var(--bg-bar);
+  border-top: 1px solid var(--border);
+  white-space: nowrap;
+}
+.scrap-foot .count { overflow: hidden; text-overflow: ellipsis; }
+.scrap-foot .track {
+  position: relative;
+  flex: 1;
+  min-width: 40px;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--fg) 12%, transparent);
+}
+.scrap-foot .track[hidden] { display: none; }
+.scrap-foot .track > div {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 35%;
+  border-radius: 4px;
+  background: var(--accent);
+  animation: progress-run 1.2s ease-in-out infinite;
+}
+
 /* The Find dialog (find.js), in the look of the page's small dialogs. */
 dialog.find {
   color: var(--fg);

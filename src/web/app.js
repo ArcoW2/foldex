@@ -1943,7 +1943,8 @@ class ListView {
 // A list of its own entries instead of a folder's (3.1): never a child, but a parent (a folder focused in it shows in
 // its children); filled by drops, Add to scrap, pasting and searches (3.2). Its entries' ids, its name and its search
 // go with the layout (scraps.js decides what is left of them after a restart). Its ring and the edge under its head
-// are dashed (app.css), its head has Stop (while it searches) and Delete (from disk, as Alt+Delete).
+// are dashed (app.css), its head has Stop (while it searches) and Delete (from disk, as Alt+Delete); its foot its count
+// and, while it searches, a running bar (a search tells no total, so the bar cannot fill).
 class ScrapView extends ListView {
   constructor(id) {
     super(id);
@@ -1971,7 +1972,23 @@ class ScrapView extends ListView {
     const bar = Object.assign(document.createElement('div'), { className: 'scrap-bar' });
     bar.append(del);
     this.el.querySelector('.head').after(bar);
+    this.foot = Object.assign(document.createElement('div'), { className: 'scrap-foot' });
+    this.foot.innerHTML = '<span class="count"></span><div class="track" hidden title="Searching"><div></div></div>';
+    this.el.append(this.foot);
     this.showName();
+  }
+
+  render() {
+    super.render();
+    this.drawFoot();
+  }
+
+  drawFoot() {
+    if (!this.foot) return;   // a render from ListView's constructor, before the foot is made
+    const shown = this.entries.length, all = this.all.length, picked = this.selected.size;
+    this.foot.querySelector('.count').textContent = `${shown === all ? `${all} items` : `${shown} of ${all} items`}` +
+      `${picked ? `, ${picked} selected` : ''}${this.searching ? ', searching...' : ''}`;
+    this.foot.querySelector('.track').hidden = !this.searching;
   }
 
   tabTitle() { return layout.pane(this.id).name ?? 'Scrap'; }
@@ -2093,6 +2110,7 @@ class ScrapView extends ListView {
     tellLayout();
     this.searching = true;
     this.stopButton.hidden = false;
+    this.drawFoot();
     if (activePane === this.id) this.tellCount();
     post({ op: 'search', channel: this.id, ...options });
   }
@@ -2102,6 +2120,7 @@ class ScrapView extends ListView {
   searched(m) {
     this.searching = false;
     this.stopButton.hidden = true;
+    this.drawFoot();
     if (m.error) return status(`${this.tabTitle()}: ${m.error}`, true);
     const engine = { walk: 'Foldex walked the folders', everything: 'from Everything', windows: 'from the Windows Search index',
       scrap: 'in the scrap' }[m.engine] ?? m.engine;
