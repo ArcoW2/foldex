@@ -145,6 +145,10 @@ with the set's settings for it. The menu also has the fits and the sets. Ctrl+R 
   icon button that shows the direction (ascending or descending) and turns it on a click, and a Remove button. The
   column the window was opened from is added at the bottom when it is not in the sort yet.
 - When the last line is removed, a line "Name, ascending" takes its place: a list always sorts on something.
+- Two buttons under the lines; each changes the pane's sort and closes the window:
+  - As the set: the sort of the set the pane uses, as the set has it (the column the window was opened from is not
+    added). Only when the pane uses a set; without one the button is not there.
+  - Remove all: every line goes, so the sort is "Name, ascending".
 - What is changed applies to the pane at once (as More columns does).
 - Opened by Ctrl+click on a title, and by a click on a title not in a sort of several columns (3.4); not from the
   right-click, which is the header's menu (3.8). What it can be: a modal
@@ -216,7 +220,9 @@ with the set's settings for it. The menu also has the fits and the sets. Ctrl+R 
   (1 and 2) and a list in a folder sorted that way, the header showing 1 and 2; a click on a sorted title turning only
   that column; a click on another title opening the Sort window with it at the bottom; Ctrl+click opening the Sort
   window, adding a column not in the sort and leaving the sort as it is for one in it;
-  the Sort window's grip, direction button and Remove, the last line removed giving "Name, ascending"; Select
+  the Sort window's grip, direction button and Remove, the last line removed giving "Name, ascending"; As the set
+  (the set's sort back, the window closed; not there for a pane without a set) and Remove all ("Name, ascending", the
+  window closed); Select
   columns...: a hidden column of the set moved right (shown with the set's width) and back left, the filter off and a
   Windows property found by the search and shown at the end; a column with auto-enlarge widening when a wider name is listed;
   a minimum holding when the column is dragged narrower; floating at its first width with nothing scrolling sideways;
