@@ -1259,8 +1259,18 @@ dialog.more-columns .props, .manage-sets .setcolumns {
   color: var(--fg-dim);
 }
 
+/* Log on..., Try again, List as administrator (app.js render): in the theme's colours, as a dialog's buttons. */
 .message button {
   margin-left: 8px;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 14px;
+}
+
+.message button:hover, .message button:focus {
+  border-color: var(--accent);
 }
 
 footer {

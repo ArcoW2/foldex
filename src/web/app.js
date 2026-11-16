@@ -1405,7 +1405,7 @@ class ListView {
     if (!this.cols.set) tellLayout();
   }
 
-  load(location, elevated = false) {
+  load(location, elevated = false, fresh = false) {
     // Thumbnails still being made for the folder left: no longer (docs/plans/executed/22-PLAN-thumbnails.md 3.1).
     if (this.thumbsAsked) {
       post({ op: 'thumbs', channel: this.id, ids: [] });
@@ -1426,7 +1426,7 @@ class ListView {
     tellWatched();
     if (!location) return;
     let first = true;
-    list(this.id, location, this.content() === 'folders', part => this.take(part, first && !(first = false)), m => this.done(m, first), elevated);
+    list(this.id, location, this.content() === 'folders', part => this.take(part, first && !(first = false)), m => this.done(m, first), elevated, false, fresh);
   }
 
   // Show (plan 18 3.2): folders, files or both.
@@ -1739,19 +1739,20 @@ class ListView {
       const msg = document.createElement('div');
       msg.className = 'message';
       msg.textContent = this.message === 'denied' ? 'You have no access to this folder.' : this.message;
-      if (this.message === 'denied' && /^\\\\[^\\?]/.test(this.location ?? '')) {
-        // On the network: a user name and password for that machine or share (Windows' own prompt), then again.
-        msg.textContent = 'This machine or share wants you to log on.';
-        const button = document.createElement('button');
-        button.textContent = 'Log on...';
-        button.addEventListener('click', () => askHost({ op: 'netLogon', path: this.location }).then(m => { if (m.ok) this.load(this.location); }));
-        msg.append(button);
-      } else if (this.message === 'denied') {
-        const button = document.createElement('button');
-        button.textContent = 'List as administrator';
-        button.addEventListener('click', () => this.load(this.location, true));
-        msg.append(button);
-      }
+      const button = (text, run) => {
+        const b = document.createElement('button');
+        b.textContent = text;
+        b.addEventListener('click', run);
+        msg.append(b);
+      };
+      if (/^\\\\[^\\?]/.test(this.location ?? '')) {
+        // On the network, whatever went wrong (refused, a log-on failed, no answer): a user name and password for that
+        // machine or share (Windows' own prompt), then read again.
+        if (this.message === 'denied') msg.textContent = 'This machine or share wants you to log on.';
+        button('Log on...', () => askHost({ op: 'netLogon', path: this.location }).then(m => { if (m.ok) this.refresh(); }));
+      } else if (this.message === 'denied') button('List as administrator', () => this.load(this.location, true));
+      // Every error: read again (F5), a share that did not answer tried again at once.
+      button('Try again', () => this.refresh());
       this.rows.style.height = '';
       this.rows.replaceChildren(msg);
       return;
@@ -1899,9 +1900,9 @@ class ListView {
     if (this.location) goTo(this.id, parentOf(this.location));
   }
 
-  // F5: read again from disk, where it is (reread); after an error, opened again.
+  // F5: read again from disk, where it is (reread); after an error, opened again, from disk too.
   refresh() {
-    if (this.location && this.message) this.load(this.location);
+    if (this.location && this.message) this.load(this.location, false, true);
     else if (this.location) this.reread(null, true);
   }
 

@@ -46,6 +46,12 @@ static class NetworkGuard
         return parts.Length >= 2 ? $@"\\{parts[0]}\{parts[1]}" : $@"\\{parts[0]}";
     }
 
+    /// <summary>A server tried again at the next check, not left alone until RetryAfter (F5, Try again).</summary>
+    public static void Forget(string path)
+    {
+        if (IsNetwork(path)) down.TryRemove(Server(path), out _);
+    }
+
     /// <summary>When a server was found down (null: not marked).</summary>
     public static DateTime? DownSince(string path) => IsNetwork(path) && down.TryGetValue(Server(path), out var since) ? since : null;
 

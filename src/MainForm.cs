@@ -324,8 +324,12 @@ sealed class MainForm : Form
                 freshLayout = false;
                 break;
             case "list":
-                // F5: from disk again, not from the cache.
-                if (msg["fresh"]?.GetValue<bool>() == true) app.Cache.Invalidate(msg["location"]!.GetValue<string>());
+                // F5: from disk again, not from the cache; a share found down is tried again at once.
+                if (msg["fresh"]?.GetValue<bool>() == true)
+                {
+                    app.Cache.Invalidate(msg["location"]!.GetValue<string>());
+                    Shell.NetworkGuard.Forget(msg["location"]!.GetValue<string>());
+                }
                 await List(msg["location"]!.GetValue<string>(), msg["req"]?.GetValue<int>() ?? 0,
                     msg["channel"]?.GetValue<string>() ?? "", msg["foldersOnly"]?.GetValue<bool>() == true, msg["tree"]?.GetValue<bool>() == true);
                 break;
