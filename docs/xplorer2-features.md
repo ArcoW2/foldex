@@ -30,7 +30,7 @@ updated whenever a plan is written, built or closed that touches a feature here.
 | Detachable, floating, docked panes | P+ | built (plan 12); floating: plan 14, built (every pane floats, the tree, the list and the scrap too) | 4 | -- |
 | Miller columns | P+ | built (plan 03, preset "Columns") | 4 | presets (plan 03) |
 | Named window layouts (workspaces) | P+ | built (plan 15): projects, a default layout | 4 | -- |
-| Address bar: breadcrumbs, typed path, autocomplete | P+ | part: the path bar (plan 10), typed; breadcrumbs in a column; autocomplete -- | 4 | bars (plan 10) |
+| Address bar: breadcrumbs, typed path, autocomplete | P+ | part: the path bar (plan 10), typed; breadcrumbs in a column; in a pane's head: plan 29; autocomplete -- | 4 | bars (plan 10) |
 | Back / forward / up | P+ | built (per pane, plan 17; the mouse's buttons too) | 4 | -- |
 | Frequent folders, jump list | P+ | -- | 4 | Back / forward / up (the history) |
 | Bookmarks (keys, icons, dual bookmarks) | P+ | built (plan 23, plan 26, plan 27): one list of bookmarks, quick access a flag (an area in a tree), names, icons, two keys each, Regular or Root, open in a new pane, folders to any depth on both | 4 | bars (plan 10), for a bookmark bar |
