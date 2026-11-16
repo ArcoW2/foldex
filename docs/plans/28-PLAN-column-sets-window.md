@@ -32,7 +32,8 @@ a list's header a sorted column shows its arrow, and its number when more than o
 sorts by it or turns it the other way; Ctrl+click adds it to the sort; the Sort window shows the whole order to drag,
 turn and remove. A column of a set that is not shown can be shown in a pane from the header's right-click menu,
 with the set's settings for it. Ctrl+R fits the columns that fit, Ctrl+Shift+R every column. All buttons are the
-theme's. Floating, the window opens wide enough to show both parts without scrolling sideways.
+theme's. Floating, the window opens wide enough to show both parts without scrolling sideways; where they do not fit
+side by side, the sets' part comes first and the set chosen under it.
 
 ## Status
 
@@ -46,7 +47,7 @@ theme's. Floating, the window opens wide enough to show both parts without scrol
 | Part | What | Waits for | Reference |
 |---|---|---|---|
 | Theme buttons | every button of the page in the theme's look | -- | 3.1 |
-| Two parts | sets left, the set chosen right, a draggable line between, a label naming the set; wide enough when floating | -- | 3.1 |
+| Two parts | sets left, the set chosen right, a draggable line between, a label naming the set; wide enough when floating; stacked (sets first) when narrow | -- | 3.1 |
 | The sets' list | rows, grip, arrow strip, buttons under it; the order kept and used in every list of sets | -- | 3.2 |
 | The columns' list | two lines per column (shown or not), grip, arrow strip, Remove and Add under it | -- | 3.3 |
 | Sort on several columns | the sort cells in the editor; the lists sort that way | -- | 3.4 |
@@ -67,7 +68,10 @@ theme's. Floating, the window opens wide enough to show both parts without scrol
   dragged to give one part more room; where it is, is kept with the pane (as the bookmarks' column widths are). Above
   the right part a label: "Set: <name>" (with "(changed)" or "(yours)" as the list shows it).
 - Floating, it opens wide enough for both parts and the columns' two lines without scrolling sideways (the first time;
-  after that as its window was). A narrow docked pane keeps the stacked layout (sets above the set chosen) it has now.
+  after that as its window was).
+- Where the two parts do not fit side by side (a narrow docked pane, a floating window made narrow), they are stacked:
+  first the whole sets' part (the list and its buttons), under it the whole part of the set chosen (its label, its
+  columns and their buttons). The line between them is then not shown; it comes back once both fit side by side.
 - LexPen has no window like this one; the list look (rows, grip, arrow strip) is Foldex's own, from Manage the
   bookmarks (plan 26 3.3, plan 27 3.4).
 
@@ -186,6 +190,7 @@ theme's. Floating, the window opens wide enough to show both parts without scrol
   the Sort window's grip, direction button and Remove, the last line removed giving "Name, ascending"; a hidden column
   shown from Select columns... with the set's width; a column with auto-enlarge widening when a wider name is listed;
   a minimum holding when the column is dragged narrower; floating at its first width with nothing scrolling sideways;
+  made narrow (docked and floating): the sets' part whole above the set chosen, no splitter;
   the splitter dragged and kept after a restart.
 
 ## 4. Open questions
