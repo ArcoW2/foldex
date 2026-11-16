@@ -219,7 +219,7 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 | Projects | pane page (projects.html; PaneHosts.Projects) | both (built) | floating, in the middle of the window | as LexPen's; docked: as Settings |
 | More columns (every property, columns.js moreColumns) | modal floating window | modal floating window (built) | | adds columns to the pane it was opened from |
 | Sort (plan 28 3.5) | (not built) | modal floating window | under the title it came from | a pane's sort in order: drag, direction, remove |
-| Select columns (plan 28 3.7) | (not built) | modal floating window | | shows or hides the set's columns in the pane it was opened from |
+| Select columns (plan 28 3.7) | (not built) | modal floating window | | the columns not shown and the selected ones, arrows between; the set's filter |
 | Find | modal floating window (find.js) | modal floating window (built) | | fills a scrap |
 | Rename (several items, renamedialog.js) | modal floating window | modal floating window (built) | | renames the items selected when it opened |
 | Edit a bookmark, Change Icon, Move to folder..., a name asked (askText) | modal floating windows | modal floating window (built) | | each asks one thing and waits for the answer |

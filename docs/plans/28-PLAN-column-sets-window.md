@@ -38,8 +38,9 @@ scrolling sideways; where they do not fit side by side, the sets' part comes fir
 In a list's header a sorted column shows its arrow, and its number when more than one column sorts. A click on a
 title sorts by it or turns it the other way, without undoing a sort of several columns; Ctrl+click adds it to the
 sort; the Sort window shows the whole order to drag, turn and remove. The header's right-click menu, as xplorer2's,
-holds Select columns..., where a column of the set that is not shown can be shown in the pane with the set's settings
-for it, the fits and the sets. Ctrl+R fits the columns whose Fit says so, Ctrl+Shift+R every column.
+holds Select columns..., two lists with arrow buttons between them: the columns not shown at the left (the set's
+only, or with its filter off every column there is) and the "Selected" ones at the right; a column of the set comes
+with the set's settings for it. The menu also has the fits and the sets. Ctrl+R fits the columns whose Fit says so, Ctrl+Shift+R every column.
 
 ## Status
 
@@ -59,7 +60,7 @@ for it, the fits and the sets. Ctrl+R fits the columns whose Fit says so, Ctrl+S
 | Sort on several columns | the sort cells in the editor; the lists sort that way | -- | 3.4 |
 | The header's sort | numbers beside the arrows; click, Ctrl+click; the Sort window | Open questions 1, 2 | 3.4; 3.5 |
 | Fit per column | never, manual, auto-enlarge, auto-shrink, auto-both; minimum and maximum, also when resizing by hand; Ctrl+R and Ctrl+Shift+R | -- | 3.6 |
-| Columns not shown | a set's columns kept but not shown; shown in a pane from the header's menu | Open questions 4 | 3.7 |
+| Columns not shown | a set's columns kept but not shown; Select columns... (not shown left, "Selected" right, arrows, the set's filter) | Open questions 4, 5 | 3.7 |
 | The header's menu | Select columns..., the fits, the sets, Columns... for a pane's own columns | Open questions 1, 3 | 3.8 |
 | Host | columnsets.json: the sets' order, a sort of several columns, per column shown, Fit and its limits; older files read | -- | 3.9 |
 
@@ -158,11 +159,18 @@ for it, the fits and the sets. Ctrl+R fits the columns whose Fit says so, Ctrl+S
 
 - A column of a set can be kept in it but not shown (Shown off, 3.3): it has its width, Fit, limits and place in the
   set, but a pane using the set does not show it.
-- The header's right-click menu has Select columns...: a list of the set's columns, the shown ones checked; checking
-  one that is not shown shows it in that pane, at its place in the set and with the set's settings for it (width, Fit,
-  limits); unchecking hides it again. More columns... (every property Windows has) stays for columns the set does not
-  have.
-- What can be: a modal floating window, as More columns (plan 14 3.7).
+- The header's right-click menu has Select columns...: a window with two lists side by side. At the left the columns
+  not shown in the pane, at the right, under the label "Selected", the columns shown, in their order in the pane.
+  Between them an arrow right button (the columns selected at the left are shown) and an arrow left button (the
+  columns selected at the right are hidden; not the Name column).
+- Above the left list a filter, a check with the set's name ("Columns of set <name>"), on when the window opens: the
+  left list then has only the set's columns that are not shown. Turned off, it has every column there is that is not
+  shown: Foldex's own and every property Windows has for columns, with a search box as More columns has. A pane that
+  uses no set has no filter: the left list has every column.
+- A column of the set, shown, comes at its place in the set with the set's settings for it (width, Fit, limits); a
+  column from outside the set comes at the end with the defaults (3.6). What is changed applies to the pane at once.
+- What can be: a modal floating window, as More columns (plan 14 3.7). Whether More columns... stays in the menu
+  beside it: Open questions 5.
 - Whether showing such a column changes the set or only that pane: Open questions 4.
 
 ### 3.8 The header's right-click menu
@@ -193,8 +201,9 @@ for it, the fits and the sets. Ctrl+R fits the columns whose Fit says so, Ctrl+S
   the header's menu after; a set chosen and its label; a column moved, removed, added and hidden; two sort columns set
   (1 and 2) and a list in a folder sorted that way, the header showing 1 and 2; a click on a sorted title turning only
   that column; a click on another title opening the Sort window with it at the bottom; Ctrl+click adding a column;
-  the Sort window's grip, direction button and Remove, the last line removed giving "Name, ascending"; a hidden column
-  shown from Select columns... with the set's width; a column with auto-enlarge widening when a wider name is listed;
+  the Sort window's grip, direction button and Remove, the last line removed giving "Name, ascending"; Select
+  columns...: a hidden column of the set moved right (shown with the set's width) and back left, the filter off and a
+  Windows property found by the search and shown at the end; a column with auto-enlarge widening when a wider name is listed;
   a minimum holding when the column is dragged narrower; floating at its first width with nothing scrolling sideways;
   made narrow (docked and floating): the sets' part whole above the set chosen, no splitter;
   the splitter dragged and kept after a restart.
@@ -212,3 +221,5 @@ for it, the fits and the sets. Ctrl+R fits the columns whose Fit says so, Ctrl+S
    Recommended: yes.
 4. A column of a set shown from the header (3.7): only in that pane, the set unchanged until Update set (as other
    changes to a pane's columns now), or in the set, so every pane using it shows it? Recommended: only in that pane.
+5. More columns... in the header's menu: Select columns... with its filter off does what it does. Take it out of the
+   menu? Recommended: yes, one way to add a column.
