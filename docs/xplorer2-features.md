@@ -47,7 +47,7 @@ updated whenever a plan is written, built or closed that touches a feature here.
 
 | Feature | Edition | Foldex | Prio | Depends on |
 |---|---|---|---|---|
-| Columns: shell properties, column sets | P+ | built (plan 11); Fit per column and the Manage window: plan 28 | 4 | -- |
+| Columns: shell properties, column sets | P+ | built (plan 11); Fit per column, columns kept but not shown, Select columns and the Manage window: plan 28 | 4 | -- |
 | Cloud status columns | P+ | -- | 4 | Columns |
 | Sorting: secondary, natural, folders first | P+ | part: natural sort, folders first, by any column (plan 11); secondary: plan 28 (sorting on several columns) | 4 | Columns |
 | Wildcard filter | All | built (plan 03: a filter per pane, wildcards for files) | 4 | -- |

@@ -217,7 +217,7 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 | F1, all actions and keys (palette.js, palette.html, palettepane.js) | pane page | both, not modal (built) | floating | as LexPen's F1 (plan 19 3.10): stays open while actions run |
 | Settings | pane page (settings.html; PaneHosts.Settings) | both (built) | floating, in the middle of the window | as LexPen's; one per window, every window following a change |
 | Projects | pane page (projects.html; PaneHosts.Projects) | both (built) | floating, in the middle of the window | as LexPen's; docked: as Settings |
-| More columns (every property, columns.js moreColumns) | modal floating window | modal floating window (built) | | adds columns to the pane it was opened from |
+| More columns (every property, columns.js moreColumns) | modal floating window | modal floating window (built) | | adds columns to the pane it was opened from; replaced by Select columns (plan 28 3.7) |
 | Sort (plan 28 3.5) | (not built) | modal floating window | under the title it came from | a pane's sort in order: drag, direction, remove; As the set, Remove all |
 | Select columns (plan 28 3.7) | (not built) | modal floating window | | the columns not shown and the selected ones, arrows between; the set's filter |
 | Find | modal floating window (find.js) | modal floating window (built) | | fills a scrap |

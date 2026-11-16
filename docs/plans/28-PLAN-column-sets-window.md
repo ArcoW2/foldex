@@ -61,8 +61,8 @@ with the set's settings for it. The menu also has the fits and the sets. Ctrl+R 
 | Sort on several columns | the sort cells in the editor; the lists sort that way | -- | 3.4 |
 | The header's sort | numbers beside the arrows; click, Ctrl+click; the Sort window | -- | 3.4; 3.5 |
 | Fit per column | never, manual, auto-enlarge, auto-shrink, auto-both; minimum and maximum, also when resizing by hand; Ctrl+R and Ctrl+Shift+R | -- | 3.6 |
-| Columns not shown | a set's columns kept but not shown; Select columns... (not shown left, "Selected" right, arrows, the set's filter) | Open questions 2, 3 | 3.7 |
-| The header's menu | Select columns..., the fits, the sets, Columns... for a pane's own columns | Open questions 1 | 3.8 |
+| Columns not shown | a set's columns kept but not shown; Select columns... (not shown left, "Selected" right, arrows, the set's filter), in the pane only; More columns goes | -- | 3.7 |
+| The header's menu | Select columns..., the fits, the sets, Columns... for a pane's own columns | -- | 3.8 |
 | Host | columnsets.json: the sets' order, a sort of several columns, per column shown, Fit and its limits; older files read | -- | 3.9 |
 
 ## 3. Details
@@ -91,8 +91,8 @@ with the set's settings for it. The menu also has the fits and the sets. Ctrl+R 
   and an arrow down: they move the selected set one place.
 - Under the list: New... (an empty set with the Name column, its name asked), Rename..., Duplicate..., Delete...,
   Reset (a changed shipped set back as shipped). Duplicate asks the name of the copy, as now.
-- The order is kept (3.9) and is the order of every list of sets: the header's menu, More columns' and Manage's
-  lists. It decides nothing else (not which set is offered first when a pane's columns are saved as a set).
+- The order is kept (3.9) and is the order of every list of sets: the header's menu and Manage's
+  list. It decides nothing else (not which set is offered first when a pane's columns are saved as a set).
 
 ### 3.3 The columns' list
 
@@ -149,10 +149,10 @@ with the set's settings for it. The menu also has the fits and the sets. Ctrl+R 
   - As the set: the sort of the set the pane uses, as the set has it (the column the window was opened from is not
     added). Only when the pane uses a set; without one the button is not there.
   - Remove all: every line goes, so the sort is "Name, ascending".
-- What is changed applies to the pane at once (as More columns does).
+- What is changed applies to the pane at once (as Select columns does, 3.7).
 - Opened by Ctrl+click on a title, and by a click on a title not in a sort of several columns (3.4); not from the
-  right-click, which is the header's menu (3.8). What it can be: a modal
-  floating window, as More columns (plan 14 3.7); it opens under the title it came from.
+  right-click, which is the header's menu (3.8). What it can be: a modal floating window (plan 14 3.7); it opens under
+  the title it came from.
 
 ### 3.6 Fit per column
 
@@ -182,22 +182,26 @@ with the set's settings for it. The menu also has the fits and the sets. Ctrl+R 
   columns selected at the right are hidden; not the Name column).
 - Above the left list a filter, a check with the set's name ("Columns of set <name>"), on when the window opens: the
   left list then has only the set's columns that are not shown. Turned off, it has every column there is that is not
-  shown: Foldex's own and every property Windows has for columns, with a search box as More columns has. A pane that
-  uses no set has no filter: the left list has every column.
+  shown: Foldex's own and every property Windows has for columns, with a search box (as More columns has now). A pane
+  that uses no set has no filter: the left list has every column.
 - A column of the set, shown, comes at its place in the set with the set's settings for it (width, Fit, limits); a
   column from outside the set comes at the end with the defaults (3.6). What is changed applies to the pane at once.
-- What can be: a modal floating window, as More columns (plan 14 3.7). Whether More columns... stays in the menu
-  beside it: Open questions 3.
-- Whether showing such a column changes the set or only that pane: Open questions 2.
+- Showing or hiding a column here changes that pane only; the set stays as it is until Update set (as any change to a
+  pane's columns now), so other panes using the set do not change.
+- Select columns replaces More columns (columns.js moreColumns, its dialog page's moreColumnsHere): with its filter
+  off it adds any column More columns could, so More columns goes, from the menu and the code.
+- What can be: a modal floating window (plan 14 3.7).
 
 ### 3.8 The header's right-click menu
 
 - As xplorer2's (its menu has Select columns, Autosize columns, Fit columns, Details from filter, Programmable...,
-  Column sets with Add current, Organize and the sets): Select columns... (3.7), More columns..., Fit columns
+  Column sets with Add current, Organize and the sets): Select columns... (3.7), Fit columns
   (Ctrl+R), Fit all columns (Ctrl+Shift+R), Column sets (Save as new set..., Update set, Manage sets..., and the sets
   in their order, the one used checked), Columns... (this editor's right part for a pane's own columns, when the pane
   uses no set), and the folder's set as now (Use for this folder, Back to generic).
-- Where Foldex differs from xplorer2: Details from filter and Programmable... are not in the menu (Open questions 1).
+- Where Foldex differs from xplorer2: Details from filter and Programmable... are not in the menu, as Foldex has
+  neither feature (programmable columns are not built, xplorer2-features "Programmable columns"); they come with those
+  features, if ever.
 - The right-click on a title opens this menu, as anywhere in the header; the Sort window is opened by Ctrl+click
   (3.5).
 
@@ -231,10 +235,4 @@ with the set's settings for it. The menu also has the fits and the sets. Ctrl+R 
 
 ## 4. Open questions
 
-1. xplorer2's Details from filter and Programmable... in the header's menu: Foldex has neither feature (programmable
-   columns are not built, xplorer2-features "Programmable columns"). Leave them out until those features exist?
-   Recommended: yes.
-2. A column of a set shown from the header (3.7): only in that pane, the set unchanged until Update set (as other
-   changes to a pane's columns now), or in the set, so every pane using it shows it? Recommended: only in that pane.
-3. More columns... in the header's menu: Select columns... with its filter off does what it does. Take it out of the
-   menu? Recommended: yes, one way to add a column.
+None.
