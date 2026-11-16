@@ -106,15 +106,16 @@ with the set's settings for it. The menu also has the fits and the sets. Ctrl+R 
 - The strip at the left holds an arrow up and an arrow down: they move the selected column one place. The grip drags
   a column to another place. Every column can go anywhere, the Name column too (e.g. the Git status first); the Name
   column cannot be hidden or removed. Dragging a title in a list's header moves a column the same way, Name included.
-- The item's icon and a link's mark stay with the Name column wherever it is.
-- A tree's structure (its indent per level, its lines and expanders, plan 18 3.3) always stays at the left of the
-  row, whichever column is first: it is drawn at the start of the first column's cell, before that column's value, so
-  the columns stay in line from row to row (the indent differs per level; drawn before the cells it would shift every
-  column). With the Git status first, a tree's row is: indent, lines, expander, the Git status, ..., icon and name.
-  Fitting the first column counts the indent and the expander, as fitting the Name column does now.
+- What marks the item stays at the left of the row, whichever column is first: in a tree its structure (its indent
+  per level, its lines and expanders, plan 18 3.3), then the item's icon and a link's mark; in a list the icon and the
+  link's mark. They are drawn at the start of the first column's cell, before that column's value, so the columns
+  stay in line from row to row (the indent differs per level; drawn before the cells it would shift every column).
+  With the Git status first, a tree's row is: indent, lines, expander, icon, link mark, the Git status, ..., the name;
+  a list's: icon, link mark, the Git status, ..., the name. Fitting the first column counts what is drawn before its
+  value, as fitting the Name column does now.
 - Fitting the columns to the pane still makes the Name column give way first, wherever it is. The code now takes the
   first column as the Name column (app.js: a list's and a tree's rows, fitting; columns.js moveColumn keeps it first):
-  each of those goes by the column's id instead, except a tree's structure, which stays with the first column.
+  each of those goes by the column's id instead, except what marks the item, which stays with the first column.
 - Under the list: Remove (the selected column) and Add a column... (Foldex's own columns and Windows' properties, as
   now).
 
