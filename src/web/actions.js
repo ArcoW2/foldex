@@ -306,7 +306,7 @@ action('bars.change', { title: 'Change the bars', hint: 'their change mode: drag
 action('bars.reset', { title: 'Reset the bars', hint: 'the bars as Foldex ships them (your bars.json removed)', group: 'view',
   run: () => askYes('Put the bars back as Foldex ships them?').then(yes => yes && post({ op: 'barsReset' })) });
 // The presets (docs/plans/executed/03-PLAN-connected-panes.md 3.5; app.js applyPreset).
-const Presets = { default: 'Default', dual: 'Dual', columns: 'Columns', preview: 'With preview' };
+const Presets = { default: 'Default', dual: 'Dual', columns: 'Columns', preview: 'Preview' };
 action('layout.preset', { title: 'Preset', hint: 'the panes of this window made again in a preset arrangement, at the folder shown now', group: 'projects',
   variants: Object.keys(Presets).map(p => [p]), variantTitles: Object.fromEntries(Object.entries(Presets).map(([p, t]) => [p, `Preset: ${t}`])),
   run: params => applyPreset(Presets[params[0]] ? params[0] : 'default') });

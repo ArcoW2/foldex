@@ -105,3 +105,6 @@ plan (`30-PLAN-ribbon-tabs.md.images/`): [Home](30-PLAN-ribbon-tabs.md.images/ri
 - Tested: `dotnet test` 238 passed (the shipped ribbon's actions known, every button with its icon); in the test copy
   each tab drawn, no letter boxes, the four tab names, `>>` at 1000 px.
 - Not checked: a ribbon.json of your own kept as it was (3.2: the code reads yours whole, as before).
+- Afterwards, as asked: Home's Find has Search bar under Find; Filter... is a group of its own, Filter (plan 32 adds the
+  named filters to it); Show is Views and Preview with Hidden items under it; Info went to View, in the group Preview
+  (Info, Pane preview, Pane info). The preset With preview is named Preview.

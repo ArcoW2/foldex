@@ -33,9 +33,10 @@
         { "action": "item.open", "size": "large", "label": "Open" },
         { "action": "item.properties", "label": "Properties" }, { "action": "item.selectAll", "label": "Select all", "stack": true } ] },
       { "name": "Find", "items": [
-        { "action": "find", "size": "large", "label": "Find" },
-        { "action": "pane.filter", "label": "Filter..." }, { "action": "search.focus", "label": "Search bar", "stack": true },
+        { "action": "find", "size": "large", "label": "Find" }, { "action": "search.focus", "label": "Search bar", "stack": true },
         { "action": "scrap.new", "label": "New scrap" }, { "action": "scrap.add", "label": "Add to scrap", "stack": true } ] },
+      { "name": "Filter", "items": [
+        { "action": "pane.filter", "size": "large", "label": "Filter..." } ] },
       { "name": "Go", "items": [
         { "action": "history.back", "label": "Back" }, { "action": "history.forward", "label": "Forward", "stack": true },
         { "action": "folder.up", "label": "Up", "stack": true },
@@ -43,9 +44,7 @@
         { "action": "bookmarks.menu", "label": "Bookmarks", "stack": true } ] },
       { "name": "Show", "items": [
         { "action": "view.menu", "size": "large", "label": "Views" },
-        { "action": "preview.toggle", "size": "large", "label": "Preview" },
-        { "action": "info.toggle", "size": "large", "label": "Info" },
-        { "action": "hidden.toggle", "label": "Hidden items" } ] } ] },
+        { "action": "preview.toggle", "size": "large", "label": "Preview" }, { "action": "hidden.toggle", "label": "Hidden items", "stack": true } ] } ] },
 
     { "name": "View", "groups": [
       { "name": "Panes", "items": [
@@ -56,13 +55,14 @@
         { "action": "pane.rename", "label": "Rename pane", "stack": true },
         { "action": "pane.next", "label": "Next pane" },
         { "action": "pane.detach", "label": "Detach", "stack": true }, { "action": "pane.pin", "label": "Pin", "stack": true } ] },
-      { "name": "Pane preview", "items": [
+      { "name": "Preview", "items": [
+        { "action": "info.toggle", "size": "large", "label": "Info" },
         { "action": "preview.pane", "label": "Pane preview" }, { "action": "info.pane", "label": "Pane info", "stack": true } ] },
       { "name": "Layout", "items": [
         { "action": "layout.preset", "params": ["default"], "label": "Default" },
         { "action": "layout.preset", "params": ["dual"], "label": "Dual", "stack": true },
         { "action": "layout.preset", "params": ["columns"], "label": "Columns", "stack": true },
-        { "action": "layout.preset", "params": ["preview"], "label": "With preview" } ] },
+        { "action": "layout.preset", "params": ["preview"], "label": "Preview" } ] },
       { "name": "Projects", "corners": { "left": "projects.manage", "right": "projects.menu" }, "items": [
         { "action": "projects.menu", "size": "large", "label": "Projects" },
         { "action": "projects.manage", "label": "Manage projects" }, { "action": "project.new", "label": "New", "stack": true },

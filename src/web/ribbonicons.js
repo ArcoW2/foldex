@@ -106,7 +106,7 @@ const RIBBON_ICONS = (() => {
     'layout.preset default': ['Default', win + p('M6 2.5v11M6 8h8.5')],
     'layout.preset dual': ['Dual', win + p('M5.5 2.5v11M10 2.5v11')],
     'layout.preset columns': ['Columns', win + p('M4.5 2.5v11M8 2.5v11M11.5 2.5v11')],
-    'layout.preset preview': ['With preview', win + p('M5.5 2.5v11M10 2.5v11') + '<circle cx="12.25" cy="8" r="1"/>'],
+    'layout.preset preview': ['Preview', win + p('M5.5 2.5v11M10 2.5v11') + '<circle cx="12.25" cy="8" r="1"/>'],
     // Bars
     'bars.change': ['Change the bars', bar + dim('M2 10h12M2 13h7') + p(pencil)],
     'bars.reset': ['Reset the bars', bar + p('M7.5 9.5L4.5 12l3 2.5M4.5 12h6a2 2 0 0 0 0-4')],
