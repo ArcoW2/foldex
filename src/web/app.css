@@ -1446,12 +1446,19 @@ dialog.ask form {
   color: var(--warning);
 }
 
-/* What an action did (app.js statusAction): lit in the accent until it goes (the setting actionMessageSeconds). */
+/* What an action did (app.js statusAction): lit in the accent until it goes (the setting actionMessageSeconds), flashing
+   twice quickly as it comes. */
 #status.action {
   color: var(--fg);
   background: color-mix(in srgb, var(--accent) 35%, transparent);
   border-radius: 3px;
   padding: 0 6px;
+  animation: action-flash 0.6s linear;
+}
+
+@keyframes action-flash {
+  0%, 50% { background: color-mix(in srgb, var(--accent) 80%, transparent); }
+  25%, 75% { background: transparent; }
 }
 
 /* The progress bar (app.js showProgress): over the status line from where the status text starts to its end, the text

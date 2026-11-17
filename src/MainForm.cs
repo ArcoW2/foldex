@@ -135,6 +135,15 @@ sealed class MainForm : Form
         }
     }
 
+    // The window in front (started, Alt+Tab, clicked): the keyboard to its page when the control does not have it yet,
+    // so the page knows it is in front (its document focused) and the first click in it acts; without it the page took
+    // the window for one in the background and stopped that click (web/app.js, the setting ignoreActivationClick).
+    protected override void OnActivated(EventArgs e)
+    {
+        base.OnActivated(e);
+        if (!web.ContainsFocus) web.Focus();
+    }
+
     // The page only once the window is on its desktop and in its project: which layout it gets depends on that.
     protected override async void OnShown(EventArgs e)
     {

@@ -89,13 +89,15 @@ function status(text, warn = false) {
   logStatus(text, warn);
 }
 
-// What an action did (Copied ...): lit in the status line and gone after the setting actionMessageSeconds, the line
+// What an action did (Copied ...): lit in the status line, flashing twice as it comes, and gone after the setting
+// actionMessageSeconds, the line
 // showing again what it showed before. As LexPen's toast "Copied ...", which Foldex has not.
 let actionMessage = null;
 function statusAction(text) {
   const el = $('status');
   const before = actionMessage?.before ?? { text: el.textContent, warn: el.classList.contains('warn') };
   status(text);
+  void el.offsetWidth;   // its flash starts again for a message following another
   el.classList.add('action');
   const timer = setTimeout(() => {
     actionMessage = null;
