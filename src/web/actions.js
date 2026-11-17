@@ -87,15 +87,21 @@ action('item.paste', { title: 'Paste', group: 'items', enabled: () => !!currentF
     status(`${m.entries.length} item(s) added to ${scrap.tabTitle()}.`);
   });
 } });
+// What was copied, said in the status line (and so in the Log): as LexPen's toast "Copied ...", which Foldex has not;
+// its messages are the status line's.
+function copyPaths(ids, separator) {
+  post({ op: 'copyText', text: ids.join(separator) });
+  status(ids.length > 1 ? `Copied ${ids.length} paths: ${ids.join(', ')}` : `Copied ${ids[0]}`);
+}
 action('item.copyPath', { title: 'Copy path', group: 'items', enabled: onDisk,
-  run: () => post({ op: 'copyText', text: selectedIds().join('\r\n') }) });
+  run: () => copyPaths(selectedIds(), '\r\n') });
 // The focused item's full path; with several selected, theirs on one line, comma-separated.
 // The preview active: the file it shows.
 const pathsOnOneLine = () => activeView() instanceof PreviewView ? (activeView().path ? [activeView().path] : [])
   : selectedIds().length > 1 ? selectedIds() : focusedItem() ? [focusedItem().id] : [];
 action('item.copyPathsLine', { title: 'Copy path (on one line)', hint: 'the focused item; several selected: comma-separated', group: 'items',
   enabled: () => pathsOnOneLine().length > 0 && pathsOnOneLine().every(id => /^[A-Za-z]:\\|^\\\\/.test(id)),
-  run: () => post({ op: 'copyText', text: pathsOnOneLine().join(', ') }) });
+  run: () => copyPaths(pathsOnOneLine(), ', ') });
 action('item.selectAll', { title: 'Select all', group: 'items', enabled: () => activeView() instanceof ListView,
   run: () => activeView().selectAll() });
 
