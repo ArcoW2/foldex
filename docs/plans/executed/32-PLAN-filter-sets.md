@@ -213,6 +213,8 @@ None.
   order. A line row: And / Or, the brackets opened (`(` to `(((`), Not, what it tests, the brackets closed. The field:
   a box to type in with its list under it (Up, Down, Enter, Esc). Dates: open, a day, a day and a time, or n minutes
   to years ago; sizes with a unit, kept in bytes.
+- **The line chosen**: under its field, the field's condition and its "or <field> is empty" together in one box (a line at
+  its left), so the empty check reads as part of the field's value: "or Date modified is empty".
 - **Brackets in the editor**: a line is indented a step per bracket open before it (the lines after an opening bracket,
   up to and with the one that closes it; nested, deeper), so taking a closing bracket away indents the lines after it,
   adding one brings them back. While they do not match, one field has an outline in the theme's warning colour: more

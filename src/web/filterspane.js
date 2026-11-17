@@ -262,9 +262,13 @@ function drawEditor() {
     el('div', { className: 'fl-row' }, el('span', { className: 'cs-caption', textContent: 'Field' }), fieldPicker(line)),
   ];
   if (f.slow) rows.push(el('div', { className: 'fl-row fl-warn' }, tortoise(), ' Read per item after the folder is listed: slow in a large folder.'));
-  rows.push(...conditionRows(kind, c, line));
-  if (!['has', 'none'].includes(c.op)) rows.push(el('div', { className: 'fl-row' }, check('or empty', !!line.orEmpty,
-    on => changeLine(l => { l.orEmpty = on; }), 'An item that could have this field but has no value for it passes too')));
+  // What the field's value must be, together in a box under the field: its condition, and "or <field> is empty" (an
+  // item that could have the field but has no value for it passes too).
+  const cond = el('div', { className: 'fl-cond' }, ...conditionRows(kind, c, line));
+  if (!['has', 'none'].includes(c.op)) cond.append(el('div', { className: 'fl-row' }, el('span', { className: 'cs-caption' }),
+    check(`or ${f.title} is empty`, !!line.orEmpty, on => changeLine(l => { l.orEmpty = on; }),
+      `An item that could have ${f.title} but has no value for it passes too`)));
+  rows.push(cond);
   box.replaceChildren(...rows);
 }
 
