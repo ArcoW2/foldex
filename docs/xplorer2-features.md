@@ -25,7 +25,7 @@ updated whenever a plan is written, built or closed that touches a feature here.
 |---|---|---|---|---|
 | Folder tree, follows active folder | P+ | built | 5 | -- |
 | Two trees (one per pane) | P+ | built (any number of roots) | 5 | -- |
-| Ribbon or menu bar, quick access toolbar | All | part: ribbon built as LexPen's (icons, change mode, Customize, lists, key tips, height, only when wanted; plan 19); menus, QAT -- | 5 | -- |
+| Ribbon or menu bar, quick access toolbar | All | part: ribbon built as LexPen's (icons, change mode, Customize, lists, key tips, height, only when wanted; plan 19); its tabs Home, View, Customize, Tools (plan 30); menus, QAT -- | 5 | -- |
 | Drive bar with free space | P+ | built (plan 10, drives bar) | 5 | bars (plan 10) |
 | Detachable, floating, docked panes | P+ | built (plan 12); floating: plan 14, built (every pane floats, the tree, the list and the scrap too) | 4 | -- |
 | Miller columns | P+ | built (plan 03, preset "Columns") | 4 | presets (plan 03) |

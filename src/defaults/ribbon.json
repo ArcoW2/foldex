@@ -2,6 +2,8 @@
 // right-click the ribbon > Change the ribbon (drag actions from F1 onto it, buttons, groups and tabs around and off
 // it) or Customize...; Foldex then writes your own ribbon.json in %LOCALAPPDATA%\Foldex, which replaces this one whole.
 // Reset to the shipped ribbon removes yours.
+// Its tabs (docs/plans/executed/30-PLAN-ribbon-tabs.md): Home the everyday explorer work, View the panes and the
+// projects, Customize the editing of what Foldex keeps, Tools Foldex itself.
 //
 // A tab: { "name", "groups" }. A group: { "name", "items", "corners" }.
 // An item: "divider", or a button {
@@ -24,19 +26,25 @@
         { "action": "item.copyPath", "label": "Copy path", "stack": true } ] },
       { "name": "Organize", "items": [
         { "action": "item.delete", "size": "large", "label": "Delete" },
-        { "action": "folder.new", "size": "large", "label": "New\nfolder" } ] },
+        { "action": "folder.new", "size": "large", "label": "New\nfolder" },
+        { "action": "item.rename", "label": "Rename" }, { "action": "item.deleteDisk", "label": "Delete from disk", "stack": true } ] },
       { "name": "Open", "items": [
         { "action": "item.open", "size": "large", "label": "Open" },
-        { "action": "item.properties", "label": "Properties" }, { "action": "item.selectAll", "label": "Select all", "stack": true },
-        { "action": "bookmarks.menu", "label": "Bookmarks", "stack": true } ] },
+        { "action": "item.properties", "label": "Properties" }, { "action": "item.selectAll", "label": "Select all", "stack": true } ] },
       { "name": "Find", "items": [
         { "action": "find", "size": "large", "label": "Find" },
-        { "action": "scrap.new", "label": "New scrap" }, { "action": "scrap.add", "label": "Add to scrap", "stack": true },
-        { "action": "item.deleteDisk", "label": "Delete from disk", "stack": true } ] },
+        { "action": "pane.filter", "label": "Filter..." }, { "action": "search.focus", "label": "Search bar", "stack": true },
+        { "action": "scrap.new", "label": "New scrap" }, { "action": "scrap.add", "label": "Add to scrap", "stack": true } ] },
       { "name": "Go", "items": [
         { "action": "history.back", "label": "Back" }, { "action": "history.forward", "label": "Forward", "stack": true },
-        { "action": "folder.up", "label": "Up", "stack": true }, { "action": "refresh", "label": "Refresh" },
-        { "action": "drives.list", "label": "Drives", "stack": true } ] } ] },
+        { "action": "folder.up", "label": "Up", "stack": true },
+        { "action": "refresh", "label": "Refresh" }, { "action": "drives.list", "label": "Drives", "stack": true },
+        { "action": "bookmarks.menu", "label": "Bookmarks", "stack": true } ] },
+      { "name": "Show", "items": [
+        { "action": "view.menu", "size": "large", "label": "Views" },
+        { "action": "preview.toggle", "size": "large", "label": "Preview" },
+        { "action": "info.toggle", "size": "large", "label": "Info" },
+        { "action": "hidden.toggle", "label": "Hidden items" } ] } ] },
 
     { "name": "View", "groups": [
       { "name": "Panes", "items": [
@@ -47,32 +55,42 @@
         { "action": "pane.rename", "label": "Rename pane", "stack": true },
         { "action": "pane.next", "label": "Next pane" },
         { "action": "pane.detach", "label": "Detach", "stack": true }, { "action": "pane.pin", "label": "Pin", "stack": true } ] },
-      { "name": "Show", "items": [
-        { "action": "view.menu", "size": "large", "label": "Views" },
-        { "action": "preview.toggle", "size": "large", "label": "Preview" },
-        { "action": "info.toggle", "size": "large", "label": "Info" },
-        { "action": "preview.pane", "label": "Pane preview" }, { "action": "info.pane", "label": "Pane info", "stack": true },
-        { "action": "hidden.toggle", "label": "Hidden items", "stack": true } ] },
-      { "name": "Projects", "items": [
-        { "action": "projects.menu", "size": "large", "label": "Projects" },
-        { "action": "projects.manage", "label": "Manage" }, { "action": "project.new", "label": "New", "stack": true },
-        { "action": "project.rename", "label": "Rename", "stack": true },
-        { "action": "layout.saveDefault", "label": "Save layout as default" },
-        { "action": "layout.resetDefault", "label": "Reset layout", "stack": true } ] },
-      { "name": "Presets", "items": [
+      { "name": "Pane preview", "items": [
+        { "action": "preview.pane", "label": "Pane preview" }, { "action": "info.pane", "label": "Pane info", "stack": true } ] },
+      { "name": "Layout", "items": [
         { "action": "layout.preset", "params": ["default"], "label": "Default" },
         { "action": "layout.preset", "params": ["dual"], "label": "Dual", "stack": true },
         { "action": "layout.preset", "params": ["columns"], "label": "Columns", "stack": true },
         { "action": "layout.preset", "params": ["preview"], "label": "With preview" } ] },
+      { "name": "Projects", "items": [
+        { "action": "projects.menu", "size": "large", "label": "Projects" },
+        { "action": "projects.manage", "label": "Manage" }, { "action": "project.new", "label": "New", "stack": true },
+        { "action": "project.rename", "label": "Rename", "stack": true } ] },
       { "name": "Columns", "items": [
-        { "action": "columns.fit", "label": "Fit all columns" },
-        { "action": "columns.manage", "label": "Manage sets", "stack": true } ] },
+        { "action": "columns.fitName", "label": "Fit columns" },
+        { "action": "columns.fit", "label": "Fit all columns", "stack": true } ] } ] },
+
+    { "name": "Customize", "groups": [
+      { "name": "Column sets", "items": [
+        { "action": "columns.manage", "size": "large", "label": "Manage\nsets" } ] },
+      { "name": "Bookmarks", "items": [
+        { "action": "bookmarks.manage", "size": "large", "label": "Manage" },
+        { "action": "bookmarks.add", "label": "Add the current folder" } ] },
       { "name": "Bars", "items": [
         { "action": "bars.change", "label": "Change bars" },
         { "action": "bars.reset", "label": "Reset bars", "stack": true },
         { "action": "bars.add", "params": ["path"], "label": "Add path bar" },
         { "action": "bars.add", "params": ["drives"], "label": "Add drives bar", "stack": true },
         { "action": "bars.add", "params": ["search"], "label": "Add search bar", "stack": true } ] },
+      { "name": "Ribbon", "items": [
+        { "action": "ribbon.change", "label": "Change the ribbon" },
+        { "action": "ribbon.customize", "label": "Customize...", "stack": true },
+        { "action": "ribbon.reset", "label": "Reset the ribbon", "stack": true } ] },
+      { "name": "Layout", "items": [
+        { "action": "layout.saveDefault", "label": "Save layout as default" },
+        { "action": "layout.resetDefault", "label": "Reset layout", "stack": true } ] } ] },
+
+    { "name": "Tools", "groups": [
       { "name": "Foldex", "items": [
         { "action": "settings.open", "size": "large", "label": "Settings" },
         { "action": "palette", "label": "All actions" },

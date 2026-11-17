@@ -1,8 +1,9 @@
 # Plan 30: The ribbon's tabs: Home for the everyday work, then View, Customize and Tools
 
-Status: not started; see Status.
+Status: executed; see Status and 6.
 
 - 2026-11-17: draft, at the user's request.
+- 2026-11-17: executed.
 
 Builds on plan 19 (the ribbon as LexPen's, executed). Where Foldex differs from LexPen: LexPen's tabs follow an
 editor's work (File, Home, Arrange, Review, View, Tools); an explorer changes little and mostly views, finds,
@@ -26,12 +27,15 @@ ribbon.json of your own stays as it is until Reset.
 
 ### Built
 
+| Part | What | Reference |
+|---|---|---|
+| Tabs | the shipped ribbon.json with the four tabs and their groups | 3.1; 6 |
+| Tests | the shipped ribbon's actions and icons (the existing tests); each tab drawn in the test copy | 3.3; 6 |
+
 ### Not yet built
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| Tabs | the shipped ribbon.json with the four tabs and their groups | -- | 3.1 |
-| Tests | the shipped ribbon's actions and icons (the existing tests); each tab drawn in the test copy | Tabs | 3.3 |
 
 ## 3. Details
 
@@ -79,3 +83,18 @@ and Customize can move a group to another tab.
 ## 4. Open questions
 
 None.
+
+## 6. As built
+
+The shipped `src/defaults/ribbon.json` as 3.1 has it: Home, View, Customize, Tools. Pictures of each tab beside this
+plan (`30-PLAN-ribbon-tabs.md.images/`): [Home](30-PLAN-ribbon-tabs.md.images/ribbon-home.png),
+[View](30-PLAN-ribbon-tabs.md.images/ribbon-view.png), [Customize](30-PLAN-ribbon-tabs.md.images/ribbon-customize.png),
+[Tools](30-PLAN-ribbon-tabs.md.images/ribbon-tools.png).
+
+- In Customize, Column sets' Manage sets and the bookmarks' Manage are large buttons (a group of one or two needs
+  them to be found); Add the current folder is small beside it.
+- Measured in the test copy (the groups' widths added, CSS px): Home 1278, View 1010, Customize 918, Tools 165. On a
+  ribbon 1000 px wide Home puts Go and Show into `>>` (whole groups from the right, as plan 19 has it).
+- Tested: `dotnet test` 238 passed (the shipped ribbon's actions known, every button with its icon); in the test copy
+  each tab drawn, no letter boxes, the four tab names, `>>` at 1000 px.
+- Not checked: a ribbon.json of your own kept as it was (3.2: the code reads yours whole, as before).
