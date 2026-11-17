@@ -241,8 +241,8 @@ None.
 - **Keys**: a kept set's key is taken in Manage filters (keys.js `strokeOf`), refused when keys.json, a bookmark or
   another set has it (`filterKeyClash`); bound as `filters.apply` with the set's name (keys.js `buildKeys`).
   `filters.toggle` on Ctrl+Alt+F.
-- **Ribbon**: Home's Filter group as the user arranged it, with Filters (the list) and On (`filters.toggle`) stacked
-  beside Filter..., Hidden under them, its corners Manage filters and the list. Icons: the list (a funnel with lines),
+- **Ribbon**: Home's Filter group as the user arranged it afterwards: Filters (the list) and Hidden, both large, its
+  corners Manage filters and the list; Filter... and On (`filters.toggle`) are in F1, the pane menu and Ctrl+Alt+F. Icons: the list (a funnel with lines),
   on or off (a funnel struck through), Manage filters (the funnel in the framed window). The pane menu: Filter...,
   Filters (None, the kept sets, Manage filters...), Filter on.
 - **Select columns** (dialogpage.js): its lists are `pickList`s, as a `<select multiple>` (a click, Ctrl+click,
