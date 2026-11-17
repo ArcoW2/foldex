@@ -45,6 +45,7 @@ bar's filter stays as it is: a quick filter for once, apart from these sets.
 | Kept sets | `filters.json` (name, lines), the defaults, every window told | -- | 3.4 |
 | Defaults | one for a new root, one for a new child (a tab too); a child made a root keeps its own | Kept sets | 3.5 |
 | In the head | the filter in italic between brackets at the head's start, a click switches it, giving way to the name | -- | 3.6 |
+| Slow fields | the tortoise in the field list and under a line using one; in Select columns' lists, the names aligned | Filter lines | 3.1 |
 | Ribbon and menus | Home's group Filter, its corners; the pane menu's Filter... | Manage filters; Kept sets | 3.7 |
 | Keys | a key per kept set, as a bookmark's; a key switching the active pane's filter off and on | Kept sets | 3.8 |
 | Tests | see 3.9 | -- | 3.9 |
@@ -88,6 +89,10 @@ A line tests one field of an item, for the folders, the files or both:
   take a while in a large folder [not yet checked: how long]. In the field's drop-down they have a tortoise in front of
   their name (a drawing of Foldex's own, stroked in the text colour as the ribbon's icons; its tooltip: read per item,
   slow in a large folder); a line using one shows the same tortoise and a short warning under the field.
+- Select columns (plan 28 3.7) marks them the same way, in both its lists. Every line there keeps the tortoise's room
+  in front of its name, empty for a column that is not slow, so all names start at the same place. Its lists are
+  `<select>` boxes now, which cannot hold a drawing: they become lists of Foldex's own that keep what the boxes do
+  (several chosen with Ctrl and Shift, a double click moving a column, the keys, Up and Down).
 - A filter of now (Filter...'s wildcards) is a set of one line: Files, Name matches its wildcards; Folders checked too,
   since folders are always shown now.
 
