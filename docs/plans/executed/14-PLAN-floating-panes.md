@@ -214,6 +214,7 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 | F3's preview | pane page (preview.html) | both (built) | floating, beside the window | 3.5 |
 | Manage the bookmarks | modal dialog (bookmarks.js) | both | floating, beside the window | plan 26 3.3: a tab for the bookmarks and one for quick access; its Edit... and New open their dialogs over it |
 | Manage column sets | pane page (columnsets.html, colsmanage.js; columns.js openManageSets) | both (built) | floating | its sets above the one chosen in a narrow pane |
+| Manage filters (plan 32 3.3) | pane page (filters.html, filterspane.js; app.js openManageFilters) | both (built) | floating | the kept sets above the set chosen in a narrow pane; opened by Filter... for a pane |
 | F1, all actions and keys (palette.js, palette.html, palettepane.js) | pane page | both, not modal (built) | floating | as LexPen's F1 (plan 19 3.10): stays open while actions run |
 | Settings | pane page (settings.html; PaneHosts.Settings) | both (built) | floating, in the middle of the window | as LexPen's; one per window, every window following a change |
 | Projects | pane page (projects.html; PaneHosts.Projects) | both (built) | floating, in the middle of the window | as LexPen's; docked: as Settings |

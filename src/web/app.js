@@ -212,18 +212,128 @@ const showsHidden = id => layout.pane(id)?.hidden ?? !!settings.showHidden;
 const shownName = x => settings.showExtensions === false && x.folder === false && x.name?.lastIndexOf('.') > 0
   ? x.name.slice(0, x.name.lastIndexOf('.')) : x.name;
 
-function filterTest(pattern) {
-  const parts = (pattern ?? '').split(/[;,]/).map(p => p.trim()).filter(Boolean);
-  if (!parts.length) return () => true;
-  const res = parts.map(p => new RegExp('^' + p.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.') + '$', 'i'));
-  return x => x.folder !== false || res.some(re => re.test(x.name));
+// ---------- Filter sets (docs/plans/executed/32-PLAN-filter-sets.md; the rules: filters.js) ----------
+
+// The kept sets and the defaults (filters.json, from the host: hello, the event filters).
+let filterSets = { sets: [], rootDefault: null, childDefault: null };
+// A field's kind for its conditions.
+const filterKindOf = id => filterKind(id, columnInfo(id).kind);
+// A pane's set: its own (filterSet), or the wildcards of a filter of before plan 32 (filter) as a set; null: none.
+function paneFilterSet(id) {
+  const pane = layout.pane(id);
+  return pane?.filterSet ?? (pane?.filter ? filterOfPattern(pane.filter) : null);
+}
+const paneFilterTest = id => filterTestOf(paneFilterSet(id), filterKindOf);
+// The fields its set reads that are not in the listing (Windows' properties, the Git status, GPS), while it is on.
+const paneFilterFields = id => {
+  const set = paneFilterSet(id);
+  return set && !set.off ? [...new Set(set.lines.map(l => l.field).filter(slowField))] : [];
+};
+const keptFilter = name => filterSets.sets.find(s => s.name.toLowerCase() === String(name ?? '').toLowerCase());
+
+// A pane filtered by `set` (a kept one: a copy with its name; null: none), shown again at once: a tree folds again, a
+// list filters what it read (in its page for a pane of a page of its own: the call carries the pane).
+function setPaneFilter(id, set) {
+  const pane = layout.pane(id), v = views.get(id);
+  if (!pane || !v || v instanceof PreviewView) return;
+  delete pane.filter;
+  if (set?.lines?.length) pane.filterSet = JSON.parse(JSON.stringify(set));
+  else delete pane.filterSet;
+  v.filterChanged?.();
+  drawHeads();
+  tellLayout();
+  ribbonRefresh();
+}
+
+// Its filter off and on (a click on its [name] in the head, filters.toggle): the same set.
+function togglePaneFilter(id) {
+  const set = paneFilterSet(id);
+  if (set) setPaneFilter(id, { ...set, off: !set.off });
+}
+
+// A new pane gets the default for its sort (3.5): a root's or a child's (a tab is a child), once, when it is made.
+function defaultFilterFor(id) {
+  const pane = layout.pane(id);
+  if (!pane || pane.kind === 'preview' || pane.kind === 'scrap') return;
+  const set = keptFilter(pane.source === null ? filterSets.rootDefault : filterSets.childDefault);
+  if (set) pane.filterSet = JSON.parse(JSON.stringify({ name: set.name, lines: set.lines }));
+}
+
+// Manage filters (FiltersView; its page filterspane.js), opened for a pane (Filter..., the pane menu): that pane's set
+// with it, chosen; Cancel there puts back what it had now.
+let filtersFor = null;   // { id, before }: the pane it was opened for
+function openManageFilters(paneId = null) {
+  const v = paneId ? views.get(paneId) : null;
+  filtersFor = v && !(v instanceof PreviewView) && layout.pane(paneId) ? { id: paneId, before: paneFilterSet(paneId) } : null;
+  askPropList().then(() => paneOfKind('filters')?.render());
+  openOnePane('filters');
+  paneOfKind('filters')?.render(true);
+}
+
+// What its page is sent: the kept sets, the fields there are (Foldex's own columns and Windows' properties, with their
+// filter kind and whether they are slow), the pane it is for with its set.
+function filtersForPage(view, paneFirst = false) {
+  const field = (id, title, kind) => ({ id, title, kind: filterKind(id, kind), slow: slowField(id) });
+  const fields = [...OwnColumns.map(c => field(c.id, c.title, c.kind)), ...(propList ?? []).map(p => field(p.name, p.title, p.kind))];
+  const p = filtersFor && layout.pane(filtersFor.id) ? filtersFor : null;
+  return { kind: 'filters', filters: filterSets, fields, split: layout.pane(view.id)?.split,
+    pane: p ? { id: p.id, title: views.get(p.id)?.tabTitle() ?? p.id, set: paneFilterSet(p.id), before: p.before } : null, paneFirst };
+}
+
+// What its page asks.
+async function filtersPageAsks(view, m) {
+  switch (m.kind) {
+    case 'apply': return setPaneFilter(m.id, m.set);
+    case 'save': return post({ op: 'filtersSave', filters: m.filters });
+    case 'setKey': {
+      const clash = m.key && filterKeyClash(m.key, m.name);
+      if (clash) return view.send({ kind: 'keyRefused', key: 'keyRefused', text: clash });
+      view.send({ kind: 'keyRefused', key: 'keyRefused', text: '' });
+      return post({ op: 'filtersSave', filters: { ...filterSets, sets: filterSets.sets.map(s => s.name === m.name ? { ...s, key: m.key ?? undefined } : s) } });
+    }
+    case 'split':
+      layout.pane(view.id).split = m.at;
+      return tellLayout();
+    case 'close': return closePane(view.id);
+    case 'ask': {
+      const value = m.what === 'yes' ? await askYes(m.title) : await askText(m.title, m.value ?? '');
+      return view.send({ kind: 'answer', key: `answer:${m.req}`, req: m.req, value });
+    }
+  }
+}
+
+// What already has a key a kept set is to get (keys.json, a bookmark, another set): a line saying so, or ''.
+function filterKeyClash(key, name) {
+  const first = key.includes(', ') ? key.split(', ')[0] : null;
+  for (const [k, call] of keys.bindings) {
+    if (call[0] === 'filters.apply' && String(call[1]).toLowerCase() === name.toLowerCase()) continue;
+    const what = call[0] === 'filters.apply' ? `the filter set ${call[1]}`
+      : call[0].startsWith('bookmarks.open') ? 'a bookmark' : actionTitle(call[0], call.slice(1));
+    if (k === key || first && k === first || !first && k.startsWith(key + ', ')) return `${k} is ${what}: not taken.`;
+  }
+  return '';
+}
+
+// The kept sets came or changed: a pane using one by name follows it (removed: it keeps its lines, without the name).
+function filterSetsCame(m) {
+  filterSets = m ?? filterSets;
+  for (const [id, pane] of layout.panes) {
+    if (!pane.filterSet?.name) continue;
+    const kept = keptFilter(pane.filterSet.name);
+    const next = kept ? { ...pane.filterSet, name: kept.name, lines: kept.lines } : { ...pane.filterSet, name: undefined };
+    if (JSON.stringify(next) === JSON.stringify(pane.filterSet)) continue;
+    pane.filterSet = JSON.parse(JSON.stringify(next));
+    if (!PanePage || id === PanePage) views.get(id)?.filterChanged?.();
+  }
+  buildKeys();   // their keys (keys.js)
+  if (!PanePage) { drawHeads(); paneOfKind('filters')?.render(); }
 }
 
 // What each kind of pane can be (docs/plans/executed/14-PLAN-floating-panes.md 3.7): docked, floating, or both. A pane of a page
 // of its own (a PreviewView: the previews, Info, and every PageView; a tree, a list or a scrap of pagedviews.js) can
 // float; the others are docked until they are pages (plan 14 3.0, the stages).
 const PaneCan = { tree: ['docked', 'floating'], list: ['docked', 'floating'], scrap: ['docked', 'floating'], preview: ['docked', 'floating'], log: ['docked', 'floating'],
-  bookmarks: ['docked', 'floating'], columnsets: ['docked', 'floating'], palette: ['docked', 'floating'],
+  bookmarks: ['docked', 'floating'], columnsets: ['docked', 'floating'], filters: ['docked', 'floating'], palette: ['docked', 'floating'],
   settings: ['docked', 'floating'], projects: ['docked', 'floating'] };
 const canFloat = id => (PaneCan[layout.pane(id)?.kind] ?? ['docked']).includes('floating')
   && (views.get(id) instanceof PreviewView || isPaged(views.get(id)));
@@ -234,7 +344,7 @@ function makeView(id) {
   const kind = layout.pane(id).kind;
   if (!PanePage && PagedKinds.has(kind)) return pagedView(id);
   return kind === 'tree' ? new TreeView(id) : kind === 'log' ? new LogView(id) : kind === 'bookmarks' ? new BookmarksView(id)
-    : kind === 'columnsets' ? new ColumnSetsView(id) : kind === 'palette' ? new PaletteView(id)
+    : kind === 'columnsets' ? new ColumnSetsView(id) : kind === 'filters' ? new FiltersView(id) : kind === 'palette' ? new PaletteView(id)
     : kind === 'settings' ? new SettingsView(id) : kind === 'projects' ? new ProjectsView(id)
     : kind === 'preview' ? (layout.pane(id).info ? new InfoView(id) : new PreviewView(id))
     : kind === 'scrap' ? new ScrapView(id) : new ListView(id);
@@ -293,7 +403,7 @@ function paneElement(id, kind, title) {
   el.dataset.pane = id;
   // A child's own round (the pin) left of the name; at the right only the marks of the branches it feeds.
   el.innerHTML = '<div class="head"><span class="connector" title="Drag onto another pane to follow it"></span>' +
-    '<button class="pin" title="Pin: stop following the parent"></button><span class="pane-name" hidden></span><span class="title"></span>' +
+    '<button class="pin" title="Pin: stop following the parent"></button><span class="filter-name" hidden></span><span class="pane-name" hidden></span><span class="title"></span>' +
     '<button class="filtered" hidden><svg viewBox="0 0 16 16"><path d="M2 3h12l-4.5 5.5V13l-3 1.5V8.5z"/></svg></button>' +
     '<span class="marks"></span></div>' +
     '<div class="body" tabindex="0"><div class="rows"></div></div>';
@@ -310,9 +420,11 @@ function paneElement(id, kind, title) {
       e.preventDefault();
       views.get(id)?.body.focus();
     }
-    if (!e.target.closest('.connector, .pin, .filtered, .marks span, .scrap-button')) dragToDock(id, e);
+    if (!e.target.closest('.connector, .pin, .filtered, .filter-name, .marks span, .scrap-button')) dragToDock(id, e);
   });
   el.querySelector('.head').addEventListener('contextmenu', e => openPaneMenu(id, e));
+  // Its filter set (plan 32 3.6): a click switches it off and on.
+  el.querySelector('.filter-name').addEventListener('click', () => togglePaneFilter(id));
   // A part of the path in the title (plan 29): the pane goes there, as a path typed; "..." the parts left out, in a menu.
   const titleEl = el.querySelector('.title');
   titleEl.addEventListener('click', e => {
@@ -426,6 +538,12 @@ function drawHead(v, branch) {
   nameEl.textContent = layout.headName(v.id);
   nameEl.title = name ?? '';
   v.el.querySelector('.title').hidden = !!name && pane.source === null;
+  // Its filter set (plan 32 3.6): at the head's start, in italic between brackets; dimmed while switched off.
+  const set = paneFilterSet(v.id), filterEl = v.el.querySelector('.filter-name');
+  filterEl.hidden = !set?.lines?.length;
+  filterEl.textContent = set ? `[${filterHeadText(set)}]` : '';
+  filterEl.classList.toggle('off', !!set?.off);
+  filterEl.title = set ? `Filter: ${set.lines.map(l => filterLineText(l, f => columnInfo(f).title)).join(' / ')}\n${set.off ? 'Off: a click switches it on' : 'A click switches it off'} (Ctrl+Alt+F)` : '';
   v.el.classList.toggle('pinned', pane.pinned);
   v.el.querySelector('.pin').title = pane.kind === 'scrap'
     ? pane.pinned ? 'Pinned: comes back (empty) after a restart; click to unpin' : 'Pin: keep this scrap after a restart (it comes back empty)'
@@ -930,7 +1048,8 @@ class TreeView {
 
   flatten() {
     this.flat = [];
-    const hidden = showsHidden(this.id), filter = filterTest(layout.pane(this.id).filter), search = searchTest(this.id);
+    const hidden = showsHidden(this.id), test = paneFilterTest(this.id), search = searchTest(this.id);
+    const filter = n => test(n) !== false;   // a value not read yet (a tree reads no properties): shown
     // The search text (search.js): the folders and files that match, and the folders leading to them (of what the
     // tree has read).
     const leads = new Map();
@@ -1236,6 +1355,9 @@ class TreeView {
   }
 
   // Show changed (plan 18 3.2): read again, the focus kept.
+  // Its filter set changed (plan 32): folded again from what it read.
+  filterChanged() { this.flatten(); }
+
   reshow() {
     const focus = layout.state(this.id).focus;
     if (this.folder) return this.load(this.root);
@@ -1481,13 +1603,15 @@ class ListView {
 
   // The values that are not in the listing: the Git status of the folder's items, Windows' properties for the rows in
   // view (as they come).
-  askColumnValues() {
-    if (wantsGit(this.cols) && this.location && !this.gitAsked && /^[A-Za-z]:\\|^\\\\/.test(this.location)) {
+  askColumnValues(forFilter = false) {
+    if ((forFilter || wantsGit(this.cols)) && this.location && !this.gitAsked && /^[A-Za-z]:\\|^\\\\/.test(this.location)) {
       this.gitAsked = true;
       const at = this.location;
       askHost({ op: 'git', folder: at }).then(m => {
-        if (this.location !== at || !m.status) return;
-        for (const x of this.entries) x.git = m.status[x.name] ?? null;
+        if (this.location !== at) return;
+        // Every item of the folder (the filter, plan 32, may wait for those it does not show yet).
+        for (const x of this.all) if (!x.up) x.git = m.status?.[x.name] ?? null;
+        if (paneFilterFields(this.id).includes('git')) return this.searchChanged();
         if (this.cols.sort.some(s => s.id === 'git')) this.entries.sort(this.comparer());
         this.render();
       });
@@ -1791,22 +1915,48 @@ class ListView {
     this.entries = this.entries.concat(entries.filter(this.passes())).sort(this.comparer());
     this.render();
     this.autoFit();
+    this.askFilterValues();
     status(`${this.itemCount()} items so far...`, false, 'verbose');
   }
 
-  // What it shows of what it read: hidden items, Show, the filter and the search text (search.js); ".." always.
+  // What it shows of what it read: hidden items, Show, its filter set (plan 32) and the search text (search.js); ".."
+  // always. An item whose value for the filter is not read yet (a property, the Git status) waits: asked for
+  // (askFilterValues) and shown when it comes, if it passes.
   passes() {
-    const hidden = showsHidden(this.id), filter = filterTest(layout.pane(this.id).filter), search = searchTest(this.id);
-    return x => x.up || (hidden || !x.hidden) && this.shows(x) && filter(x) && search(x);
+    const hidden = showsHidden(this.id), filter = paneFilterTest(this.id), search = searchTest(this.id);
+    const waiting = this.filterWaiting = [];
+    return x => {
+      if (x.up) return true;
+      if (!((hidden || !x.hidden) && this.shows(x) && search(x))) return false;
+      const f = filter(x);
+      if (f !== 'wait') return f;
+      if (!isDiskPath(x.id)) return true;   // no property can be read of it: shown
+      waiting.push(x);
+      return false;
+    };
   }
 
-  // The search text changed: filtered again from what it read, without reading the folder again.
+  // The values the filter waits for, read: Windows' properties of the waiting items, the folder's Git status; then
+  // filtered again.
+  askFilterValues() {
+    const waiting = this.filterWaiting ?? [];
+    this.filterWaiting = [];
+    if (!waiting.length) return;
+    const fields = paneFilterFields(this.id), names = fields.flatMap(f => propsFor(f));
+    const ask = waiting.filter(x => names.length && propsToAsk(x, names));
+    if (ask.length) this.askProps(ask, names).then(() => this.searchChanged());
+    if (fields.includes('git')) this.askColumnValues(true);
+  }
+
+  // The search text or the filter set changed: filtered again from what it read, without reading the folder again.
   searchChanged() {
     this.entries = this.all.filter(this.passes()).sort(this.comparer());
     this.selected = new Set([...this.selected].filter(id => this.entries.some(x => x.id === id)));
     this.render();
+    this.askFilterValues();
     if (paneSearch.has(this.id)) status(`${this.entries.length} of ${this.all.length} items`, false, 'verbose');
   }
+  filterChanged() { this.searchChanged(); }
 
   // Typed (search.js): the first item from the focus on (then from the top) whose name passes the test.
   goToMatch(test) {
@@ -2659,13 +2809,22 @@ class ProjectsView extends HostPageView {
   }
 }
 
-// ---------- Panes there is one of (plan 14 3.7): Manage the bookmarks, Manage column sets, F1, Settings, Projects ----------
+// Manage filters (its page filters.html, filterspane.js; plan 32 3.3): the kept sets and the editor; opened by Filter...
+// for a pane, that pane's set with it.
+class FiltersView extends PageView {
+  constructor(id) { super(id, 'filters', 'filters.html', 'Filters'); }
+  state() { return new Map([['filters', filtersForPage(this, true)]]); }
+  render(paneFirst = false) { this.send(filtersForPage(this, paneFirst)); }
+  receive(m) { return filtersPageAsks(this, m); }
+}
+
+// ---------- Panes there is one of (plan 14 3.7): Manage the bookmarks, Manage column sets, Manage filters, F1, Settings, Projects ----------
 
 // Opened again it comes forward; opened after it was closed, where it was last (docked at its place, or floating where
 // its window was, kept with the window's layout); the first time floating beside the window.
-const OnePanes = new Set(['bookmarks', 'columnsets', 'palette', 'settings', 'projects']);
+const OnePanes = new Set(['bookmarks', 'columnsets', 'filters', 'palette', 'settings', 'projects']);
 // The first size of a floating one, when the default (narrow, beside the window) is too small for it: CSS px.
-const FirstSizes = { columnsets: [980, 620], settings: [760, 620], projects: [900, 600] };
+const FirstSizes = { columnsets: [980, 620], filters: [1000, 640], settings: [760, 620], projects: [900, 600] };
 const paneHomes = {};   // kind -> where it was when last closed: { floating, place, bounds }
 const paneOfKind = kind => [...views.values()].find(v => layout.pane(v.id)?.kind === kind) ?? null;
 function openOnePane(kind) {
@@ -2996,6 +3155,7 @@ function newTab(id) {
   if (view instanceof ScrapView) return newScrap(null, place);   // a scrap's tab: a new, empty scrap
   if (pane.source !== null) {
     const tab = layout.add({ source: pane.source, colour: layout.newColour(), kind: pane.kind, content: pane.content, columns: pane.columns });
+    defaultFilterFor(tab);   // a tab is a child (plan 32 3.5)
     placeView(makeView(tab), place);
     activate(tab);   // its branch active: the parent's state for it starts as a copy of the one shown
     followParent(tab);
@@ -3004,6 +3164,7 @@ function newTab(id) {
   }
   if (view instanceof TreeView) return newRootPane(layout.state(id).focus, place);
   const root = layout.add({ kind: pane.kind, content: pane.content });
+  defaultFilterFor(root);
   placeView(makeView(root), place);
   activate(root);
   views.get(root).reveal(view.location);
@@ -3059,7 +3220,16 @@ function paneMenu(id) {
       .map(([kind, label]) => ({ label, checked: pane.kind === kind, run: () => setPaneShape(id, kind) })) },
     { label: 'Hidden items', enabled: pane.kind !== 'preview', checked: pane.kind !== 'preview' && showsHidden(id),
       run: () => setPaneHidden(id, !showsHidden(id)) },
-    { label: pane.filter ? `Filter: ${pane.filter}...` : 'Filter...', enabled: pane.kind !== 'preview', run: () => askPaneFilter(id) },
+    // Its filter set (plan 32 3.7): Manage filters on it, a kept one chosen, switched off and on.
+    ...(['tree', 'list', 'scrap'].includes(pane.kind) ? [
+      { label: 'Filter...', run: () => openManageFilters(id) },
+      { label: 'Filters', items: [
+        { label: 'None', checked: !paneFilterSet(id), run: () => setPaneFilter(id, null) },
+        ...filterSets.sets.map(s => ({ label: s.name, key: s.key ?? '', checked: paneFilterSet(id)?.name === s.name,
+          run: () => setPaneFilter(id, { name: s.name, lines: s.lines }) })),
+        '-', { label: 'Manage filters...', run: () => openManageFilters(id) }] },
+      { label: 'Filter on', enabled: !!paneFilterSet(id), checked: !!paneFilterSet(id) && !paneFilterSet(id).off, key: keyText('filters.toggle'),
+        run: () => togglePaneFilter(id) }] : []),
     '-',
     // A pane that can float (plan 14 3.1, 3.7): Float, or (floating) Dock, back where it was.
     ...(canFloat(id) ? [pane.floating ? { label: 'Dock', run: () => dockPane(id) } : { label: 'Float', run: () => floatPane(id) }] : []),
@@ -3092,18 +3262,6 @@ function setPaneHidden(id, on) {
   const pane = layout.pane(id), v = views.get(id);
   if (!pane || !v || v instanceof PreviewView) return;
   pane.hidden = on;
-  if (v instanceof TreeView) v.flatten();
-  else v.reshow();
-  drawHeads();
-  tellLayout();
-}
-
-async function askPaneFilter(id) {
-  const pane = layout.pane(id), v = views.get(id);
-  if (!pane || !v || v instanceof PreviewView) return;
-  const pattern = await askText('Filter: the files to show, as wildcards (*.cs;*.md). Empty: all of them.', pane.filter ?? '');
-  if (pattern === null) return;
-  pane.filter = pattern.trim() || undefined;
   if (v instanceof TreeView) v.flatten();
   else v.reshow();
   drawHeads();
@@ -3368,6 +3526,7 @@ function newRootPane(path, place = { area: 'left' }, top = null) {
   const drawn = [...layout.panes.values()].filter(p => p.source === null && p.colour === null).map(p => layout.pathColour(p.id));
   const id = layout.add({ kind: 'tree', content: 'folders' });
   layout.pane(id).colour = layout.newColour(drawn);
+  defaultFilterFor(id);   // the default for a new root (plan 32 3.5)
   if (top) layout.pane(id).top = top;
   const tree = placeView(makeView(id), place);
   activate(id);
@@ -3390,6 +3549,7 @@ function setPaneTop(id, folder) {
 // it shows what the parent focuses. A tab is New tab, not a child.
 function newChildPane(parentId, where = 'right', place = null) {
   const id = layout.add({ source: parentId, ...layout.childSettings(parentId) });
+  defaultFilterFor(id);   // the default for a new child (plan 32 3.5)
   const view = placeView(makeView(id), place ?? { pane: parentId, side: where === 'below' ? 'bottom' : 'right' });
   // Its branch active first (a new one starts from a copy of the parent's state), then it shows the parent's focused
   // item when that is a folder (3.3); the other branches' children stay as they are.
@@ -4044,6 +4204,7 @@ const events = {
     runId = m.run;
     searches = m.searches;
     renames = m.renames ?? renames;
+    filterSetsCame(m.filters);
     bookmarksCame(m.bookmarks);
     start(m.paths, m.layout);
   },
@@ -4166,6 +4327,8 @@ const events = {
   searched(m) { views.get(m.channel)?.searched?.(m); },
   entries(m) { columnReply(m); },
   searches(m) { searches = m.searches; },
+  // The kept filter sets changed (plan 32 3.4): panes using one follow it, its keys bound again.
+  filters(m) { filterSetsCame(m.filters); },
   // The bookmarks changed (in any window; plan 26 3.1); Edit asked from Windows' menu (3.8); answers to plain questions.
   bookmarks(m) { bookmarksCame(m); },
   bookmarkEdit(m) { editBookmark(m.id); },

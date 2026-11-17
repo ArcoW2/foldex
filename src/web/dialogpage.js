@@ -137,38 +137,39 @@ function aboutHere(info) {
 
 // Select columns (columns.js selectColumns; plan 28 3.7): the columns not shown at the left, the "Selected" ones at the
 // right, -> and <- between them. Above the left list the set's filter: on, only the set's columns not shown; off (or
-// without a set), every column there is, with a search box. Each move changes the pane at once; Close closes it.
+// without a set), every column there is, with a search box. Each move changes the pane at once; Close closes it. A slow
+// column (read per item after the listing; plan 32 3.1) has a tortoise in front of its name; every line keeps that
+// room, so the names start at the same place (the lists are pickLists, a <select> can hold no drawing).
 function selectColumnsHere(a) {
   const titles = new Map([...a.all, ...a.shown].map(c => [c.id, c.title]));
   let shown = a.shown.map(c => c.id);
   const dialog = document.createElement('dialog');
   dialog.className = 'ask select-columns resizable';
   dialog.innerHTML = '<div class="sc-lists"><div class="sc-side"><label class="sc-filter"><input type="checkbox"> <span></span></label>' +
-    '<input class="sc-search" spellcheck="false" placeholder="Type to find a column"><select class="sc-left" multiple></select></div>' +
+    '<input class="sc-search" spellcheck="false" placeholder="Type to find a column"><div class="sc-left"></div></div>' +
     '<div class="sc-arrows"><button class="sc-show" title="Show the columns selected at the left">-&gt;</button>' +
     '<button class="sc-hide" title="Hide the columns selected at the right">&lt;-</button></div>' +
-    '<div class="sc-side"><div class="sc-label">Selected</div><select class="sc-right" multiple></select></div>' +
+    '<div class="sc-side"><div class="sc-label">Selected</div><div class="sc-right"></div></div>' +
     '<div class="sc-order"><button class="sc-up" title="The columns chosen at the right one place up (to the left in the pane)">' +
     '<svg viewBox="0 0 16 16"><path d="M3.5 10l4.5-4.5 4.5 4.5"/></svg></button>' +
     '<button class="sc-down" title="The columns chosen at the right one place down (to the right in the pane)">' +
     '<svg viewBox="0 0 16 16"><path d="M3.5 6l4.5 4.5 4.5-4.5"/></svg></button></div></div>' +
     '<div class="ask-buttons"><button class="ok">Close</button></div>';
   const filter = dialog.querySelector('.sc-filter input'), search = dialog.querySelector('.sc-search');
-  const left = dialog.querySelector('.sc-left'), right = dialog.querySelector('.sc-right');
+  const show = () => moved({ show: left.chosen() }), hide = () => moved({ hide: right.chosen() });
+  const left = pickList(dialog.querySelector('.sc-left'), show), right = pickList(dialog.querySelector('.sc-right'), hide);
   dialog.querySelector('.sc-filter span').textContent = `Columns of set ${a.setName ?? ''}`;
   dialog.querySelector('.sc-filter').hidden = !a.setIds;
   filter.checked = !!a.setIds;
-  const option = id => Object.assign(new Option(titles.get(id) ?? id, id), { title: id });
+  const item = id => ({ id, text: titles.get(id) ?? id, title: id === 'name' ? 'Name: always shown; Up and Down move it' : id, slow: slowField(id) });
   const fill = () => {
     const onlySet = filter.checked && a.setIds;
     search.hidden = !!onlySet;
     const words = onlySet ? [] : search.value.toLowerCase().split(/\s+/).filter(Boolean);
     const ids = (onlySet ? a.setIds : [...titles.keys()]).filter(id => !shown.includes(id))
       .filter(id => words.every(w => `${titles.get(id)} ${id}`.toLowerCase().includes(w))).slice(0, 400);
-    left.replaceChildren(...ids.map(option));
-    right.replaceChildren(...shown.map(option));
-    const name = [...right.options].find(o => o.value === 'name');   // always shown (<- passes it over), but it can be moved
-    if (name) name.title = 'Name: always shown; Up and Down move it';
+    left.set(ids.map(item));
+    right.set(shown.map(item));
   };
   const moved = async change => {
     shown = await askWindow(change) ?? shown;
@@ -176,29 +177,89 @@ function selectColumnsHere(a) {
   };
   // Up and Down: the columns chosen at the right moved among the shown ones, still chosen after.
   const order = async by => {
-    const ids = [...right.selectedOptions].map(o => o.value);
+    const ids = right.chosen();
     if (!ids.length) return;
     await moved({ move: { ids, by } });
-    for (const o of right.options) o.selected = ids.includes(o.value);
-    right.focus();
+    right.choose(ids);
+    right.el.focus();
   };
   dialog.querySelector('.sc-up').addEventListener('click', () => order(-1));
   dialog.querySelector('.sc-down').addEventListener('click', () => order(1));
-  right.addEventListener('keydown', e => {
-    if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) { e.preventDefault(); order(e.key === 'ArrowUp' ? -1 : 1); }
-  });
-  dialog.querySelector('.sc-show').addEventListener('click', () => moved({ show: [...left.selectedOptions].map(o => o.value) }));
-  dialog.querySelector('.sc-hide').addEventListener('click', () => moved({ hide: [...right.selectedOptions].map(o => o.value) }));
-  left.addEventListener('dblclick', () => moved({ show: [...left.selectedOptions].map(o => o.value) }));
-  right.addEventListener('dblclick', () => moved({ hide: [...right.selectedOptions].map(o => o.value) }));
+  right.el.addEventListener('keydown', e => {
+    if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) { e.preventDefault(); e.stopImmediatePropagation(); order(e.key === 'ArrowUp' ? -1 : 1); }
+  }, true);
+  dialog.querySelector('.sc-show').addEventListener('click', show);
+  dialog.querySelector('.sc-hide').addEventListener('click', hide);
   filter.addEventListener('change', fill);
   search.addEventListener('input', fill);
+  search.addEventListener('keydown', e => { if (e.key === 'ArrowDown') { e.preventDefault(); left.el.focus(); } });
   dialog.querySelector('.ok').addEventListener('click', () => dialog.close());
   document.body.append(dialog);
   fill();
   dialog.showModal();
-  left.focus();
+  left.el.focus();
   return new Promise(resolve => dialog.addEventListener('close', () => resolve(null), { once: true }));
+}
+
+// A list of lines to choose from, as a <select multiple> does, that can hold a drawing: a click chooses one, Ctrl+click
+// adds or takes one away, Shift+click the lines from the last one clicked; Up, Down, Home, End move (with Shift:
+// choosing as they go), Ctrl+A chooses all; a double click or Enter runs `act` on what is chosen. A line: { id, text,
+// title, slow } (slow: a tortoise in front, filters.js TortoiseSvg; every line keeps its room).
+function pickList(el, act) {
+  el.classList.add('pick-list');
+  el.tabIndex = 0;
+  let items = [], chosen = new Set(), anchor = 0, at = 0;
+  const draw = () => {
+    el.replaceChildren(...items.map((x, k) => {
+      const row = document.createElement('div');
+      row.className = 'pick-row' + (chosen.has(x.id) ? ' chosen' : '') + (k === at ? ' at' : '');
+      row.title = x.title ?? '';
+      const mark = Object.assign(document.createElement('span'), { className: 'fl-slow' });
+      if (x.slow) { mark.innerHTML = TortoiseSvg; mark.title = 'Read per item: slow in a large folder'; }
+      row.append(mark, Object.assign(document.createElement('span'), { textContent: x.text }));
+      row.addEventListener('mousedown', e => { e.preventDefault(); el.focus(); click(k, e); });
+      row.addEventListener('dblclick', () => act());
+      return row;
+    }));
+    el.children[at]?.scrollIntoView({ block: 'nearest' });
+  };
+  const range = (from, to) => items.slice(Math.min(from, to), Math.max(from, to) + 1).map(x => x.id);
+  function click(k, e) {
+    if (e.shiftKey) chosen = new Set([...(e.ctrlKey ? chosen : []), ...range(anchor, k)]);
+    else if (e.ctrlKey) { if (chosen.has(items[k].id)) chosen.delete(items[k].id); else chosen.add(items[k].id); anchor = k; }
+    else { chosen = new Set([items[k].id]); anchor = k; }
+    at = k;
+    draw();
+  }
+  el.addEventListener('keydown', e => {
+    const step = { ArrowDown: 1, ArrowUp: -1, PageDown: 10, PageUp: -10 }[e.key];
+    if (step || e.key === 'Home' || e.key === 'End') {
+      if (!items.length) return;
+      e.preventDefault();
+      const to = e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : Math.max(0, Math.min(items.length - 1, at + step));
+      click(to, { shiftKey: e.shiftKey, ctrlKey: false });
+    } else if (e.key === 'a' && e.ctrlKey) { e.preventDefault(); chosen = new Set(items.map(x => x.id)); draw(); }
+    else if (e.key === 'Enter') { e.preventDefault(); act(); }
+  });
+  return {
+    el,
+    // New lines; what was chosen and still there stays chosen; else the line at the same place.
+    set(next) {
+      items = next;
+      chosen = new Set([...chosen].filter(id => items.some(x => x.id === id)));
+      at = Math.min(at, Math.max(0, items.length - 1));
+      if (!chosen.size && items[at]) chosen.add(items[at].id);
+      anchor = at;
+      draw();
+    },
+    chosen: () => items.filter(x => chosen.has(x.id)).map(x => x.id),
+    choose(ids) {
+      chosen = new Set(ids);
+      const k = items.findIndex(x => chosen.has(x.id));
+      if (k >= 0) at = anchor = k;
+      draw();
+    },
+  };
 }
 
 // The Sort window (columns.js openSortWindow; plan 28 3.5): a line per column of the pane's sort, in its order: a grip

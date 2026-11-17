@@ -231,8 +231,28 @@ action('info.pane', { title: 'Pane info', hint: 'an Info pane of the active pane
 action('hidden.toggle', { title: 'Hidden items', hint: 'hidden and system files and folders in the active pane (its own choice; the setting is for the others)',
   group: 'view', enabled: () => !!activePane && !(views.get(activePane) instanceof PreviewView),
   checked: () => !!activePane && showsHidden(activePane), run: () => setPaneHidden(activePane, !showsHidden(activePane)) });
-action('pane.filter', { title: 'Filter...', hint: 'the files the active pane shows, as wildcards (*.cs;*.md)', group: 'view',
-  enabled: () => !!activePane && !(views.get(activePane) instanceof PreviewView), run: () => askPaneFilter(activePane) });
+// Filter sets (docs/plans/executed/32-PLAN-filter-sets.md 3.7, 3.8).
+const filterable = () => !!activePane && !!views.get(activePane) && !(views.get(activePane) instanceof PreviewView) && !(views.get(activePane) instanceof PageView);
+action('pane.filter', { title: 'Filter...', hint: 'the active pane\'s filter set, in Manage filters: lines on any column, and / or, brackets', group: 'view',
+  enabled: filterable, run: () => openManageFilters(activePane) });
+const filtersMenu = () => [
+  { label: 'None', checked: !paneFilterSet(activePane), enabled: filterable(), run: () => setPaneFilter(activePane, null) },
+  ...filterSets.sets.map(s => ({ label: s.name, key: s.key ?? '', checked: paneFilterSet(activePane)?.name === s.name, enabled: filterable(),
+    run: () => setPaneFilter(activePane, { name: s.name, lines: s.lines }) })),
+  '-', { label: 'Manage filters...', run: () => openManageFilters(filterable() ? activePane : null) }];
+action('filters.list', { title: 'Filters', hint: 'the kept filter sets: one chosen filters the active pane', group: 'view',
+  dropDownOnly: true, dropDown: () => filtersMenu(), run: () => {
+    const r = (views.get(activePane)?.body ?? document.body).getBoundingClientRect();
+    openMenu(r.left, r.top, filtersMenu());
+  } });
+action('filters.manage', { title: 'Manage filters', hint: 'the kept filter sets: make, change, name, a key, the defaults for new panes', group: 'view',
+  run: () => openManageFilters(filterable() ? activePane : null) });
+action('filters.toggle', { title: 'Filter on or off', hint: 'the active pane\'s filter switched off (every item shown) or on again', group: 'view',
+  enabled: () => filterable() && !!paneFilterSet(activePane), checked: () => !!paneFilterSet(activePane) && !paneFilterSet(activePane).off,
+  run: () => togglePaneFilter(activePane) });
+// A kept set's key (Manage filters): that set on the active pane.
+action('filters.apply', { title: 'Filter by a kept set', group: 'view', enabled: params => filterable() && !!keptFilter(params[0]),
+  variantTitles: {}, run: params => { const s = keptFilter(params[0]); if (s) setPaneFilter(activePane, { name: s.name, lines: s.lines }); } });
 
 // ---------- Foldex ----------
 

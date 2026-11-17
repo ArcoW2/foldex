@@ -576,6 +576,14 @@ sealed class MainForm : Form
                     Post(new JsonObject { ["event"] = "settingFailed", ["error"] = $"{SearchesFile.Name}: {ex.Message}" });
                 }
                 break;
+            case "filtersSave":
+                // The kept filter sets changed (plan 32 3.4): filters.json, and every window gets them again.
+                try { app.SaveFilters(msg["filters"]!); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    Post(new JsonObject { ["event"] = "settingFailed", ["error"] = $"{FiltersFile.Name}: {ex.Message}" });
+                }
+                break;
             case "paste":
             {
                 var (onClipboard, move) = ShellClipboard.Take();
@@ -1007,6 +1015,7 @@ sealed class MainForm : Form
             ["project"] = app.ProjectInfo(this),
             ["ops"] = new JsonArray(app.FileOps.All.Select(o => (JsonNode)o.ToJson()).ToArray()),
             ["searches"] = SearchesFile.Load(AppHost.DataDir),
+            ["filters"] = FiltersFile.Load(AppHost.DataDir),
             ["renames"] = RenamesFile.Load(AppHost.DataDir),
             ["bookmarks"] = app.BookmarksJson(),
             ["run"] = AppHost.RunId,

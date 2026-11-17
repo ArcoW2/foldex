@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Filters</title>
+  <!-- Manage filters as a pane's page (docs/plans/executed/32-PLAN-filter-sets.md 3.3; plan 14 3.7): docked in a frame
+       of its window's page, or floating; the kept sets at the left, the set chosen at the right: its lines, and under
+       them the line chosen. Laid out as Manage column sets (columnsets.html). -->
+  <link rel="stylesheet" href="app.css">
+  <link rel="stylesheet" href="pane.css">
+  <script src="menu.js" defer></script>
+  <script src="pane.js" defer></script>
+  <script src="keys.js" defer></script>
+  <script src="filters.js" defer></script>
+  <script src="filterspane.js" defer></script>
+</head>
+<body>
+  <div id="manage" class="manage-sets cs-page filters-page">
+    <div class="cs-parts">
+      <section class="cs-sets">
+        <div class="cs-label">Filter sets</div>
+        <div class="bm-body">
+          <div class="bm-arrows"><button class="up" title="Move the set chosen up"><svg viewBox="0 0 10 10"><path d="M1 7l4-4 4 4"/></svg></button>
+            <button class="down" title="Move the set chosen down"><svg viewBox="0 0 10 10"><path d="M1 3l4 4 4-4"/></svg></button></div>
+          <div class="cs-list cs-setlist" tabindex="0"></div>
+        </div>
+        <div class="ask-buttons cs-setbuttons"></div>
+        <div class="fl-setextra"></div>
+      </section>
+      <div class="cs-split" title="Drag to give one part more room"></div>
+      <section class="cs-set">
+        <div class="cs-label cs-setname"></div>
+        <div class="bm-body">
+          <div class="bm-arrows"><button class="up" title="Move the line chosen up"><svg viewBox="0 0 10 10"><path d="M1 7l4-4 4 4"/></svg></button>
+            <button class="down" title="Move the line chosen down"><svg viewBox="0 0 10 10"><path d="M1 3l4 4 4-4"/></svg></button></div>
+          <div class="cs-list fl-lines" tabindex="0"></div>
+        </div>
+        <div class="fl-problem" hidden></div>
+        <div class="ask-buttons fl-linebuttons"></div>
+        <div class="fl-editor"></div>
+      </section>
+    </div>
+    <div class="ask-buttons fl-bottom"></div>
+  </div>
+</body>
+</html>

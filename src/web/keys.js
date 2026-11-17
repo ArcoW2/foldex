@@ -50,7 +50,7 @@ function setKeys({ keys: map, order, problems }) {
   if (problems.length) status('keys.json: ' + problems.join('; '), true);
 }
 
-// The key set: keys.json's, then the bookmarks' (docs/plans/executed/26-PLAN-bookmarks.md 3.6). A bookmark's key takes over
+// The key set: keys.json's, then the bookmarks' (docs/plans/executed/26-PLAN-bookmarks.md 3.6) and the kept filter sets'. A bookmark's key takes over
 // what it clashes with: the same key, the chords a single key starts, a single key a chord starts with.
 function buildKeys() {
   keys.bindings.clear();
@@ -58,7 +58,9 @@ function buildKeys() {
     const value = keys.file.keys[key];
     keys.bindings.set(key, Array.isArray(value) ? value : [value]);
   }
-  for (const [key, call] of typeof bookmarkBindings === 'function' ? bookmarkBindings() : []) {
+  // Then the kept filter sets' keys (plan 32 3.8), as the bookmarks'.
+  const filterKeys = typeof filterSets !== 'undefined' ? filterSets.sets.filter(s => s.key).map(s => [s.key, ['filters.apply', s.name]]) : [];
+  for (const [key, call] of [...(typeof bookmarkBindings === 'function' ? bookmarkBindings() : []), ...filterKeys]) {
     const first = key.includes(', ') ? key.split(', ')[0] : null;
     for (const k of [...keys.bindings.keys()]) if (k === key || k === first || !first && k.startsWith(key + ', ')) keys.bindings.delete(k);
     keys.bindings.set(key, call);

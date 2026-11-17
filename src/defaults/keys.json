@@ -4,6 +4,7 @@
 {
   "F1": "palette",
   "Ctrl+F1": "ribbon.onDemand",
+  "Ctrl+Alt+F": "filters.toggle",
   "Enter": "item.execute",
   "Alt+Enter": "item.properties",
   "Del": "item.delete",

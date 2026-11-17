@@ -761,6 +761,22 @@ body[data-focus-away] .pane.active > .head {
 
 .pane:not(.child) > .head .pane-name { flex: 1; max-width: none; }
 
+/* Its filter set (app.js drawHead; plan 32 3.6): first, in italic between brackets, a click switching it; dimmed while
+   off. It gives way first: at most a third of the head, down to "[..." when narrow. */
+.pane > .head .filter-name {
+  flex: 0 1 auto;
+  max-width: 33%;
+  min-width: 2.2em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: pre;
+  font-style: italic;
+  cursor: pointer;
+}
+
+.pane > .head .filter-name.off { opacity: 0.45; }
+.pane > .head .filter-name:hover { text-decoration: underline; }
+
 /* The title as a path (app.js headTitle; plan 29): each folder before the one shown a button, "..." the ones left out. */
 .pane > .head .crumb:not(.here) {
   cursor: pointer;
@@ -1316,7 +1332,14 @@ body[data-focus-away] :is(.row, .tile).selected.focused {
 /* Select columns (dialogpage.js selectColumnsHere; plan 28 3.7): two lists, the arrows between them. */
 .sc-lists { display: flex; gap: 8px; align-items: stretch; }
 .sc-side { display: flex; flex-direction: column; gap: 4px; width: 22em; }
-.sc-side select { flex: 1 1 auto; height: 26em; }
+.sc-side .pick-list { flex: 1 1 auto; height: 26em; }
+/* A list of lines to choose from (dialogpage.js pickList), as a <select multiple>: the slow ones' tortoise in front. */
+.pick-list { overflow: auto; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--fg); outline: none; padding: 1px 0; }
+.pick-list:focus { border-color: var(--accent); }
+.pick-row { display: flex; align-items: center; gap: 4px; padding: 1px 6px; white-space: nowrap; cursor: default; }
+.pick-row.chosen { background: color-mix(in srgb, var(--select) 70%, transparent); }
+.pick-list:focus .pick-row.chosen { background: var(--select); }
+.pick-list:focus .pick-row.at { outline: 1px dotted var(--fg-dim); outline-offset: -1px; }
 .sc-label { color: var(--fg-dim); padding: 2px 0; }
 .sc-arrows { display: flex; flex-direction: column; justify-content: center; gap: 6px; }
 .sc-arrows button, .sort-line button {
@@ -1394,6 +1417,40 @@ dialog.select-columns .ask-buttons, dialog.sort-window .ask-buttons { margin-top
 .manage-sets > .ask-buttons { justify-content: flex-end; }
 .manage-sets .setfolders { color: var(--fg-dim); max-height: 8em; overflow: auto; }
 .manage-sets .setfolders button { margin-left: 6px; }
+
+/* Manage filters (filters.html, filterspane.js; plan 32 3.3): as Manage column sets; the lines in a list (And / Or,
+   brackets, Not, what it tests), under them the line chosen; a field's list with a tortoise for the slow ones. */
+.filters-page .cs-set > .bm-body { flex: 0 1 auto; min-height: 7em; max-height: 40%; }
+.fl-linerow { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.fl-linerow select { padding: 0 2px; }
+.fl-join { width: 4.2em; flex: none; }
+.fl-bracket { width: 3.4em; font-family: Consolas, monospace; }
+.fl-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; display: inline-flex; align-items: center; gap: 4px; }
+.fl-editor { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 6px; padding: 6px 2px; border-top: 1px solid var(--border); }
+.fl-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.fl-row .cs-caption { min-width: 5.5em; }
+.fl-check { white-space: nowrap; }
+.fl-setextra { display: flex; flex-direction: column; gap: 6px; }
+.fl-key { color: var(--fg-dim); font-size: 0.9em; margin-left: auto; }
+.fl-marks { color: var(--accent); font-size: 0.85em; }
+.fl-note { color: var(--fg-dim); }
+.fl-problem { color: var(--warning); }
+.fl-problem[hidden] { display: none; }
+.fl-warn { color: var(--warning); }
+.fl-attrs { gap: 6px 14px; }
+.fl-attr { white-space: nowrap; }
+.fl-date { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.fl-date input[type=number] { width: 4.5em; }
+.fl-picker { position: relative; display: inline-block; }
+.fl-picker > input { width: 18em; }
+.fl-fieldlist { position: absolute; left: 0; top: 100%; z-index: 30; width: 22em; max-height: 18em; overflow: auto;
+  background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; box-shadow: 0 4px 12px rgba(0, 0, 0, .25); }
+.fl-fieldlist[hidden] { display: none; }
+.fl-fieldrow { display: flex; align-items: center; gap: 4px; padding: 2px 6px; white-space: nowrap; cursor: default; }
+.fl-fieldrow.hot { background: var(--select); }
+/* The tortoise of a slow field: always its room, so the names after it start at the same place (empty: no mark). */
+.fl-slow { flex: none; display: inline-grid; place-items: center; width: 16px; height: 16px; color: var(--fg-dim); }
+.fl-slow svg { width: 14px; height: 14px; }
 
 /* Too narrow for both side by side (a pane docked at a side, a narrow window): stacked, the whole sets' part first and
    the set chosen under it, the page scrolling; no line between them. The page is its own document, so the width is

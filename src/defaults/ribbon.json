@@ -40,8 +40,9 @@
         { "action": "folder.up", "label": "\n", "stack": true },
         { "action": "bookmarks.menu", "size": "large", "label": "Bookmarks" },
         { "action": "refresh", "label": "Refresh" }, { "action": "drives.list", "label": "Drives", "stack": true, "tip": "D" } ] },
-      { "name": "Filter", "items": [
+      { "name": "Filter", "corners": { "left": "filters.manage", "right": "filters.list" }, "items": [
         { "action": "pane.filter", "size": "large", "label": "Filter..." },
+        { "action": "filters.list", "label": "Filters" }, { "action": "filters.toggle", "label": "On", "stack": true },
         { "action": "hidden.toggle", "label": "Hidden", "stack": true, "tip": "H" } ] },
       { "name": "Show", "items": [
         { "action": "view.menu", "size": "large", "label": "Views" },

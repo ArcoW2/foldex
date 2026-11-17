@@ -64,6 +64,9 @@ const RIBBON_ICONS = (() => {
     find: ['Find', mag(6.8, 6.8, 4.5)],
     'search.focus': ['Search bar', bar.replace('y="2.5"', 'y="5.5"') + mag(5, 8, 1.5)],
     'pane.filter': ['Filter', p('M2 3h12l-4.5 5.5V13l-3 1.5V8.5z')],
+    'filters.list': ['Filters', p('M1.5 3h8.5l-3.2 4V11l-2 1V7z') + p('M11.5 6.5h3M11.5 9.5h3M11.5 12.5h3')],
+    'filters.toggle': ['Filter on or off', p('M2 3h12l-4.5 5.5V13l-3 1.5V8.5z') + p('M1.5 14.5l13-13')],
+    'filters.apply': ['Filter by a kept set', p('M2 3h12l-4.5 5.5V13l-3 1.5V8.5z')],
     'scrap.new': ['New scrap', p(tray) + p('M8 .5v4M6 2.5h4')],
     'scrap.add': ['Add to scrap', p(tray) + p('M8 .8v5M6 3.8l2 2 2-2')],
     'scrap.clear': ['Clear scrap', p(tray) + p('M5.5 1.5l5 5M10.5 1.5l-5 5')],
@@ -135,13 +138,14 @@ const RIBBON_ICONS = (() => {
     // of the font's box counted.
     commands: ['All actions and keys', t(0.44, 13.37, 15.12, 'F1', 700), t(2.58, 13.1, 10.85, 'F1', 700)],
     projects: ['Manage projects', p(projects), p('M3.2 6h3l1 1h5.3v5.8H3.2zM5 10.2h6')],
+    filters: ['Manage filters', p('M2 3h12l-4.5 5.5V13l-3 1.5V8.5z'), p('M3.6 6h8.8l-3.3 3.6v2.6l-2.2 1V9.6z')],
   };
   return { buttons, panels };
 })();
 
 // The actions that show a pane or open a window: its icon (plan 14 3.7's list of panes and windows).
 const RIBBON_PANEL_ACTIONS = { 'preview.toggle': 'preview', 'info.toggle': 'info', 'log.toggle': 'log', palette: 'commands',
-  'settings.open': 'settings', 'projects.manage': 'projects', 'columns.manage': 'cols', 'bookmarks.manage': 'bm' };
+  'settings.open': 'settings', 'projects.manage': 'projects', 'columns.manage': 'cols', 'bookmarks.manage': 'bm', 'filters.manage': 'filters' };
 
 function ribbonIconSvg(body, size, panel, small) {
   const px = size === 'large' ? 32 : 16, w = size === 'large' ? 1 : 1.4;

@@ -1,8 +1,9 @@
 # Plan 32: Filter sets
 
-Status: not started; see Status.
+Status: executed; see Status and 6.
 
 - 2026-11-17: draft, at the user's request.
+- 2026-11-17: executed.
 
 Builds on plan 03 (a filter per pane: wildcards for its files, Filter... on the pane menu), plan 11 (the columns: an
 item's attributes and dates) and plan 19 / plan 30 (the ribbon, its corners: the manager at the left, the list at the
@@ -35,21 +36,23 @@ bar's filter stays as it is: a quick filter for once, apart from these sets.
 
 ### Built
 
+| Part | What | Reference |
+|---|---|---|
+| Filter lines | Folders and Files, a field (any column), its conditions by kind, Not; an item against them | 3.1; 6 |
+| Combining | and / or, brackets, exceptions; the order they are worked out in | 3.2; 6 |
+| Manage filters | a pane (docked or floating): the kept sets, and the editor of the one chosen: add (with and), change, remove, move, brackets | 3.3; 6 |
+| Kept sets | `filters.json` (name, lines), the defaults, every window told | 3.4; 6 |
+| Defaults | one for a new root, one for a new child (a tab too); a child made a root keeps its own | 3.5; 6 |
+| In the head | the filter in italic between brackets at the head's start, a click switches it, giving way to the name | 3.6; 6 |
+| Slow fields | the tortoise in the field list and under a line using one; in Select columns' lists, the names aligned | 3.1; 6 |
+| Ribbon and menus | Home's group Filter, its corners; the pane menu's Filter... | 3.7; 6 |
+| Keys | a key per kept set, as a bookmark's; a key switching the active pane's filter off and on | 3.8; 6 |
+| Tests | see 3.9 and 6 | 3.9; 6 |
+
 ### Not yet built
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| Filter lines | Folders and Files, a field (any column), its conditions by kind, Not; an item against them | -- | 3.1 |
-| Combining | and / or, brackets, exceptions; the order they are worked out in | -- | 3.2 |
-| Manage filters | a pane (docked or floating): the kept sets, and the editor of the one chosen: add (with and), change, remove, move, brackets | Filter lines | 3.3 |
-| Kept sets | `filters.json` (name, lines), the defaults, every window told | -- | 3.4 |
-| Defaults | one for a new root, one for a new child (a tab too); a child made a root keeps its own | Kept sets | 3.5 |
-| In the head | the filter in italic between brackets at the head's start, a click switches it, giving way to the name | -- | 3.6 |
-| Slow fields | the tortoise in the field list and under a line using one; in Select columns' lists, the names aligned | Filter lines | 3.1 |
-| Ribbon and menus | Home's group Filter, its corners; the pane menu's Filter... | Manage filters; Kept sets | 3.7 |
-| Keys | a key per kept set, as a bookmark's; a key switching the active pane's filter off and on | Kept sets | 3.8 |
-| Tests | see 3.9 | -- | 3.9 |
-
 ## 3. Details
 
 ### 3.1 Filter lines
@@ -67,7 +70,7 @@ A line tests one field of an item, for the folders, the files or both:
 
 | Kind of field | Conditions |
 |---|---|
-| Text (Name, Type, Extension, Folder, a text property) | matches wildcards (`;` between them: `*.cs;*.md`); matches a regex; contains; is; case does not matter, unless asked [not yet decided] |
+| Text (Name, Type, Extension, Folder, a text property) | matches wildcards (`;` between them: `*.cs;*.md`); matches a regex; contains; is; case does not matter |
 | Number (Size, Total size, Free space, a number property) | a range: from and to, each open; a size in bytes, KB, MB, GB |
 | Date (Date modified, created, accessed, a date property) | a range: from and to, each open, an absolute date (with a time or not), or relative to now (n minutes, hours, days, weeks, months or years ago); the last n days is from n days ago to open |
 | Yes / no (a boolean property) | true, false |
@@ -93,8 +96,8 @@ A line tests one field of an item, for the folders, the files or both:
   in front of its name, empty for a column that is not slow, so all names start at the same place. Its lists are
   `<select>` boxes now, which cannot hold a drawing: they become lists of Foldex's own that keep what the boxes do
   (several chosen with Ctrl and Shift, a double click moving a column, the keys, Up and Down).
-- A filter of now (Filter...'s wildcards) is a set of one line: Files, Name matches its wildcards; Folders checked too,
-  since folders are always shown now.
+- A filter of before (Filter...'s wildcards, kept by a pane in a layout) is read as a set of two lines: `Folders, Name has
+  a value` Or `Files, Name matches` its wildcards, so every folder still shows.
 
 ### 3.2 Combining
 
@@ -124,15 +127,14 @@ A line tests one field of an item, for the folders, the files or both:
   of `{ name, lines }` in the order Manage filters gives them, and which ones are the defaults (3.5).
 - The host reads and writes it (a `.tmp` file, as `BarsFile.Save`) and tells every window when it changed.
 - A pane keeps its set as it is (its lines) and, when it came from a kept one, that one's name; and whether it is
-  switched off (3.6). A kept set changed in Manage filters changes the panes using it [not yet decided: or they keep
-  the lines they had].
+  switched off (3.6). A kept set changed in Manage filters changes the panes using it; a kept set deleted leaves them
+  its lines, without its name.
 
 ### 3.5 Defaults
 
 - Two defaults, each a kept set or none: one for a new root pane (New pane, a preset's roots), one for a new child
   (New child pane, New tab: a tab is a child).
-- Set in Manage filters (a mark per set: Default for roots, Default for children) and in the Settings window [not yet
-  decided: or only one of them].
+- Set in Manage filters: a check per set, Default for a new root pane, Default for a new child pane (a tab too).
 - A pane gets its default once, when it is made. A child that becomes a root (Detach from parent, its parent closed)
   keeps the filter it has: nothing is applied then. A pane's own choice afterwards (another set, None) is its own.
 
@@ -184,3 +186,53 @@ Home, after Find: the group Filter.
 ## 4. Open questions
 
 None.
+
+## 6. As built
+
+- **The rules** are `src/web/filters.js`, without a page (the tests run it under Jint): a line against an item
+  (`filterLine`), a set as a test (`filterTestOf`: Not on its line, And before Or, brackets; a line left out for an
+  item as if it were not there), what is wrong with a set (`filterProblem`: brackets, a regex), a line in short
+  (`filterLineText`), the head's text (`filterHeadText`). A set with a problem filters nothing until it is right; the
+  editor says why.
+- **A field's kind** comes from its column (`columns.js columnInfo`): text, size, number, date; Windows' yes / no
+  properties are now `bool` (`ShellProps`: display type 2, and a raw 1 / 0 for VT_BOOL); Attributes is `attrs` (its
+  letters R H S A C E L O), Git status `list`, GPS `flag` (has a value or not).
+- **A field that does not apply**: one only a drive has (Total size, Free space) for anything else; a folder without a
+  value for a field (Size, Extension, a Windows property: those are read for files only). **Waiting**: an item whose
+  property or Git status is not read yet is not shown; the list asks for it (`ListView.askFilterValues`: the
+  properties of the waiting items, the folder's Git status) and filters again when it comes. A tree reads no
+  properties: there such an item shows. An item that is not on disk (no property can be read) shows.
+- **A pane** keeps its set as `filterSet` ({ name of a kept one, lines, off }) with the layout; `filter` (wildcards of
+  before) is read as a set (3.1). `setPaneFilter`, `togglePaneFilter`, `defaultFilterFor` (New pane, a preset's tree,
+  New child pane, New tab, a list's own root tab) in `app.js`; a list filters again from what it read
+  (`filterChanged`, no new listing), a tree folds again.
+- **Manage filters** (`filters.html`, `filterspane.js`, `FiltersView`): the pane's row is always on top when it was
+  opened for a pane, saying what the pane has ("This pane (Windows): Exes", "its own filter", "no filter"), so None,
+  Cancel and Keep as... are always at hand; editing it while it uses a kept set makes it the pane's own (the name
+  goes). For a kept set: Use in (the pane), Key, the two defaults; New, Rename, Duplicate, Delete, the arrows for the
+  order. A line row: And / Or, the brackets opened (`(` to `(((`), Not, what it tests, the brackets closed. The field:
+  a box to type in with its list under it (Up, Down, Enter, Esc). Dates: open, a day, a day and a time, or n minutes
+  to years ago; sizes with a unit, kept in bytes.
+- **Keys**: a kept set's key is taken in Manage filters (keys.js `strokeOf`), refused when keys.json, a bookmark or
+  another set has it (`filterKeyClash`); bound as `filters.apply` with the set's name (keys.js `buildKeys`).
+  `filters.toggle` on Ctrl+Alt+F.
+- **Ribbon**: Home's Filter group as the user arranged it, with Filters (the list) and On (`filters.toggle`) stacked
+  beside Filter..., Hidden under them, its corners Manage filters and the list. Icons: the list (a funnel with lines),
+  on or off (a funnel struck through), Manage filters (the funnel in the framed window). The pane menu: Filter...,
+  Filters (None, the kept sets, Manage filters...), Filter on.
+- **Select columns** (dialogpage.js): its lists are `pickList`s, as a `<select multiple>` (a click, Ctrl+click,
+  Shift+click, the arrows with and without Shift, Home, End, Ctrl+A; a double click or Enter moves), each line with
+  the tortoise's room in front.
+- Tested: `FiltersTests` (each kind's conditions; dates absolute and relative, either end open; a field that does not
+  apply, an empty one, or empty; Folders and Files; Not; And before Or; brackets; problems; an empty and an off set;
+  waiting for a value; a filter of before); `dotnet test` 248 passed. In the test copy: a set on C:\Windows (Folders
+  Or Files with Extension exe;dll: 101 of 118 shown, only exe and dll files), the head `[Filter]`, a click on it off
+  (dimmed, 114 shown: the hidden ones stay hidden) and on, `filters.toggle`; Manage filters opened by Filter... with
+  the pane's set, Keep as... "Exes" (filters.json written, the head `[Exes]`), Default for a new child pane, a new tab
+  getting Exes; None; after a restart the set back on the list; a key: Ctrl+C refused ("Ctrl+C is Copy"), Ctrl+Alt+E
+  taken and applying Exes; a line added (And), its field typed and chosen (Date modified, 7 days ago), the pane at
+  once 41 of 118; the field list with the tortoises; Select columns with its tortoises, a click and a Ctrl+click,
+  shown, a double click on Name (stays), hidden again; the ribbon's group.
+- Not checked: a regex line and an attributes line through the editor (the rules are unit tested); a Windows property
+  as a field on a large folder (how long it waits); Git status in a repository; the narrow layout of Manage filters;
+  a filter on a scrap.

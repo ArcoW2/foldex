@@ -44,7 +44,7 @@ dialog.inline.rb-customize { width: auto; }
 dialog.inline.fills[open] { inset: 0; width: auto; height: auto; display: flex; flex-direction: column; }
 dialog.inline.fills .sc-lists { flex: 1; min-height: 0; }
 dialog.inline.fills .sc-side { flex: 1; width: auto; min-width: 10em; }
-dialog.inline.fills .sc-side select { height: auto; min-height: 6em; }
+dialog.inline.fills .sc-side .pick-list { height: auto; min-height: 6em; }
 
 /* About (dialogpage.js aboutHere; as LexPen's .mm-about): the name, a line, by whom, the coffee, the build, a table
    of what it runs on. */

@@ -32,7 +32,7 @@ static class ShellProps
                     {
                         ["name"] = name,
                         ["title"] = title,
-                        ["kind"] = display switch { 1 => "number", 3 => "date", _ => "text" },
+                        ["kind"] = display switch { 1 => "number", 2 => "bool", 3 => "date", _ => "text" },
                     });
                 }
                 finally { Marshal.ReleaseComObject(description); }
@@ -69,6 +69,7 @@ static class ShellProps
                         var shown = PSFormatForDisplayAlloc(ref key, ref value, 0, out var text) >= 0
                             ? DirectionMarks.Replace(text, "") : null;
                         double? raw = value.vt == VtFiletime ? DateTimeOffset.FromFileTime(value.l).ToUnixTimeMilliseconds()
+                            : value.vt == VtBool ? ((short)value.l != 0 ? 1 : 0)
                             : NumberTypes.Contains(value.vt) && PropVariantToDouble(ref value, out var d) >= 0 ? d : null;
                         values[name] = new JsonArray(shown, raw);
                     }
@@ -118,7 +119,7 @@ static class ShellProps
     static readonly System.Text.RegularExpressions.Regex DirectionMarks = new("[\u200E\u200F\u202A-\u202E]");
 
     const int PdefColumn = 6, GpsBestEffort = 0x40;
-    const ushort VtFiletime = 64;
+    const ushort VtFiletime = 64, VtBool = 11;
     static readonly HashSet<ushort> NumberTypes = [2, 3, 4, 5, 16, 17, 18, 19, 20, 21, 22, 23];
 
     [StructLayout(LayoutKind.Sequential, Pack = 4)]
