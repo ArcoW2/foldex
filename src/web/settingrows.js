@@ -8,7 +8,7 @@
 // The tabs of the settings window, each with its groups in order: the app itself, the panes, what is in them, and
 // searching and scraps.
 const SETTING_TABS = [
-  ['App', ['Theme', 'Fonts', 'Mouse', 'Status line', 'Memory']],
+  ['App', ['Theme', 'Fonts', 'Mouse', 'Ribbon', 'Status line', 'Memory']],
   ['Panes', ['Colours', 'Behaviour', 'Scrollbars']],
   ['Contents', ['Rows', 'Columns', 'Highlights', 'Trees', 'Items', 'Thumbnails']],
   ['Search and scrap', ['Search bar']],
@@ -23,6 +23,10 @@ const SETTING_ROWS = [
     hint: 'The colours of the window, the branch colours included. Your own themes go in themes\\ in the data folder.' },
   { tab: 'App', group: 'Theme', name: 'themeDark', kind: 'theme', title: 'Theme in dark mode',
     hint: 'The colours of the window in dark mode.' },
+  { tab: 'App', group: 'Ribbon', name: 'ribbonGroupNames', kind: 'toggle', title: 'Group names',
+    hint: 'The name of each group under its buttons; off, a group\'s name is its tooltip.' },
+  { tab: 'App', group: 'Ribbon', name: 'ribbonLabelWidth', kind: 'range', range: [8, 40, 1], unit: ' characters', title: 'Label width',
+    hint: 'A small button\'s label longer than this is cut off with ...; a large button\'s after two lines of half of it. Show the ribbon only when wanted: Ctrl+F1, or the button at its right end.' },
   { tab: 'App', group: 'Status line', name: 'actionMessageSeconds', kind: 'range', range: [1, 30, 1], unit: ' s', title: 'Action messages',
     hint: 'How long what an action did (Copied ...) stays lit in the status line before the line shows again what it showed; the Log keeps it.' },
   { tab: 'App', group: 'Status line', name: 'logDetail', kind: 'choice', title: 'Log',

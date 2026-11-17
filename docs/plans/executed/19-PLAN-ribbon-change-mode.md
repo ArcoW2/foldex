@@ -1,8 +1,9 @@
 # Plan 19: The ribbon as LexPen's: icons, change mode, lists, key tips, height
 
-Status: not started; see Status.
+Status: executed; see Status and 6.
 
 - 2026-11-12: draft.
+- 2026-11-17: executed.
 
 Builds on plan 01 (the ribbon, actions, F1), plan 10 (the bars' change mode, made as LexPen's) and plan 14 (every
 window a docked pane and/or a floating window), which is built first: F1 as a pane needs its floating window. The
@@ -33,30 +34,33 @@ and only when wanted (Ctrl+F1). Foldex differs only where it has no menu bar and
 
 ### Built
 
+| Part | What | Reference |
+|---|---|---|
+| Ribbon code from LexPen | LexPen's `ribbon.js` over Foldex's, renamed to Foldex's names; delegated events; all tab bodies drawn | 3.1; 3.2; 3.4; 6 |
+| Look | LexPen's ribbon CSS over Foldex's `rb-` rules; the size variables | 3.1; 3.4; 6 |
+| Icon proposal | a drawing per shipped button, with its sheets in the dark and the light theme | 3.3; 6 |
+| Icons | `web/ribbonicons.js`; buttons drawn with them; the letter box; the parameter mark | 3.3; 6 |
+| Corners | a group's left and right corner buttons drawn and run | 3.4 |
+| Group names and labels | `ribbonGroupNames`, `ribbonLabelWidth`; long labels cut off | 3.4; 3.14 |
+| Overflow | groups that do not fit into `>>` | 3.4; 6 |
+| Writing the ribbon | `RibbonFile.Save` / `Reset`, the read retry, host ops `ribbonSave` / `ribbonReset`, every window told | 3.5; 6 |
+| Change mode | on / off, Done, Esc, Ctrl+Z, buttons not running, the ribbon outlined | 3.6; 6 |
+| Dragging | buttons, dividers, corners, groups, tabs moved; dragged off: removed; New tab, New group | 3.7; 6 |
+| Right-click menus | per part in the change mode; outside it Change the ribbon, Customize..., Reset | 3.8; 6 |
+| Customize dialog | the two lists and their buttons, sharing undo and saving with the change mode | 3.9; 6 |
+| F1 as a pane | not modal, a pane of its own, docked or floating; rows draggable in the change mode; its Change the ribbon button | 3.10; 6 |
+| Lists on buttons | variants as a list, split arrow, list-only buttons, `dropDown` / `dropDownOnly`, `"open": "dropDown"`; Foldex's menu actions as drop-downs | 3.11; 6 |
+| Drives button | `drives.list`: a drop-down of all drives | 3.11; 6 |
+| Key tips | Alt shows a letter per tab, then per button and corner | 3.12; 6 |
+| Height and only when wanted | the grip, `ribbonRow`, `ribbonShow`, `ribbon.onDemand` on Ctrl+F1, sliding over the panes | 3.13; 6 |
+| Settings and actions | the settings in `settings.json` and the Settings window; the ribbon's actions | 3.14; 6 |
+| ribbon.json | the shipped file's header and content as LexPen's (corners, open, tip) | 3.15; 6 |
+| Tests | see 3.16 and 6 | 3.16; 6 |
+
 ### Not yet built
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| Ribbon code from LexPen | LexPen's `ribbon.js` over Foldex's, renamed to Foldex's names; delegated events; all tab bodies drawn | -- | 3.1; 3.2; 3.4 |
-| Look | LexPen's ribbon CSS over Foldex's `rb-` rules; the size variables | Ribbon code from LexPen | 3.1; 3.4 |
-| Icon proposal | a drawing per shipped button, beside this plan, with its sheets in the dark and the light theme, for you to see | -- | 3.3 |
-| Icons | `web/ribbonicons.js` made from the proposal; buttons drawn with them; the letter box; the parameter mark | Icon proposal | 3.3 |
-| Corners | a group's left and right corner buttons drawn and run | Ribbon code from LexPen | 3.4 |
-| Group names and labels | `ribbonGroupNames`, `ribbonLabelWidth`; long labels cut off | Ribbon code from LexPen | 3.4; 3.14 |
-| Overflow | groups that do not fit into `>>` | Ribbon code from LexPen | 3.4 |
-| Writing the ribbon | `RibbonFile.Save` / `Reset`, the read retry, host ops `ribbonSave` / `ribbonReset`, every window told | -- | 3.5 |
-| Change mode | on / off, Done, Esc, Ctrl+Z, buttons not running, the ribbon outlined | Writing the ribbon | 3.6 |
-| Dragging | buttons, dividers, corners, groups, tabs moved; dragged off: removed; New tab, New group | Change mode | 3.7 |
-| Right-click menus | per part in the change mode; outside it Change the ribbon, Customize..., Reset | Change mode | 3.8 |
-| Customize dialog | the two lists and their buttons, sharing undo and saving with the change mode | Change mode | 3.9 |
-| F1 as a pane | not modal, a pane of its own, docked or floating; rows draggable in the change mode; its Change the ribbon button | plan 14 (The floating window) | 3.10 |
-| Lists on buttons | variants as a list, split arrow, list-only buttons, `dropDown` / `dropDownOnly`, `"open": "dropDown"`; Foldex's menu actions as drop-downs | Ribbon code from LexPen | 3.11 |
-| Drives button | `drives.list`: a drop-down of all drives | Lists on buttons | 3.11 |
-| Key tips | Alt shows a letter per tab, then per button and corner | Ribbon code from LexPen | 3.12 |
-| Height and only when wanted | the grip, `ribbonRow`, `ribbonShow`, `ribbon.onDemand` on Ctrl+F1, sliding over the panes | Ribbon code from LexPen | 3.13 |
-| Settings and actions | the settings in `settings.json` and the Settings window; the ribbon's actions | -- | 3.14 |
-| ribbon.json | the shipped file's header and content as LexPen's (corners, open, tip) | Icons | 3.15 |
-| Tests | see 3.16 | -- | 3.16 |
 
 ## 3. Details
 
@@ -323,3 +327,65 @@ None.
 
 ## 6. As built
 
+Pictures beside this plan (`19-PLAN-ribbon-change-mode.md.images/`): the icon sheets
+[dark](19-PLAN-ribbon-change-mode.md.images/ribbon-icons-dark.png) and
+[light](19-PLAN-ribbon-change-mode.md.images/ribbon-icons-light.png), every drawing large and small; the tabs
+[Home](19-PLAN-ribbon-change-mode.md.images/ribbon-home.png),
+[Home, light](19-PLAN-ribbon-change-mode.md.images/ribbon-home-light.png) and
+[View](19-PLAN-ribbon-change-mode.md.images/ribbon-view.png).
+
+What differs from the plan, and what was decided while building:
+
+- **Icons without a separate proposal file.** The drawings were made in `src/web/ribbonicons.js` itself, and the
+  sheets above made from it in the test copy; there is no `ribbon-icons.js` copy beside the plan. They are open for
+  your remarks: a drawing changes in that one file.
+- **The model's changes are in `ribbonmodel.js`** (`rbTake`, `rbPlaceIn`, `rbRemoveIn`), pure, so the tests run them
+  under Jint; `ribbon.js` runs them through `rbChange`. Found by the tests and fixed there: a divider dropped on a
+  corner was taken out before the drop was refused (LexPen has the same order).
+- **The ribbon's actions** (`ribbon.change`, `ribbon.customize`, `ribbon.reset`, `ribbon.onDemand`) are in
+  `actions.js` with the others, not in `ribbon.js`, so the test of the shipped keys and ribbon knows them.
+- **Per window** (`ribbonTab`, `ribbonRow`, `ribbonShow`): kept as `ribbon` in the window's layout (`app.js`
+  windowLayout, restored in `start` by `rbWindow`). They are not rows of the Settings window, which writes
+  settings.json for every window; only when wanted is switched by Ctrl+F1, the button at the ribbon's right end, its
+  right-click menu and the grip. The Settings window's App tab has a group Ribbon with Group names and Label width.
+- **Reset** posts `ribbonReset` and takes the ribbon the host sends back (`rb.resetting`), also in the change mode,
+  which otherwise keeps its own model over the events of other windows.
+- **Customize** is a modal floating window (`dialog.html`, `dialogpage.js customizeHere`): each change it makes is the
+  window's page's (`rbcDo`), which answers with the lines; a name it needs (New tab, New group, Rename) it asks in its
+  own window. Ctrl+Z there takes back the last change too.
+- **A label's line break**: the small text dialog has one line, so `\n` typed in a label is a line break (shown so
+  when renamed again), not Shift+Enter.
+- **Key tips from a pane**: a tree's, list's or scrap's page (a frame) and the other pane pages (`pane.js`) tell the
+  window an Alt alone, or Alt+a letter no key of keys.json has (`ribbonAlt`); the keyboard goes to the window's page
+  while the tips show and back to the active pane after. A dialog's window keeps its Alt.
+- **Lists**: Bookmarks, Views, Projects and Drives are `dropDownOnly`; Projects asks the host for its list
+  (`projectListItems`). Menus have no `&` mnemonics (Foldex's menus have none).
+- **Not taken from LexPen**: the clipboard badge and its lists, the "auto" mark (no Foldex action has one), the
+  panels' poll.
+- **The shipped ribbon**: the Drives button in Home > Go; All actions (F1) and Log in View > Foldex; Rename pane and
+  Hidden items stacked, With preview a column of its own; the header documents the format.
+
+Tested:
+
+- Unit: `RibbonTests` (your ribbon.json written with corners, `open`, `tip` and a line break, read back the same, no
+  `.tmp` left, Reset gives the shipped one; every shipped button has a drawing, large and small, and every drawing is
+  well-formed SVG; a button moved after, under and before another, the one under a taken button starting its column;
+  a corner, a tab, a call into a group, a divider and a group removed, a tab moved; a group moved and a divider on a
+  corner refused with nothing changed; columns, key tips, sizes at the full, a middle and the lowest height) and the
+  shipped keys and ribbon test (corners' actions too). `dotnet test`: 238 passed, 0 failed.
+- In the test copy (CDP; drags as the ribbon's own drag events with a DataTransfer, clicks as mouse events): the
+  icons in the dark and the light theme; Drives' list (the drives with their free space), closed by a click again;
+  Bookmarks' list; the change mode on (outline, Done, grips, F1 opened floating, its button "Done changing the
+  ribbon", its rows draggable), a button dragged after another, under another (into another group), into a corner,
+  off the ribbon; your ribbon.json written; Ctrl+Z four times back to the start, a fifth "Nothing to take back.";
+  an action from F1 floating (the browser's drop) and docked (the pointer drag as the window sees it, the place
+  marked); Esc ending the mode; Reset (the file removed, "The shipped ribbon (Ctrl+Z takes it back).") and Ctrl+Z
+  after it (the file back); key tips (Alt: H, V; V: the View tab and its buttons' tips; Esc twice: gone); Alt+P still
+  the preview, no tips; `>>` at a narrow ribbon with the groups left out as its menu; the height lower (row 20); only
+  when wanted (the buttons hidden, a tab click slides them down without moving the panes, a button run slides them
+  up), Ctrl+F1 back to always; Customize (an action found by its search and added after the chosen line, Up, Remove,
+  the chosen line outlined on the ribbon, closed); the right-click menus of the ribbon, a button, a tab and a group's
+  grip.
+- Not checked: dragging with the real mouse (the browser's drag from F1 floating to the window, a group by its grip,
+  a tab), the grip dragged and double-clicked, Alt pressed in a pane's frame, another window following a change,
+  New tab and New group, Customize's keys, the Views list's right-click.

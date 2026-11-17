@@ -55,6 +55,17 @@ addEventListener('keydown', e => {
   if (ctrlKey || altKey || metaKey || /^F\d+$/.test(key)) e.preventDefault();   // the window's, not the browser's
 });
 
+// Alt pressed and let go alone: the window's (its ribbon's key tips, ribbon.js rbAlt).
+let altAlone = false;
+addEventListener('keydown', e => { altAlone = e.key === 'Alt' && !e.repeat; }, true);
+addEventListener('keyup', e => {
+  if (e.key !== 'Alt' || !altAlone) return;
+  altAlone = false;
+  if (document.querySelector('dialog')) return;   // a dialog's window (modal): its own
+  e.preventDefault();
+  toWindow({ kind: 'ribbonAlt' });
+}, true);
+
 // A press anywhere in the pane: its window's pane becomes the active one, as a press in the page does.
 addEventListener('pointerdown', () => toWindow({ kind: 'activate' }), true);
 

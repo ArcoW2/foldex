@@ -90,11 +90,14 @@ function paneChannel({ id, page, title, view, state, receive, menu }) {
     switch (m.kind) {
       case 'activate':   // a press in its page: its pane the active one, this window's menus closed
         closeMenus();
+        rbSlide(false);   // the ribbon slid down (only when wanted) goes up
+        rbTipsOff();
         return views.has(id) && activate(id);   // a dialog's window has no pane here
       case 'menusClose':   // a press or a menu in its page: every other menu of this window closed (menu.js)
         closeMenus();
         return closePanesMenus(ch);
       case 'menuPick': return ch.runs?.[m.id]?.();
+      case 'ribbonAlt': return rbAlt(m.letter);   // Alt alone or Alt+a free letter there: the ribbon's key tips
       case 'menuAsk': return menu && ch.menuThere(menu(), m.x, m.y);
       case 'key':   // a key the pane does not use: this window's (keys.js), as if pressed here
         activate(id);

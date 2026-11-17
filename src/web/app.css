@@ -375,102 +375,131 @@ body.bar-dragging .bars {
   margin-bottom: 6px;
 }
 
-/* The ribbon (ribbon.js) */
-#ribbon {
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-bar);
-}
+/* ---------- The ribbon (ribbon.js; docs/plans/executed/19-PLAN-ribbon-change-mode.md; LexPen's taken over) ----------
+   Its tab names in a row of their own, under them the shown tab's groups, under those the grip for its height. The
+   sizes follow the height (ribbon.js rbApplyHeight, ribbonmodel.js ribbonSizes: --rb-r a row, --rb-sp spacing, --rb-f
+   text). */
+#ribbon { flex: none; background: var(--bg-bar); border-bottom: 1px solid var(--border); user-select: none; position: relative; outline: none;
+  --rb-row: calc(var(--rb-r, 30) * 1px); }   /* three: a large button's icon, two lines of label and a split's arrow row */
+#ribbon button { background: none; border: 1px solid transparent; color: var(--fg); font: inherit; cursor: default; }
+.rb-tabs { display: flex; gap: 1px; padding: 2px 8px 0; }
+.rb-tab { padding: 3px 10px; position: relative; border-radius: 4px 4px 0 0; }
+.rb-tab:hover { background: var(--hover); }
+.rb-tab.on { color: var(--accent); box-shadow: inset 0 -2px var(--accent); }
+.rb-new { font-style: italic; color: var(--fg-dim) !important; }
+.rb-bodies { display: flex; align-items: stretch; overflow: hidden; padding: calc(3px * var(--rb-sp, 1)) 4px 0; font-size: calc(100% * var(--rb-f, 1)); }
+.rb-body { display: flex; align-items: stretch; flex: none; }
+.rb-body[hidden], .rb-group[hidden] { display: none; }
+.rb-group { position: relative; display: flex; flex-direction: column; padding: 0 5px; border-right: 1px solid var(--border); }
+.rb-cols { display: flex; align-items: stretch; gap: 1px; height: calc(var(--rb-row) * 3); }
+.rb-name { display: grid; grid-template-columns: 18px 1fr 18px; align-items: center; gap: 4px; min-height: calc(14px * var(--rb-f, 1));
+  font-size: .85em; color: var(--fg-dim); padding: calc(1px * var(--rb-sp, 1)) 0 calc(2px * var(--rb-sp, 1)); }   /* the corners in the group's corners, the name centred */
+.rb-name > span { grid-row: 1; grid-column: 2; text-align: center; white-space: nowrap; }
+.rb-name > .rb-left { grid-row: 1; grid-column: 1; }
+.rb-name > .rb-right { grid-row: 1; grid-column: 3; }
+#ribbon:not(.rb-names) .rb-name > span { visibility: hidden; }
+.rb-col { display: flex; flex-direction: column; justify-content: flex-start; }   /* one or two: at the top */
+/* A large button with a small one above or under it: a row shorter, its label on one line. */
+.rb-col-large > .rb-large { height: calc(var(--rb-row) * 2); }
+.rb-col-large > .rb-large .rb-label { -webkit-line-clamp: 1; max-width: var(--rb-ch); }
+.rb-div { width: 1px; margin: 4px 3px; background: var(--border); }
+#ribbon .rb-btn { position: relative; display: flex; align-items: center; gap: 5px; padding: 0 6px; border: 0; border-radius: 4px; white-space: nowrap; }
+.rb-small { height: var(--rb-row); }
+#ribbon .rb-large { flex-direction: column; justify-content: flex-start; gap: 1px; padding: calc(3px * var(--rb-sp, 1)) 6px; text-align: center; white-space: normal; }
+.rb-btn:hover { background: var(--hover); }
+.rb-small .rb-label { max-width: var(--rb-ch); overflow: hidden; text-overflow: ellipsis; }
+.rb-large .rb-label { max-width: calc(var(--rb-ch) / 2); line-height: var(--rb-lh, 1.3); overflow: hidden; display: -webkit-box;
+  -webkit-line-clamp: 2; -webkit-box-orient: vertical; white-space: pre-line; }   /* a line break of its own (\n in its label); a small one: a space */
+.rb-icon { position: relative; display: inline-flex; flex: none; }
+.rb-letter { display: inline-grid; place-items: center; width: calc(14px * var(--rb-f, 1)); height: calc(14px * var(--rb-f, 1)); border: 1.4px solid currentColor; border-radius: 3px;
+  font-size: 9px; font-weight: 700; }
+.rb-large .rb-letter { width: calc((var(--rb-li, 32) - 4) * 1px); height: calc((var(--rb-li, 32) - 4) * 1px); font-size: 13px; }
+.rb-small .rb-svg { width: calc(16px * var(--rb-f, 1)); height: calc(16px * var(--rb-f, 1)); }
+.rb-large .rb-svg { width: calc(var(--rb-li, 32) * 1px); height: calc(var(--rb-li, 32) * 1px); }
+.rb-col-large > .rb-large .rb-svg { width: calc(var(--rb-li2, 19) * 1px); height: calc(var(--rb-li2, 19) * 1px); }
+/* Without an arrow row: that room for the icon too, up to 32. */
+.rb-large:not(:has([data-arrow])) .rb-svg { width: min(32px, calc((var(--rb-li, 32) + var(--rb-ar, 16) + 1) * 1px)); height: min(32px, calc((var(--rb-li, 32) + var(--rb-ar, 16) + 1) * 1px)); }
+.rb-col-large > .rb-large:not(:has([data-arrow])) .rb-svg { width: min(32px, calc((var(--rb-li2, 19) + var(--rb-ar, 16) + 1) * 1px)); height: min(32px, calc((var(--rb-li2, 19) + var(--rb-ar, 16) + 1) * 1px)); }
+/* A variant without a drawing of its own: its parameter in a small mark at the icon's corner. */
+.rb-mark { position: absolute; right: -6px; bottom: -3px; min-width: 9px; padding: 0 3px; border-radius: 7px; font-size: 9px;
+  font-weight: 700; line-height: 13px; text-align: center; background: var(--fg-dim); color: var(--bg); }
+.rb-arrow::after { content: ""; border: 4px solid transparent; border-top-color: currentColor; margin-top: 4px; }
+.rb-arrow { display: inline-grid; place-items: center; flex: none; }
+/* A split button (an action with a list): the arrow a part of its own behind a divider, each part lit on its own;
+   a small button's arrow the full height at its right, a large one's a row under the label, the button's width. */
+.rb-small .rb-arrow[data-arrow] { align-self: stretch; width: 18px; margin: 0 -6px 0 auto; border-radius: 0 4px 4px 0;
+  background: linear-gradient(var(--border), var(--border)) left center / 1px 12px no-repeat; }
+.rb-small:has(.rb-arrow[data-arrow]) .rb-text { align-self: stretch; flex: 1; }   /* the arrow at the button's right end */
+.rb-small:has(.rb-arrow[data-arrow]) .rb-label { padding-right: 4px; }
+.rb-large > .rb-arrow[data-arrow] { align-self: stretch; height: calc(var(--rb-ar, 16) * 1px); margin: auto -6px calc(-3px * var(--rb-sp, 1)); border-top: 1px solid var(--border);
+  border-radius: 0 0 4px 4px; }
+.rb-large > .rb-arrow::after { margin-top: 4px; }
+.rb-btn:has([data-arrow]):hover { background: none; }
+.rb-btn [data-arrow]:hover { background: var(--hover); }
+.rb-btn:has([data-arrow]):hover:not(:has([data-arrow]:hover)) { background: linear-gradient(var(--hover), var(--hover)) no-repeat;
+  background-size: var(--rb-main-w, 100%) var(--rb-main-h, 100%); }
+.rb-small:has([data-arrow]) { --rb-main-w: calc(100% - 18px); }
+.rb-large:has([data-arrow]) { --rb-main-h: calc(100% - (var(--rb-ar, 16) + 1) * 1px); }
+#ribbon .rb-btn.on { background: var(--select); color: var(--accent); }
+.rb-btn.off { opacity: .45; }
+.rb-btn.off:hover { background: none; }
+/* 22 x 18 to hit, into the group's padding and down to its edge; the mark a small corner at the outside. */
+#ribbon .rb-corner { width: 22px; height: calc(18px * var(--rb-f, 1)); padding: 0; margin-bottom: -2px; border: 0; border-radius: 2px; flex: none; position: relative; }
+.rb-corner:hover { background: var(--hover); }
+.rb-corner.rb-right { margin-right: -4px; justify-self: end; }
+.rb-corner.rb-left { margin-left: -4px; }
+.rb-corner::after { content: ""; position: absolute; right: 4px; bottom: 4px; width: 6px; height: 6px;
+  border-right: 1.4px solid var(--fg-dim); border-bottom: 1.4px solid var(--fg-dim); }
+.rb-corner.rb-left::after { right: auto; left: 4px; border-right: 0; border-left: 1.4px solid var(--fg-dim); }
+.rb-corner.rb-empty { outline: 1px dashed var(--border); }
+.rb-corner.rb-empty::after { display: none; }
+/* A corner that opens a drop-down: a small arrow down, not the launcher mark. */
+.rb-corner.rb-drop-down::after { width: 0; height: 0; bottom: 5px; right: 6px; border: 4px solid transparent; border-top-color: var(--fg-dim); border-bottom: 0; }
+.rb-corner.rb-left.rb-drop-down::after { right: auto; left: 6px; border-left: 4px solid transparent; }
+.rb-more { flex: none; align-self: center; margin-left: auto; }
+.rb-more[hidden] { display: none; }
+.rb-tip { position: absolute; z-index: 20; left: 50%; bottom: -4px; transform: translateX(-50%); padding: 0 4px; border-radius: 3px;
+  font: 600 10px/14px var(--app-font, "Segoe UI"); color: var(--bg); background: var(--fg); box-shadow: 0 1px 3px rgba(0, 0, 0, .35); pointer-events: none; }
+.rb-small > .rb-tip { left: 1px; bottom: -2px; transform: none; }
+/* Change mode: a dashed edge, Done at the right; the groups with a grip; the drop place marked. */
+body.rb-changing #ribbon { outline: 2px dashed var(--accent); outline-offset: -2px; }
+body.rb-changing .rb-bodies { overflow-x: auto; }
+#ribbon .rb-done { position: absolute; right: 6px; top: 4px; color: var(--accent); font-weight: 600; border: 1px solid var(--accent); border-radius: 4px; padding: 1px 10px; }
+.rb-grip { position: absolute; left: 0; top: 0; bottom: 0; width: 5px; cursor: grab;
+  background: repeating-linear-gradient(transparent 0 2px, var(--fg-dim) 2px 3px); opacity: .5; }
+.rb-new-group .rb-cols { align-items: center; padding: 0 10px; color: var(--fg-dim); border: 1px dashed var(--border); border-radius: 4px; }
+.rb-missing { color: var(--warning) !important; }
+.rb-drop.rb-before { box-shadow: inset 2px 0 var(--accent); }
+.rb-drop.rb-after { box-shadow: inset -2px 0 var(--accent); }
+.rb-drop.rb-under { box-shadow: inset 0 -2px var(--accent); }
+.rb-drop:not(.rb-before):not(.rb-after):not(.rb-under) { outline: 2px solid var(--accent); }
+/* F1 docked: a row dragged to the ribbon with the pointer (ribbon.js rbCallDragStart), its name beside the pointer. */
+.rb-ghost { position: fixed; z-index: 1000; pointer-events: none; padding: 2px 8px; border: 1px solid var(--border); border-radius: 4px;
+  background: var(--bg); color: var(--fg); opacity: 0.9; white-space: nowrap; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25); }
+.rb-ghost[hidden] { display: none; }
+.rb-text { display: inline-flex; align-items: center; gap: 2px; min-width: 0; }
+.rb-large .rb-text { align-items: flex-end; }
+/* Customize's chosen line (ribbon.js rbcShow). */
+.rb-picked { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 4px; }
 
-.rb-tabs {
-  display: flex;
-  gap: 2px;
-  padding: 2px 8px 0;
-}
-
-.rb-tabs button, .rb-button {
-  background: none;
-  border: 1px solid transparent;
-  border-radius: 3px;
-  color: var(--fg);
-  font: inherit;
-  cursor: default;
-}
-
-.rb-tabs button {
-  padding: 2px 10px;
-}
-
-.rb-tabs button.on {
-  border-color: var(--border);
-  border-bottom-color: var(--bg);
-  background: var(--bg);
-}
-
-.rb-groups {
-  display: flex;
-  background: var(--bg);
-  border-top: 1px solid var(--border);
-  height: 84px;
-}
-
-.rb-group {
-  display: flex;
-  flex-direction: column;
-  border-right: 1px solid var(--border);
-  padding: 3px 4px 0;
-}
-
-.rb-cols {
-  flex: 1;
-  display: flex;
-  gap: 2px;
-}
-
-.rb-col {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.rb-col.divider {
-  width: 1px;
-  background: var(--border);
-  margin: 2px 3px;
-}
-
-.rb-button.large {
-  height: 62px;
-  min-width: 52px;
-  white-space: pre-line;
-  padding: 2px 6px;
-}
-
-.rb-button.small {
-  height: 20px;
-  text-align: left;
-  padding: 0 6px;
-  white-space: nowrap;
-}
-
-.rb-button:hover:not(:disabled) {
-  background: var(--hover);
-  border-color: var(--border);
-}
-
-.rb-button.on {
-  background: var(--select);
-}
-
-.rb-button:disabled {
-  opacity: 0.45;
-}
-
-.rb-name {
-  text-align: center;
-  color: var(--fg-dim);
-  font-size: 0.85em;
-  padding: 1px 0 2px;
-}
+/* The height and showing it only when wanted. The grip: a strip of its own under the group names, dragged up or down;
+   a double click: the full height. */
+.rb-grip-h { height: 5px; cursor: ns-resize; }
+.rb-grip-h:hover, .rb-grip-h.on { background: linear-gradient(var(--accent), var(--accent)) center / 40px 2px no-repeat; }
+/* The button at the ribbon's right end, after the last group: a chevron up (only when wanted) or, slid down, a pin
+   (always). */
+#ribbon .rb-collapse { flex: none; align-self: flex-end; width: 22px; height: 18px; padding: 0; margin: 0 0 2px 4px; color: var(--fg-dim); border: 0; }
+.rb-collapse:hover { background: var(--hover); }
+.rb-more + .rb-collapse, .rb-done + .rb-collapse { margin-left: 4px; }
+.rb-more[hidden] + .rb-collapse { margin-left: auto; }
+.rb-collapse svg { width: 14px; height: 14px; }
+/* Only when wanted: the tab names stay, the buttons are hidden; shown, they slide down over the panes (which do not
+   move), with a shadow at their lower edge. */
+#ribbon.rb-on-demand:not(.rb-down) .rb-bodies, #ribbon.rb-on-demand .rb-grip-h { display: none; }
+#ribbon.rb-on-demand.rb-down .rb-bodies { position: absolute; left: 0; right: 0; top: 100%; z-index: 60;
+  padding-bottom: 2px; background: var(--bg-bar); border-bottom: 1px solid var(--border); box-shadow: 0 6px 14px rgba(0, 0, 0, .25);
+  animation: rb-slide .12s ease-out; }
+@keyframes rb-slide { from { transform: translateY(-8px); opacity: 0; } }
 
 /* F1 as a pane's page (palette.html, palettepane.js; plan 14 3.7): the whole frame or window, the list scrolling in
    the room left. */
@@ -485,6 +514,11 @@ body.bar-dragging .bars {
   color: var(--fg);
 }
 #palette .palette-list { flex: 1; min-height: 0; overflow: auto; }
+/* Its head: the name and version, and the ribbon's change mode (plan 19 3.10): while on, its rows are dragged. */
+#palette .palette-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+#palette .palette-head .about { flex: 1; }
+#palette .palette-ribbon.on { color: var(--accent); border-color: var(--accent); font-weight: 600; }
+#palette tr.draggable { cursor: grab; }
 
 #palette .filter {
   width: 100%;

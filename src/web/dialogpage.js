@@ -280,8 +280,89 @@ paneHandlers.share = m => {
   if (at) at.textContent = `(now ${m.share}%)`;
 };
 
+// Customize the ribbon (ribbon.js rbCustomize; docs/plans/executed/19-PLAN-ribbon-change-mode.md 3.9; as LexPen's): at
+// the left every action by group with a search, at the right the ribbon as lines. Each change is the window's page's
+// (askWindow: its rbcDo), which answers with the lines now and the one to choose; the line chosen is outlined on the
+// ribbon. Enter or a double click in the left list adds the action after the line chosen at the right; Del removes the
+// line; Alt+Up / Alt+Down move it; Ctrl+Z takes the last change back; Esc closes.
+function customizeHere(a) {
+  let lines = a.lines;
+  const dialog = document.createElement('dialog');
+  dialog.className = 'ask rb-customize';
+  dialog.innerHTML = `<div class="rbc-lists">
+      <div class="rbc-side"><input class="rbc-search" type="text" spellcheck="false" placeholder="Search an action">
+        <select class="rbc-actions" size="20"></select></div>
+      <div class="rbc-mid"><button data-rbc="add" title="After the line chosen at the right (Enter in the left list)">Add &gt;</button></div>
+      <div class="rbc-side"><select class="rbc-ribbon" size="21"></select></div>
+      <div class="rbc-buttons">
+        <button data-rbc="up" title="Alt+Up">Up</button><button data-rbc="down" title="Alt+Down">Down</button>
+        <button data-rbc="remove" title="Del">Remove</button><hr>
+        <button data-rbc="size">Large / small</button><button data-rbc="stack">Stacked</button>
+        <button data-rbc="dropDown" title="A button or corner whose action has a list and a window: that list under it, or its window">Drop-down</button>
+        <button data-rbc="divider">Divider</button><button data-rbc="rename" title="A tab, a group, or a button (its label)">Rename...</button><hr>
+        <button data-rbc="newTab">New tab...</button><button data-rbc="newGroup">New group...</button><hr>
+        <button data-rbc="reset">Reset</button><button data-rbc="close">Close</button></div>
+    </div>`;
+  const $q = s => dialog.querySelector(s), search = $q('.rbc-search'), actionList = $q('.rbc-actions'), list = $q('.rbc-ribbon');
+  const fillActions = () => {
+    const q = search.value.trim().toLowerCase();
+    actionList.replaceChildren(...a.actions.map(([label, rows]) => {
+      const shown = rows.filter(r => !q || `${r.title} ${r.call[0]}`.toLowerCase().includes(q));
+      if (!shown.length) return null;
+      const group = Object.assign(document.createElement('optgroup'), { label });
+      group.append(...shown.map(r => Object.assign(document.createElement('option'), { value: JSON.stringify(r.call), textContent: r.title })));
+      return group;
+    }).filter(Boolean));
+    actionList.selectedIndex = 0;
+  };
+  const fillLines = select => {
+    list.replaceChildren(...lines.map((l, n) => Object.assign(document.createElement('option'), { value: n, className: `rbc-${l.kind}`, textContent: l.text })));
+    list.selectedIndex = Math.max(0, Math.min(select, lines.length - 1));
+  };
+  const took = r => { if (r?.lines) { lines = r.lines; fillLines(r.select); } };
+  const run = async what => {
+    if (what === 'close') return dialog.close();
+    const line = lines[list.selectedIndex];
+    let name;
+    if (what === 'newTab') name = await askTextHere('New tab', '', 'Its name');
+    else if (what === 'newGroup') name = await askTextHere('New group', '', 'Its name');
+    else if (what === 'rename') {
+      if (!['tab', 'group', 'item'].includes(line?.kind)) return;
+      name = await askTextHere(line.kind === 'item' ? 'Label (empty: the action\'s title; \\n: a line break)' : line.kind === 'tab' ? 'Tab name' : 'Group name',
+        line.name ?? '', line.title ?? 'Its name');
+    }
+    if (name === null) return;
+    const call = what === 'add' && actionList.value ? JSON.parse(actionList.value) : undefined;
+    took(await askWindow({ op: what, line: list.selectedIndex, call, name }));
+    if (what === 'add') actionList.focus();
+  };
+  search.addEventListener('input', fillActions);
+  search.addEventListener('keydown', e => { if (e.key === 'ArrowDown') { e.preventDefault(); actionList.focus(); } });
+  actionList.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); run('add'); } });
+  actionList.addEventListener('dblclick', () => run('add'));
+  list.addEventListener('keydown', e => {
+    if (e.key === 'Delete') { e.preventDefault(); run('remove'); }
+    else if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) { e.preventDefault(); run(e.key === 'ArrowUp' ? 'up' : 'down'); }
+  });
+  list.addEventListener('change', () => askWindow({ op: 'show', line: list.selectedIndex }));
+  dialog.addEventListener('keydown', e => {
+    if (e.ctrlKey && !e.shiftKey && !e.altKey && e.code === 'KeyZ' && !e.target.matches('input')) { e.preventDefault(); run('undo'); }
+  });
+  dialog.addEventListener('click', e => { const b = e.target.closest('[data-rbc]'); if (b) run(b.dataset.rbc); });
+  // The ribbon changed meanwhile (Ctrl+Z, Reset, another window): its lines again, the same one chosen.
+  paneHandlers.rbcLines = m => { lines = m.lines; fillLines(list.selectedIndex); };
+  document.body.append(dialog);
+  fillActions();
+  fillLines(0);
+  dialog.showModal();
+  askWindow({ op: 'show', line: 0 });
+  search.focus();
+  return new Promise(resolve => dialog.addEventListener('close', () => resolve(null), { once: true }));
+}
+
 // What to show, from the window's page: which dialog, and what it needs.
 paneHandlers.args = async m => {
+  if (m.what === 'customize') return done(await customizeHere(m));
   if (m.what === 'about') return done(await aboutHere(m.info ?? {}));
   if (m.what === 'askText') return done(await askTextHere(m.title, m.value, m.placeholder));
   if (m.what === 'find') return done(await findHere(m));

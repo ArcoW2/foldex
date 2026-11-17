@@ -61,7 +61,14 @@ public class KeysAndRibbonTests
         var problems = new JsonArray();
         var ribbon = RibbonFile.Parse(File.ReadAllText(Path.Combine(Defaults, "ribbon.json")), problems, "shipped");
         Assert.Empty(problems);
-        foreach (var item in ribbon!["tabs"]!.AsArray().SelectMany(t => t!["groups"]!.AsArray()).SelectMany(g => g!["items"]!.AsArray()))
+        var groups = ribbon!["tabs"]!.AsArray().SelectMany(t => t!["groups"]!.AsArray()).ToList();
+        foreach (var item in groups.SelectMany(g => g!["items"]!.AsArray()))
             if (item is JsonObject o) Assert.True(names.Contains(o["action"]!.GetValue<string>()), o["action"]!.GetValue<string>());
+        // A group's corners as its buttons (plan 19 3.16): an action's name, [action, ...params] or { action }.
+        foreach (var corner in groups.Select(g => g!["corners"]).OfType<JsonObject>().SelectMany(c => c.Select(kv => kv.Value)))
+        {
+            var name = corner is JsonArray a ? a[0]!.GetValue<string>() : corner is JsonObject co ? co["action"]!.GetValue<string>() : corner!.GetValue<string>();
+            Assert.True(names.Contains(name), name);
+        }
     }
 }

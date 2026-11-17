@@ -3216,7 +3216,7 @@ let layoutTimer = 0;
 // With each pane's name as its head and tab show it (tabTitle), for the Projects menu (plan 15 3.6).
 let runId = '';   // this run of Foldex (AppHost.RunId): kept with the layout, for its scraps (plan 06 3.2)
 const windowLayout = () => JSON.parse(JSON.stringify({ panes: layout.toJSON(), docks: docks.toJSON(), active: activePane, run: runId,
-  homes: paneHomes,
+  homes: paneHomes, ribbon: rbWin,
   names: Object.fromEntries([...views].map(([id, v]) => [id, v.tabTitle()])) }));
 function tellLayout() {
   clearTimeout(layoutTimer);
@@ -3253,6 +3253,7 @@ function restoreLayout(saved, path) {
     Object.assign(layout, { panes: panes.panes, root: panes.root, next: panes.next });
     for (const kind of Object.keys(paneHomes)) delete paneHomes[kind];
     Object.assign(paneHomes, saved.homes ?? (saved.bookmarksHome ? { bookmarks: saved.bookmarksHome } : {}));
+    rbWindow(saved.ribbon);   // its tab, height and only when wanted (plan 19 3.2)
     Object.assign(docks, { areas: placed.areas, sizes: placed.sizes });
     for (const id of placed.panes()) if (!layout.pane(id)) docks.remove(id);
     for (const id of [...layout.panes.keys()]) if (!docks.find(id) && !layout.pane(id).away && !layout.pane(id).floating) layout.remove(id);
@@ -3940,6 +3941,7 @@ function settingsChanged(before) {
     for (const v of views.values()) if (v instanceof TreeView && !isPaged(v)) v.render();
   }
   if (before.quickAccess !== settings.quickAccess) for (const v of views.values()) if (v instanceof TreeView && !isPaged(v)) v.quickAccessChanged();
+  if (before.ribbonGroupNames !== settings.ribbonGroupNames || before.ribbonLabelWidth !== settings.ribbonLabelWidth) renderRibbon();
   ribbonRefresh();
 }
 
@@ -3995,6 +3997,9 @@ const events = {
   // Bars changed in a window (plan 10 3.3), and the drives there are now (3.2).
   bars(m) { setBars(m.bars); },
   barsFailed(m) { status(`The bars could not be written: ${m.error}`, true); },
+  // The ribbon changed in a window (plan 19 3.5): this one draws it again (ribbon.js setRibbon).
+  ribbon(m) { setRibbon(m.ribbon); },
+  ribbonFailed(m) { status(`The ribbon could not be written: ${m.error}`, true); },
   drives(m) { setDrives(m.drives); },
   // Columns (plan 11): the sets changed, Windows' properties for columns, the Git status and property values asked.
   columnSets(m) { setColumnSets(m.columnSets); },

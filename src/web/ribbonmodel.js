@@ -1,6 +1,7 @@
 'use strict';
 // The ribbon's rules without a page (ribbon.js draws it; the tests run this file under Jint): a group's items as its
-// columns, and the key tips of one level. Copied from LexPen (docs/plans/executed/PLAN-ribbon.md there).
+// columns, the changes of the change mode, the corners, the key tips of one level and the sizes at a height. Copied
+// from LexPen (docs/plans/executed/PLAN-ribbon.md there).
 
 const RB_STACK = 3;   // small buttons in one column at most
 
@@ -24,6 +25,83 @@ function ribbonColumns(items) {
     else cols.push({ kind: 'small', items: [{ item, i }] });
   });
   return cols;
+}
+
+// ---------- Changes of the model (plan 19 3.7; ribbon.js rbChange runs them on the ribbon) ----------
+// The item being moved, taken out of where it was (its place given back for an index fix), or made from a call.
+function rbTake(m, what) {
+  if (what.kind === 'call') {
+    const [action, ...params] = what.call;
+    return { item: params.length ? { action, params } : { action } };
+  }
+  if (what.kind === 'corner') {
+    const [t, g, side] = what.path, corners = m.tabs[t].groups[g].corners, item = ribbonItemOf(corners?.[side]);
+    if (!item) return null;
+    delete corners[side];
+    return { item };
+  }
+  if (what.kind === 'item' || what.kind === 'divider') {
+    const [t, g, i] = what.path, items = m.tabs[t].groups[g].items, item = items[i];
+    items.splice(i, 1);
+    // The one under it in its column now starts it.
+    if (item !== 'divider' && !item.stack && items[i] && items[i] !== 'divider' && items[i].stack) items[i] = { ...items[i], stack: false };
+    return { item, from: [t, g, i] };
+  }
+  return null;
+}
+
+// The model change of a drop (the tests run it under Jint). False: nothing changed.
+function rbPlaceIn(m, what, target) {
+  if (what.kind === 'tab') {   // a tab moved: before the one it is dropped on
+    if (target.kind !== 'tab') return false;
+    const [from] = what.path, [to] = target.path;
+    if (from === to) return false;
+    const [tab] = m.tabs.splice(from, 1);
+    m.tabs.splice(to, 0, tab);
+    return;
+  }
+  if (what.kind === 'group') {   // a group moved: before the group (or the button's group) it is dropped on, or to a tab
+    if (target.kind === 'newGroup' || target.kind === 'corner') return false;
+    const [ft, fg] = what.path, [g] = m.tabs[ft].groups.splice(fg, 1);
+    if (target.kind === 'tab') { m.tabs[target.path[0]].groups.push(g); return; }
+    const [tt, tg] = target.path;
+    const at = tt === ft && tg > fg ? tg - 1 : tg;
+    m.tabs[tt].groups.splice(target.kind === 'item' && target.how === 'after' ? at + 1 : at, 0, g);
+    return;
+  }
+  if (what.kind === 'divider' && target.kind === 'corner') return false;   // refused before it is taken out
+  // A target's path before the item is taken out of the same group: one less after it.
+  let tpath = target.path;
+  const taken = rbTake(m, what);
+  if (!taken) return false;
+  const item = taken.item;
+  if (taken.from && target.kind === 'item' && taken.from[0] === tpath[0] && taken.from[1] === tpath[1] && taken.from[2] < tpath[2])
+    tpath = [tpath[0], tpath[1], tpath[2] - 1];
+  if (target.kind === 'corner') {
+    if (item === 'divider') return false;
+    const [t, g, side] = tpath, grp = m.tabs[t].groups[g];
+    grp.corners = { ...(grp.corners ?? {}), [side]: ribbonCornerOf(item) };
+    return;
+  }
+  if (target.kind === 'tab') {
+    const tab = m.tabs[tpath[0]];
+    if (!tab.groups.length) tab.groups.push({ name: tab.name, items: [] });
+    tab.groups.at(-1).items.push(item === 'divider' ? item : { ...item, stack: false });
+    return;
+  }
+  if (target.kind === 'group') { m.tabs[tpath[0]].groups[tpath[1]].items.push(item === 'divider' ? item : { ...item, stack: false }); return; }
+  const [t, g, i] = tpath, items = m.tabs[t].groups[g].items;
+  if (item === 'divider') { items.splice(target.how === 'before' ? i : i + 1, 0, item); return; }
+  if (target.how === 'under') items.splice(i + 1, 0, { ...item, size: undefined, stack: true });
+  else if (target.how === 'before') items.splice(i, 0, { ...item, stack: false });
+  else items.splice(i + 1, 0, { ...item, stack: false });
+}
+
+// A part removed (dropped off the ribbon, Remove). False: nothing changed.
+function rbRemoveIn(m, what) {
+  if (what.kind === 'tab') { m.tabs.splice(what.path[0], 1); return; }
+  if (what.kind === 'group') { m.tabs[what.path[0]].groups.splice(what.path[1], 1); return; }
+  if (!rbTake(m, what)) return false;
 }
 
 // ---------- Corners ----------

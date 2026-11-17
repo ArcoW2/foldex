@@ -671,6 +671,15 @@ sealed class MainForm : Form
                     Post(new JsonObject { ["event"] = "barsFailed", ["error"] = ex.Message });
                 }
                 break;
+            case "ribbonSave":
+            case "ribbonReset":
+                // The ribbon changed in the window (plan 19 3.5): your ribbon.json, and every window gets it again.
+                try { app.SaveRibbon(msg["op"]!.GetValue<string>() == "ribbonSave" ? msg["ribbon"] : null); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    Post(new JsonObject { ["event"] = "ribbonFailed", ["error"] = ex.Message });
+                }
+                break;
             case "projects":
                 Post(new JsonObject { ["event"] = "projectList", ["list"] = app.ProjectList(this) });
                 break;

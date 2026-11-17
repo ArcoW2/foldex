@@ -63,8 +63,22 @@ async function renameProject() {
   if (name !== null) projectCommand('rename', { name });
 }
 
-// The list came: the menu opens (at the bottom bar, above the project's name).
+// The menu's items, for the ribbon's Projects button (its list under it; plan 19 3.11).
+let projectListWaiting = null;
+function projectListItems() {
+  return new Promise(resolve => {
+    projectListWaiting = resolve;
+    post({ op: 'projects' });
+  });
+}
+
+// The list came: the menu opens (at the bottom bar, above the project's name), or the ribbon's list gets its items.
 function projectListCame(list) {
+  if (projectListWaiting) {
+    const resolve = projectListWaiting;
+    projectListWaiting = null;
+    return resolve(projectMenuItems(list));
+  }
   const r = document.getElementById('project').getBoundingClientRect();
   const at = projectMenuAt ?? { x: r.left, y: r.top };
   openMenu(at.x, at.y, projectMenuItems(list));

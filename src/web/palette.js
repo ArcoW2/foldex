@@ -15,9 +15,10 @@ function paletteRows() {
   return rows;
 }
 
-// What F1's page is sent: the rows, each marked when it does not work on the active pane now.
+// What F1's page is sent: the rows, each marked when it does not work on the active pane now; whether the ribbon is
+// being changed (its rows dragged onto it then; plan 19 3.10).
 function paletteForPage() {
-  return { kind: 'rows', version, rows: paletteRows().map(r => ({ ...r, off: !actionEnabled(r.call[0], r.call.slice(1)) })) };
+  return { kind: 'rows', version, ribbon: rb.changing, rows: paletteRows().map(r => ({ ...r, off: !actionEnabled(r.call[0], r.call.slice(1)) })) };
 }
 
 // F1 pressed: the pane comes (where it was last; the first time floating), its search gets the keyboard.
@@ -35,5 +36,14 @@ function palettePageAsks(view, m) {
     case 'run': return runAction(m.call[0], m.call.slice(1), { from: 'palette' });
     case 'refresh': return view.render();
     case 'close': return closePane(view.id);
+    case 'ribbonChange': return runAction('ribbon.change');   // its button: the ribbon's change mode on or off
+    // Docked: a row dragged to the ribbon with the pointer (ribbon.js rbCallDragStart); its point in F1's frame.
+    case 'ribbonDragStart': return rbCallDragStart(m.call);
+    case 'ribbonDragMove':
+    case 'ribbonDragEnd': {
+      if (m.kind === 'ribbonDragEnd' && !m.drop) return rbCallDragEnd();
+      const r = view.channel.frame.getBoundingClientRect();
+      return rbCallDragAt(r.left + m.x, r.top + m.y, m.kind === 'ribbonDragEnd');
+    }
   }
 }

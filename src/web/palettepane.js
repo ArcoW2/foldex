@@ -10,11 +10,16 @@ const pal = {
   input: document.querySelector('#palette .filter'),
   body: document.querySelector('#palette tbody'),
   list: document.querySelector('#palette .palette-list'),
+  ribbonButton: document.querySelector('#palette .palette-ribbon'),
   rows: [],
+  changing: false,   // the ribbon is being changed: rows are dragged onto it
 };
 
 paneHandlers.rows = m => {
   pal.rows = m.rows ?? [];
+  pal.changing = !!m.ribbon;
+  pal.ribbonButton.textContent = pal.changing ? 'Done changing the ribbon' : 'Change the ribbon';
+  pal.ribbonButton.classList.toggle('on', pal.changing);
   pal.el.querySelector('.about').textContent = `Foldex ${m.version ?? ''}`;   // the name and version (plan 10 3.2)
   fill(false);
 };
@@ -28,6 +33,8 @@ function fill(searched = true) {
   pal.body.replaceChildren(...shown.map(r => {
     const tr = document.createElement('tr');
     tr.dataset.call = JSON.stringify(r.call);
+    tr.draggable = pal.changing && floating;   // floating: the browser's drag, between windows (docked: below)
+    tr.classList.toggle('draggable', pal.changing);
     if (r.off) tr.classList.add('disabled');
     for (const text of [r.group, r.title, r.keys]) tr.insertCell().textContent = text;
     tr.title = r.hint;
@@ -50,8 +57,9 @@ addEventListener('keydown', e => {
   const step = { ArrowDown: 1, ArrowUp: -1, PageDown: 10, PageUp: -10 }[e.key];
   if (step) select(Math.max(0, Math.min(rows.length - 1, at + step)));
   else if (e.key === 'Enter') run(rows[at]);
-  else if (e.key === 'Escape') {   // the search goes first, then the pane
-    if (pal.input.value) { pal.input.value = ''; fill(); }
+  else if (e.key === 'Escape') {   // a row's drag ends first, then the search goes, then the pane
+    if (rowDrag?.dragging()) rowDrag.cancel();
+    else if (pal.input.value) { pal.input.value = ''; fill(); }
     else toWindow({ kind: 'close' });
   } else return;
   e.preventDefault();
@@ -63,4 +71,51 @@ pal.body.addEventListener('click', e => {
   pal.input.focus();
 });
 pal.body.addEventListener('dblclick', e => run(e.target.closest('tr')));
+
+// The ribbon (plan 19 3.10): its change mode on or off; while on, a row dragged onto it adds its action.
+pal.ribbonButton.addEventListener('click', () => toWindow({ kind: 'ribbonChange' }));
+// Floating: the browser's drag, between windows.
+pal.body.addEventListener('dragstart', e => {
+  const row = e.target.closest('tr');
+  if (!row || !pal.changing) return e.preventDefault();
+  e.dataTransfer.setData('text/plain', 'foldex-call:' + row.dataset.call);
+  e.dataTransfer.effectAllowed = 'copyMove';
+});
+// Docked (a frame of another site): the browser lets no drag from here drop in the window around it, so a row goes to
+// the ribbon with the pointer: it starts here (ribbonDragStart); the moves and the release over this frame are told
+// from here (ribbonDragMove, ribbonDragEnd: the point in this frame), those over the rest of the window the window sees
+// itself (ribbon.js rbCallDragStart). Esc: it ends, nothing added.
+let rowDrag = null;
+pal.body.addEventListener('pointerdown', e => {
+  rowDrag?.end();
+  const row = e.target.closest('tr');
+  if (floating || !pal.changing || !row || e.button !== 0) return;
+  const call = JSON.parse(row.dataset.call), x0 = e.clientX, y0 = e.clientY;
+  let dragging = false;
+  const move = ev => {
+    if (!(ev.buttons & 1)) return rowDrag?.end();   // let go outside this frame: the window ended it
+    if (!dragging) {
+      if (Math.abs(ev.clientX - x0) + Math.abs(ev.clientY - y0) < 6) return;
+      dragging = true;
+      toWindow({ kind: 'ribbonDragStart', call });
+    }
+    toWindow({ kind: 'ribbonDragMove', x: ev.clientX, y: ev.clientY });
+  };
+  const up = ev => {
+    if (dragging) toWindow({ kind: 'ribbonDragEnd', drop: true, x: ev.clientX, y: ev.clientY });
+    rowDrag?.end();
+  };
+  rowDrag = {
+    dragging: () => dragging,
+    cancel: () => { toWindow({ kind: 'ribbonDragEnd', drop: false }); rowDrag.end(); },
+    end: () => {
+      removeEventListener('pointermove', move);
+      removeEventListener('pointerup', up);
+      rowDrag = null;
+    },
+  };
+  addEventListener('pointermove', move);
+  addEventListener('pointerup', up);
+});
+paneHandlers.ribbonDragDone = () => rowDrag?.end();   // the window ended it (let go there, or Esc)
 addEventListener('focus', () => toWindow({ kind: 'refresh' }));

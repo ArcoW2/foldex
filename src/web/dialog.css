@@ -25,6 +25,20 @@ dialog.inline.rename-many { width: 760px; }
 dialog.inline .rn-list { max-height: 360px; }
 dialog.inline.size-window { width: 420px; }
 dialog.inline.select-columns { width: auto; }
+/* Customize the ribbon (dialogpage.js customizeHere; as LexPen's .mm-rb-customize): every action, Add, the ribbon as
+   lines, the buttons. */
+dialog.inline.rb-customize { width: auto; }
+.rbc-lists { display: flex; gap: 8px; align-items: stretch; }
+.rbc-side { display: flex; flex-direction: column; gap: 4px; width: 280px; }
+.rbc-side select, .rbc-search { font: inherit; color: var(--fg); background: var(--bg-side); border: 1px solid var(--border); border-radius: 4px; }
+.rbc-side select { flex: 1; min-height: 360px; }
+.rbc-search { padding: 3px 6px; }
+.rbc-mid { display: flex; align-items: center; }
+.rbc-buttons { display: flex; flex-direction: column; gap: 3px; min-width: 120px; }
+.rbc-buttons hr { width: 100%; border: 0; border-top: 1px solid var(--border); margin: 3px 0; }
+.rbc-tab { font-weight: 700; }
+.rbc-group { font-weight: 600; color: var(--accent); }
+.rbc-corner, .rbc-divider { color: var(--fg-dim); }
 /* A window you can resize (Select columns; dialogpage.js fitWindow): its first size the dialog's own, then the dialog
    fills the window, its lists taking the room. */
 dialog.inline.fills[open] { inset: 0; width: auto; height: auto; display: flex; flex-direction: column; }

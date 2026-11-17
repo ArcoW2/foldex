@@ -226,7 +226,7 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 | The Projects pane's own question (a name, a copy's name) | modal floating window | modal floating window (built) | | asked by the window's page for the pane (askText) |
 | The Size of a bar (bars.js) | floating window, not modal | floating window, not modal (built); never docks | | moved off the bar it sizes; the main window stays usable and can be resized meanwhile, the bar's marks following |
 | Foldex's question window (AskForm) | a modal window of its own | modal floating window (as now) | | |
-| The ribbon's Customize (plan 19 3.9) | (not built) | modal floating window | | |
+| The ribbon's Customize (plan 19 3.9) | (not built) | modal floating window (built) | | every action beside the ribbon as lines; each change made in the window's page |
 | About Foldex (View > Foldex, beside Settings; as LexPen's) | modal floating window | modal floating window (built) | | the project, by whom, Buy me a coffee (opens in the browser), the build, what it runs on |
 
 ## 4. Open questions

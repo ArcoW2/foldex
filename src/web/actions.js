@@ -142,6 +142,15 @@ action('item.rename', { title: 'Rename', hint: "the focused item's name in place
   } });
 action('folder.up', { title: 'Up', hint: 'the folder above, through the parent pane', group: 'folders', enabled: () => !!activeView(),
   run: () => activeView().up() });
+// Every drive as the drives bar has them (plan 19 3.11): on the ribbon its list under the button; from F1 or a key at
+// the pane. A click goes there in the active pane.
+const drivesMenu = () => drives.map(d => ({ label: d.total ? `${d.name}  (${formatSize(d.free)} free of ${formatSize(d.total)})` : d.name,
+  run: () => activePane && goTo(activePane, d.id) }));
+action('drives.list', { title: 'Drives', hint: 'every drive: a click goes there in the active pane', group: 'folders',
+  dropDownOnly: true, dropDown: () => drivesMenu(), run: () => {
+    const r = (views.get(activePane)?.body ?? document.body).getBoundingClientRect();
+    openMenu(r.left, r.top, drivesMenu());
+  } });
 action('refresh', { title: 'Refresh', group: 'folders', enabled: () => !!activeView(), run: () => activeView().refresh() });
 
 // ---------- Panes (docs/plans/executed/03-PLAN-connected-panes.md 3.4) ----------
@@ -197,6 +206,14 @@ action('pane.toSide', { title: 'To the pane at a side', hint: 'the keyboard to t
 
 // ---------- View ----------
 
+// The ribbon itself (ribbon.js; docs/plans/executed/19-PLAN-ribbon-change-mode.md 3.14).
+action('ribbon.change', { title: 'Change the ribbon', hint: 'its change mode: drag actions from F1 onto it, buttons, groups and tabs around and off it; right-click a button for its size, label and more; Esc or Done ends it',
+  group: 'view', checked: () => rb.changing, enabled: () => !!rb.model, run: () => rbChangeMode(!rb.changing) });
+action('ribbon.customize', { title: 'Customize the ribbon...', hint: 'the ribbon\'s tabs, groups and buttons as a list beside every action: add, remove, move, large or small, labels (also by keyboard)',
+  group: 'view', enabled: () => !!rb.model, run: () => rbCustomize() });
+action('ribbon.reset', { title: 'Reset the ribbon', hint: 'back to the ribbon Foldex ships (your ribbon.json removed)', group: 'view', run: () => rbReset() });
+action('ribbon.onDemand', { title: 'Ribbon only when wanted', hint: 'only its tab names stay; Alt, a drag down from the tab names or a click on one slides it down over the panes, and it goes away after a button',
+  group: 'view', checked: () => rbWin.show === 'onDemand', run: () => rbSetWindow('show', rbWin.show === 'onDemand' ? 'always' : 'onDemand') });
 action('log.toggle', { title: 'Log', hint: "a pane at the bottom with the status line's messages and the file operations",
   group: 'view', checked: () => !!logPane, run: () => toggleLog() });
 action('preview.toggle', { title: 'Preview', hint: 'a preview pane showing the item of the pane with the keyboard', group: 'view',
@@ -221,7 +238,9 @@ action('pane.filter', { title: 'Filter...', hint: 'the files the active pane sho
 
 // Bookmarks (docs/plans/executed/26-PLAN-bookmarks.md; bookmarks.js): the menu (the ribbon's Bookmarks), the current folder added
 // or taken off, Manage; a bookmark opened by its keys (each bookmark a variant, so F1 lists them with their keys).
+// On the ribbon its list under the button (dropDownOnly, plan 19 3.11); from F1 or a key at the pane.
 action('bookmarks.menu', { title: 'Bookmarks', hint: 'the bookmarks; add the current folder, add one, manage them', group: 'folders',
+  dropDownOnly: true, dropDown: () => bookmarksMenu(),
   run: (params, ctx) => {
     const r = (ctx.el ?? views.get(activePane)?.body ?? document.body).getBoundingClientRect();
     openMenu(r.left, ctx.el ? r.bottom : r.top, bookmarksMenu());
@@ -246,7 +265,7 @@ const isFolderList = id => views.get(id) instanceof ListView && !(views.get(id) 
 const viewsPane = () => !activePane ? null : isFolderList(activePane) ? activePane
   : layout.followers(activePane, layout.keyOf(activePane)).map(f => f.id).find(isFolderList) ?? null;
 action('view.menu', { title: 'Views', hint: 'details, icons or thumbnails, for the active pane (a tree: the pane following it)', group: 'panes',
-  enabled: () => !!viewsPane(), run: (params, ctx) => {
+  enabled: () => !!viewsPane(), dropDownOnly: true, dropDown: () => viewsMenu(viewsPane()), run: (params, ctx) => {
     const id = viewsPane();
     const r = (ctx.el ?? views.get(id).body).getBoundingClientRect();
     openMenu(r.left, ctx.el ? r.bottom : r.top, viewsMenu(id));
@@ -254,7 +273,7 @@ action('view.menu', { title: 'Views', hint: 'details, icons or thumbnails, for t
 action('palette', { title: 'All actions and keys', group: 'app', run: () => openPalette() });
 // Projects (docs/plans/15-PLAN-projects.md 3.6; projectmenu.js).
 action('projects.menu', { title: 'Projects', hint: 'every project and its windows, as at the project in the bottom bar', group: 'projects',
-  run: () => projectsMenu() });
+  dropDownOnly: true, dropDown: () => projectListItems(), run: () => projectsMenu() });
 action('projects.manage', { title: 'Manage projects', hint: 'every project in one list: open, close, merge, rename, delete',
   group: 'projects', run: () => openOnePane('projects') });
 action('project.new', { title: 'New project', hint: 'a new project in a window of its own', group: 'projects', run: async () => {

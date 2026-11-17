@@ -24,11 +24,39 @@ static class RibbonFile
         var userPath = Path.Combine(dataDir, Name);
         if (File.Exists(userPath))
         {
-            var mine = Parse(File.ReadAllText(userPath), problems, "your " + Name);
+            var mine = Parse(ReadText(userPath), problems, "your " + Name);
             if (mine is not null) return new JsonObject { ["ribbon"] = mine, ["user"] = true, ["problems"] = problems };
         }
-        var shipped = File.Exists(shippedPath) ? Parse(File.ReadAllText(shippedPath), problems, "the shipped " + Name) : null;
+        var shipped = File.Exists(shippedPath) ? Parse(ReadText(shippedPath), problems, "the shipped " + Name) : null;
         return new JsonObject { ["ribbon"] = shipped ?? new JsonObject { ["tabs"] = new JsonArray() }, ["user"] = false, ["problems"] = problems };
+    }
+
+    static string ReadText(string path)
+    {
+        for (var attempt = 0; ; attempt++)
+        {
+            try { return File.ReadAllText(path); }
+            catch (IOException) when (attempt < 4) { Thread.Sleep(50); }   // being saved
+        }
+    }
+
+    /// <summary>Your ribbon written (the change mode's changes, docs/plans/executed/19-PLAN-ribbon-change-mode.md 3.5),
+    /// indented, through a .tmp file as BarsFile.Save does.</summary>
+    public static void Save(string dataDir, JsonNode ribbon)
+    {
+        Directory.CreateDirectory(dataDir);
+        var path = Path.Combine(dataDir, Name);
+        var text = "// Your ribbon (Foldex writes it when you change the ribbon; Reset removes it). See defaults\\ribbon.json.\n" +
+            ribbon.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n";
+        File.WriteAllText(path + ".tmp", text);
+        File.Move(path + ".tmp", path, true);
+    }
+
+    /// <summary>Reset: your ribbon.json removed, so the shipped one is used again.</summary>
+    public static void Reset(string dataDir)
+    {
+        var path = Path.Combine(dataDir, Name);
+        if (File.Exists(path)) File.Delete(path);
     }
 
     /// <summary>The ribbon of a text, cleaned; null when it is no JSON object with tabs.</summary>

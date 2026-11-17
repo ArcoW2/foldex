@@ -263,6 +263,16 @@ sealed class AppHost : ApplicationContext
         foreach (var w in windows) w.Tell((JsonObject)message.DeepClone());
     }
 
+    /// <summary>Your ribbon.json written from a window's ribbon (its change mode, Customize; plan 19 3.5), or removed
+    /// (null: the shipped ribbon again); every window gets the ribbon again.</summary>
+    public void SaveRibbon(JsonNode? ribbon)
+    {
+        if (ribbon is null) RibbonFile.Reset(DataDir);
+        else RibbonFile.Save(DataDir, ribbon);
+        var message = new JsonObject { ["event"] = "ribbon", ["ribbon"] = RibbonFile.Load(DataDir, Path.Combine(DefaultsDir, RibbonFile.Name)) };
+        foreach (var w in windows) w.Tell((JsonObject)message.DeepClone());
+    }
+
     /// <summary>The Find dialog's searches.json written (docs/plans/executed/06-PLAN-search-and-scrap.md 3.3); every window gets it
     /// again.</summary>
     public void SaveSearches(JsonNode searches)
