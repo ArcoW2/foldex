@@ -144,7 +144,7 @@ followNow = (paneId, item) => { flush(); toWindow({ kind: 'followNow', item }); 
 const WindowFunctions = ['openBookmark', 'openManageSets'];
 for (const name of WindowFunctions) globalThis[name] = (...args) => { flush(); toWindow({ kind: 'windowFn', fn: name, args }); };
 showGlobal = id => toWindow({ kind: 'global', id });
-status = (text, warn = false) => toWindow({ kind: 'status', text, warn });
+status = (text, warn = false, detail = 'messages') => toWindow({ kind: 'status', text, warn, detail });
 activate = id => { if (activePane !== id) toWindow({ kind: 'activate' }); };
 openPaneMenu = (id, e) => {
   e.preventDefault();

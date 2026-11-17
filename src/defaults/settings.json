@@ -36,7 +36,8 @@
   "searchDelay": 600,              // ms after typing in a pane before it filters (more than 3 characters) or jumps, 100 to 2000
   "sortColumnIntensity": 200,     // the text of the columns the pane is sorted on, 0 to 200 %: 100 the theme's dim text, 200 the full text
   "otherColumnsIntensity": 160,   // the text of every other column, the name too, the same way
-  "actionMessageSeconds": 2,      // seconds what an action did (Copied ...) stays lit in the status line, 1 to 30
+  "logDetail": "changes",          // what the Log shows besides errors and messages: messages, copies (copy, move), changes (also delete, new, rename), verbose (also every folder shown)
+  "actionMessageSeconds": 2,     // seconds what an action did (Copied ...) stays lit in the status line, 1 to 30
   "sortColumnBackground": 6,      // the background of the columns sorted on, 0 to 50 %: their colour over the row (stripes, selection, focus blend)
   "sortColumnBackgroundColour": "", // that colour as #rrggbb; empty: the theme's text colour
   "focusIntensity": 100,          // the focused item's highlight, 0 to 200 %: 100 the theme's, lower fainter, higher stronger

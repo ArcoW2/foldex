@@ -122,7 +122,7 @@ async function dialogWindow(title, args, calls = null, modal = true, opened = nu
       if (m.kind === 'host') ch.send({ kind: 'answer', key: `answer:${m.req}`, req: m.req, value: await askHost(m.msg) });
       else if (m.kind === 'call') ch.send({ kind: 'answer', key: `answer:${m.req}`, req: m.req, value: await calls?.(m.msg) });
       else if (m.kind === 'post') post(m.msg);
-      else if (m.kind === 'status') status(m.text, m.warn);
+      else if (m.kind === 'status') status(m.text, m.warn, m.detail);
     } });
   Object.assign(ch, { floating: true, floatReady: false, floatQueue: new Map() });
   opened?.(ch);

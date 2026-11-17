@@ -86,7 +86,7 @@ const inTextField = () => !!document.activeElement?.matches('input, textarea, [c
 
 function setPending(stroke) {
   keys.pending = stroke;
-  if (stroke) status(`${stroke}, ...`);
+  if (stroke) status(`${stroke}, ...`, false, 'verbose');
 }
 
 document.addEventListener('keydown', e => {

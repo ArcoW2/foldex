@@ -128,7 +128,7 @@ function pagedReceive(v, m) {
     case 'execute': return execute(id, m.item);
     case 'goTo': return goTo(id, m.path);
     case 'global': return activePane === id && showGlobal(m.id);
-    case 'status': return status(m.text, m.warn);
+    case 'status': return status(m.text, m.warn, m.detail);
     case 'ribbon': return ribbonRefresh();
     case 'watched': return tellWatched();
     case 'action':

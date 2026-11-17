@@ -78,7 +78,9 @@ const log = { entries: [], seen: 0 };
 const LogMax = 1000, LogRepeat = 1500;
 let logPane = null;
 
-function status(text, warn = false) {
+// A message in the status line, and in the log; detail 'verbose' for one only telling where a pane is (a folder shown,
+// its count of items), which the log shows only at the setting logDetail's Verbose.
+function status(text, warn = false, detail = 'messages') {
   if (actionMessage) {   // an action's message replaced: it no longer goes, nor brings back what it covered
     clearTimeout(actionMessage.timer);
     actionMessage = null;
@@ -86,7 +88,7 @@ function status(text, warn = false) {
   $('status').textContent = text;
   $('status').classList.toggle('warn', warn);
   $('status').classList.remove('action');
-  logStatus(text, warn);
+  logStatus(text, warn, detail);
 }
 
 // What an action did (Copied ...): lit in the status line, flashing twice as it comes, and gone after the setting
@@ -1457,10 +1459,10 @@ class ListView {
     if (names.length) {
       const missing = this.entries.filter(x => !(x.props && names.every(p => p in x.props)) && !x.propsAll);
       if (missing.length) {
-        status(`Reading ${by.map(s => columnInfo(s.id).title).join(', ')} of ${missing.length} items to sort by it...`);
+        status(`Reading ${by.map(s => columnInfo(s.id).title).join(', ')} of ${missing.length} items to sort by it...`, false, 'verbose');
         await this.askProps(missing, names);
         for (const x of missing) x.propsAll = true;
-        status(`${this.name ?? ''}: ${this.entries.length} items`);
+        status(`${this.name ?? ''}: ${this.entries.length} items`, false, 'verbose');
       }
     }
     this.entries.sort(this.comparer());
@@ -1769,7 +1771,7 @@ class ListView {
       this.render();
       this.autoFit();   // an item come in or changed: an auto column follows (plan 28 3.6)
       if (activePane === this.id && $('status').textContent.startsWith(`${this.name}: `))
-        status(`${this.name}: ${this.entries.length} items`);
+        status(`${this.name}: ${this.entries.length} items`, false, 'verbose');
     });
   }
 
@@ -1779,7 +1781,7 @@ class ListView {
     this.entries = this.entries.concat(entries.filter(this.passes())).sort(this.comparer());
     this.render();
     this.autoFit();
-    status(`${this.itemCount()} items so far...`);
+    status(`${this.itemCount()} items so far...`, false, 'verbose');
   }
 
   // What it shows of what it read: hidden items, Show, the filter and the search text (search.js); ".." always.
@@ -1793,7 +1795,7 @@ class ListView {
     this.entries = this.all.filter(this.passes()).sort(this.comparer());
     this.selected = new Set([...this.selected].filter(id => this.entries.some(x => x.id === id)));
     this.render();
-    if (paneSearch.has(this.id)) status(`${this.entries.length} of ${this.all.length} items`);
+    if (paneSearch.has(this.id)) status(`${this.entries.length} of ${this.all.length} items`, false, 'verbose');
   }
 
   // Typed (search.js): the first item from the focus on (then from the top) whose name passes the test.
@@ -1816,7 +1818,7 @@ class ListView {
     if (m.error) status(`${m.name}: ${m.error}`, true);
     // A share that does not answer: what the cache had, said not to be current (plan 24 3.8).
     else if (m.offline) status(`${m.name}: ${this.itemCount()} items as last read; not current: ${m.offline}`, true);
-    else status(`${m.name}${m.elevated ? ' (as administrator)' : ''}: ${this.itemCount()} items`);
+    else status(`${m.name}${m.elevated ? ' (as administrator)' : ''}: ${this.itemCount()} items`, false, 'verbose');
     drawTabs();   // the tab shows the folder's name
     // The focus of this branch, as it was left, comes back when it is still there; nothing focused here yet (a pane
     // opened, another folder): the first item, as Down would. Its followers wait until the focus moves, but a preview
@@ -2134,7 +2136,7 @@ class ScrapView extends ListView {
 
   tellCount() {
     const shown = this.entries.length, all = this.all.length;
-    status(`${this.tabTitle()}: ${shown === all ? `${all} items` : `${shown} of ${all} items`}${this.searching ? ', searching...' : ''}`);
+    status(`${this.tabTitle()}: ${shown === all ? `${all} items` : `${shown} of ${all} items`}${this.searching ? ', searching...' : ''}`, false, 'verbose');
   }
 
   // Its ids kept with the layout (they come back as long as Foldex runs).
@@ -2479,13 +2481,25 @@ class InfoView extends PreviewView {
 // their own line), oldest first, for as long as the window is open; the host keeps the operations of all windows and
 // tells a new page (hello). Shown in the Log pane (LogView), docked at the bottom and hidden until the status bar's Log
 // button (or the action log.toggle) shows it. A message that follows one that is not a warning within LogRepeat ms
-// takes its line (a count that runs: "Scrap: 120 items, searching..."), so the log is not flooded.
-function logStatus(text, warn) {
+// takes its line (a count that runs: "Scrap: 120 items, searching..."), so the log is not flooded. What the Log pane
+// shows of it: the setting logDetail (logShows).
+function logStatus(text, warn, detail = 'messages') {
   if (!text) return;
   const last = log.entries.at(-1), now = Date.now();
-  if (last?.kind === 'status' && !last.warn && !warn && now - last.at < LogRepeat) Object.assign(last, { text, at: now });
-  else log.entries.push({ kind: 'status', text, warn, at: now });
+  if (last?.kind === 'status' && !last.warn && !warn && last.detail === detail && now - last.at < LogRepeat) Object.assign(last, { text, at: now });
+  else log.entries.push({ kind: 'status', text, warn, detail, at: now });
   logChanged();
+}
+
+// The setting logDetail, least first: errors and messages always; then copy and move; then delete, new and rename;
+// Verbose also every folder shown. An unknown value: delete, new and rename.
+const LogDetails = ['messages', 'copies', 'changes', 'verbose'];
+const entryDetail = e => e.kind === 'op'
+  ? e.op.error ? 'messages' : e.op.kind === 'copy' || e.op.kind === 'move' ? 'copies' : 'changes'
+  : e.warn ? 'messages' : e.detail ?? 'messages';
+function logShows(e) {
+  const at = LogDetails.indexOf(settings.logDetail);
+  return LogDetails.indexOf(entryDetail(e)) <= (at < 0 ? 2 : at);
 }
 
 // A file operation came or changed (fileOp, hello): its line, made once and kept up to date.
@@ -2514,7 +2528,7 @@ function logChanged() {
 }
 
 // The log's lines as the Log pane's page draws them.
-const logLines = () => log.entries.map(e => ({ at: e.at, warn: !!(e.warn || e.op?.error), text: e.kind === 'op' ? opText(e.op) : e.text }));
+const logLines = () => log.entries.filter(logShows).map(e => ({ at: e.at, warn: !!(e.warn || e.op?.error), text: e.kind === 'op' ? opText(e.op) : e.text }));
 
 // The status bar's Log button: lit while the pane is shown; marked when a warning or a failed operation came that
 // the pane has not shown yet.
@@ -4007,6 +4021,7 @@ const events = {
     settingsProblems(m);
     paneOfKind('settings')?.fromHost(m);
     paneOfKind('projects')?.fromHost(m);
+    logPane?.render();   // its lines as logDetail says
   },
   open(m) {
     const tree = views.get(layout.root);
