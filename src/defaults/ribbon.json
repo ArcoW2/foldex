@@ -14,7 +14,8 @@
 //   "label": its text, shorter than the action's title; "\n" a line break on a large button,
 //   "tip": its key tip, one or two letters (Alt shows them),
 //   "open": "dropDown" (an action with a list and a window: its list under the button; the default its window) }.
-// A group's "corners": { "left", "right" }: a small button beside the group's name, each an action's name,
+// A group's "corners": { "left", "right" }: a small button beside the group's name (as LexPen: the left one its
+// manager, the right one its list), each an action's name,
 // [action, ...params], or { "action", "params", "open" }.
 // A button whose action has variants or a list (Views, Bookmarks, Drives) has an arrow that lists them.
 {
@@ -62,19 +63,19 @@
         { "action": "layout.preset", "params": ["dual"], "label": "Dual", "stack": true },
         { "action": "layout.preset", "params": ["columns"], "label": "Columns", "stack": true },
         { "action": "layout.preset", "params": ["preview"], "label": "With preview" } ] },
-      { "name": "Projects", "items": [
+      { "name": "Projects", "corners": { "left": "projects.manage", "right": "projects.menu" }, "items": [
         { "action": "projects.menu", "size": "large", "label": "Projects" },
-        { "action": "projects.manage", "label": "Manage" }, { "action": "project.new", "label": "New", "stack": true },
+        { "action": "projects.manage", "label": "Manage projects" }, { "action": "project.new", "label": "New", "stack": true },
         { "action": "project.rename", "label": "Rename", "stack": true } ] },
       { "name": "Columns", "items": [
         { "action": "columns.fitName", "label": "Fit columns" },
         { "action": "columns.fit", "label": "Fit all columns", "stack": true } ] } ] },
 
     { "name": "Customize", "groups": [
-      { "name": "Column sets", "items": [
-        { "action": "columns.manage", "size": "large", "label": "Manage\nsets" } ] },
-      { "name": "Bookmarks", "items": [
-        { "action": "bookmarks.manage", "size": "large", "label": "Manage" },
+      { "name": "Column sets", "corners": { "left": "columns.manage" }, "items": [
+        { "action": "columns.manage", "size": "large", "label": "Manage\ncolumn sets" } ] },
+      { "name": "Bookmarks", "corners": { "left": "bookmarks.manage", "right": "bookmarks.menu" }, "items": [
+        { "action": "bookmarks.manage", "size": "large", "label": "Manage\nbookmarks" },
         { "action": "bookmarks.add", "label": "Add the current folder" } ] },
       { "name": "Bars", "items": [
         { "action": "bars.change", "label": "Change bars" },

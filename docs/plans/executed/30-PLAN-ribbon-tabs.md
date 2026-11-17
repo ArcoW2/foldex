@@ -91,8 +91,13 @@ plan (`30-PLAN-ribbon-tabs.md.images/`): [Home](30-PLAN-ribbon-tabs.md.images/ri
 [View](30-PLAN-ribbon-tabs.md.images/ribbon-view.png), [Customize](30-PLAN-ribbon-tabs.md.images/ribbon-customize.png),
 [Tools](30-PLAN-ribbon-tabs.md.images/ribbon-tools.png).
 
-- In Customize, Column sets' Manage sets and the bookmarks' Manage are large buttons (a group of one or two needs
-  them to be found); Add the current folder is small beside it.
+- In Customize, Manage column sets and Manage bookmarks are large buttons (a group of one or two needs them to be
+  found); Add the current folder is small beside it. A Manage button says what it manages (Manage column sets, Manage
+  bookmarks, Manage projects).
+- Corners as LexPen's: the left one opens the manager, the right one the list. Column sets: Manage column sets at the
+  left (no list of sets at the right: no action has one). Bookmarks: Manage bookmarks at the left, the bookmarks' list
+  at the right. Projects (View): Manage projects at the left, the projects' list at the right. Tested in the test copy:
+  the Bookmarks corners, the right one opening the list under it, the left one the Bookmarks pane.
 - Measured in the test copy (the groups' widths added, CSS px): Home 1278, View 1010, Customize 918, Tools 165. On a
   ribbon 1000 px wide Home puts Go and Show into `>>` (whole groups from the right, as plan 19 has it).
 - Tested: `dotnet test` 238 passed (the shipped ribbon's actions known, every button with its icon); in the test copy
