@@ -1123,6 +1123,26 @@ body[data-focus-away] :is(.row, .tile).selected.focused {
   left: 0;
 }
 
+/* The edge under the mouse or being dragged: its line in the accent, a pixel wider at each side (the grips). */
+.colcell.edge-lit {
+  border-right-color: var(--accent);
+}
+
+.colgrip.lit::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 1px;
+  background: var(--accent);
+}
+
+.colgrip.before.lit::after {
+  right: auto;
+  left: 0;
+}
+
 .list .body, .tree .body {
   overflow-x: auto;
 }

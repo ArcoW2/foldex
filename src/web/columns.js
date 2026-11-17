@@ -345,6 +345,20 @@ function drawColumnHeader(view) {
     before = col;
     inner.append(cell);
   }
+  // An edge under the mouse (or being dragged) lit as one bar: its line, a pixel left of it (the left grip) and a pixel
+  // right of it (the right grip).
+  const light = (id, on) => {
+    for (const g of inner.querySelectorAll('.colgrip')) {
+      if (g.dataset.of !== id) continue;
+      g.classList.toggle('lit', on);
+      if (!g.classList.contains('before')) g.parentElement.classList.toggle('edge-lit', on);   // its line itself
+    }
+  };
+  for (const g of inner.querySelectorAll('.colgrip')) {
+    g.addEventListener('mouseenter', () => light(g.dataset.of, true));
+    g.addEventListener('mouseleave', () => { if (view.resizing !== g.dataset.of) light(g.dataset.of, false); });
+  }
+  if (view.resizing) light(view.resizing, true);
   head.replaceChildren(inner);
   inner.style.transform = `translateX(${-view.body.scrollLeft}px)`;
 }
@@ -404,6 +418,7 @@ function resizeColumn(view, col, e) {
   e.stopPropagation();
   const fontPx = view.fontPx();
   const start = e.clientX, from = (col.width ?? columnInfo(col.id).width) * fontPx;
+  view.resizing = col.id;   // its edge stays lit while dragged (drawColumnHeader)
   const move = m => {
     col.width = withinLimits(col, Math.round((from + m.clientX - start) / fontPx * 10) / 10);
     view.drawHeader();
@@ -412,6 +427,7 @@ function resizeColumn(view, col, e) {
   const up = () => {
     removeEventListener('mousemove', move);
     removeEventListener('mouseup', up);
+    view.resizing = null;
     view.columnsChanged();
   };
   addEventListener('mousemove', move);
