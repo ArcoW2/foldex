@@ -27,24 +27,25 @@
         { "action": "item.copyPath", "label": "Copy path", "stack": true } ] },
       { "name": "Organize", "items": [
         { "action": "item.delete", "size": "large", "label": "Delete" },
-        { "action": "folder.new", "size": "large", "label": "New\nfolder" },
-        { "action": "item.rename", "label": "Rename" } ] },
+        { "action": "file.new" }, { "action": "folder.new", "label": "New\nfolder", "stack": true },
+        { "action": "item.rename", "label": "Rename", "stack": true } ] },
       { "name": "Open", "items": [
         { "action": "item.open", "size": "large", "label": "Open" },
         { "action": "item.properties", "label": "Properties" }, { "action": "item.selectAll", "label": "Select all", "stack": true } ] },
       { "name": "Find", "items": [
         { "action": "find", "size": "large", "label": "Find" }, { "action": "search.focus", "label": "Search bar", "stack": true },
         { "action": "scrap.new", "label": "New scrap" }, { "action": "scrap.add", "label": "Add to scrap", "stack": true } ] },
+      { "name": "Go", "corners": { "left": "bookmarks.manage", "right": "bookmarks.menu" }, "items": [
+        { "action": "history.back", "label": "\n" }, { "action": "history.forward", "label": "\n", "stack": true },
+        { "action": "folder.up", "label": "\n", "stack": true },
+        { "action": "bookmarks.menu", "size": "large", "label": "Bookmarks" },
+        { "action": "refresh", "label": "Refresh" }, { "action": "drives.list", "label": "Drives", "stack": true, "tip": "D" } ] },
       { "name": "Filter", "items": [
-        { "action": "pane.filter", "size": "large", "label": "Filter..." } ] },
-      { "name": "Go", "items": [
-        { "action": "history.back", "label": "Back" }, { "action": "history.forward", "label": "Forward", "stack": true },
-        { "action": "folder.up", "label": "Up", "stack": true },
-        { "action": "refresh", "label": "Refresh" }, { "action": "drives.list", "label": "Drives", "stack": true },
-        { "action": "bookmarks.menu", "label": "Bookmarks", "stack": true } ] },
+        { "action": "pane.filter", "size": "large", "label": "Filter..." },
+        { "action": "hidden.toggle", "label": "Hidden", "stack": true, "tip": "H" } ] },
       { "name": "Show", "items": [
         { "action": "view.menu", "size": "large", "label": "Views" },
-        { "action": "preview.toggle", "size": "large", "label": "Preview" }, { "action": "hidden.toggle", "label": "Hidden items", "stack": true } ] } ] },
+        { "action": "preview.toggle", "size": "large", "label": "Preview", "tip": "P" } ] } ] },
 
     { "name": "View", "groups": [
       { "name": "Panes", "items": [

@@ -108,3 +108,7 @@ plan (`30-PLAN-ribbon-tabs.md.images/`): [Home](30-PLAN-ribbon-tabs.md.images/ri
 - Afterwards, as asked: Home's Find has Search bar under Find; Filter... is a group of its own, Filter (plan 32 adds the
   named filters to it); Show is Views and Preview with Hidden items under it; Info went to View, in the group Preview
   (Info, Pane preview, Pane info). The preset With preview is named Preview.
+- Home as the user arranged it in the window and asked to ship: Organize with New file, New folder and Rename stacked;
+  Go after Find, with Back, Forward and Up as icons only (their label a line break), Bookmarks large, Refresh and
+  Drives, its corners Manage bookmarks and the bookmarks' list; Filter with Hidden (key tip H) under Filter...; Show
+  with Views and Preview (key tip P).
