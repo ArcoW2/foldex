@@ -3952,15 +3952,30 @@ function settingsProblems(m) {
 }
 
 
-// The mouse's back and forward buttons (plan 17 3.3): Back and Forward on the pane with the focus, not the browser's
-// own (the page has no history to go to).
+// The mouse's back and forward buttons (plan 17 3.3): Back and Forward on the pane under the mouse, which becomes the
+// active one, not the browser's own (the page has no history to go to). A press in a pane's page comes here from there
+// (viewpage.js: its action, its pane activated); one in this page while another program has the focus (the page inert,
+// app.js setInert: the panes' frames get no press) finds its pane by the point.
 for (const type of ['mousedown', 'mouseup', 'auxclick'])
   document.addEventListener(type, e => {
     if (e.button !== 3 && e.button !== 4) return;
     e.preventDefault();
     e.stopPropagation();
-    if (type === 'mouseup') runAction(e.button === 3 ? 'history.back' : 'history.forward');
+    if (type !== 'mouseup') return;
+    const under = PanePage ? null : paneAt(e.clientX, e.clientY);
+    if (under && under !== activePane) activate(under);
+    runAction(e.button === 3 ? 'history.back' : 'history.forward');
   }, true);
+
+// The pane shown at a point of this page (docked: its element there), or null.
+function paneAt(x, y) {
+  for (const v of views.values()) {
+    if (!v.el?.isConnected || !v.el.offsetParent) continue;   // floating, or in a tab not shown
+    const r = v.el.getBoundingClientRect();
+    if (x >= r.left && x < r.right && y >= r.top && y < r.bottom) return v.id;
+  }
+  return null;
+}
 
 // ---------- File operations (their lines: the log, logOp) ----------
 
