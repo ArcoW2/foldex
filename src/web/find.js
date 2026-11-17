@@ -185,14 +185,6 @@ function runSearch(o, lookScrap, target, clearFirst) {
   scrap.search({ ...o, within });
 }
 
-async function renameScrap(view) {
-  const name = await askText('Name of this scrap', view.tabTitle());
-  if (!name) return;
-  layout.pane(view.id).name = scrapName(name, scrapViews().filter(v => v !== view).map(v => v.tabTitle()));
-  view.showName();
-  tellLayout();
-}
-
 // A name asked while the Find dialog is open: the small dialog on top of it (in its window).
 function askTextOver(dialog, title, value) {
   return askText(title, value).then(name => {

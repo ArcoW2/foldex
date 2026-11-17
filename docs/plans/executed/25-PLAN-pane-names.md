@@ -1,10 +1,9 @@
 # Plan 25: A name for a pane or a tab
 
-Status: not started.
+Status: executed; see 6 for what was built and how it was tested.
 
 - 2026-11-13: draft, at the user's request.
-- 2026-11-13: revised: Rename pane... an action without a key, a button in View > Panes; a scrap's name takes the
-  folder's place, without "Scrap".
+- 2026-11-17: executed.
 
 LexPen has no names for its tabs (a tab there is a file); the model in Foldex itself is a scrap's name (Rename
 scrap..., plan 06 3.1), which this plan makes one thing for every pane.
@@ -27,16 +26,19 @@ scrap has no folder: its name is shown in the folder's place, as now.
 
 ### Built
 
+| Part | What | Reference |
+|---|---|---|
+| The name | kept on the pane in the layout, one thing with a scrap's name | 3.1; 6 |
+| Rename pane... | the pane menu's item, the action and its ribbon button, its dialog | 3.2; 6 |
+| Heads | name - folder in a child, the name only in a root pane | 3.3; 6 |
+| Tabs | two lines when a tab of the group has a name, the unnamed ones on the lower line | 3.4; 6 |
+| Elsewhere | the name where a pane is named in a menu | 3.5; 6 |
+| Tests | unit and in the app | 3.6; 6 |
+
 ### Not yet built
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| The name | kept on the pane in the layout, one thing with a scrap's name | -- | 3.1 |
-| Rename pane... | the pane menu's item and its dialog | -- | 3.2 |
-| Heads | name - folder in a child, the name only in a root pane | -- | 3.3 |
-| Tabs | two lines when a tab of the group has a name, the unnamed ones on the lower line | -- | 3.4 |
-| Elsewhere | the name where a pane is named in a menu | -- | 3.5 |
-| Tests | unit and in the app | -- | 3.6 |
 
 ## 3. Details
 
@@ -91,3 +93,29 @@ menu shows), the name goes first when there is one: `name - folder`, as on a chi
 ## 4. Open questions
 
 None.
+
+## 6. As built
+
+- The name: `name` on the pane, as the plan says. It is now one of the fields the window's page decides
+  (pagedviews.js WindowFields), so a pane's own page gets it with the layout and never sends an old one back. Layout
+  (panes.js) answers what is shown of it: `paneName` (a tree's or a list's only; a scrap's name is its title, a
+  preview has none), `headName` (`name - ` in a child, the name in a root) and `paneTitle` (`name - folder`).
+- Rename pane... (app.js renamePane) replaces Rename scrap... on the pane menu, after New tab, and not on a preview's
+  menu. The action `scrap.rename` is replaced by `pane.rename` (group Panes, no key); the ribbon's View > Panes has a
+  Rename pane button after New tab. On a scrap, an empty name gives it a new name as a new scrap gets (Scrap and a
+  number), so it never goes without one; the name is kept apart from the other scraps' as before (scrapName).
+- Heads (app.js drawHead, so the window's page and a floating pane's own page draw it alike): a span `.pane-name`
+  before the title. In a child it takes at most half the head, the path's parts (plan 29) the rest; in a root the
+  title is hidden and the name takes the head.
+- Tabs (app.js drawTabs): the views' `folderTitle` is the folder the tab showed before; `tabTitle` is
+  `paneTitle(folderTitle)`, so Attach to, Hidden panes, a hidden pane's kept title and the Projects menu's names have
+  the name first. A strip with a named tab gets the class `two`: each tab a name line and a folder line.
+- Tested: unit test PanesTests.APanesNameIsKeptAndShownOnItsHead (the name over toJSON/fromJSON, the head texts of
+  a root, a child and an unnamed one, no name for a preview or a scrap, the name taken away); dotnet test 232/232. In
+  the test copy (CDP, the dialog's answer given in place of askText): the menu has Rename pane...; a child list named
+  (spaces dropped) shows `Invoices - ` before its path, its own page has the name; the root tree named shows only
+  `Work`; a new tab beside the named list: the strip two lines (42 px high, against 24 px with one line), the unnamed
+  tab with an empty name line; the name taken away: one line again; Cancel keeps the name; after a restart both names
+  and the two-line strip are back; a scrap renamed and emptied (Scrap 1 again); the ribbon's View tab has Rename pane,
+  enabled.
+- Not checked: a floating pane's own head with a name; a long name's ellipsis by eye.

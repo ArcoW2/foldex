@@ -286,7 +286,7 @@ function paneElement(id, kind, title) {
   el.dataset.pane = id;
   // A child's own round (the pin) left of the name; at the right only the marks of the branches it feeds.
   el.innerHTML = '<div class="head"><span class="connector" title="Drag onto another pane to follow it"></span>' +
-    '<button class="pin" title="Pin: stop following the parent"></button><span class="title"></span>' +
+    '<button class="pin" title="Pin: stop following the parent"></button><span class="pane-name" hidden></span><span class="title"></span>' +
     '<button class="filtered" hidden><svg viewBox="0 0 16 16"><path d="M2 3h12l-4.5 5.5V13l-3 1.5V8.5z"/></svg></button>' +
     '<span class="marks"></span></div>' +
     '<div class="body" tabindex="0"><div class="rows"></div></div>';
@@ -314,6 +314,23 @@ function paneElement(id, kind, title) {
   el.addEventListener('mousedown', e => { if (e.button < 3) activate(id); }, true);   // not the mouse's back and forward
   el.addEventListener('focusin', () => activate(id));
   return el;
+}
+
+// Rename pane... (docs/plans/executed/25-PLAN-pane-names.md 3.2): the name asked, the one it has in the box; empty
+// takes it away. A scrap's stands in its folder's place: kept apart from the other scraps' (scrapName), empty a new one
+// as a new scrap gets.
+async function renamePane(id) {
+  const view = views.get(id), pane = layout.pane(id);
+  if (!view || !pane || view instanceof PreviewView) return;
+  const scrap = view instanceof ScrapView;
+  const name = (await askText(scrap ? 'Name of this scrap' : 'Name of this pane', pane.name ?? '', scrap ? 'Empty: Scrap and a number' : 'Empty: no name'))?.trim();
+  if (name == null || !layout.pane(id)) return;
+  const taken = scrapViews().filter(v => v !== view).map(v => v.tabTitle());
+  if (scrap) pane.name = name ? scrapName(name, taken) : newScrapName(taken);
+  else if (name) pane.name = name;
+  else delete pane.name;
+  if (scrap) view.showName();
+  drawHeads();
 }
 
 // What a pane's head names (plan 29): a folder's path as its parts, each a button but the last (the folder shown), the
@@ -391,6 +408,12 @@ function drawHead(v, branch) {
   for (const name of ['bg', 'bg-side', 'select', 'hover', 'accent', 'text', 'text-selected', 'text-focused', 'text-hover'])
     v.el.style.setProperty(name === 'text' ? '--branch-text' : `--${name}`, key !== null ? `var(--branch-${key}-${name})` : '');
   v.el.classList.toggle('child', pane.source !== null);
+  // Its name (plan 25 3.3): a child's before its folder, a root's in the folder's place.
+  const name = layout.paneName(v.id), nameEl = v.el.querySelector('.pane-name');
+  nameEl.hidden = !name;
+  nameEl.textContent = layout.headName(v.id);
+  nameEl.title = name ?? '';
+  v.el.querySelector('.title').hidden = !!name && pane.source === null;
   v.el.classList.toggle('pinned', pane.pinned);
   v.el.querySelector('.pin').title = pane.kind === 'scrap'
     ? pane.pinned ? 'Pinned: comes back (empty) after a restart; click to unpin' : 'Pin: keep this scrap after a restart (it comes back empty)'
@@ -1211,7 +1234,9 @@ class TreeView {
 
   locationText() { return layout.state(this.id).focus ?? this.root ?? ''; }
 
-  tabTitle() { return this.folder ? this.name ?? (this.root ?? '').split('\\').filter(x => x).pop() ?? 'Folders' : 'Folders'; }
+  folderTitle() { return this.folder ? this.name ?? (this.root ?? '').split('\\').filter(x => x).pop() ?? 'Folders' : 'Folders'; }
+
+  tabTitle() { return layout.paneTitle(this.id, this.folderTitle()); }
 
   // ---------- Columns (plan 11; plan 18 3.3): the pane's generic ones; no set per folder for a tree ----------
 
@@ -2019,7 +2044,9 @@ class ListView {
 
   locationText() { return this.location ?? ''; }
 
-  tabTitle() { return this.name ?? (this.location ?? '').split('\\').filter(x => x).pop() ?? 'Files'; }
+  folderTitle() { return this.name ?? (this.location ?? '').split('\\').filter(x => x).pop() ?? 'Files'; }
+
+  tabTitle() { return layout.paneTitle(this.id, this.folderTitle()); }
 }
 
 // ---------- A scrap (docs/plans/executed/06-PLAN-search-and-scrap.md): files and folders from anywhere ----------
@@ -2835,10 +2862,18 @@ function drawNode(node) {
 function drawTabs() {
   for (const strip of document.querySelectorAll('.dock-tabs')) {
     const shown = docks.find(strip.dataset.group.split(' ')[0])?.group.shown;
-    strip.replaceChildren(...strip.dataset.group.split(' ').filter(id => views.get(id)).map(id => {
+    const ids = strip.dataset.group.split(' ').filter(id => views.get(id));
+    // A tab with a name (plan 25 3.4): two lines, the name above its folder; then all tabs of the group, the folders on
+    // one line.
+    const two = ids.some(id => layout.paneName(id));
+    strip.classList.toggle('two', two);
+    strip.replaceChildren(...ids.map(id => {
       const tab = document.createElement('button');
       tab.className = 'dock-tab' + (id === shown ? ' on' : '') + (id === activePane ? ' active' : '');
-      tab.textContent = views.get(id).tabTitle();
+      if (!two) tab.textContent = views.get(id).tabTitle();
+      else tab.append(Object.assign(document.createElement('span'), { className: 'tab-name', textContent: layout.paneName(id) ?? '' }),
+        Object.assign(document.createElement('span'), { className: 'tab-folder', textContent: layout.paneName(id) ? views.get(id).folderTitle() : views.get(id).tabTitle() }));
+      tab.title = layout.paneName(id) ?? '';
       const pane = layout.pane(id);
       const key = layout.pathColour(id);
       tab.style.setProperty('--branch', key !== null ? `var(--branch-${key})` : '');
@@ -2965,9 +3000,8 @@ function paneMenu(id) {
   const parents = docks.panes().filter(p => views.get(p) && !below(p) && layout.pane(p).kind !== 'preview' && p !== pane.source);
   const free = Branches.filter(b => !layout.followers(pane.source ?? '').some(f => f.colour === b && f.id !== id));
   const scrap = views.get(id) instanceof ScrapView ? views.get(id) : null;
-  // A scrap's own (plan 06 3.1, 3.4): rename, clear, its search again or stopped.
+  // A scrap's own (plan 06 3.4): clear, its search again or stopped. Its name: Rename pane... (plan 25).
   const scrapItems = scrap ? [
-    { label: 'Rename scrap...', run: () => renameScrap(scrap) },
     { label: 'Clear scrap', enabled: scrap.all.length > 0, run: () => scrap.clear() },
     { label: 'Search again...', enabled: !!pane.search, run: () => openFind({ again: scrap }) },
     { label: 'Stop the search', enabled: scrap.searching, run: () => scrap.stop() },
@@ -2981,6 +3015,7 @@ function paneMenu(id) {
       { label: 'Preview', checked: layout.followers(id).some(f => f.kind === 'preview' && !f.info), run: () => togglePanePreview(id, false) },
       { label: 'Info', checked: layout.followers(id).some(f => f.kind === 'preview' && f.info), run: () => togglePanePreview(id, true) } ] },
     { label: 'New tab', enabled: !(views.get(id) instanceof PreviewView), run: () => newTab(id) },
+    ...views.get(id) instanceof PreviewView ? [] : [{ label: 'Rename pane...', run: () => renamePane(id) }],
     { label: 'Hidden panes', enabled: layout.hiddenTops().length > 0, items: hiddenPanesMenu() },
     '-',
     { label: 'Branch', items: [

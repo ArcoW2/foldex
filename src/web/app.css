@@ -611,6 +611,21 @@ body.bar-dragging .bars {
   background: color-mix(in srgb, var(--branch, var(--accent)) calc(18% * var(--head-mix, 1)), var(--bg-bar));
 }
 
+/* A group with a named tab (app.js drawTabs; plan 25 3.4): each tab two lines, its name above its folder. */
+.dock-tabs.two .dock-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  max-width: 20em;
+}
+
+.dock-tabs.two .tab-name, .dock-tabs.two .tab-folder {
+  max-width: 100%;
+  min-height: 1.2em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .dock-tab.on {
   color: var(--fg);
   background: color-mix(in srgb, var(--branch, var(--accent)) calc(45% * var(--head-mix, 1)), var(--bg-bar));
@@ -697,6 +712,17 @@ body[data-focus-away] .pane.active > .head {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* A pane's name (app.js drawHead; plan 25): a child's before its folder, at most half the head; a root's the whole. */
+.pane > .head .pane-name {
+  flex: 0 1 auto;
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: pre;
+}
+
+.pane:not(.child) > .head .pane-name { flex: 1; max-width: none; }
 
 /* The title as a path (app.js headTitle; plan 29): each folder before the one shown a button, "..." the ones left out. */
 .pane > .head .crumb:not(.here) {

@@ -335,6 +335,25 @@ class Layout {
     return null;
   }
 
+  // A pane's own name (docs/plans/executed/25-PLAN-pane-names.md): a tree's or a list's, for the task it is kept for;
+  // null without one. A scrap's name is its title (app.js ScrapView.tabTitle), a preview has none.
+  paneName(id) {
+    const pane = this.pane(id);
+    return pane && (pane.kind === 'tree' || pane.kind === 'list') && pane.name ? pane.name : null;
+  }
+
+  // What a pane's head shows of its name (plan 25 3.3): a child's before its folder, a root's in the folder's place
+  // (the folder is in the path bar); '' without one.
+  headName(id) {
+    const name = this.paneName(id);
+    return !name ? '' : this.pane(id).source !== null ? `${name} - ` : name;
+  }
+
+  // A pane named by its name and its folder (plan 25 3.5), where a pane is named in a menu.
+  paneTitle(id, folder) {
+    return this.paneName(id) ? `${this.paneName(id)} - ${folder}` : folder;
+  }
+
   // What is kept with the project (3.7).
   toJSON() {
     return { root: this.root, next: this.next, panes: [...this.panes.values()] };

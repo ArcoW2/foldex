@@ -453,4 +453,19 @@ public class PanesTests
             """, "[updates.map(u => u.pane), l.subtree(C), l.hiddenTops().map(p => p.id), l.pane(C).source]");
         Assert.Equal("""[["p2"],["p3","p4"],["p3"],null]""", r.GetRawText());
     }
+
+    // Plan 25: a pane's name kept with the layout; a child's head shows it before its folder, a root's in its place; a
+    // scrap's and a preview's are no pane names.
+    [Fact]
+    public void APanesNameIsKeptAndShownOnItsHead()
+    {
+        var r = Run(Example + """
+            l.pane(A).name = 'Work'; l.pane(B).name = 'Invoices'; l.pane(D).name = 'x';
+            const S = l.add({ kind: 'scrap' }); l.pane(S).name = 'Scrap 1';
+            const k = Layout.fromJSON(JSON.parse(JSON.stringify(l.toJSON())));
+            const kept = [k.paneName(A), k.headName(A), k.headName(B), k.headName(C), k.paneName(D), k.paneName(S), k.paneTitle(B, 'Docs'), k.paneTitle(C, 'Docs')];
+            delete k.pane(B).name;
+            """, "[...kept, k.paneName(B), k.headName(B)]");
+        Assert.Equal("""["Work","Work","Invoices - ","",null,null,"Invoices - Docs","Docs",null,""]""", r.GetRawText());
+    }
 }

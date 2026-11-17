@@ -34,7 +34,7 @@ updated whenever a plan is written, built or closed that touches a feature here.
 | Back / forward / up | P+ | built (per pane, plan 17; the mouse's buttons too) | 4 | -- |
 | Frequent folders, jump list | P+ | -- | 4 | Back / forward / up (the history) |
 | Bookmarks (keys, icons, dual bookmarks) | P+ | built (plan 23, plan 26, plan 27): one list of bookmarks, quick access a flag (an area in a tree), names, icons, two keys each, Regular or Root, open in a new pane, folders to any depth on both | 4 | bars (plan 10), for a bookmark bar |
-| Folder tabs (lock, colour, rename, reopen closed) | All / P+ | part: tabs built (plan 12; a tab is a branch); rename: plan 25; lock, reopen -- | 3 | Detachable, floating, docked panes |
+| Folder tabs (lock, colour, rename, reopen closed) | All / P+ | part: tabs built (plan 12; a tab is a branch); rename: built (plan 25, a name above the folder); lock, reopen -- | 3 | Detachable, floating, docked panes |
 | Details pane, infobar, multi-part status bar | P+ | -- | 3 | bars (plan 10) |
 | Full screen; clone window | P+ | part: new window (-n) built | 3 | -- |
 | Mirror browsing / scrolling | P+ | -- | 3 | -- |

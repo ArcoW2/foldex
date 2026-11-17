@@ -9,13 +9,13 @@
 
 // The kinds of pane whose views are pages of their own.
 const PagedKinds = new Set(['tree', 'list', 'scrap']);
-// What of a pane this page decides (its connections, its place, its history); the rest its page does.
+// What of a pane this page decides (its connections, its place, its history, its name); the rest its page does.
 const WindowFields = ['id', 'source', 'colour', 'pinned', 'activeKey', 'lastKey', 'lastChild', 'away', 'floating', 'floatBounds',
-  'histories', 'recall', 'kind', 'fixed', 'info', 'path'];
+  'histories', 'recall', 'kind', 'fixed', 'info', 'path', 'name'];
 // The actions that run in the page of the active pane: they work on its rows themselves.
 const PageActions = new Set(['item.rename', 'folder.new', 'file.new']);
 // The methods of a stand-in answered here, from what its page told: they read the layout and that only.
-const PagedHere = new Set(['ids', 'content', 'iconsView', 'thumbsView', 'shows', 'tabTitle', 'showsFiles', 'quickAccessShown', 'topFolder']);
+const PagedHere = new Set(['ids', 'content', 'iconsView', 'thumbsView', 'shows', 'tabTitle', 'folderTitle', 'showsFiles', 'quickAccessShown', 'topFolder']);
 // The events of the host every pane's page gets as well: what they change is used there too.
 const PageEvents = new Set(['settings', 'columnSets', 'bookmarks', 'searches', 'renames', 'propList', 'fileOp', 'folderChanged']);
 
