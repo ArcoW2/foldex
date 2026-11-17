@@ -52,7 +52,7 @@ updated whenever a plan is written, built or closed that touches a feature here.
 | Sorting: secondary, natural, folders first | P+ | part: natural sort, folders first, by any column (plan 11); secondary built (plan 28: sorting on several columns) | 4 | Columns |
 | Wildcard filter | All | built (plan 03: a filter per pane, wildcards for files) | 4 | -- |
 | Quick filter box (live) | P+ | built (plan 10: the search bar, Ctrl+Shift+F) | 4 | Wildcard filter; bars (plan 10), for the box |
-| Hyperfilters (rules, saved) | P+ | named filters: plan 32; rules -- | 4 | Wildcard filter; Columns (rules on properties) |
+| Hyperfilters (rules, saved) | P+ | plan 32 (filter sets: lines on name, regex, attributes, dates; and / or, brackets; kept, defaults) | 4 | Wildcard filter; Columns (rules on properties) |
 | Colour coding by rule | P+ | -- | 4 | Hyperfilters (the rules) |
 | Colour tags on files | All | -- | 4 | -- |
 | Views: details, list, thumbnails, Ctrl+wheel thumbnail zoom | All | built: details with columns (plan 11), icons (plan 03); Ctrl+wheel font size and icons that grow built (plan 08); thumbnails built (plan 22: grid, mosaic, river, details, cards; Ctrl+wheel) | 3 (mostly detail now) | Columns |
