@@ -5,10 +5,14 @@ using Microsoft.Web.WebView2.Core;
 namespace Foldex.Shell;
 
 /// <summary>
-/// A preview of Foldex's own for a file Windows has no preview handler for: images (a GIF moving), video and audio
-/// in the page's own players, text as text. The page gets an image, a video or a sound at a URL of Foldex's own
-/// (https://foldex-files.example/file?path=...), served here from the file: in ranges when the player asks for them,
-/// so a video can be wound; the file opened off the window's thread (a share may be slow).
+/// Foldex's own preview (docs/plans/executed/04-PLAN-preview.md 3.1, 3.3): images (a GIF moving), video and audio in the
+/// page's own players, a PDF in pdf.js, markdown rendered, code coloured, CSV as a table, a zip's listing, a binary file
+/// as hex, a folder's summary. The page gets an image, a video, a sound or a PDF at a URL of Foldex's own
+/// (https://foldex-files.example/file?path=...), served here from the file: in ranges when the player asks for them, so
+/// a video can be wound; the file opened off the window's thread (a share may be slow), shared for reading and writing so
+/// a file another program has open still shows. Text-like kinds get their first bytes (the setting previewTextKB) in the
+/// message itself. A cloud file that is not on this PC (a placeholder) is not read until asked: reading it would
+/// download it.
 /// </summary>
 static class OwnPreview
 {
@@ -29,49 +33,176 @@ static class OwnPreview
         [".mp3"] = "audio/mpeg", [".wav"] = "audio/wav", [".ogg"] = "audio/ogg", [".oga"] = "audio/ogg", [".opus"] = "audio/ogg",
         [".m4a"] = "audio/mp4", [".aac"] = "audio/aac", [".flac"] = "audio/flac", [".weba"] = "audio/webm",
     };
+    static readonly HashSet<string> Markdowns = new(StringComparer.OrdinalIgnoreCase) { ".md", ".markdown", ".mdown", ".mkd" };
+    static readonly HashSet<string> Htmls = new(StringComparer.OrdinalIgnoreCase) { ".html", ".htm", ".xhtml" };
+    static readonly HashSet<string> Csvs = new(StringComparer.OrdinalIgnoreCase) { ".csv", ".tsv" };
+    static readonly HashSet<string> Zips = new(StringComparer.OrdinalIgnoreCase) { ".zip", ".nupkg", ".jar", ".vsix" };
+    // Code by its extension: highlight.js's name of its language (LexPen's core.js; preview.html).
+    static readonly Dictionary<string, string> Codes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        [".cs"] = "csharp", [".js"] = "javascript", [".mjs"] = "javascript", [".ts"] = "typescript", [".css"] = "css",
+        [".xml"] = "xml", [".xaml"] = "xml", [".svg"] = "xml", [".csproj"] = "xml", [".props"] = "xml",
+        [".targets"] = "xml", [".json"] = "json", [".py"] = "python", [".ps1"] = "powershell", [".psm1"] = "powershell",
+        [".bat"] = "dos", [".cmd"] = "dos", [".sh"] = "bash", [".sql"] = "sql", [".pas"] = "delphi", [".dpr"] = "delphi",
+        [".dfm"] = "delphi", [".yml"] = "yaml", [".yaml"] = "yaml", [".ini"] = "ini", [".cfg"] = "ini", [".conf"] = "ini",
+        [".toml"] = "ini", [".reg"] = "ini", [".java"] = "java", [".c"] = "c", [".h"] = "c", [".cpp"] = "cpp", [".hpp"] = "cpp",
+        [".go"] = "go", [".rs"] = "rust", [".php"] = "php", [".rb"] = "ruby", [".vb"] = "vbnet", [".fs"] = "fsharp", [".kt"] = "kotlin",
+        [".swift"] = "swift", [".lua"] = "lua", [".r"] = "r", [".diff"] = "diff", [".patch"] = "diff", [".dockerfile"] = "dockerfile",
+    };
     static readonly HashSet<string> Texts = new(StringComparer.OrdinalIgnoreCase)
     {
-        ".txt", ".log", ".md", ".csv", ".tsv", ".json", ".xml", ".ini", ".cfg", ".conf", ".yml", ".yaml", ".toml",
-        ".cs", ".js", ".ts", ".css", ".html", ".htm", ".py", ".ps1", ".bat", ".cmd", ".sh", ".sql", ".pas", ".dpr",
-        ".dfm", ".csproj", ".sln", ".props", ".targets", ".gitignore", ".editorconfig",
+        ".txt", ".log", ".sln", ".gitignore", ".gitattributes", ".editorconfig", ".nfo", ".text",
     };
 
-    /// <summary>The most of a text file shown (the rest is said to be left out).</summary>
-    public const int TextBytes = 256 * 1024;
-
-    /// <summary>What kind of own preview a file gets: "image", "video", "audio", "text", or null (none).</summary>
+    /// <summary>What kind of own preview a file gets: "image", "video", "audio", "pdf", "markdown", "html", "csv", "zip",
+    /// "code", "text", or null (none by its extension: a look at it decides, Read).</summary>
     public static string? KindOf(string path)
     {
         var ext = Path.GetExtension(path);
-        return Images.ContainsKey(ext) ? "image" : Videos.ContainsKey(ext) ? "video" : Sounds.ContainsKey(ext) ? "audio" : Texts.Contains(ext) ? "text" : null;
+        return Images.ContainsKey(ext) ? "image"
+            : Videos.ContainsKey(ext) ? "video" : Sounds.ContainsKey(ext) ? "audio"
+            : ext.Equals(".pdf", StringComparison.OrdinalIgnoreCase) ? "pdf"
+            : Markdowns.Contains(ext) ? "markdown" : Htmls.Contains(ext) ? "html" : Csvs.Contains(ext) ? "csv" : Zips.Contains(ext) ? "zip"
+            : Codes.ContainsKey(ext) ? "code" : Texts.Contains(ext) ? "text" : null;
     }
+
+    // The kinds served at a URL of Foldex's own (the others come in the message).
+    static bool Served(string? kind) => kind is "image" or "video" or "audio" or "pdf";
 
     static string TypeOf(string path)
     {
         var ext = Path.GetExtension(path);
-        return Images.GetValueOrDefault(ext) ?? Videos.GetValueOrDefault(ext) ?? Sounds.GetValueOrDefault(ext) ?? "application/octet-stream";
+        return Images.GetValueOrDefault(ext) ?? Videos.GetValueOrDefault(ext) ?? Sounds.GetValueOrDefault(ext)
+            ?? (ext.Equals(".pdf", StringComparison.OrdinalIgnoreCase) ? "application/pdf" : "application/octet-stream");
     }
 
-    /// <summary>The own preview of a file for the page (event previewShown's `own`): its kind, and its URL or (text) its
-    /// first TextBytes. A file of an extension not known here is shown as text when its start looks like text (an .nss,
-    /// a .reg). Null when Foldex has none for it. Touches the file: off the window's thread.</summary>
-    public static JsonObject? Read(string path)
+    /// <summary>A file of its own preview's kind that Windows is asked first for (the setting previewWindowsTypes:
+    /// extensions such as ".docx;.pdf").</summary>
+    public static bool WindowsFirst(string path, string? types) =>
+        !string.IsNullOrWhiteSpace(types) && types.Split([';', ',', ' '], StringSplitOptions.RemoveEmptyEntries)
+            .Any(t => ("." + t.TrimStart('*', '.')).Equals(Path.GetExtension(path), StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>The most of a text file shown by default (the setting previewTextKB), and of a binary one as hex.</summary>
+    public const int TextBytes = 256 * 1024, HexBytes = 64 * 1024;
+
+    /// <summary>The most Show all reads: a text larger still shows its start, said to be cut.</summary>
+    public const int AllBytes = 32 * 1024 * 1024;
+
+    // Cloud files not on this PC (Synology Drive, OneDrive files on demand): offline, or read only by downloading.
+    const FileAttributes RecallOnOpen = (FileAttributes)0x40000, RecallOnDataAccess = (FileAttributes)0x400000;
+    public static bool Placeholder(string path)
     {
+        try { return (File.GetAttributes(path) & (FileAttributes.Offline | RecallOnOpen | RecallOnDataAccess)) != 0; }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException) { return false; }
+    }
+
+    /// <summary>The own preview of a file for the page (event previewShown's `own`): its kind and what it shows (a URL,
+    /// its text, a zip's entries, its bytes as hex). A file of an extension not known here is shown as text when its start
+    /// looks like text (an .nss, a .reg), else as hex. A placeholder: only that (download: read all the same, which
+    /// downloads it). A file another program holds: why it cannot be read. Null for a file that is not there. Touches the
+    /// file: off the window's thread.</summary>
+    public static JsonObject? Read(string path, int textBytes = TextBytes, bool download = false, bool hex = true)
+    {
+        if (!File.Exists(path)) return null;
+        if (!download && Placeholder(path)) return With(Properties(path), "placeholder");
         var kind = KindOf(path);
-        if (!File.Exists(path) || kind is not (null or "text")) return kind is null ? null
-            : new JsonObject { ["kind"] = kind, ["url"] = $"https://{FilesHost}/file?path={Uri.EscapeDataString(path)}" };
-        using var file = File.OpenRead(path);
-        var buffer = new byte[Math.Min(kind is null ? SniffBytes : TextBytes, file.Length)];
-        var read = file.ReadAtLeast(buffer, buffer.Length, false);
-        if (kind is null)
+        if (Served(kind)) return new JsonObject { ["kind"] = kind, ["url"] = UrlOf(path) };
+        try
         {
-            if (!LooksLikeText(buffer.AsSpan(0, read))) return null;
-            buffer = new byte[Math.Min(TextBytes, file.Length)];
-            file.Position = 0;
-            read = file.ReadAtLeast(buffer, buffer.Length, false);
+            if (kind == "zip") return Zip(path) ?? (hex ? Hex(path) : null);
+            using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            if (kind is null)
+            {
+                var start = new byte[Math.Min(SniffBytes, file.Length)];
+                var got = file.ReadAtLeast(start, start.Length, false);
+                if (!LooksLikeText(start.AsSpan(0, got))) return hex ? Hex(path) : null;
+                file.Position = 0;
+                kind = "text";
+            }
+            var buffer = new byte[Math.Min(textBytes, file.Length)];
+            var read = file.ReadAtLeast(buffer, buffer.Length, false);
+            var cut = file.Length > textBytes;
+            var o = new JsonObject { ["kind"] = kind, ["text"] = Decode(buffer.AsSpan(0, read), cut), ["cut"] = cut, ["size"] = file.Length };
+            if (kind == "code") o["lang"] = Codes[Path.GetExtension(path)];
+            if (kind == "csv") o["tab"] = Path.GetExtension(path).Equals(".tsv", StringComparison.OrdinalIgnoreCase);
+            if (kind is "markdown" or "html") o["folder"] = Path.GetDirectoryName(path);
+            return o;
         }
-        var cut = file.Length > TextBytes;
-        return new JsonObject { ["kind"] = "text", ["text"] = Decode(buffer.AsSpan(0, read), cut), ["cut"] = cut };
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { var o = With(Properties(path), "locked"); o["error"] = ex.Message; return o; }
+    }
+
+    /// <summary>The properties of a file without a viewer (3.1, Anything else): size, dates, attributes.</summary>
+    public static JsonObject Properties(string path)
+    {
+        var f = new FileInfo(path);
+        return new JsonObject { ["kind"] = "properties", ["name"] = f.Name, ["size"] = f.Length,
+            ["created"] = new DateTimeOffset(f.CreationTimeUtc).ToUnixTimeMilliseconds(),
+            ["modified"] = new DateTimeOffset(f.LastWriteTimeUtc).ToUnixTimeMilliseconds(),
+            ["accessed"] = new DateTimeOffset(f.LastAccessTimeUtc).ToUnixTimeMilliseconds(),
+            ["attributes"] = f.Attributes.ToString() };
+    }
+
+    static JsonObject With(JsonObject o, string kind) { o["kind"] = kind; return o; }
+
+    /// <summary>A URL of Foldex's own for a file the page shows by itself (an image, a video, a sound, a PDF).</summary>
+    public static string UrlOf(string path) => $"https://{FilesHost}/file?path={Uri.EscapeDataString(path)}";
+
+    // A zip's entries (at most ZipEntries): name, size, packed size, modified; null when it is no zip.
+    const int ZipEntries = 5000;
+    static JsonObject? Zip(string path)
+    {
+        try
+        {
+            using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            using var zip = new System.IO.Compression.ZipArchive(file, System.IO.Compression.ZipArchiveMode.Read);
+            var entries = new JsonArray();
+            foreach (var e in zip.Entries.Take(ZipEntries))
+                entries.Add(new JsonObject { ["name"] = e.FullName, ["size"] = e.Length, ["packed"] = e.CompressedLength,
+                    ["modified"] = e.LastWriteTime.ToUnixTimeMilliseconds() });
+            return new JsonObject { ["kind"] = "zip", ["entries"] = entries, ["count"] = zip.Entries.Count, ["size"] = file.Length };
+        }
+        catch (InvalidDataException) { return null; }
+    }
+
+    // The start of a file as hex: its first HexBytes, base64.
+    public static JsonObject Hex(string path)
+    {
+        using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        var buffer = new byte[Math.Min(HexBytes, file.Length)];
+        var read = file.ReadAtLeast(buffer, buffer.Length, false);
+        return new JsonObject { ["kind"] = "hex", ["bytes"] = Convert.ToBase64String(buffer, 0, read), ["size"] = file.Length, ["cut"] = file.Length > HexBytes };
+    }
+
+    /// <summary>A folder's summary (3.1): its folders and files (at most SummaryItems looked at), its files' size, the
+    /// file types by count with their size, its dates. Off the window's thread.</summary>
+    const int SummaryItems = 100_000;
+    public static JsonObject? Folder(string path)
+    {
+        try
+        {
+            var dir = new DirectoryInfo(path);
+            long folders = 0, files = 0, size = 0;
+            var types = new Dictionary<string, (long Count, long Size)>(StringComparer.OrdinalIgnoreCase);
+            var all = true;
+            foreach (var e in dir.EnumerateFileSystemInfos("*", new EnumerationOptions { IgnoreInaccessible = true, AttributesToSkip = 0 }))
+            {
+                if (folders + files >= SummaryItems) { all = false; break; }
+                if (e is DirectoryInfo) { folders++; continue; }
+                var f = (FileInfo)e;
+                files++;
+                size += f.Length;
+                var ext = f.Extension.Length > 0 ? f.Extension.ToLowerInvariant() : "(none)";
+                var t = types.GetValueOrDefault(ext);
+                types[ext] = (t.Count + 1, t.Size + f.Length);
+            }
+            var byType = new JsonArray(types.OrderByDescending(kv => kv.Value.Count).Take(15)
+                .Select(kv => (JsonNode)new JsonObject { ["type"] = kv.Key, ["count"] = kv.Value.Count, ["size"] = kv.Value.Size }).ToArray());
+            return new JsonObject { ["kind"] = "folder", ["name"] = dir.Name.Length > 0 ? dir.Name : path, ["folders"] = folders, ["files"] = files,
+                ["size"] = size, ["types"] = byType, ["more"] = types.Count > 15, ["all"] = all,
+                ["created"] = new DateTimeOffset(dir.CreationTimeUtc).ToUnixTimeMilliseconds(),
+                ["modified"] = new DateTimeOffset(dir.LastWriteTimeUtc).ToUnixTimeMilliseconds() };
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or System.Security.SecurityException) { return null; }
     }
 
     /// <summary>How much of a file of an unknown extension is looked at to tell whether it is text.</summary>
@@ -108,7 +239,8 @@ static class OwnPreview
     /// <summary>Makes a WebView2 serve the files of the own preview (before its page is loaded).</summary>
     public static void Serve(CoreWebView2 core)
     {
-        core.AddWebResourceRequestedFilter($"https://{FilesHost}/*", CoreWebView2WebResourceContext.All);
+        // All source kinds: a docked preview is a frame of its own process (WebFiles.Serve).
+        core.AddWebResourceRequestedFilter($"https://{FilesHost}/*", CoreWebView2WebResourceContext.All, CoreWebView2WebResourceRequestSourceKinds.All);
         core.WebResourceRequested += async (_, e) =>
         {
             var uri = new Uri(e.Request.Uri);
@@ -118,14 +250,15 @@ static class OwnPreview
             var range = e.Request.Headers.Contains("Range") ? e.Request.Headers.GetHeader("Range") : null;
             // Completed once below, not disposed: its Dispose completes it again, which WebView2 refuses (0x8000000E).
             var deferral = e.GetDeferral();
-            // Only a kind the preview shows; opened off this thread.
-            var part = KindOf(path) is string kind && kind != "text" ? await Task.Run(() => Open(path, range)) : null;
+            // Only a kind the preview shows; opened off this thread. Readable by the preview's page (pdf.js fetches the
+            // PDF from the panes' origin): only Foldex's own pages run scripts in this WebView2.
+            var part = Served(KindOf(path)) ? await Task.Run(() => Open(path, range)) : null;
             try
             {
                 e.Response = part is null
                     ? core.Environment.CreateWebResourceResponse(null, 404, "Not Found", "")
                     : core.Environment.CreateWebResourceResponse(part.Value.Stream, part.Value.Status, part.Value.Status == 206 ? "Partial Content" : "OK",
-                        $"Content-Type: {TypeOf(path)}\r\nAccept-Ranges: bytes\r\nContent-Length: {part.Value.Length}"
+                        $"Content-Type: {TypeOf(path)}\r\nAccept-Ranges: bytes\r\nContent-Length: {part.Value.Length}\r\nAccess-Control-Allow-Origin: *"
                         + (part.Value.Status == 206 ? $"\r\nContent-Range: bytes {part.Value.From}-{part.Value.From + part.Value.Length - 1}/{part.Value.Total}" : ""));
                 deferral.Complete();
             }

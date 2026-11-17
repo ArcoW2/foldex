@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 namespace Foldex.Shell;
 
 /// <summary>
-/// A Windows preview handler (Office and the like, docs/plans/04-PLAN-preview.md 3.2) in a native window of its own,
+/// A Windows preview handler (Office and the like, docs/plans/executed/04-PLAN-preview.md 3.2) in a native window of its own,
 /// laid over the page where the page says its preview area is. A native window covers the page's popups
 /// (docs/plans/02-PLAN-ui-technology.md 3.3): while one is open, the page asks for a snapshot, shows that in the
 /// area, and the native window is hidden until the popup closes. On the UI thread.

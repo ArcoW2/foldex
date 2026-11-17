@@ -1,0 +1,18 @@
+{
+  "@highlightjs/cdn-assets": "11.12.0",
+  "codemirror": "5.65.21",
+  "katex": "0.16.47",
+  "markdown-it": "14.3.2",
+  "markdown-it-anchor": "9.2.1",
+  "markdown-it-deflist": "3.0.1",
+  "markdown-it-emoji": "3.1.0",
+  "markdown-it-footnote": "4.0.0",
+  "markdown-it-mark": "4.0.0",
+  "markdown-it-sub": "2.0.0",
+  "markdown-it-sup": "2.0.0",
+  "markdown-it-task-lists": "2.1.1",
+  "markdown-it-texmath": "1.0.0",
+  "mermaid": "11.17.2",
+  "pagedjs": "0.4.3",
+  "pdfjs-dist": "6.4.299"
+}

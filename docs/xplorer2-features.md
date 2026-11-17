@@ -113,10 +113,10 @@ updated whenever a plan is written, built or closed that touches a feature here.
 
 | Feature | Edition | Foldex | Prio | Depends on |
 |---|---|---|---|---|
-| Preview: Windows preview handlers | All | built (plan 04, part) | 4 | -- |
+| Preview: Windows preview handlers | All | built (plan 04) | 4 | -- |
 | Explorer's right-click menu, extended verbs | All | built | 4 | -- |
 | Elevated window | P+ | part: list as administrator (plan 05); no elevated window by design | 4 | -- |
-| Own viewers: text, hex, images | P+ | plan 04 | 3 | -- |
+| Own viewers: text, hex, images | P+ | built (plan 04: also markdown, HTML, code, PDF, CSV, zip, a folder's summary) | 3 | -- |
 | Full shell namespace (This PC, Recycle Bin, MTP, cloud) | All | built | 3 | -- |
 | Total Commander plugins (WLX, WDX, WCX) | P+ / U | -- | 3 | -- |
 | Enter archive (7z, RAR via plugins) | U | -- | 3 | Total Commander plugins (WCX) |

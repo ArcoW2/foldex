@@ -58,6 +58,12 @@ function control(def) {
     box.append(input, value);
     return { el: box, show: v => { input.value = v; value.textContent = input.value + def.unit; } };
   }
+  // A text (previewWindowsTypes): written when the box is left or Enter.
+  if (def.kind === 'text') {
+    const input = Object.assign(document.createElement('input'), { type: 'text', spellcheck: false });
+    input.addEventListener('change', () => set(def.name, input.value.trim()));
+    return { el: input, show: v => input.value = v ?? '' };
+  }
   // A colour of your own or the default (docs/plans/executed/28-PLAN-column-sets-window.md 3.4): '' the default (the hint says
   // which), else #rrggbb; Use this colour on takes the colour box's.
   if (def.kind === 'colour') {

@@ -10,7 +10,7 @@
 const SETTING_TABS = [
   ['App', ['Theme', 'Fonts', 'Mouse', 'Ribbon', 'Status line', 'Memory']],
   ['Panes', ['Colours', 'Behaviour', 'Scrollbars']],
-  ['Contents', ['Rows', 'Columns', 'Highlights', 'Trees', 'Items', 'Thumbnails']],
+  ['Contents', ['Rows', 'Columns', 'Highlights', 'Trees', 'Items', 'Thumbnails', 'Preview']],
   ['Search and scrap', ['Search bar']],
 ];
 
@@ -78,6 +78,12 @@ const SETTING_ROWS = [
     hint: 'Where thumbnails are kept once made: one cache in Foldex\u0027s data folder, or a hidden .foldex-thumbs folder in each folder of images (it goes along when the folder is copied).' },
   { tab: 'Contents', group: 'Thumbnails', name: 'thumbnailCacheMB', kind: 'range', range: [8, 1024, 8], unit: ' MB', title: 'Thumbnail cache size',
     hint: "The cache in Foldex's data folder at most; above it the thumbnails used longest ago go first." },
+  { tab: 'Contents', group: 'Preview', name: 'previewRemoteImages', kind: 'toggle', title: 'Remote images in previews',
+    hint: 'Images from the internet in a markdown or HTML preview are shown; off: nothing is fetched from the network. Scripts never run in a preview.' },
+  { tab: 'Contents', group: 'Preview', name: 'previewTextKB', kind: 'range', range: [16, 4096, 16], unit: ' KB', title: 'Text read for a preview',
+    hint: 'How much of a text, code, markdown or CSV file the preview reads; a larger file shows its start, with Show all above it.' },
+  { tab: 'Contents', group: 'Preview', name: 'previewWindowsTypes', kind: 'text', title: "Windows' preview for these types",
+    hint: "Extensions (such as .pdf; .svg) that Windows' preview handler shows instead of Foldex's own viewer, when Windows has one for them." },
   { tab: 'Search and scrap', group: 'Search bar', name: 'searchDelay', kind: 'range', range: [100, 2000, 50], unit: 'ms', title: 'Typing delay',
     hint: 'How long after typing in a pane it acts: more than 3 characters filter the pane (in the search bar), fewer go to the first item starting with them.' },
   { tab: 'Contents', group: 'Columns', name: 'sortColumnIntensity', kind: 'range', range: [0, 200, 5], unit: '%', title: 'Sort columns',

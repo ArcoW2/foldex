@@ -746,22 +746,47 @@ sealed class MainForm : Form
             {
                 var path = msg["path"]!.GetValue<string>();
                 var pane = msg["pane"]?.GetValue<string>() ?? "";
-                var (handler, error) = PreviewOf(pane).Show(path, PreviewArea(pane, msg["rect"]));
-                // No Windows preview: Foldex's own for an image, a video, a sound or text (Shell/OwnPreview.cs; a file of
-                // an extension it does not know is looked at, and shown when it is text).
+                // The order (docs/plans/executed/04-PLAN-preview.md 3.1): Foldex's own viewer for a type it knows (unless
+                // previewWindowsTypes names it and Windows has a handler), else Windows' preview handler, else text when
+                // the file looks like text, the picture Windows makes of it (its thumbnail handler: a PSD, ...), hex,
+                // and the properties last. A folder: its summary. `all`: Show all (the whole text); `download`: a cloud
+                // placeholder read all the same.
+                var textBytes = msg["all"]?.GetValue<bool>() == true ? Shell.OwnPreview.AllBytes
+                    : Math.Max(1, msg["textKB"]?.GetValue<int>() ?? Shell.OwnPreview.TextBytes / 1024) * 1024;
+                var download = msg["download"]?.GetValue<bool>() == true;
+                var types = msg["windowsTypes"]?.GetValue<string>();
+                string? handler = null, error = "no preview";
                 JsonObject? own = null;
-                if (error is not null && !Directory.Exists(path) && await NetworkGuard.Reachable(path))
+                static JsonObject? Safely(Func<JsonObject?> read)
                 {
-                    own = await Task.Run(() =>
-                    {
-                        try { return Shell.OwnPreview.Read(path); }
-                        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException) { return null; }
-                    });
+                    try { return read(); }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException) { return null; }
                 }
-                // Nor that: the picture Windows makes of it (its thumbnail handler: a PSD, a PDF, ...), large.
-                if (error is not null && own is null && !Directory.Exists(path) && await NetworkGuard.Reachable(path)
-                    && await StaWorker.Once("previewPicture", () => Shell.Thumbnails.Picture(path, PictureSize)) is string picture)
-                    own = new JsonObject { ["kind"] = "image", ["url"] = picture };
+                var reachable = await NetworkGuard.Reachable(path);
+                if (Directory.Exists(path))
+                {
+                    PreviewOf(pane).Unload();
+                    if (reachable) own = await Task.Run(() => Shell.OwnPreview.Folder(path));
+                }
+                else if (Shell.OwnPreview.KindOf(path) is not null
+                    && !(Shell.OwnPreview.WindowsFirst(path, types) && Shell.PreviewHost.HandlerFor(path) is not null))
+                {
+                    PreviewOf(pane).Unload();
+                    if (reachable) own = await Task.Run(() => Safely(() => Shell.OwnPreview.Read(path, textBytes, download)));
+                }
+                else
+                {
+                    (handler, error) = PreviewOf(pane).Show(path, PreviewArea(pane, msg["rect"]));
+                    if (error is not null && reachable && File.Exists(path))
+                    {
+                        own = await Task.Run(() => Safely(() => Shell.OwnPreview.Read(path, textBytes, download, hex: false)));
+                        if (own is null && !Shell.OwnPreview.Placeholder(path)
+                            && await StaWorker.Once("previewPicture", () => Shell.Thumbnails.Picture(path, PictureSize)) is string picture)
+                            own = new JsonObject { ["kind"] = "image", ["url"] = picture };
+                        own ??= await Task.Run(() => Safely(() => Shell.OwnPreview.Read(path, textBytes, download)));
+                    }
+                }
+                if (own is null && error is not null && reachable && File.Exists(path)) own = await Task.Run(() => Safely(() => Shell.OwnPreview.Properties(path)));
                 Post(new JsonObject { ["event"] = "previewShown", ["pane"] = pane, ["path"] = path, ["handler"] = handler, ["error"] = error, ["own"] = own });
                 break;
             }
@@ -797,6 +822,22 @@ sealed class MainForm : Form
             case "previewRestore":
                 foreach (var host in previews.Values) host.Restore();
                 break;
+            // The preview's Open in LexPen (plan 04 3.4): LexPen started with the file, as a later launch of it would
+            // (LexPen hands it to its running window); found by its registration (Applications\LexPen.exe).
+            case "openLexPen":
+            {
+                var path = msg["path"]!.GetValue<string>();
+                var command = Microsoft.Win32.Registry.ClassesRoot.OpenSubKey(@"Applications\LexPen.exe\shell\open\command")?.GetValue("") as string;
+                var exe = command is null ? null : command.StartsWith('"') ? command[1..Math.Max(1, command.IndexOf('"', 1))] : command.Split(' ')[0];
+                if (exe is null || !File.Exists(exe))
+                {
+                    Post(new JsonObject { ["event"] = "executeFailed", ["error"] = "LexPen is not installed (no Applications\\LexPen.exe in the registry)" });
+                    break;
+                }
+                try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(exe) { ArgumentList = { path }, UseShellExecute = false }); }
+                catch (System.ComponentModel.Win32Exception ex) { Post(new JsonObject { ["event"] = "executeFailed", ["error"] = ex.Message }); }
+                break;
+            }
             case "previewClose":
             {
                 var pane = msg["pane"]?.GetValue<string>() ?? "";

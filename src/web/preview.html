@@ -2,6 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <!-- No scripts but the page's own (docs/plans/executed/04-PLAN-preview.md 3.3): a previewed document's script, inline or
+       an on... attribute, never runs. wasm: pdf.js decodes some images with it. -->
+  <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>Preview</title>
   <!-- A preview or Info pane's page (docs/plans/executed/14-PLAN-floating-panes.md 3.0, 3.5): docked in a frame of its window's
        page, or floating. Windows' own preview, when there is one, is a window the host lays over it. -->
@@ -9,6 +12,7 @@
   <link rel="stylesheet" href="pane.css">
   <script src="menu.js" defer></script>
   <script src="pane.js" defer></script>
+  <script src="vendor/core.js" defer></script>
   <script src="previewpane.js" defer></script>
 </head>
 <body>

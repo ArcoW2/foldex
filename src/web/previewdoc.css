@@ -1,0 +1,61 @@
+/* A markdown or HTML file rendered in the preview (previewpane.js documentView), inside its own shadow root: LexPen's
+   rendered markdown (its app.css, Rendered markdown), in Foldex's theme colours. */
+:host { display: block; }
+.mm-preview {
+  padding: 16px clamp(12px, 4%, 48px) 24px;
+  font-size: 15px; line-height: 1.65; overflow-wrap: break-word; color: var(--fg); user-select: text;
+}
+.mm-preview > :first-child { margin-top: 0; }
+.mm-preview h1, .mm-preview h2, .mm-preview h3, .mm-preview h4, .mm-preview h5, .mm-preview h6 {
+  margin: 1.5em 0 .6em; line-height: 1.25; font-weight: 600;
+}
+.mm-preview h1 { font-size: 2em; padding-bottom: .3em; border-bottom: 1px solid var(--border); }
+.mm-preview h2 { font-size: 1.5em; padding-bottom: .3em; border-bottom: 1px solid var(--border); }
+.mm-preview h3 { font-size: 1.25em; }
+.mm-preview h4 { font-size: 1em; }
+.mm-preview h5 { font-size: .9em; }
+.mm-preview h6 { font-size: .85em; color: var(--fg-dim); }
+.mm-preview p, .mm-preview ul, .mm-preview ol, .mm-preview dl, .mm-preview table,
+.mm-preview pre, .mm-preview blockquote { margin: 0 0 1em; }
+.mm-preview a { color: var(--accent); text-decoration: none; }
+.mm-preview a:hover { text-decoration: underline; }
+.mm-preview img, .mm-preview svg, .mm-preview video { max-width: 100%; }
+.mm-preview hr { height: 2px; margin: 1.6em 0; border: 0; background: var(--border); }
+.mm-preview ul, .mm-preview ol { padding-left: 2em; }
+.mm-preview li > ul, .mm-preview li > ol { margin-bottom: 0; }
+.mm-preview li + li { margin-top: .2em; }
+.mm-preview .task-list-item { list-style: none; }
+.mm-preview .task-list-item-checkbox { margin: 0 .5em 0 -1.4em; vertical-align: middle; }
+.mm-preview dt { font-weight: 600; }
+.mm-preview dd { margin: 0 0 .6em 1.5em; }
+.mm-preview mark { background: rgba(255, 210, 0, .45); color: inherit; border-radius: 2px; padding: 0 2px; }
+.mm-preview kbd {
+  padding: 1px 5px; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px;
+  background: var(--bg-code); font: .85em Consolas, monospace;
+}
+.mm-preview blockquote { padding: 0 1em; color: var(--fg-dim); border-left: 4px solid var(--border); }
+.mm-preview blockquote > :last-child { margin-bottom: 0; }
+.mm-preview code { padding: .15em .4em; border-radius: 4px; background: var(--bg-code); font: .88em Consolas, "Cascadia Mono", monospace; }
+.mm-preview pre { padding: 14px 16px; overflow: auto; border-radius: 6px; background: var(--bg-code); line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.mm-preview pre code { padding: 0; background: none; color: inherit; font-size: 13px; }
+.mm-preview pre.mermaid { background: none; text-align: center; }
+.mm-preview table { display: block; width: max-content; max-width: 100%; overflow: auto; border-collapse: collapse; }
+.mm-preview th, .mm-preview td { padding: 6px 13px; border: 1px solid var(--border); }
+.mm-preview th { font-weight: 600; background: var(--bg-side); }
+.mm-preview tr:nth-child(2n) td { background: var(--hover); }
+.mm-preview .footnotes { margin-top: 2em; font-size: .88em; color: var(--fg-dim); }
+.mm-preview .footnotes-sep { height: 1px; }
+.mm-preview section > eqn { display: block; margin: 0 0 1em; overflow-x: auto; }
+/* An image from the internet not fetched (the setting previewRemoteImages off): a dashed box for it. */
+.mm-preview .pv-not-fetched { display: inline-block; min-width: 24px; min-height: 24px; border: 1px dashed var(--fg-dim); }
+.mm-preview .pv-cut { color: var(--fg-dim); }
+
+/* Code highlighting (highlight.js token classes), as LexPen's */
+.hljs-comment, .hljs-quote, .hljs-meta { color: var(--hl-comment); font-style: italic; }
+.hljs-keyword, .hljs-selector-tag, .hljs-literal, .hljs-doctag, .hljs-deletion, .hljs-name, .hljs-tag { color: var(--hl-keyword); }
+.hljs-string, .hljs-regexp, .hljs-template-variable, .hljs-addition { color: var(--hl-string); }
+.hljs-number, .hljs-built_in, .hljs-type, .hljs-symbol, .hljs-bullet, .hljs-variable, .hljs-link { color: var(--hl-number); }
+.hljs-title, .hljs-section, .hljs-selector-id, .hljs-selector-class { color: var(--hl-title); }
+.hljs-attr, .hljs-attribute, .hljs-property, .hljs-params { color: var(--hl-attr); }
+.hljs-emphasis { font-style: italic; }
+.hljs-strong { font-weight: 700; }

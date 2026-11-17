@@ -2279,6 +2279,44 @@ dialog.bm-icons { width: min(520px, calc(100vw - 32px)); }
 .own-audio { display: block; width: calc(100% - 16px); margin: 12px 8px; }
 .own-text { margin: 0; padding: 6px 8px; white-space: pre-wrap; overflow-wrap: anywhere; font: 12px Consolas, monospace; user-select: text; }
 
+/* The own preview's viewers (previewpane.js; docs/plans/executed/04-PLAN-preview.md 3.1, 3.4): the bar above, the viewer
+   under it scrolling by itself. Code coloured as LexPen's (highlight.js token classes; previewdoc.css has the same for
+   a document's code). */
+:root { --hl-keyword: #cf222e; --hl-string: #0a3069; --hl-comment: #6e7781; --hl-number: #0550ae; --hl-title: #8250df;
+  --hl-attr: #116329; --bg-code: #f6f8fa; }
+:root[data-theme="dark"] { --hl-keyword: #ff7b72; --hl-string: #a5d6ff; --hl-comment: #8b949e; --hl-number: #79c0ff;
+  --hl-title: #d2a8ff; --hl-attr: #7ee787; --bg-code: #2b2d31; }
+.preview-page .rows:has(> .pv-content) { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+.pv-content { flex: 1; min-height: 0; overflow: auto; }
+.pv-content.pv-video, .pv-content.pv-image:not(:has(.pv-zoomed)) { overflow: hidden; }
+.pv-bar { flex: none; display: flex; align-items: center; gap: 2px; padding: 2px 4px; border-bottom: 1px solid var(--border);
+  background: var(--bg-bar); white-space: nowrap; overflow: hidden; }
+.pv-button { padding: 2px 8px; border: 1px solid transparent; border-radius: 3px; background: none; color: var(--fg); font: inherit; cursor: pointer; }
+.pv-button:hover { background: var(--hover); border-color: var(--border); }
+.pv-gap { flex: 1; }
+.pv-page { padding: 0 8px; color: var(--fg-dim); }
+.pv-zoom { min-width: 4.5em; }
+.own-image.pv-zoomed { width: auto; height: auto; max-width: none; object-fit: none; }
+.pv-table-box { padding: 4px 6px; user-select: text; }
+.pv-table { border-collapse: collapse; font-size: .92em; }
+.pv-table th, .pv-table td { padding: 2px 8px; border: 1px solid var(--border); text-align: left; vertical-align: top; white-space: pre-wrap; }
+.pv-table th { position: sticky; top: 0; background: var(--bg-side); font-weight: 600; }
+.pv-table td.pv-num { text-align: right; white-space: nowrap; }
+.pv-note { padding: 6px 2px; color: var(--fg-dim); }
+.own-hex { white-space: pre; overflow-wrap: normal; }
+.pv-pdf-pages { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 12px; }
+.pv-pdf-page { flex: none; background: white; box-shadow: 0 1px 4px rgba(0, 0, 0, .3); }
+.pv-pdf-page canvas { display: block; }
+.info-list > .pv-button { margin: 4px 0 8px; border-color: var(--border); }
+.hljs-comment, .hljs-quote, .hljs-meta { color: var(--hl-comment); font-style: italic; }
+.hljs-keyword, .hljs-selector-tag, .hljs-literal, .hljs-doctag, .hljs-deletion, .hljs-name, .hljs-tag { color: var(--hl-keyword); }
+.hljs-string, .hljs-regexp, .hljs-template-variable, .hljs-addition { color: var(--hl-string); }
+.hljs-number, .hljs-built_in, .hljs-type, .hljs-symbol, .hljs-bullet, .hljs-variable, .hljs-link { color: var(--hl-number); }
+.hljs-title, .hljs-section, .hljs-selector-id, .hljs-selector-class { color: var(--hl-title); }
+.hljs-attr, .hljs-attribute, .hljs-property, .hljs-params { color: var(--hl-attr); }
+.hljs-emphasis { font-style: italic; }
+.hljs-strong { font-weight: 700; }
+
 /* The Info pane (app.js InfoView): a group's name dim, its properties as name and value, a line between groups. */
 .info-list { padding: 4px 10px 10px; user-select: text; }
 .info-group { color: var(--fg-dim); font-size: .9em; margin: 4px 0 3px; }

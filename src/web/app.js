@@ -2521,7 +2521,7 @@ class PreviewView {
         this.away = true;
       } else if (this.away) {
         this.away = false;
-        post({ op: 'preview', pane: this.id, path: this.path, rect: this.rect() });
+        this.ask();
       } else post({ op: 'previewMove', pane: this.id, rect: this.rect() });
     }).observe(this.body);
     this.message('Select a file to preview it.');
@@ -2545,6 +2545,12 @@ class PreviewView {
 
   receive(m) {
     if (m.kind === 'still') this.still(m.withPlayer);
+    // The bar above Foldex's own preview (plan 04 3.4), and a cloud file's Download and preview.
+    if (m.kind === 'openLexPen' && this.path) post({ op: 'openLexPen', path: this.path });
+    if (m.kind === 'openDefault' && this.path) post({ op: 'execute', ids: [this.path] });
+    if (m.kind === 'copy' && typeof m.text === 'string') { post({ op: 'copyText', text: m.text }); status('The text is copied.'); }
+    if (m.kind === 'showAll' && this.path) this.ask({ all: true });
+    if (m.kind === 'download' && this.path) this.ask({ download: true });
     if (m.kind === 'close' && layout.pane(this.id)?.fixed) closePane(this.id);   // Esc in F3's preview
   }
 
@@ -2552,16 +2558,24 @@ class PreviewView {
   moved() {
     if (!this.path || this.info) return;
     this.away = false;
-    post({ op: 'preview', pane: this.id, path: this.path, rect: this.rect() });
+    this.ask();
+  }
+
+  // The host asked for the preview of the file: its own viewer, Windows' or the properties (plan 04 3.1), with the
+  // preview settings; xtra: Show all, Download and preview.
+  ask(extra = {}) {
+    post({ op: 'preview', pane: this.id, path: this.path, rect: this.rect(), textKB: settings.previewTextKB ?? 256,
+      windowsTypes: settings.previewWindowsTypes ?? '', ...extra });
   }
 
   show(path) {
     this.native = false;   // until the host says Windows shows it (previewShown)
     const x = path && itemShown(path, views.get(layout.pane(this.id).source));
-    if (!path || x?.folder || !isDiskPath(path)) {
+    // A folder on disk: its summary (plan 04 3.1); a place that is no folder on disk (This PC): nothing.
+    if (!path || !isDiskPath(path)) {
       this.path = null;
       post({ op: 'previewClose', pane: this.id });
-      this.message(path ? x?.folder || !isDiskPath(path) ? 'A folder.' : '' : 'Select a file to preview it.');
+      this.message(path ? x?.folder ? 'A folder.' : '' : 'Select a file to preview it.');
       return;
     }
     this.path = path;
@@ -2569,11 +2583,11 @@ class PreviewView {
     this.el.querySelector('.title').textContent = x?.name ?? path;
     this.message('');
     if (this.away && !this.channel.floating) return;   // a tab not shown: when it is (the ResizeObserver)
-    post({ op: 'preview', pane: this.id, path, rect: this.rect() });
+    this.ask();
   }
 
   // Foldex's own preview, when Windows has none for the file (Shell/OwnPreview.cs): drawn by its page.
-  showOwn(own) { this.showing({ what: 'own', own }); }
+  showOwn(own) { this.showing({ what: 'own', own, remoteImages: settings.previewRemoteImages !== false }); }
 
   // A video or sound its page's player cannot play (a codec it lacks): the picture Windows makes of it (a frame of a
   // video), said to be a still, else that it cannot be previewed.
