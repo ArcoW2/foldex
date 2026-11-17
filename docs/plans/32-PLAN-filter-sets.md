@@ -72,11 +72,12 @@ A line tests one field of an item, for the folders, the files or both:
 | Yes / no (a boolean property) | true, false |
 | Attributes | each attribute (hidden, system, read-only, archive, compressed, encrypted, offline, link): has / has not / either |
 | A list of values (Git status, a property with fixed values) | is one of the values chosen |
-| Every kind | has a value; has no value |
+| Every kind | has a value; has no value; and with every other condition a check **or empty**: an item whose field has no value passes too |
 
 - A field that does not apply to an item (a property only files have, for a folder; GPS for a folder): the line is
   left out for that item, as if it were not there (it lets the item through). A field that applies but has no value
-  for the item (a photo without GPS): the condition decides; it passes only "has no value".
+  for the item (a .jpg without GPS): it passes "has no value", and any other condition only when that line's "or empty"
+  is checked (`Files, Date taken from 2024-01-01, or empty`: the photos since 2024 and those without a date taken).
 - So: all images with a GPS location: `Files, Extension matches *.jpg;*.heic` And `Files, GPS has a value`. All folders,
   files of this week only: `Folders` Or `Files, Date modified from 7 days ago`. Everything but temporary files:
   `Not Files, Name matches *.tmp;*.bak`.
