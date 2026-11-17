@@ -1061,7 +1061,8 @@ body[data-focus-away] :is(.row, .tile).selected.focused {
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: default;
-  border-right: 1px solid var(--border);
+  /* The line between two titles, plain to see in every theme. */
+  border-right: 1px solid color-mix(in srgb, var(--fg) 30%, transparent);
 }
 
 .colcell:hover {
@@ -1106,13 +1107,20 @@ body[data-focus-away] :is(.row, .tile).selected.focused {
   outline-offset: -1px;
 }
 
+/* The edge between two titles, grabbed on both sides of its line (columns.js drawColumnHeader): at the right of one
+   title and at the left of the next, together about 12 px. */
 .colgrip {
   position: absolute;
   top: 0;
   right: 0;
   bottom: 0;
-  width: 5px;
+  width: 6px;
   cursor: ew-resize;
+}
+
+.colgrip.before {
+  right: auto;
+  left: 0;
 }
 
 .list .body, .tree .body {

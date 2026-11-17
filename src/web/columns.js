@@ -309,6 +309,7 @@ function drawColumnHeader(view) {
   const inner = document.createElement('div');
   inner.className = 'colhead-inner';
   const fontPx = view.fontPx(), sort = view.cols.sort;
+  let before = null;   // the column shown before this one: its edge is also grabbed at this one's left
   for (const col of shownColumns(view.cols)) {
     const info = columnInfo(col.id);
     const cell = document.createElement('div');
@@ -325,14 +326,23 @@ function drawColumnHeader(view) {
     cell.addEventListener('mousedown', e => {
       if (e.button !== 0) return;
       // By its id now: the view's columns may have been taken again (a layout from the window) since this was drawn.
-      const now = view.cols.columns.find(c => c.id === col.id);
+      const id = e.target.classList.contains('colgrip') ? e.target.dataset.of : col.id;
+      const now = view.cols.columns.find(c => c.id === id);
       if (!now) return;
       if (e.target.classList.contains('colgrip')) resizeColumn(view, now, e);
       else moveColumn(view, now, e);
     });
-    const grip = document.createElement('span');
-    grip.className = 'colgrip';
+    // The edge between two titles is grabbed on both sides of the line: at this one's right (its own width) and at
+    // the next one's left (this one's).
+    const grip = Object.assign(document.createElement('span'), { className: 'colgrip' });
+    grip.dataset.of = col.id;
     cell.append(grip);
+    if (before) {
+      const left = Object.assign(document.createElement('span'), { className: 'colgrip before' });
+      left.dataset.of = before.id;
+      cell.append(left);
+    }
+    before = col;
     inner.append(cell);
   }
   head.replaceChildren(inner);
