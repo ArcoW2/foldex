@@ -73,6 +73,22 @@ document.addEventListener('wheel', e => {
   paneSizeTimer = setTimeout(() => post({ op: 'setSetting', name: 'paneSize', value: settings.paneSize }), PaneSizes.rest);
 }, { passive: false });
 
+// The wheel scrolls the pane under the mouse, active or not, as in Explorer. A docked pane that is not active answers
+// no mouse with the settings ignoreRootPaneActivationClick / ignoreChildPaneActivationClick (app.css: its frame passes
+// the mouse to this page, so the first click only makes it active), so the wheel lands here: passed on to its page
+// (menu.js wheelHere), at the same place in its frame.
+document.addEventListener('wheel', e => {
+  if (e.ctrlKey) return;   // the panes' font or thumbnails (above)
+  const pane = e.target.closest?.('.pane');
+  const ch = paneChannels.get(pane?.dataset.pane);
+  if (!ch?.frame || ch.floating || pane.classList.contains('active') || !e.target.closest('.body')) return;
+  e.preventDefault();
+  const r = ch.frame.getBoundingClientRect();
+  const sideways = e.shiftKey && !e.deltaX;
+  ch.send({ kind: 'wheel', key: `wheel:${performance.now()}`, x: e.clientX - r.left, y: e.clientY - r.top,
+    dx: sideways ? e.deltaY : e.deltaX, dy: sideways ? 0 : e.deltaY, mode: e.deltaMode });
+}, { passive: false });
+
 // The log (its pane and functions: LogView): declared here, as status() writes to it from the start.
 const log = { entries: [], seen: 0 };
 const LogMax = 1000, LogRepeat = 1500;
@@ -3363,6 +3379,19 @@ function showPane(id) {
   views.get(id)?.body.focus();
 }
 
+// A splitter's drag: the mouse followed until it is let go, over the panes too: their frames answer no mouse meanwhile
+// (app.css body.splitting), else the moves and the release went to the frame under the mouse and the splitter stuck to it.
+function splitterDrag(move) {
+  document.body.classList.add('splitting');
+  const up = () => {
+    document.body.classList.remove('splitting');
+    removeEventListener('mousemove', move);
+    removeEventListener('mouseup', up);
+  };
+  addEventListener('mousemove', move);
+  addEventListener('mouseup', up);
+}
+
 // The splitter of a side area: dragging it sets the area's size.
 function areaSplitter(side) {
   const bar = document.createElement('div');
@@ -3377,9 +3406,7 @@ function areaSplitter(side) {
       docks.sizes[side] = Math.max(80, size + sign * ((across ? m.clientX : m.clientY) - start));
       el.style[across ? 'width' : 'height'] = `${docks.sizes[side]}px`;
     };
-    const up = () => { removeEventListener('mousemove', move); removeEventListener('mouseup', up); };
-    addEventListener('mousemove', move);
-    addEventListener('mouseup', up);
+    splitterDrag(move);
   });
   return bar;
 }
@@ -3403,9 +3430,7 @@ function splitSplitter(split, k) {
       before.style.flexGrow = split.shares[k - 1];
       after.style.flexGrow = split.shares[k];
     };
-    const up = () => { removeEventListener('mousemove', move); removeEventListener('mouseup', up); };
-    addEventListener('mousemove', move);
-    addEventListener('mouseup', up);
+    splitterDrag(move);
   });
   return bar;
 }

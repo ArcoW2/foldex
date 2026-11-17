@@ -235,6 +235,7 @@ function fromWindow(m) {
       return;
     case 'menu': return windowMenu(m);
     case 'closeMenus': return closeMenus();   // a press or a menu elsewhere in the window (menu.js)
+    case 'wheel': return wheelHere(m);        // over this pane while it is not active (menu.js)
     case 'away':
       windowAway = activation.away = m.on;
       return setInert(m.on && !document.hasFocus());

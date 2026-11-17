@@ -36,6 +36,19 @@ function closePanesMenus(except) {
     if (ch !== except && (ch.floating ? ch.floatReady : ch.ready)) ch.send({ kind: 'closeMenus' });
 }
 
+// The wheel over a pane that is not active, passed on by the window (app.js): the element under it here that can scroll
+// that way scrolls, as the wheel itself would. Here, as every pane's page loads this file.
+function wheelHere({ x, y, dx, dy, mode }) {
+  const unit = mode === 1 ? 16 : mode === 2 ? innerHeight : 1;   // pixels, lines, pages
+  for (let el = document.elementFromPoint(x, y); el; el = el.parentElement) {
+    const s = getComputedStyle(el);
+    const down = dy && /auto|scroll/.test(s.overflowY) && el.scrollHeight > el.clientHeight;
+    const across = dx && /auto|scroll/.test(s.overflowX) && el.scrollWidth > el.clientWidth;
+    if (down || across) return el.scrollBy({ left: across ? dx * unit : 0, top: down ? dy * unit : 0 });
+  }
+  document.scrollingElement?.scrollBy(dx * unit, dy * unit);
+}
+
 function openMenu(x, y, items, level = 0, back = null) {
   closeMenus(level);
   if (level === 0) closeOtherMenus();
