@@ -85,6 +85,9 @@ function paneChannel({ id, page, title, view, state, receive, menu }) {
       if (from === 'float') { ch.floatReady = true; ch.floatQueue = new Map(); }
       else { ch.ready = true; ch.queue = new Map(); }
       for (const msg of waiting.values()) ch.send(msg);
+      // The active pane's page ready while the window has the keyboard and nothing in it is focused (the start): the
+      // keyboard to it (app.js, the focus).
+      if (from !== 'float' && id === activePane && document.hasFocus() && (!document.activeElement || document.activeElement === document.body)) ch.focus();
       return;
     }
     switch (m.kind) {

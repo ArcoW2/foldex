@@ -328,6 +328,9 @@ sealed class MainForm : Form
                 hello["paths"] = PathsArray(paths);
                 hello["layout"] = freshLayout ? null : pageLayout?.DeepClone() ?? app.LayoutFor(this);
                 Post(hello);
+                // In front already (the start): the keyboard to the page now that it is there, which gives it to the
+                // pane that was active (web/app.js); given when the window came to the front, the page was not ready.
+                if (InFront() && !web.ContainsFocus) web.Focus();
                 foreach (var queued in queue) web.CoreWebView2.PostWebMessageAsJson(queued);
                 queue.Clear();
                 freshLayout = false;

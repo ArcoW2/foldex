@@ -3868,6 +3868,12 @@ function folderChanged(folder, ids = null) {
 // inFront), not this page's focus: that goes into a pane's frame (a page of its own) and to Foldex's own floating windows
 // too, which is no leaving Foldex. A pane's page is told by its window (tellPagesAway; viewpage.js).
 const activation = { away: false, clickBack: 0, eaten: 0, until: 0, double: 500 };
+// The keyboard into the window's page with nothing in it focused (the start: the host gives it the keyboard once its
+// window is in front, after the layout asked for the active pane, whose page was not there yet): to the active pane, as
+// it was when the window was closed (the layout keeps it, per window of a project), so the keys work at once.
+if (!PanePage) addEventListener('focus', () => {
+  if (!document.activeElement || document.activeElement === document.body) views.get(activePane)?.body.focus();
+});
 addEventListener('keydown', () => { activation.away = false; activation.until = 0; }, true);
 const activationEating = () => performance.now() < activation.until;
 // Not in front, with the setting: the page answers no mouse at all, not even hovering (no hover colours, tooltips or
