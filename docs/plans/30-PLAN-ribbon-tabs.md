@@ -17,9 +17,9 @@ of the everyday work (the views, the preview, filtering), and View mixes those w
 ## 2. The solution, in brief
 
 Four tabs. Home holds every action of the everyday explorer work: the clipboard, organizing, opening, finding and
-filtering, going, and how the panes show their items (views, preview, info, hidden items). View holds the panes and
-their arrangement. Customize holds the editing of what Foldex keeps: column sets, bookmarks, the bars, the ribbon,
-the default layout. Tools holds Settings, All actions, the Log and About. Only the shipped ribbon.json changes; a
+filtering, going, and how the panes show their items (views, preview, info, hidden items). View holds the panes,
+their arrangement and the projects. Customize holds the editing of what Foldex keeps: column sets, bookmarks, the
+bars, the ribbon, the default layout. Tools holds Settings, All actions, the Log and About. Only the shipped ribbon.json changes; a
 ribbon.json of your own stays as it is until Reset.
 
 ## Status
@@ -30,7 +30,7 @@ ribbon.json of your own stays as it is until Reset.
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| Tabs | the shipped ribbon.json with the four tabs and their groups | Open question 1 | 3.1 |
+| Tabs | the shipped ribbon.json with the four tabs and their groups | -- | 3.1 |
 | Tests | the shipped ribbon's actions and icons (the existing tests); each tab drawn in the test copy | Tabs | 3.3 |
 
 ## 3. Details
@@ -47,7 +47,8 @@ ribbon.json of your own stays as it is until Reset.
 | | Show | Views (large), Preview (large), Info (large), Hidden items | View |
 | View | Panes | New child pane (large), New tab, New pane, Close pane, Show/hide pane, Hidden panes, Rename pane, Next pane, Detach, Pin | View |
 | | Pane preview | Pane preview, Pane info | View's Show |
-| | Layout | the four presets, Projects (large; open question 1) | View's Presets and Projects |
+| | Layout | the four presets | View's Presets |
+| | Projects | Projects (large: the list), Manage, New, Rename | View |
 | | Columns | Fit columns, Fit all columns | View (Fit columns new) |
 | Customize | Column sets | Manage sets | View's Columns |
 | | Bookmarks | Add the current folder, Manage the bookmarks | new on the ribbon |
@@ -55,7 +56,6 @@ ribbon.json of your own stays as it is until Reset.
 | | Ribbon | Change the ribbon, Customize the ribbon..., Reset the ribbon | new on the ribbon |
 | | Layout | Save layout as default, Reset layout | View's Projects |
 | Tools | Foldex | Settings (large), All actions, Log, About | View's Foldex |
-| | Projects | Manage, New, Rename (open question 1) | View's Projects |
 
 - The buttons keep their size and labels where they are now; a group's large buttons first, small ones stacked by
   three.
@@ -78,6 +78,4 @@ and Customize can move a group to another tab.
 
 ## 4. Open questions
 
-1. **Projects.** Switching to another project (the Projects list) is everyday work for some, managing projects (New,
-   Rename, Manage) is not. The table puts the list in View's Layout group and the rest in Tools. Or all of Projects in
-   View, or in Customize?
+None.
