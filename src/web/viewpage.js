@@ -47,9 +47,11 @@ function init(m) {
   pageView = makeView(PanePage);
   views.set(PanePage, pageView);
   $('panes').append(pageView.el);
-  // Its rows the page's focused element from the start, so the keys go there whenever its frame has the keyboard (at
-  // the window's start the frame got it before this pane was made: the focus below found no pane to give it to).
-  if (!document.activeElement || document.activeElement === document.body) pageView.body.focus({ preventScroll: true });
+  // The active pane: its rows the page's focused element from the start, so the keys go there whenever its frame has
+  // the keyboard (at the window's start the frame got it before this pane was made: the focus below found no pane to
+  // give it to). Only the active one: a focus in another pane's page would pull the keyboard into its frame, and with it
+  // make that pane the active one, the heads switching as each page loads.
+  if (PanePage === activePane && (!document.activeElement || document.activeElement === document.body)) pageView.body.focus({ preventScroll: true });
   drawHeads();
   if (m.restore && pageView instanceof ScrapView) pageView.addIds(layout.pane(PanePage).items ?? []);   // a scrap's entries
   if (m.restore && pageView instanceof TreeView) {   // a tree: its tops (a child: its folder), then its focus
