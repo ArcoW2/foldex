@@ -104,7 +104,8 @@ the bar.
 - **Registered without taking a type.** LexPen registers its handler's COM class and lists it with Windows' preview
   handlers. It does not bind the handler to `.md`, `.cs` and the others under their `shellex` key, so no other
   program's preview is replaced, in Explorer or Outlook. Under its class it writes the extensions it shows (from its
-  language packs).
+  language packs, markdown included): `.md` and `.cs` are in that list, so Foldex offers LexPen for them, while
+  Explorer keeps the handler bound to them.
 - **Foldex's part.**
   - It finds LexPen's handler by its class, through its registration (`Applications\LexPen.exe` names the exe; the
     class is LexPen's [its CLSID: set in LexPen's plan]).
