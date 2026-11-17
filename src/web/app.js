@@ -3857,34 +3857,54 @@ function folderChanged(folder, ids = null) {
 
 // ---------- The click that brings the window back (setting ignoreActivationClick; as LexPen) ----------
 
-// It only brings the window to the front. After the window lost the focus, the next press that comes with the focus
-// back (before it, or just after it) goes no further: its press, release and click are stopped before anything sees
-// them (on the window, in the capture phase). The title bar is Windows' own and works at once. A double click to
-// bring the window back: every press, release, click and dblclick until Windows' double-click time has passed after
-// the last of them is stopped as well, so it does not act as a click or a double click (opening an item); a click
-// after that acts at once. Back by the keys (Alt+Tab) is no click.
-const activation = { away: false, back: 0, until: 0, double: 500, own: 0 };
-addEventListener('blur', () => { activation.away = true; });
-addEventListener('focus', () => { activation.back = performance.now(); });
+// It only brings the window to the front. While Foldex is not in front, the press that brings it back goes no further:
+// its press, release and click are stopped before anything sees them (on the window, in the capture phase). The title
+// bar is Windows' own and works at once. A double click to bring the window back: every press, release, click and
+// dblclick until Windows' double-click time has passed after the last of them is stopped as well, so it does not act
+// as a click or a double click (opening an item); a click after that acts at once. Back by the keys (Alt+Tab) is no
+// click.
+//
+// Whether Foldex is in front is the host's word (MainForm WM_ACTIVATE: the event windowActive; at the start hello's
+// inFront), not this page's focus: that goes into a pane's frame (a page of its own) and to Foldex's own floating windows
+// too, which is no leaving Foldex. A pane's page is told by its window (tellPagesAway; viewpage.js).
+const activation = { away: false, clickBack: 0, eaten: 0, until: 0, double: 500 };
 addEventListener('keydown', () => { activation.away = false; activation.until = 0; }, true);
 const activationEating = () => performance.now() < activation.until;
 // Not in front, with the setting: the page answers no mouse at all, not even hovering (no hover colours, tooltips or
 // wheel; app.css body[data-inert]); the click that brings it back still reaches the window (above). A drag from
 // another program still lands: while it is over the window, the page answers again.
 const setInert = on => document.body.toggleAttribute('data-inert', on && settings.ignoreActivationClick !== false);
-addEventListener('blur', () => setInert(true));
-addEventListener('focus', () => setInert(false));
 addEventListener('dragenter', () => setInert(false), true);
-addEventListener('dragleave', e => { if (!e.relatedTarget && !document.hasFocus()) setInert(true); }, true);
-addEventListener('drop', () => setTimeout(() => setInert(!document.hasFocus())), true);
+addEventListener('dragleave', e => { if (!e.relatedTarget && activation.away) setInert(true); }, true);
+addEventListener('drop', () => setTimeout(() => setInert(activation.away)), true);
+
+// The host's word: in front or not, how it came there (a click from another program: that press only brings it back;
+// it may reach this page before this word or after it), whether it went to or came from another window of Foldex's
+// own (then it was not away).
+function windowActiveCame(m) {
+  const now = performance.now();
+  if (m.active) {
+    activation.away = false;
+    activation.clickBack = m.click && !m.own && now - activation.eaten > 1000 ? now : 0;
+    setInert(false);
+    tellPagesAway(false);
+  } else if (!m.own) {
+    activation.away = true;
+    activation.clickBack = 0;
+    setInert(true);
+    tellPagesAway(true);
+  }
+}
+
 addEventListener('pointerdown', e => {
   const now = performance.now();
-  const first = activation.away && !activation.own && (!document.hasFocus() || now - activation.back < 500);
+  const first = activation.away || activation.clickBack > 0 && now - activation.clickBack < 1000;
   activation.away = false;
-  activation.own = 0;
+  activation.clickBack = 0;
   if ((!first && !activationEating()) || settings.ignoreActivationClick === false) return;
   // In the log (Verbose): which press only brought the window back, and why it counted as one.
-  logStatus(`A click only brought the window back (${first ? `the window was away${document.hasFocus() ? ', back just now' : ''}` : 'within the double-click time after one'}).`, false, 'verbose');
+  logStatus(`A click only brought the window back (${first ? 'Foldex was not in front' : 'within the double-click time after one'}).`, false, 'verbose');
+  activation.eaten = now;
   activation.until = now + activation.double;
   e.preventDefault();   // no mousedown, mouseup after it
   e.stopImmediatePropagation();
@@ -3896,24 +3916,6 @@ for (const type of ['mousedown', 'mouseup', 'pointerup', 'click', 'dblclick', 'a
     e.stopImmediatePropagation();
     if (type === 'pointerup') activation.until = performance.now() + activation.double;   // a next press may follow
   }, true);
-
-// Foldex's own floating windows (a floating pane, a dialog's window such as Customize the ribbon) tell when they get
-// and lose the focus (panechannel.js): the focus going there is not leaving Foldex, so the first press back in this
-// window acts and this page is not inert meanwhile. Lost to another program (no own window got it within a moment):
-// away, as after any blur.
-function ownWindowFocus(kind) {
-  if (kind === 'back' || kind === 'ownFocus') {
-    activation.own = performance.now();
-    setInert(false);
-  } else if (kind === 'blurred' || kind === 'ownBlur') {
-    const at = performance.now();
-    setTimeout(() => {
-      if (activation.own >= at || document.hasFocus()) return;
-      activation.own = 0;
-      setInert(true);
-    }, 300);
-  }
-}
 
 // With the settings ignoreRootPaneActivationClick (a pane without a parent, normally a tree) and
 // ignoreChildPaneActivationClick (a pane following another, normally a list; a tab too): a press in the body of such a
@@ -4223,6 +4225,7 @@ const events = {
     setRibbon(m.ribbon);
     version = m.version + (m.commit ? ` (${m.commit})` : '');
     if (m.doubleClickTime > 0) activation.double = m.doubleClickTime;
+    if (m.inFront) windowActiveCame({ active: true });   // started in front: not away
     setBars(m.bars);
     setColumnSets(m.columnSets);
     post({ op: 'drives' });
@@ -4238,6 +4241,8 @@ const events = {
   },
   // Bars changed in a window (plan 10 3.3), and the drives there are now (3.2).
   bars(m) { setBars(m.bars); },
+  // In front or not (MainForm WM_ACTIVATE): whether a press only brings the window back.
+  windowActive(m) { windowActiveCame(m); },
   barsFailed(m) { status(`The bars could not be written: ${m.error}`, true); },
   // The ribbon changed in a window (plan 19 3.5): this one draws it again (ribbon.js setRibbon).
   ribbon(m) { setRibbon(m.ribbon); },

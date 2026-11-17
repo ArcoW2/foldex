@@ -79,8 +79,6 @@ function paneChannel({ id, page, title, view, state, receive, menu }) {
 
   ch.receive = (m, from) => {
     if ((from === 'float') !== ch.floating) return;   // not the one shown now
-    if (from === 'float' && typeof ownWindowFocus === 'function') ownWindowFocus(m.kind);   // a window of Foldex's own (app.js)
-    if (m.kind === 'ownFocus' || m.kind === 'ownBlur') return;
     if (m.kind === 'ready') {
       const waiting = new Map([['look', paneLook()], ...state(), ...(from === 'float' ? ch.floatQueue : ch.queue)]);
       waiting.delete('menu');

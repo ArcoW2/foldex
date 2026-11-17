@@ -137,14 +137,9 @@ function pagedReceive(v, m) {
     case 'callPane': return views.get(m.pane)?.[m.method]?.(...m.args);
     case 'followNow': return followNow(id, m.item);
     case 'windowFn': return globalThis[m.fn]?.(...m.args);   // a function of this page asked there (viewpage.js WindowFunctions)
-    // Its page lost the focus: to this page or another pane's (nothing), or to another program (the window away, its
-    // next press only brings it back: app.js ignoreActivationClick). It has it again: the window is back.
-    case 'blurred': {
-      if (document.hasFocus()) return;
-      activation.away = true;
-      setInert(true);
-      return tellPagesAway(true);
-    }
+    // Its page lost the focus: whether Foldex is away is the host's word (app.js windowActiveCame), not a page's
+    // focus, so nothing. It has it again: the window answers the mouse.
+    case 'blurred': return;
     case 'back':
       setInert(false);
       return tellPagesAway(false);

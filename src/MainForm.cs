@@ -1006,6 +1006,7 @@ sealed class MainForm : Form
             ["version"] = version,
             ["commit"] = commit,
             ["doubleClickTime"] = SystemInformation.DoubleClickTime,
+            ["inFront"] = InFront(),
             ["settings"] = SettingsFile.Load(AppHost.DataDir),
             ["themes"] = ThemeFile.Load(AppHost.DataDir),
             ["keys"] = KeysFile.Load(AppHost.DataDir),
@@ -1083,6 +1084,15 @@ sealed class MainForm : Form
     protected override void WndProc(ref Message m)
     {
         if (ShellMenu.HandleMessage(ref m)) return;
+        // In front or not (WM_ACTIVATE), told to the page, which decides by it whether a press only brings the window back
+        // (web/app.js, the setting ignoreActivationClick): how (a click, or the keys / the start), and whether the window
+        // it went to or came from is one of Foldex's own (a floating pane, a dialog's window): then it was not away.
+        const int WmActivate = 0x0006;
+        if (m.Msg == WmActivate)
+        {
+            var state = m.WParam.ToInt64() & 0xFFFF;
+            Tell(new JsonObject { ["event"] = "windowActive", ["active"] = state != 0, ["click"] = state == 2, ["own"] = OwnWindow(m.LParam) });
+        }
         const int WmDeviceChange = 0x0219, DbtDeviceArrival = 0x8000, DbtDeviceRemoveComplete = 0x8004;
         if (m.Msg == WmDeviceChange && (int)m.WParam is DbtDeviceArrival or DbtDeviceRemoveComplete)
         {
@@ -1091,6 +1101,20 @@ sealed class MainForm : Form
         }
         base.WndProc(ref m);
     }
+
+    /// <summary>Whether a window is one of Foldex's own (this process: another Foldex window, a floating pane, a
+    /// dialog's window); none (zero): not.</summary>
+    static bool OwnWindow(IntPtr hwnd) =>
+        hwnd != IntPtr.Zero && GetWindowThreadProcessId(hwnd, out var pid) != 0 && pid == (uint)Environment.ProcessId;
+
+    /// <summary>Whether this window is the one in front now (its page's start: not away).</summary>
+    bool InFront() => GetForegroundWindow() == Handle;
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint processId);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    static extern IntPtr GetForegroundWindow();
 
     /// <summary>Tells the page; kept until it is ready.</summary>
     public void Tell(JsonObject msg)
