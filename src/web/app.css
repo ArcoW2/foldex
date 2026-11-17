@@ -1423,8 +1423,10 @@ dialog.select-columns .ask-buttons, dialog.sort-window .ask-buttons { margin-top
 .filters-page .cs-set > .bm-body { flex: 0 1 auto; min-height: 7em; max-height: 40%; }
 .fl-linerow { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
 .fl-linerow select { padding: 0 2px; }
-.fl-join { width: 4.2em; flex: none; }
-.fl-bracket { width: 3.4em; font-family: Consolas, monospace; }
+.fl-linerow .fl-join { width: 4.6em; flex: none; box-sizing: border-box; }
+.fl-indent { flex: none; }   /* a step per bracket open before the line (filterspane.js drawLines) */
+.fl-bracket { width: 3.4em; flex: none; font-family: Consolas, monospace; }
+.fl-bracket.fl-wrong { outline: 2px solid var(--warning); outline-offset: 0; }   /* a bracket missing here */
 .fl-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; display: inline-flex; align-items: center; gap: 4px; }
 .fl-editor { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 6px; padding: 6px 2px; border-top: 1px solid var(--border); }
 .fl-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }

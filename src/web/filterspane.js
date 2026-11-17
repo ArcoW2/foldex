@@ -198,6 +198,14 @@ function drawLines() {
   const label = manageEl.querySelector('.cs-setname');
   label.textContent = !set ? 'No set chosen' : chosen === PaneEntry ? `The filter of ${pane.title} (applied as you change it)` : `Set: ${set.name}`;
   const lines = set?.lines ?? [];
+  // The brackets: a line is indented one step per bracket open before it (the lines after an opening bracket, up to
+  // and with the one that closes it; nested, deeper). While they do not match, the field where one is missing has a red
+  // outline: more closing than opening, the first opening field that can take one more; more opening than closing, the
+  // last closing field that can.
+  const depth = [], opened = lines.reduce((n, l) => n + (l.open || 0), 0), closed = lines.reduce((n, l) => n + (l.close || 0), 0);
+  lines.reduce((d, l, k) => { depth[k] = Math.max(0, d); return d + (l.open || 0) - (l.close || 0); }, 0);
+  const wantOpen = closed > opened ? lines.findIndex(l => (l.open || 0) < 3) : -1;
+  const wantClose = opened > closed ? lines.findLastIndex(l => (l.close || 0) < 3) : -1;
   list.replaceChildren(...lines.map((line, k) => {
     const row = el('div', { className: 'cs-row fl-linerow' + (k === chosenLine ? ' selected' : '') });
     row.addEventListener('mousedown', e => {
@@ -206,15 +214,21 @@ function drawLines() {
       drawLines();
       drawEditor();
     });
+    // The first line has no And / Or: a space as wide, so every line's fields start at the same place.
     const join = k ? select([['and', 'And'], ['or', 'Or']], line.join === 'or' ? 'or' : 'and', v => change(s => { s.lines[k].join = v; }), 'How this line joins the ones before')
-      : el('span', { className: 'fl-join' });
+      : el('span');
+    join.className = 'fl-join';
     const open = select(Brackets('open'), String(line.open || 0), v => change(s => { s.lines[k].open = +v; }), 'Brackets opened before this line');
     const close = select(Brackets('close'), String(line.close || 0), v => change(s => { s.lines[k].close = +v; }), 'Brackets closed after this line');
     open.className = close.className = 'fl-bracket';
+    if (k === wantOpen) { open.classList.add('fl-wrong'); open.title = `${closed - opened} more closing than opening: an opening bracket is missing here or above`; }
+    if (k === wantClose) { close.classList.add('fl-wrong'); close.title = `${opened - closed} more opening than closing: a closing bracket is missing here or below`; }
+    const indent = el('span', { className: 'fl-indent' });
+    indent.style.width = `${depth[k] * 1.6}em`;
     const not = check('Not', !!line.not, on => change(s => { s.lines[k].not = on; }), 'An exception: an item passes when it does not pass this line');
     const text = el('span', { className: 'fl-text', textContent: filterLineText(line, titleOf), title: filterLineText(line, titleOf) });
     if (fieldOf(line.field).slow) text.prepend(tortoise());
-    row.append(join, open, not, text, close);
+    row.append(join, indent, open, not, text, close);
     return row;
   }));
   const problem = set ? filterProblem(set) : null, p = manageEl.querySelector('.fl-problem');

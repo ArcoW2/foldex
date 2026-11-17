@@ -213,6 +213,13 @@ None.
   order. A line row: And / Or, the brackets opened (`(` to `(((`), Not, what it tests, the brackets closed. The field:
   a box to type in with its list under it (Up, Down, Enter, Esc). Dates: open, a day, a day and a time, or n minutes
   to years ago; sizes with a unit, kept in bytes.
+- **Brackets in the editor**: a line is indented a step per bracket open before it (the lines after an opening bracket,
+  up to and with the one that closes it; nested, deeper), so taking a closing bracket away indents the lines after it,
+  adding one brings them back. While they do not match, one field has an outline in the theme's warning colour: more
+  closing than opening, the first opening field that can take one more; more opening than closing, the last closing
+  field that can. The first line has a space as wide as And / Or, so every line's fields start at the same place.
+  Tested in the test copy: `A And (B Or (C And D)) Or E` indented 0, 0, 1, 2, 0 steps; a closing bracket fewer: the
+  last line indented and its closing field outlined; three closing: the first opening field outlined.
 - **Keys**: a kept set's key is taken in Manage filters (keys.js `strokeOf`), refused when keys.json, a bookmark or
   another set has it (`filterKeyClash`); bound as `filters.apply` with the set's name (keys.js `buildKeys`).
   `filters.toggle` on Ctrl+Alt+F.
