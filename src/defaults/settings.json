@@ -20,7 +20,9 @@
   "paneSize": 10,                 // in points, 4 to 36 (also Ctrl+mouse wheel over a pane)
 
   // ---------- Panes ----------
-  "showHidden": false,            // hidden and system files and folders shown (Ctrl+H, View > Hidden items)
+  "showExtensions": true,          // a file's extension shown in the Name column and the icon views
+  "renameSelect": "name",          // renaming one file (F2) selects: "name" (without the extension) or "all"
+  "showHidden": false,           // hidden and system files and folders shown (Ctrl+H, View > Hidden items)
   "paneBgFocused": 100,           // the background of the pane with the keyboard, in %: 100 the theme's, 0 black, 200 white
   "paneBgBranch": 100,            // the background of the other panes in its branch (its parents, its children), the same way
   "paneBgOther": 100,             // the background of the other panes, the same way

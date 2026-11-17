@@ -1327,6 +1327,13 @@ body[data-focus-away] :is(.row, .tile).selected.focused {
   padding: 2px 10px;
 }
 .sc-arrows button:hover, .sort-line button:hover { border-color: var(--accent); }
+/* Up and Down beside the Selected list: small, in a thin border of their own, at the list's height. */
+.sc-order { display: flex; flex-direction: column; justify-content: center; gap: 2px; align-self: center; padding: 2px;
+  border: 1px solid var(--border); border-radius: 4px; margin-top: 1.4em; }
+.sc-order button { display: grid; place-items: center; width: 22px; height: 22px; padding: 0; color: var(--fg); background: none;
+  border: 1px solid transparent; border-radius: 3px; }
+.sc-order button:hover { border-color: var(--accent); background: var(--hover); }
+.sc-order svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 dialog.select-columns .ask-buttons, dialog.sort-window .ask-buttons { margin-top: 10px; }
 
 /* The Sort window (dialogpage.js sortHere; plan 28 3.5): a line per column of the sort. */

@@ -283,3 +283,7 @@ None.
   columns' background in grey and in a colour of one's own.
 - Not checked: a tree with its columns moved (the Name elsewhere) and Columns... for a tree; the Sort window and Select
   columns opened from a floating list; dragging a set by its grip (the arrows were used): `[not yet checked]`.
+- Select columns has Up and Down beside its Selected list, in a small border (Alt+Up / Alt+Down there too): the columns
+  chosen at the right move together among the shown ones, the pane changing at once (`columns.js moveShownColumns`,
+  test `ColumnsTests.ShownColumnsMovedUpAndDownTogether`). Name can be chosen there to be moved; it still cannot be
+  hidden.

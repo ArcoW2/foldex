@@ -67,10 +67,10 @@ function startRename(view, id, own = null) {
   });
 }
 
-// The name selected without its extension (a folder: all of it).
+// The name selected as the setting renameSelect says: without its extension, or all of it (a folder: all of it).
 function selectName(input, item) {
   input.focus();
-  const dot = item.folder ? -1 : input.value.lastIndexOf('.');
+  const dot = item.folder || settings.renameSelect === 'all' ? -1 : input.value.lastIndexOf('.');
   input.setSelectionRange(0, dot > 0 ? dot : input.value.length);
 }
 

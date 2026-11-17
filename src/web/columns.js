@@ -283,7 +283,7 @@ function fitViewColumns(view, items, marks, which) {
   const needs = cols.map((col, k) => {
     let widest = measure.measureText(columnInfo(col.id).title).width + 16;
     for (const x of items)
-      widest = Math.max(widest, measure.measureText(col.id === 'name' ? x.name : columnText(x, col.id)).width + (k === 0 ? marks(x, measure) : 0));
+      widest = Math.max(widest, measure.measureText(col.id === 'name' ? shownName(x) : columnText(x, col.id)).width + (k === 0 ? marks(x, measure) : 0));
     return (widest + pad) / fontPx;
   });
   const now = cols.map(c => ({ ...c, width: c.width ?? columnInfo(c.id).width }));
@@ -499,10 +499,25 @@ async function selectColumns(view) {
       const col = cols.columns.find(c => c.id === id);
       if (col && id !== 'name') col.hidden = true;
     }
+    if (m.move) moveShownColumns(cols, m.move.ids, m.move.by);
     view.columnsChanged();
     view.sortEntries();
     return shown();
   });
+}
+
+// The shown columns `ids` one place up (by -1) or down (by 1) among the shown ones (a hidden column between is passed
+// over), together: none moves when the first of them is at that end already.
+function moveShownColumns(cols, ids, by) {
+  const list = cols.columns, picked = new Set(ids);
+  const shownAt = list.map((c, i) => c.hidden ? -1 : i).filter(i => i >= 0);
+  const order = shownAt.filter(i => picked.has(list[i].id));
+  if (!order.length) return;
+  if (by < 0 ? order[0] === shownAt[0] : order.at(-1) === shownAt.at(-1)) return;
+  for (const i of by < 0 ? order : order.reverse()) {
+    const k = shownAt.indexOf(i), j = shownAt[k + by];
+    [list[i], list[j]] = [list[j], list[i]];   // shown places swapped: the next picked one moves past the one moved here
+  }
 }
 
 // The Sort window: the pane's sort in order, `from` (the title Ctrl+clicked, or clicked outside a sort of several

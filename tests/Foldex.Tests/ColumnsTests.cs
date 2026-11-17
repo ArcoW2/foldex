@@ -271,4 +271,23 @@ public class ColumnsTests : IDisposable
         var list = await StaWorker.Once("t", ShellProps.List);
         Assert.Contains(list, p => p!["name"]!.GetValue<string>() == "System.Media.Duration");
     }
+
+    // Select columns' Up and Down: the chosen shown columns move together past the next shown one (a hidden one passed
+    // over); at an end, nothing moves.
+    [Fact]
+    public void ShownColumnsMovedUpAndDownTogether()
+    {
+        var r = Run("""
+            (() => {
+              const make = () => ({ columns: [{ id: 'name' }, { id: 'size' }, { id: 'type', hidden: true }, { id: 'modified' }, { id: 'ext' }] });
+              const ids = c => c.columns.map(x => x.id + (x.hidden ? '-' : '')).join(' ');
+              const a = make(); moveShownColumns(a, ['modified', 'ext'], -1);
+              const b = make(); moveShownColumns(b, ['name'], 1);
+              const c = make(); moveShownColumns(c, ['name', 'size'], -1);
+              const d = make(); moveShownColumns(d, ['size'], 1);
+              return [ids(a), ids(b), ids(c), ids(d)];
+            })()
+            """);
+        Assert.Equal("""["name modified type- ext size","size name type- modified ext","name size type- modified ext","name modified type- size ext"]""", r.GetRawText());
+    }
 }

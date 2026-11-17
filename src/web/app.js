@@ -207,6 +207,11 @@ function showProgress() {
 // wildcards for files ("*.cs;*.md"), folders always shown.
 const showsHidden = id => layout.pane(id)?.hidden ?? !!settings.showHidden;
 
+// An item's name as the Name column and the icon views show it: a file's without its extension when the setting
+// showExtensions is off (a folder's, and a name that is only an extension, whole).
+const shownName = x => settings.showExtensions === false && x.folder === false && x.name?.lastIndexOf('.') > 0
+  ? x.name.slice(0, x.name.lastIndexOf('.')) : x.name;
+
 function filterTest(pattern) {
   const parts = (pattern ?? '').split(/[;,]/).map(p => p.trim()).filter(Boolean);
   if (!parts.length) return () => true;
@@ -1007,7 +1012,7 @@ class TreeView {
         if (c.id === 'name') {
           const name = document.createElement('span');
           name.className = 'name';
-          name.textContent = n.name;
+          name.textContent = shownName(n);
           cell.append(name);
           // Two shortcuts with the same name side by side: the folder each is in, dimmed after it (plan 23 3.4).
           if (n.bm && !n.bmGroup && n.parent.children.some(c => c !== n && !c.bmGroup && c.name.toLowerCase() === n.name.toLowerCase()))
@@ -1599,7 +1604,7 @@ class ListView {
       tile.title = x.name;
       const name = document.createElement('span');
       name.className = 'name';
-      name.textContent = x.name;
+      name.textContent = shownName(x);
       tile.append(iconImage(x, missing, 48), name);
       nodes.push(tile);
     }
@@ -1905,7 +1910,7 @@ class ListView {
         if (c.id === 'name') {
           const name = document.createElement('span');
           name.className = 'name';
-          name.textContent = x.name;
+          name.textContent = shownName(x);
           cell.append(name);
           if (x.link && k === 0) cell.append(linkMark());
         } else columnValue(cell, k, columnText(x, c.id));
@@ -3961,8 +3966,8 @@ function settingsChanged(before) {
   applyTheme();
   if (before.showHidden !== settings.showHidden) {
     for (const v of views.values()) if (layout.pane(v.id)?.hidden === undefined && !isPaged(v)) if (v instanceof TreeView) v.flatten(); else v.refresh();
-  } else if (before.treeExpanders !== settings.treeExpanders) {
-    for (const v of views.values()) if (v instanceof TreeView && !isPaged(v)) v.render();
+  } else if (before.treeExpanders !== settings.treeExpanders || before.showExtensions !== settings.showExtensions) {
+    for (const v of views.values()) if ((v instanceof TreeView || v instanceof ListView) && !isPaged(v)) v.render();
   }
   if (before.quickAccess !== settings.quickAccess) for (const v of views.values()) if (v instanceof TreeView && !isPaged(v)) v.quickAccessChanged();
   if (before.ribbonGroupNames !== settings.ribbonGroupNames || before.ribbonLabelWidth !== settings.ribbonLabelWidth) renderRibbon();

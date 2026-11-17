@@ -147,7 +147,11 @@ function selectColumnsHere(a) {
     '<input class="sc-search" spellcheck="false" placeholder="Type to find a column"><select class="sc-left" multiple></select></div>' +
     '<div class="sc-arrows"><button class="sc-show" title="Show the columns selected at the left">-&gt;</button>' +
     '<button class="sc-hide" title="Hide the columns selected at the right">&lt;-</button></div>' +
-    '<div class="sc-side"><div class="sc-label">Selected</div><select class="sc-right" multiple></select></div></div>' +
+    '<div class="sc-side"><div class="sc-label">Selected</div><select class="sc-right" multiple></select></div>' +
+    '<div class="sc-order"><button class="sc-up" title="The columns chosen at the right one place up (to the left in the pane)">' +
+    '<svg viewBox="0 0 16 16"><path d="M3.5 10l4.5-4.5 4.5 4.5"/></svg></button>' +
+    '<button class="sc-down" title="The columns chosen at the right one place down (to the right in the pane)">' +
+    '<svg viewBox="0 0 16 16"><path d="M3.5 6l4.5 4.5 4.5-4.5"/></svg></button></div></div>' +
     '<div class="ask-buttons"><button class="ok">Close</button></div>';
   const filter = dialog.querySelector('.sc-filter input'), search = dialog.querySelector('.sc-search');
   const left = dialog.querySelector('.sc-left'), right = dialog.querySelector('.sc-right');
@@ -163,12 +167,26 @@ function selectColumnsHere(a) {
       .filter(id => words.every(w => `${titles.get(id)} ${id}`.toLowerCase().includes(w))).slice(0, 400);
     left.replaceChildren(...ids.map(option));
     right.replaceChildren(...shown.map(option));
-    for (const o of right.options) o.disabled = o.value === 'name';   // the name column is always shown
+    const name = [...right.options].find(o => o.value === 'name');   // always shown (<- passes it over), but it can be moved
+    if (name) name.title = 'Name: always shown; Up and Down move it';
   };
   const moved = async change => {
     shown = await askWindow(change) ?? shown;
     fill();
   };
+  // Up and Down: the columns chosen at the right moved among the shown ones, still chosen after.
+  const order = async by => {
+    const ids = [...right.selectedOptions].map(o => o.value);
+    if (!ids.length) return;
+    await moved({ move: { ids, by } });
+    for (const o of right.options) o.selected = ids.includes(o.value);
+    right.focus();
+  };
+  dialog.querySelector('.sc-up').addEventListener('click', () => order(-1));
+  dialog.querySelector('.sc-down').addEventListener('click', () => order(1));
+  right.addEventListener('keydown', e => {
+    if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) { e.preventDefault(); order(e.key === 'ArrowUp' ? -1 : 1); }
+  });
   dialog.querySelector('.sc-show').addEventListener('click', () => moved({ show: [...left.selectedOptions].map(o => o.value) }));
   dialog.querySelector('.sc-hide').addEventListener('click', () => moved({ hide: [...right.selectedOptions].map(o => o.value) }));
   left.addEventListener('dblclick', () => moved({ show: [...left.selectedOptions].map(o => o.value) }));
