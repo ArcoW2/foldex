@@ -62,7 +62,7 @@ passes every test the line uses; a line using none lets every item through. Whic
 | Name (wildcards) | the name against wildcards, `;` between them (`*.cs;*.md`), as the filter now | case does not matter |
 | Name (regex) | the name against a regular expression | case does not matter, unless asked [not yet decided] |
 | Attributes | the attributes it has and has not | hidden, system, read-only, archive, compressed, encrypted, offline, link (a junction or symbolic link); each: has / has not / either |
-| Date modified | within a range | from and to, each a date or open; or the last n days, weeks or months |
+| Date modified | within a range | from and to, each open, an absolute date (with a time or not), or relative to now (n minutes, hours, days, weeks, months or years ago); the last n days is from n days ago to open |
 | Date created | within a range | as Date modified |
 
 - Examples: all folders, files of this week only: `Folders` Or `Files, modified the last 7 days`. Folders of this
@@ -150,7 +150,7 @@ Home, after Find: the group Filter.
 ### 3.9 Tests
 
 - Unit (Jint): each test on items (Folders and Files, names, regex, attributes, dates, open ranges, the last n days),
-  several in one line; Not; And before Or; brackets, and unmatched brackets refused; an empty line and an empty set;
+  several in one line; dates absolute (with and without a time) and relative to now, either end open; Not; And before Or; brackets, and unmatched brackets refused; an empty line and an empty set;
   the examples of 3.1. `filters.json` read, cleaned and written back, keys with it; a set's key that is taken refused.
 - In the test copy: a set made in the editor and kept; chosen from the list on another pane; None; the defaults for a
   new root, a new child and a new tab; a child detached keeping its filter; the head's `[name]`, a click switching it
