@@ -4,7 +4,10 @@
   items), Foldex does it as LexPen does, unless the user said otherwise. Look at LexPen before building such a part,
   and say where Foldex differs and why.
 - **Menus.** Every button or element that opens a menu also closes it on the next click while it is open. This is
-  generic (`src/web/menu.js`: the opener of a menu); a new opener needs nothing of its own for it.
+  generic (`src/web/menu.js`: the opener of a menu); a new opener needs nothing of its own for it. Only one menu is open
+  in the whole window: a click anywhere in the app (any pane's page, docked or floating, or the window's own) or a
+  menu opening closes every other menu. Also generic (`menu.js` closeOtherMenus); a new page that loads menu.js gets
+  it, its own message handler only has to close its menus on `closeMenus`.
 - **Windows.** Every window is a docked pane and/or a floating window, unless the user said otherwise for that
   window. A floating window can always be docked, and a docked one set floating again. For every window or pane that
   is made (in code and in its plan) it is stated which it can be: docked, floating or both; the list is
