@@ -27,7 +27,8 @@ shows its filter at the start of its head, in italic between brackets; a click t
 dimmed), and when the head is too narrow the filter gives way before the name. Home's group Filter has Filter... (the
 active pane's set, in Manage filters), the list of kept sets (ending with Manage filters...) and Manage filters: a pane,
 docked or floating as every Manage..., the kept sets beside the editor of the one chosen; in the corners as LexPen's.
-The search bar's filter stays as it is: a quick filter for once, apart from these sets.
+A kept set can have a key, as a bookmark has; Ctrl+Alt+F switches the active pane's filter off and on. The search
+bar's filter stays as it is: a quick filter for once, apart from these sets.
 
 ## Status
 
@@ -43,8 +44,9 @@ The search bar's filter stays as it is: a quick filter for once, apart from thes
 | Kept sets | `filters.json` (name, lines), the defaults, every window told | -- | 3.4 |
 | Defaults | one for a new root, one for a new child (a tab too); a child made a root keeps its own | Kept sets | 3.5 |
 | In the head | the filter in italic between brackets at the head's start, a click switches it, giving way to the name | -- | 3.6 |
-| Ribbon and menus | Home's group Filter, its corners; the pane menu's Filter... | The editor; Kept sets | 3.7 |
-| Tests | see 3.8 | -- | 3.8 |
+| Ribbon and menus | Home's group Filter, its corners; the pane menu's Filter... | Manage filters; Kept sets | 3.7 |
+| Keys | a key per kept set, as a bookmark's; a key switching the active pane's filter off and on | Kept sets | 3.8 |
+| Tests | see 3.9 | -- | 3.9 |
 
 ## 3. Details
 
@@ -82,11 +84,11 @@ passes every test the line uses; a line using none lets every item through. Whic
 ### 3.3 Manage filters, the editor
 
 - The editor is Manage filters: a pane of its own, docked or floating as every Manage... (Manage the bookmarks, Manage
-  column sets), first floating; plan 14 3.7's list gets its row. At its left the kept sets (and, on top, the active
-  pane's set when it is not a kept one), at its right the editor of the one chosen. Filter... opens it on the active
-  pane's set.
-- A list of the lines, each as it reads (`And Not Files, name *.tmp`); under the list, the line chosen with all it can
-  be: its And / Or, Not, its brackets, and every test of 3.1 with its values.
+  column sets), first floating; plan 14 3.7's list gets its row. Filter... opens it on the active pane's set.
+- It looks as Manage column sets does: at the left the kept sets (on top the active pane's set when it is not a kept
+  one), each with its key and its default marks; at the right, on top, the lines of the set chosen, a row each with its
+  And / Or, its opening brackets, Not, what it tests in short, its closing brackets; under them the line chosen with
+  every test of 3.1 and its values. Narrow: the two parts on top of each other, the sets first (as Manage column sets).
 - Add: a new line after the one chosen, joined with And. Remove, Up, Down.
 - Applied to the pane at once as lines change (the pane shows what passes), so a set is tried while it is made; Cancel
   puts back what the pane had.
@@ -137,16 +139,23 @@ Home, after Find: the group Filter.
 - The pane menu's Filter... opens Manage filters too; a submenu Filters with the kept sets (and Manage filters...) beside it.
 - Icons: a funnel (Filter..., as now), a funnel with lines (the list), the framed window with a funnel (Manage filters).
 
-### 3.8 Tests
+### 3.8 Keys
+
+- A kept set can have a key, as a bookmark has (`bookmarks.js bookmarkBindings`): given in Manage filters, kept in
+  `filters.json` with the set; it applies the set to the active pane. A key that keys.json or a bookmark has already
+  is refused there, with what has it.
+- `filters.toggle`: the active pane's filter off and on, as a click on its `[name]` in the head; Ctrl+Alt+F (free in
+  keys.json, checked). Also on the pane menu and in F1.
+
+### 3.9 Tests
 
 - Unit (Jint): each test on items (Folders and Files, names, regex, attributes, dates, open ranges, the last n days),
   several in one line; Not; And before Or; brackets, and unmatched brackets refused; an empty line and an empty set;
-  the examples of 3.1. `filters.json` read, cleaned and written back.
+  the examples of 3.1. `filters.json` read, cleaned and written back, keys with it; a set's key that is taken refused.
 - In the test copy: a set made in the editor and kept; chosen from the list on another pane; None; the defaults for a
   new root, a new child and a new tab; a child detached keeping its filter; the head's `[name]`, a click switching it
-  off (dimmed, every item) and on; a narrow head cutting the filter first.
+  off (dimmed, every item) and on, and Ctrl+Alt+F; a kept set's key; a narrow head cutting the filter first.
 
 ## 4. Open questions
 
-1. **Keys.** A key per kept set (as bookmarks have), a key for switching the active pane's filter off and on, or only
-   the list?
+None.
