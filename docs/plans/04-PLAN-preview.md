@@ -37,7 +37,7 @@ an archive's listing, a folder's summary. Every other type goes to the Windows p
 | Own viewers | text and code, markdown, images, PDF, audio and video, CSV, zip listing, hex | -- | 3.1 |
 | Summary and properties | a folder's summary; properties for anything else | -- | 3.1 |
 | Viewer order | the order of viewers; a setting per type preferring the Windows handler | -- | 3.1 |
-| Care | cloud placeholders, large files, locked files, no scripts or network in HTML and markdown | -- | 3.3 |
+| Care | cloud placeholders, large files, locked files, no scripts in HTML and markdown, remote images by a setting | -- | 3.3 |
 | Preview actions | Open in LexPen, open with the default program, copy the text, zoom, the bar above the preview | -- | 3.4 |
 
 ## 3. Details
@@ -46,7 +46,7 @@ an archive's listing, a folder's summary. Every other type goes to the Windows p
 
 | Type | Shown by |
 |---|---|
-| Text, code, by LexPen's language packs | LexPen's colouring, read-only |
+| Text, code, by LexPen's language packs | LexPen's colouring, read-only (editing is LexPen's: Open in LexPen, 3.4) |
 | Markdown | LexPen's markdown-it preview (math, Mermaid) |
 | Images (png, jpg, gif, webp, svg, ico, bmp) | The page; svg as an image, no scripts |
 | PDF | pdf.js, as LexPen's PDF view |
@@ -79,7 +79,8 @@ Windows handler.
 - **Large files**: text and hex read only the start, with a "show all" action; nothing reads a whole large file just
   to preview it. The limit is a setting [default not yet decided].
 - **Locked files**: opened with sharing for read and write; when that fails, properties and the reason.
-- **HTML and markdown**: no scripts, no network; remote images in markdown off by default (open question 2).
+- **HTML and markdown**: no scripts, ever. Remote images (in markdown and HTML) are shown by default; the setting
+  `previewRemoteImages` (on by default, Settings: Preview) turns them off, and then nothing is fetched from the network.
 - **Speed**: the preview follows the source's debounce (plan 03, 3.3); a slow viewer is cancelled when the focus moves on.
 
 ### 3.4 Actions
@@ -90,10 +91,10 @@ text, zoom, the bar above the preview as LexPen's (theme or original for PDF, pa
 ### 3.5 Tests
 
 - Unit: choosing the viewer per type and setting; the placeholder check; the large-file limit.
+- In the test copy: a markdown file with a remote image, shown, and not fetched with `previewRemoteImages` off.
 - In the test copy: each row of 3.1 with a sample file (LexPen's `docs/examples` has several); a placeholder file not
   downloaded; a .docx through its handler with a ribbon drop-down over it.
 
 ## 4. Open questions
 
-1. **Remote content.** Remote images in markdown and HTML previews: off, on, or per folder?
-2. **Text preview editable?** Suggestion: no, read-only; editing is LexPen's, one action away.
+None.
