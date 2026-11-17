@@ -87,11 +87,10 @@ action('item.paste', { title: 'Paste', group: 'items', enabled: () => !!currentF
     status(`${m.entries.length} item(s) added to ${scrap.tabTitle()}.`);
   });
 } });
-// What was copied, said in the status line (and so in the Log): as LexPen's toast "Copied ...", which Foldex has not;
-// its messages are the status line's.
+// What was copied, said as an action's message (app.js statusAction; and so in the Log).
 function copyPaths(ids, separator) {
   post({ op: 'copyText', text: ids.join(separator) });
-  status(ids.length > 1 ? `Copied ${ids.length} paths: ${ids.join(', ')}` : `Copied ${ids[0]}`);
+  statusAction(ids.length > 1 ? `Copied ${ids.length} paths: ${ids.join(', ')}` : `Copied ${ids[0]}`);
 }
 action('item.copyPath', { title: 'Copy path', group: 'items', enabled: onDisk,
   run: () => copyPaths(selectedIds(), '\r\n') });

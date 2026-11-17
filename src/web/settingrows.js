@@ -23,6 +23,8 @@ const SETTING_ROWS = [
     hint: 'The colours of the window, the branch colours included. Your own themes go in themes\\ in the data folder.' },
   { tab: 'App', group: 'Theme', name: 'themeDark', kind: 'theme', title: 'Theme in dark mode',
     hint: 'The colours of the window in dark mode.' },
+  { tab: 'App', group: 'Status line', name: 'actionMessageSeconds', kind: 'range', range: [1, 30, 1], unit: ' s', title: 'Action messages',
+    hint: 'How long what an action did (Copied ...) stays lit in the status line before the line shows again what it showed; the Log keeps it.' },
   { tab: 'App', group: 'Memory', name: 'folderCacheMB', kind: 'range', range: [16, 4096, 16], unit: ' MB', title: 'Folder cache',
     hint: 'How much memory the folders read may keep, for all windows: a folder read once is shown again at once, and folders you use often are read ahead. When Windows runs short of memory, the cache lets go anyway.' },
   { tab: 'App', group: 'Memory', name: 'cacheNetwork', kind: 'toggle', title: 'Cache network shares',

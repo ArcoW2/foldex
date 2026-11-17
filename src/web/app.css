@@ -1446,6 +1446,14 @@ dialog.ask form {
   color: var(--warning);
 }
 
+/* What an action did (app.js statusAction): lit in the accent until it goes (the setting actionMessageSeconds). */
+#status.action {
+  color: var(--fg);
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 3px;
+  padding: 0 6px;
+}
+
 /* The progress bar (app.js showProgress): over the status line from where the status text starts to its end, the text
    hidden while it runs; filling up in the accent colour, or without a count a piece of it going from left to right. */
 #progress {

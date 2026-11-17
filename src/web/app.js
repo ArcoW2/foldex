@@ -79,9 +79,31 @@ const LogMax = 1000, LogRepeat = 1500;
 let logPane = null;
 
 function status(text, warn = false) {
+  if (actionMessage) {   // an action's message replaced: it no longer goes, nor brings back what it covered
+    clearTimeout(actionMessage.timer);
+    actionMessage = null;
+  }
   $('status').textContent = text;
   $('status').classList.toggle('warn', warn);
+  $('status').classList.remove('action');
   logStatus(text, warn);
+}
+
+// What an action did (Copied ...): lit in the status line and gone after the setting actionMessageSeconds, the line
+// showing again what it showed before. As LexPen's toast "Copied ...", which Foldex has not.
+let actionMessage = null;
+function statusAction(text) {
+  const el = $('status');
+  const before = actionMessage?.before ?? { text: el.textContent, warn: el.classList.contains('warn') };
+  status(text);
+  el.classList.add('action');
+  const timer = setTimeout(() => {
+    actionMessage = null;
+    el.classList.remove('action');
+    el.textContent = before.text;
+    el.classList.toggle('warn', before.warn);
+  }, 1000 * between(Number(settings.actionMessageSeconds), 1, 30, 2));
+  actionMessage = { before, timer };
 }
 
 const same = (a, b) => a != null && b != null && a.toLowerCase() === b.toLowerCase();
