@@ -118,7 +118,7 @@ updated whenever a plan is written, built or closed that touches a feature here.
 | Elevated window | P+ | part: list as administrator (plan 05); no elevated window by design | 4 | -- |
 | Own viewers: text, hex, images | P+ | built (plan 04: also markdown, HTML, code, PDF, CSV, zip, a folder's summary) | 3 | -- |
 | Full shell namespace (This PC, Recycle Bin, MTP, cloud) | All | built | 3 | -- |
-| Total Commander plugins (WLX, WDX, WCX) | P+ / U | WLX: plan 33 (a choice there) | 3 | -- |
+| Total Commander plugins (WLX, WDX, WCX) | P+ / U | WLX: plan 33 | 3 | -- |
 | Enter archive (7z, RAR via plugins) | U | -- | 3 | Total Commander plugins (WCX) |
 | Replace Explorer (Win+E, folder opening) | P+ | -- | 3 | -- |
 | UNC paths, map network drive | P+ | part: UNC listed, cached, a share that does not answer not waited for (plan 24); Network shows nothing here [not yet checked why] | 3 | -- |
