@@ -48,7 +48,7 @@ Foldex and LexPen are separate projects and share no code. How the UI is drawn f
 | Menus | | -- | 3.3 |
 | Macros | | -- | 3.3 |
 | From LexPen | rename, folder compare, git status | the Git status column: plan 11 | 3.3 |
-| The rest of the actions | open with, open in LexPen, new file, rename, delete permanently, select by pattern, filter, sort, view mode, take ownership | take ownership: plan 05 | 3.4 |
+| The rest of the actions | open with, open in LexPen, new file, rename, delete permanently, select by pattern, filter, sort, view mode, take ownership | take ownership: plan 31 | 3.4 |
 | Own icon | an icon of Foldex's own | -- | 6.1 |
 
 Moved out: docking to plan 12, the viewers to plan 04, projects and window sessions to plan 15. The order of the rest: open question 1.
@@ -107,7 +107,7 @@ Everything the user can do is an action: an id, a title, an optional key, usable
 the command palette (F1) and macros, as in LexPen. The first set, to grow per plan: open, open with, open in LexPen,
 back, forward, up, refresh, new folder, new file, rename, copy, cut, paste, delete (recycle bin), delete permanently,
 properties, copy path, select by pattern, filter, sort, view mode, show hidden, new connected pane, disconnect pane,
-next branch, take ownership (plan 05).
+next branch, take ownership (plan 31).
 
 ### 3.5 Projects
 

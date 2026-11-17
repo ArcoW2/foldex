@@ -38,7 +38,7 @@ static class ShellListing
                 catch (UnauthorizedAccessException) when (LinkTarget(location) is string to)
                 {
                     // A compatibility link such as C:\Documents and Settings denies listing to everyone, administrators
-                    // included; its target is the folder meant (docs/plans/05-PLAN-elevation.md 3.1).
+                    // included; its target is the folder meant (docs/plans/executed/05-PLAN-elevation.md 3.1).
                     target = to;
                     ListFolder(to, icons, batcher, cancel, foldersOnly, tree);
                 }

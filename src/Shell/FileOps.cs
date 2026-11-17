@@ -4,7 +4,7 @@ using System.Text.Json.Nodes;
 namespace Foldex.Shell;
 
 /// <summary>
-/// Copy, move and delete through Windows' IFileOperation (docs/plans/05-PLAN-elevation.md 3.1): Windows' own progress,
+/// Copy, move and delete through Windows' IFileOperation (docs/plans/executed/05-PLAN-elevation.md 3.1): Windows' own progress,
 /// conflict and permission dialogs, and its administrator prompt per operation. Each operation runs on an STA thread of
 /// its own, so the windows stay responsive and a new page after a failure does not stop it
 /// (docs/plans/02-PLAN-ui-technology.md 3.5); the host keeps every operation's state for the page to show.

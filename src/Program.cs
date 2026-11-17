@@ -12,7 +12,7 @@ static class Program
     [STAThread]
     static void Main(string[] args)
     {
-        // The elevated helper (docs/plans/05-PLAN-elevation.md 3.3): no window, no instance of its own.
+        // The elevated helper (docs/plans/executed/05-PLAN-elevation.md 3.3): no window, no instance of its own.
         if (args.Length == 3 && args[0] == ElevatedHelper.Switch && int.TryParse(args[2], out var parent))
         {
             ElevatedHelper.Run(args[1], parent);

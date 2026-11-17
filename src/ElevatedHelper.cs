@@ -12,7 +12,7 @@ using Foldex.Shell;
 namespace Foldex;
 
 /// <summary>
-/// The elevated helper (docs/plans/05-PLAN-elevation.md 3.3): Foldex.exe --elevated-helper &lt;pipe&gt; &lt;parent id&gt;,
+/// The elevated helper (docs/plans/executed/05-PLAN-elevation.md 3.3): Foldex.exe --elevated-helper &lt;pipe&gt; &lt;parent id&gt;,
 /// started through UAC. No window, no WebView2, no shell extensions; it serves a fixed set of operations over a pipe
 /// only its parent may use, then exits when the parent goes. Spike scope (plan 02 3.7, item 6): listing a folder.
 /// </summary>

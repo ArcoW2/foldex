@@ -1,12 +1,13 @@
 # Plan 05: Elevated rights
 
-Status: partly executed; see Status.
+Status: executed; see Status and 6.
 
 - 2026-11-10: draft.
 - 2026-11-10: revised.
 - 2026-11-10: partly executed through plan 02's spike: the elevated helper, listing only; file operations through
   `IFileOperation`.
 - 2026-11-10: partly executed: the compatibility junctions.
+- 2026-11-17: executed.
 
 ## 1. What this is about
 
@@ -20,8 +21,8 @@ Foldex runs as the user. File operations go through Windows' `IFileOperation`, w
 per operation exactly as Explorer does, so copying into a protected folder needs no elevated Foldex. What
 `IFileOperation` does not cover (permissions, ownership, links, listing protected folders) is done by a small elevated
 helper: the same exe, started on demand through UAC, doing only a fixed set of operations asked over a private pipe,
-its results going back to the host. Foldex itself, and with it WebView2, never runs elevated: there is no elevated
-window.
+its results going back to the host; here it lists a folder the user cannot read, its other tasks are plan 31's.
+Foldex itself, and with it WebView2, never runs elevated: there is no elevated window.
 
 ## Status
 
@@ -29,7 +30,7 @@ window.
 
 | Part | What | Reference |
 |---|---|---|
-| File operations | through `IFileOperation`; copying into a protected location not tried yet | 3.4; plan 02 6.1 |
+| File operations | through `IFileOperation`; copying into a protected location checked by hand in plan 31 | 3.4; plan 02 6.1 |
 | Elevated helper | started with `runas`, pipe for the user only, accepting only its parent; one operation: listing; "List as administrator" when access is denied | 3.3; plan 02 6.1, plan 03 6.1 |
 | Compatibility junctions | a junction that denies listing: its target listed instead | 3.1 |
 
@@ -37,11 +38,9 @@ window.
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| Permissions and ownership | take ownership through the helper | -- | 3.1 |
-| Links without developer mode | symbolic links and junctions | -- | 3.1 |
-| SYSTEM and TrustedInstaller folders | | take ownership | 3.1 |
-| Helper lifetime | stays a while after its last operation, the time as a setting, the shield in the ribbon | -- | 3.3 |
-| Checks by hand | including copying into a protected location and listing through UAC | -- | 3.4; plan 02 6.3 |
+
+Moved out: taking ownership, SYSTEM and TrustedInstaller folders, links without developer mode, the helper's lifetime
+and shield, and the checks by hand, to plan 31 (the elevated helper's further tasks).
 
 ## 3. Details
 
@@ -50,10 +49,10 @@ window.
 | Task | Done by |
 |---|---|
 | Copy, move, delete, rename, new folder in a protected location | `IFileOperation` (Windows asks per operation) |
-| Permissions, ownership (take ownership) | Elevated helper |
-| Symbolic links and junctions without developer mode | Elevated helper |
+| Permissions, ownership (take ownership) | Elevated helper (plan 31) |
+| Symbolic links and junctions without developer mode | Elevated helper (plan 31) |
 | Listing a folder the user cannot read | Elevated helper; the host shows its listing in the page as any other |
-| Folders owned by SYSTEM or TrustedInstaller (`System Volume Information`, `WindowsApps`) | Elevated helper, after taking ownership; elevation alone is not enough |
+| Folders owned by SYSTEM or TrustedInstaller (`System Volume Information`, `WindowsApps`) | Elevated helper, after taking ownership; elevation alone is not enough (plan 31) |
 | Compatibility junctions that deny listing to everyone (`C:\Documents and Settings`) | No elevation: Foldex lists the junction's target instead (built 2026-11-10: `ShellListing.LinkTarget`; the pane's title shows "link -> target") |
 | Editing a protected file in place | Not Foldex's: LexPen's |
 
@@ -75,17 +74,24 @@ window.
 - It accepts a fixed set of operations with their arguments (3.1), checks each, and does nothing else: no commands,
   no scripts. Results (a listing, done or failed) go back over the pipe to the host.
 - It has no window and loads no shell extensions or WebView2.
-- It stays for a while after the last operation so a series does not prompt each time, then exits; the time is a
-  setting [default not yet decided]. While it runs, the ribbon shows a shield in a warning colour.
+- Started for each operation and gone when it is done, or when Foldex goes; staying a while after its last operation,
+  and the shield in the ribbon while it runs, are plan 31's.
 - A COM elevation moniker would avoid a process of its own but needs registration in HKLM, which a no-install exe does
   not have.
 
 ### 3.4 Tests
 
 - Unit: the helper's request parsing and refusal of anything outside the set; the pipe's access rule.
-- By hand (UAC cannot be clicked by the test copy): copy into Program Files with the Windows prompt; take ownership
-  through the helper; the helper exiting after its time; refused when the prompt is cancelled.
+- By hand (UAC cannot be clicked by the test copy): plan 31 3.4.
 
 ## 4. Open questions
 
 None.
+
+## 6. As built
+
+- Foldex not elevated, file operations through `IFileOperation` (`Shell/FileOps.cs`), the elevated helper with its one
+  operation, listing (`ElevatedHelper.cs`; List as administrator when access is denied): built with plan 02's spike,
+  plan 02 6.1 and plan 03 6.1 say how and how they were tested.
+- The compatibility junctions: `ShellListing.LinkTarget`; a pane on such a junction lists its target, its head
+  showing "link -> target".
