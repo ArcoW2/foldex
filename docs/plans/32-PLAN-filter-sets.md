@@ -58,7 +58,8 @@ A line tests one field of an item, for the folders, the files or both:
 - **Folders, Files**: two checks; a folder passes only when Folders is checked, a file only when Files is checked;
   both checked (the default): either.
 - **Field**: any column Foldex has or can show (its own columns and Windows' properties, as Select columns lists
-  them), chosen from a drop-down with a search box (type to find a column); a new line's field is Name.
+  them), chosen from a drop-down with a search box (type to find a column); a new line's field is Name. A slow field has
+  a tortoise in front of its name (below).
 - **Condition**: what the field must be. Which conditions there are depends on the field's kind; the editor shows only
   those of the field chosen (nothing that does not apply is shown).
 - **Not**: an exception; an item passes when it does not pass the line.
@@ -81,7 +82,11 @@ A line tests one field of an item, for the folders, the files or both:
   `Not Files, Name matches *.tmp;*.bak`.
 - The values are those the columns show (`columns.js columnText` and its kinds): a field that is not in the listing
   (a Windows property, Git status) is read as a column's is (`askProps`, the Git status asked); an item whose value is
-  not read yet is not shown until it is [not yet checked: how long a large folder then takes].
+  not read yet is not shown until it is.
+- Slow fields: those read per item after the listing (Windows' properties, Git status, Total size of a folder) can
+  take a while in a large folder [not yet checked: how long]. In the field's drop-down they have a tortoise in front of
+  their name (a drawing of Foldex's own, stroked in the text colour as the ribbon's icons; its tooltip: read per item,
+  slow in a large folder); a line using one shows the same tortoise and a short warning under the field.
 - A filter of now (Filter...'s wildcards) is a set of one line: Files, Name matches its wildcards; Folders checked too,
   since folders are always shown now.
 
