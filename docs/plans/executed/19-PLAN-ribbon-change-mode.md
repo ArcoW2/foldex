@@ -350,7 +350,8 @@ What differs from the plan, and what was decided while building:
   right-click menu and the grip. The Settings window's App tab has a group Ribbon with Group names and Label width.
 - **Reset** posts `ribbonReset` and takes the ribbon the host sends back (`rb.resetting`), also in the change mode,
   which otherwise keeps its own model over the events of other windows.
-- **Customize** is a modal floating window (`dialog.html`, `dialogpage.js customizeHere`): each change it makes is the
+- **Customize** is a floating window that is not modal (`dialog.html`, `dialogpage.js customizeHere`), so the ribbon
+  stays usable while it is open (another tab clicked, the change mode beside it); LexPen's is modal. Each change it makes is the
   window's page's (`rbcDo`), which answers with the lines; a name it needs (New tab, New group, Rename) it asks in its
   own window. Ctrl+Z there takes back the last change too.
 - **A label's line break**: the small text dialog has one line, so `\n` typed in a label is a line break (shown so
@@ -360,6 +361,12 @@ What differs from the plan, and what was decided while building:
   while the tips show and back to the active pane after. A dialog's window keeps its Alt.
 - **Lists**: Bookmarks, Views, Projects and Drives are `dropDownOnly`; Projects asks the host for its list
   (`projectListItems`). Menus have no `&` mnemonics (Foldex's menus have none).
+- **Foldex's own windows and the first click**: a floating window of Foldex (Customize, a floating pane) tells the
+  window when it gets and loses the focus (`pane.js`, `app.js ownWindowFocus`), so the first click back in the window
+  acts instead of being taken as the click that brings Foldex back from another program.
+- **F1 docked**: the rows it is sent each time it gets the focus only set their marks when the actions are the same
+  (`palettepane.js`); redrawn, the row a click pressed was gone before its release, so no click came (no row
+  selected, its Change the ribbon button not working). The button in the theme's colours.
 - **Not taken from LexPen**: the clipboard badge and its lists, the "auto" mark (no Foldex action has one), the
   panels' poll.
 - **The shipped ribbon**: the Drives button in Home > Go; All actions (F1) and Log in View > Foldex; Rename pane and

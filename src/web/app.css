@@ -517,6 +517,9 @@ body.rb-changing .rb-bodies { overflow-x: auto; }
 /* Its head: the name and version, and the ribbon's change mode (plan 19 3.10): while on, its rows are dragged. */
 #palette .palette-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 #palette .palette-head .about { flex: 1; }
+#palette .palette-ribbon { flex: none; color: var(--fg); background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
+  padding: 3px 14px; font: inherit; cursor: default; }   /* in the theme's colours, as a dialog's buttons */
+#palette .palette-ribbon:hover { border-color: var(--accent); }
 #palette .palette-ribbon.on { color: var(--accent); border-color: var(--accent); font-weight: 600; }
 #palette tr.draggable { cursor: grab; }
 

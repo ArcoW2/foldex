@@ -3667,7 +3667,7 @@ function folderChanged(folder, ids = null) {
 // bring the window back: every press, release, click and dblclick until Windows' double-click time has passed after
 // the last of them is stopped as well, so it does not act as a click or a double click (opening an item); a click
 // after that acts at once. Back by the keys (Alt+Tab) is no click.
-const activation = { away: false, back: 0, until: 0, double: 500 };
+const activation = { away: false, back: 0, until: 0, double: 500, own: 0 };
 addEventListener('blur', () => { activation.away = true; });
 addEventListener('focus', () => { activation.back = performance.now(); });
 addEventListener('keydown', () => { activation.away = false; activation.until = 0; }, true);
@@ -3683,8 +3683,9 @@ addEventListener('dragleave', e => { if (!e.relatedTarget && !document.hasFocus(
 addEventListener('drop', () => setTimeout(() => setInert(!document.hasFocus())), true);
 addEventListener('pointerdown', e => {
   const now = performance.now();
-  const first = activation.away && (!document.hasFocus() || now - activation.back < 500);
+  const first = activation.away && !activation.own && (!document.hasFocus() || now - activation.back < 500);
   activation.away = false;
+  activation.own = 0;
   if ((!first && !activationEating()) || settings.ignoreActivationClick === false) return;
   activation.until = now + activation.double;
   e.preventDefault();   // no mousedown, mouseup after it
@@ -3697,6 +3698,24 @@ for (const type of ['mousedown', 'mouseup', 'pointerup', 'click', 'dblclick', 'a
     e.stopImmediatePropagation();
     if (type === 'pointerup') activation.until = performance.now() + activation.double;   // a next press may follow
   }, true);
+
+// Foldex's own floating windows (a floating pane, a dialog's window such as Customize the ribbon) tell when they get
+// and lose the focus (panechannel.js): the focus going there is not leaving Foldex, so the first press back in this
+// window acts and this page is not inert meanwhile. Lost to another program (no own window got it within a moment):
+// away, as after any blur.
+function ownWindowFocus(kind) {
+  if (kind === 'back' || kind === 'ownFocus') {
+    activation.own = performance.now();
+    setInert(false);
+  } else if (kind === 'blurred' || kind === 'ownBlur') {
+    const at = performance.now();
+    setTimeout(() => {
+      if (activation.own >= at || document.hasFocus()) return;
+      activation.own = 0;
+      setInert(true);
+    }, 300);
+  }
+}
 
 // With the setting ignorePaneActivationClick: a press in the body of a pane that is not the active one only makes it the
 // active pane (the keyboard to it); it selects, opens or presses nothing there, a double click included (stopped as

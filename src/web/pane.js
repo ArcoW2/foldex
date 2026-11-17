@@ -66,6 +66,14 @@ addEventListener('keyup', e => {
   toWindow({ kind: 'ribbonAlt' });
 }, true);
 
+// Floating (a window of its own, a dialog's window): its window told when it gets and loses the focus, so a press back
+// there is no click that brings Foldex back from another program (app.js ownWindowFocus).
+if (floating) {
+  addEventListener('focus', () => toWindow({ kind: 'ownFocus' }));
+  addEventListener('blur', () => toWindow({ kind: 'ownBlur' }));
+  addEventListener('DOMContentLoaded', () => { if (document.hasFocus()) toWindow({ kind: 'ownFocus' }); });   // it came with the focus
+}
+
 // A press anywhere in the pane: its window's pane becomes the active one, as a press in the page does.
 addEventListener('pointerdown', () => toWindow({ kind: 'activate' }), true);
 

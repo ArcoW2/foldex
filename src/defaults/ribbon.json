@@ -28,7 +28,7 @@
       { "name": "Organize", "items": [
         { "action": "item.delete", "size": "large", "label": "Delete" },
         { "action": "folder.new", "size": "large", "label": "New\nfolder" },
-        { "action": "item.rename", "label": "Rename" }, { "action": "item.deleteDisk", "label": "Delete from disk", "stack": true } ] },
+        { "action": "item.rename", "label": "Rename" } ] },
       { "name": "Open", "items": [
         { "action": "item.open", "size": "large", "label": "Open" },
         { "action": "item.properties", "label": "Properties" }, { "action": "item.selectAll", "label": "Select all", "stack": true } ] },

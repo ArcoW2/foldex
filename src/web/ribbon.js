@@ -794,7 +794,8 @@ function rbEditMenu(e) {
 }
 
 // ---------- The Customize window (the ribbon's right-click > Customize...; plan 19 3.9) ----------
-// A modal floating window (dialog.html, dialogpage.js customizeHere): at the left every action (F1's, with its search),
+// A floating window, not modal (dialog.html, dialogpage.js customizeHere), so the ribbon stays usable while it is open:
+// another tab clicked, the change mode beside it. At the left every action (F1's, with its search),
 // at the right the ribbon's tabs, groups, buttons, dividers and corners in order. Each change it makes is asked here
 // (rbcDo), through the same change, undo and saving as the change mode; the line it has chosen is outlined on the
 // ribbon (its tab shown).
@@ -803,7 +804,7 @@ async function rbCustomize() {
   rbApplyShow();
   const actionsList = ACTION_GROUPS.map(([group, label]) => [label, paletteRows().filter(r => actionDef(r.call[0])?.group === group).map(r => ({ title: r.title, call: r.call }))])
     .filter(([, list]) => list.length);
-  await dialogWindow('Customize the ribbon', { what: 'customize', actions: actionsList, lines: rbcLines() }, msg => rbcDo(msg), true, ch => {
+  await dialogWindow('Customize the ribbon', { what: 'customize', actions: actionsList, lines: rbcLines() }, msg => rbcDo(msg), false, ch => {
     rb.customizing = ch;
     rbApplyShow();
   });

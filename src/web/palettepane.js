@@ -15,14 +15,26 @@ const pal = {
   changing: false,   // the ribbon is being changed: rows are dragged onto it
 };
 
+// The rows again (each time this page gets the focus: which actions work may have changed). The same actions as shown:
+// only their marks are set (greyed out, draggable), the rows themselves stay, so a click whose press brought the focus
+// here still lands on the row it pressed (a row drawn anew under it would take no click).
 paneHandlers.rows = m => {
+  const same = JSON.stringify((m.rows ?? []).map(r => r.call)) === JSON.stringify(pal.rows.map(r => r.call));
   pal.rows = m.rows ?? [];
   pal.changing = !!m.ribbon;
   pal.ribbonButton.textContent = pal.changing ? 'Done changing the ribbon' : 'Change the ribbon';
   pal.ribbonButton.classList.toggle('on', pal.changing);
   pal.el.querySelector('.about').textContent = `Foldex ${m.version ?? ''}`;   // the name and version (plan 10 3.2)
-  fill(false);
+  if (!same) return fill(false);
+  const byCall = new Map(pal.rows.map(r => [JSON.stringify(r.call), r]));
+  for (const tr of rowEls()) mark(tr, byCall.get(tr.dataset.call));
 };
+// A row's marks: greyed out when it does not work on the active pane now, draggable while the ribbon is changed.
+function mark(tr, r) {
+  tr.draggable = pal.changing && floating;   // floating: the browser's drag, between windows (docked: below)
+  tr.classList.toggle('draggable', pal.changing);
+  tr.classList.toggle('disabled', !!r?.off);
+}
 paneHandlers.focus = () => { pal.input.focus(); pal.input.select(); };
 
 // The rows the search finds; a new search starts at its first row, the same one keeps the selection.
@@ -33,9 +45,7 @@ function fill(searched = true) {
   pal.body.replaceChildren(...shown.map(r => {
     const tr = document.createElement('tr');
     tr.dataset.call = JSON.stringify(r.call);
-    tr.draggable = pal.changing && floating;   // floating: the browser's drag, between windows (docked: below)
-    tr.classList.toggle('draggable', pal.changing);
-    if (r.off) tr.classList.add('disabled');
+    mark(tr, r);
     for (const text of [r.group, r.title, r.keys]) tr.insertCell().textContent = text;
     tr.title = r.hint;
     return tr;

@@ -44,7 +44,7 @@ ribbon.json of your own stays as it is until Reset.
 | Tab | Group | Buttons | From |
 |---|---|---|---|
 | Home | Clipboard | Paste (large), Copy, Cut, Copy path | Home |
-| | Organize | Delete (large), New folder (large), Delete from disk, Rename | Home (Delete from disk from Find; Rename new) |
+| | Organize | Delete (large), New folder (large), Rename | Home (Rename new) |
 | | Open | Open (large), Properties, Select all | Home |
 | | Find | Find (large), Filter..., Search bar, New scrap, Add to scrap | Home (Filter and Search bar new) |
 | | Go | Back, Forward, Up, Refresh, Drives, Bookmarks | Home (Bookmarks from Open) |
@@ -94,6 +94,8 @@ plan (`30-PLAN-ribbon-tabs.md.images/`): [Home](30-PLAN-ribbon-tabs.md.images/ri
 - In Customize, Manage column sets and Manage bookmarks are large buttons (a group of one or two needs them to be
   found); Add the current folder is small beside it. A Manage button says what it manages (Manage column sets, Manage
   bookmarks, Manage projects).
+- Delete from disk is not on the shipped ribbon: it is a scrap's own (an item in a scrap deleted on disk, not only taken
+  out); Alt+Del and F1 still have it.
 - Corners as LexPen's: the left one opens the manager, the right one the list. Column sets: Manage column sets at the
   left (no list of sets at the right: no action has one). Bookmarks: Manage bookmarks at the left, the bookmarks' list
   at the right. Projects (View): Manage projects at the left, the projects' list at the right. Tested in the test copy:
