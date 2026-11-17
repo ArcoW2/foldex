@@ -237,6 +237,8 @@ action('pane.filter', { title: 'Filter...', hint: 'the active pane\'s filter set
   enabled: filterable, run: () => openManageFilters(activePane) });
 const filtersMenu = () => [
   { label: 'None', checked: !paneFilterSet(activePane), enabled: filterable(), run: () => setPaneFilter(activePane, null) },
+  ...(filterSets.temp?.lines?.length ? [{ label: '(temp)', checked: !!paneFilterSet(activePane)?.temp, enabled: filterable(),
+    run: () => setPaneFilter(activePane, { temp: true, lines: filterSets.temp.lines }) }] : []),
   ...filterSets.sets.map(s => ({ label: s.name, key: s.key ?? '', checked: paneFilterSet(activePane)?.name === s.name, enabled: filterable(),
     run: () => setPaneFilter(activePane, { name: s.name, lines: s.lines }) })),
   '-', { label: 'Manage filters...', run: () => openManageFilters(filterable() ? activePane : null) }];

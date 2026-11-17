@@ -133,6 +133,23 @@ public class FiltersTests
         Assert.Equal("""["Line 1 closes a bracket that was not opened.","1 bracket is not closed.",true,null,6,6,6]""", r.GetRawText());
     }
 
+    // filters.json: the kept sets (one without a name, or a second with the same name, left out), the temporary
+    // filter's lines, defaults only of kept sets; the head's text of the temporary filter.
+    [Fact]
+    public void TheFileKeepsTheSetsTheTemporaryFilterAndTheDefaults()
+    {
+        var clean = FiltersFile.Clean(System.Text.Json.Nodes.JsonNode.Parse("""
+            { "sets": [ { "name": "Exes", "lines": [ { "field": "ext" } ], "key": "ctrl+alt+e" }, { "name": "", "lines": [] },
+                        { "name": "exes", "lines": [] } ],
+              "temp": { "lines": [ { "field": "name" } ] }, "rootDefault": "Exes", "childDefault": "Gone" }
+            """));
+        var expected = System.Text.Json.Nodes.JsonNode.Parse("""
+            {"sets":[{"name":"Exes","lines":[{"field":"ext"}],"key":"Ctrl+Alt+E"}],"temp":{"lines":[{"field":"name"}]},"rootDefault":"Exes","childDefault":null}
+            """);
+        Assert.True(System.Text.Json.Nodes.JsonNode.DeepEquals(expected, clean), clean.ToJsonString());
+        Assert.Equal("\"temp\"", Run("filterHeadText({ temp: true, lines: [L({})] })").GetRawText());
+    }
+
     // A value not read yet (a property, the Git status): the item waits; a filter of before is Folders Or Files by name.
     [Fact]
     public void WaitingForAValueAndAFilterOfBefore()

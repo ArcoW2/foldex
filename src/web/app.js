@@ -215,7 +215,7 @@ const shownName = x => settings.showExtensions === false && x.folder === false &
 // ---------- Filter sets (docs/plans/executed/32-PLAN-filter-sets.md; the rules: filters.js) ----------
 
 // The kept sets and the defaults (filters.json, from the host: hello, the event filters).
-let filterSets = { sets: [], rootDefault: null, childDefault: null };
+let filterSets = { sets: [], temp: { lines: [] }, rootDefault: null, childDefault: null };
 // A field's kind for its conditions.
 const filterKindOf = id => filterKind(id, columnInfo(id).kind);
 // A pane's set: its own (filterSet), or the wildcards of a filter of before plan 32 (filter) as a set; null: none.
@@ -243,6 +243,7 @@ function setPaneFilter(id, set) {
   drawHeads();
   tellLayout();
   ribbonRefresh();
+  if (filtersFor?.id === id) paneOfKind('filters')?.render();   // Manage filters, opened for it, sees it
 }
 
 // Its filter off and on (a click on its [name] in the head, filters.toggle): the same set.
@@ -265,6 +266,14 @@ let filtersFor = null;   // { id, before }: the pane it was opened for
 function openManageFilters(paneId = null) {
   const v = paneId ? views.get(paneId) : null;
   filtersFor = v && !(v instanceof PreviewView) && layout.pane(paneId) ? { id: paneId, before: paneFilterSet(paneId) } : null;
+  // A filter of the pane without a name (a wildcard one of before, one of a version before the temporary one) becomes the
+  // temporary filter, so changing it there still filters the pane at once.
+  const own = filtersFor && paneFilterSet(paneId);
+  if (own?.lines?.length && !own.name && !own.temp) {
+    filterSets = { ...filterSets, temp: { lines: own.lines } };
+    post({ op: 'filtersSave', filters: filterSets });
+    setPaneFilter(paneId, { temp: true, lines: own.lines, ...(own.off ? { off: true } : {}) });   // its page told too
+  }
   askPropList().then(() => paneOfKind('filters')?.render());
   openOnePane('filters');
   paneOfKind('filters')?.render(true);
@@ -284,7 +293,19 @@ function filtersForPage(view, paneFirst = false) {
 async function filtersPageAsks(view, m) {
   switch (m.kind) {
     case 'apply': return setPaneFilter(m.id, m.set);
-    case 'save': return post({ op: 'filtersSave', filters: m.filters });
+    case 'save':
+      // The temporary filter saved under a name: the panes using it use that name now.
+      if (m.tempNamed) for (const [id, pane] of layout.panes) if (pane.filterSet?.temp) {
+        const { temp, ...rest } = pane.filterSet;
+        pane.filterSet = { ...rest, name: m.tempNamed };
+        views.get(id)?.filterChanged?.();
+      }
+      // A kept set renamed: the panes using it keep using it, by its new name.
+      if (m.renamed) for (const [id, pane] of layout.panes) if (pane.filterSet?.name?.toLowerCase() === m.renamed[0].toLowerCase()) {
+        pane.filterSet = { ...pane.filterSet, name: m.renamed[1] };
+        views.get(id)?.filterChanged?.();
+      }
+      return post({ op: 'filtersSave', filters: m.filters });
     case 'setKey': {
       const clash = m.key && filterKeyClash(m.key, m.name);
       if (clash) return view.send({ kind: 'keyRefused', key: 'keyRefused', text: clash });
@@ -317,10 +338,13 @@ function filterKeyClash(key, name) {
 // The kept sets came or changed: a pane using one by name follows it (removed: it keeps its lines, without the name).
 function filterSetsCame(m) {
   filterSets = m ?? filterSets;
+  filterSets.temp ??= { lines: [] };
   for (const [id, pane] of layout.panes) {
-    if (!pane.filterSet?.name) continue;
-    const kept = keptFilter(pane.filterSet.name);
-    const next = kept ? { ...pane.filterSet, name: kept.name, lines: kept.lines } : { ...pane.filterSet, name: undefined };
+    if (!pane.filterSet?.name && !pane.filterSet?.temp) continue;
+    // A pane using the temporary filter follows it too.
+    const kept = pane.filterSet.temp ? null : keptFilter(pane.filterSet.name);
+    const next = pane.filterSet.temp ? { ...pane.filterSet, lines: filterSets.temp.lines }
+      : kept ? { ...pane.filterSet, name: kept.name, lines: kept.lines } : { ...pane.filterSet, name: undefined };
     if (JSON.stringify(next) === JSON.stringify(pane.filterSet)) continue;
     pane.filterSet = JSON.parse(JSON.stringify(next));
     if (!PanePage || id === PanePage) views.get(id)?.filterChanged?.();
@@ -3225,6 +3249,8 @@ function paneMenu(id) {
       { label: 'Filter...', run: () => openManageFilters(id) },
       { label: 'Filters', items: [
         { label: 'None', checked: !paneFilterSet(id), run: () => setPaneFilter(id, null) },
+        ...(filterSets.temp?.lines?.length ? [{ label: '(temp)', checked: !!paneFilterSet(id)?.temp,
+          run: () => setPaneFilter(id, { temp: true, lines: filterSets.temp.lines }) }] : []),
         ...filterSets.sets.map(s => ({ label: s.name, key: s.key ?? '', checked: paneFilterSet(id)?.name === s.name,
           run: () => setPaneFilter(id, { name: s.name, lines: s.lines }) })),
         '-', { label: 'Manage filters...', run: () => openManageFilters(id) }] },
@@ -3857,6 +3883,8 @@ addEventListener('pointerdown', e => {
   activation.away = false;
   activation.own = 0;
   if ((!first && !activationEating()) || settings.ignoreActivationClick === false) return;
+  // In the log (Verbose): which press only brought the window back, and why it counted as one.
+  logStatus(`A click only brought the window back (${first ? `the window was away${document.hasFocus() ? ', back just now' : ''}` : 'within the double-click time after one'}).`, false, 'verbose');
   activation.until = now + activation.double;
   e.preventDefault();   // no mousedown, mouseup after it
   e.stopImmediatePropagation();

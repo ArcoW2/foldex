@@ -1,38 +1,41 @@
 'use strict';
 // Manage filters, the page of its pane (docs/plans/executed/32-PLAN-filter-sets.md 3.3 - 3.5, 3.8): docked in a frame of
 // its window's page, or floating, laid out as Manage column sets (colsmanage.js). Its window's page sends the kept sets,
-// the fields there are and, opened by Filter..., the pane it was opened for with its set (`filters`). At the left the
-// kept sets (on top that pane's set when it is not a kept one), each with its key and its default marks; at the right
-// the set chosen: its lines (And / Or, brackets, Not, what it tests), under them the line chosen with its field and only
-// the conditions of that field's kind (filters.js). A change to the pane's own set is applied to that pane at once
-// (`apply`; Cancel puts back what it had); a change to a kept set is written (`save`), and the panes using it follow.
+// the one temporary filter, the fields there are and, opened by Filter..., the pane it was opened for with its set
+// (`filters`). At the left the filters: on top the temporary one, "(temp)" in italic, then the kept sets, each with its
+// key and its default marks. At the right the filter chosen: its name (editable; the temporary one's empty: typing a
+// name saves it under that name), its lines (And / Or, brackets, Not, what it tests), under them the line chosen with its
+// field and only the conditions of that field's kind (filters.js). Every change is written (`save`), and the panes using
+// that filter follow at once.
 
-let filterSets = { sets: [], rootDefault: null, childDefault: null };
+let filterSets = { sets: [], temp: { lines: [] }, rootDefault: null, childDefault: null };
 let fields = [];         // [{ id, title, kind (filters.js filterKind), slow }]
 let pane = null;         // { id, title, set, before }: the pane it was opened for, its set now and when it opened
-let chosen = null;       // the set chosen: a kept one's name, or PaneEntry (the pane's own)
+let chosen = null;       // the filter chosen: a kept one's name, or TempEntry (the temporary one)
 let chosenLine = 0;
 let keyNote = '';        // why a key was refused
+let focusName = false;   // New: the cursor into the name once drawn
 
-const PaneEntry = ':pane';
+const TempEntry = ':temp';
 const manageEl = document.getElementById('manage');
 const keptNamed = name => filterSets.sets.find(s => s.name.toLowerCase() === String(name ?? '').toLowerCase());
 const fieldOf = id => fields.find(f => f.id === id) ?? { id, title: id.split('.').pop(), kind: 'text', slow: slowField(id) };
 const titleOf = id => fieldOf(id).title;
 const kindOf = id => fieldOf(id).kind;
 const clone = x => JSON.parse(JSON.stringify(x));
-const saveFilters = next => toWindow({ kind: 'save', filters: next });
+const saveFilters = (next, tempNamed = null, renamed = null) => toWindow({ kind: 'save', filters: next, tempNamed, renamed });
 
 paneHandlers.filters = m => {
   filterSets = m.filters ?? filterSets;
+  filterSets.temp ??= { lines: [] };
   fields = m.fields ?? fields;
   if (m.pane !== undefined) {
     pane = m.pane;
-    // Opened for a pane: its set chosen (a kept one by its name), else its own.
-    if (m.pane && m.paneFirst) chosen = pane.set?.name && keptNamed(pane.set.name) ? keptNamed(pane.set.name).name : PaneEntry;
+    // Opened for a pane: the filter it uses chosen (a kept one by its name), else the temporary one.
+    if (m.pane && m.paneFirst) chosen = pane.set?.name && keptNamed(pane.set.name) ? keptNamed(pane.set.name).name : TempEntry;
   }
   if (m.split) manageEl.style.setProperty('--cs-left', `${m.split}px`);
-  if (chosen === PaneEntry ? !pane : !keptNamed(chosen)) chosen = pane ? PaneEntry : filterSets.sets[0]?.name ?? null;
+  if (chosen !== TempEntry && !keptNamed(chosen)) chosen = TempEntry;
   draw();
 };
 paneHandlers.keyRefused = m => { keyNote = m.text ?? ''; draw(); };
@@ -72,20 +75,15 @@ const check = (text, checked, change, title = '') => {
   return el('label', { className: 'fl-check', title }, box, ' ' + text);
 };
 
-// The set the right part shows: the pane's own, or a kept one.
-const chosenSet = () => chosen === PaneEntry ? pane?.set ?? { lines: [] } : keptNamed(chosen);
+// The filter the right part shows: the temporary one, or a kept one.
+const chosenSet = () => chosen === TempEntry ? filterSets.temp : keptNamed(chosen);
 
-// A change of the set chosen: the pane's own applied to the pane at once; a kept one written (the panes using it
-// follow).
+// A change of the filter chosen, written: the temporary one's lines, or the kept one's; the panes using it follow.
 function change(edit) {
   const set = clone(chosenSet() ?? { lines: [] });
   edit(set);
   chosenLine = Math.max(0, Math.min(chosenLine, set.lines.length - 1));
-  if (chosen === PaneEntry) {
-    pane.set = set.lines.length ? { ...set, name: undefined } : null;
-    toWindow({ kind: 'apply', id: pane.id, set: pane.set });
-    return draw();
-  }
+  if (chosen === TempEntry) return saveFilters({ ...filterSets, temp: { lines: set.lines } });
   saveFilters({ ...filterSets, sets: filterSets.sets.map(s => s.name === chosen ? { ...s, lines: set.lines } : s) });
 }
 const changeLine = edit => change(set => { if (set.lines[chosenLine]) edit(set.lines[chosenLine]); });
@@ -97,17 +95,18 @@ function draw() {
   drawBottom();
 }
 
-// ---------- The sets ----------
+// ---------- The filters ----------
 
 function drawSets() {
   const list = manageEl.querySelector('.cs-setlist');
-  const rows = [];
-  if (pane) {
-    const row = el('div', { className: 'cs-row cs-setrow' + (chosen === PaneEntry ? ' selected' : '') },
-      el('span', { className: 'cs-name', textContent: `This pane (${pane.title}): ${!pane.set?.lines?.length ? 'no filter' : pane.set.name ? pane.set.name : 'its own filter'}` }));
-    row.addEventListener('click', () => { chosen = PaneEntry; chosenLine = 0; keyNote = ''; draw(); });
-    rows.push(row);
-  }
+  const temp = filterSets.temp?.lines ?? [];
+  // The temporary filter: always on top, "(temp)" in italic, until it is saved under a name.
+  const tempRow = el('div', { className: 'cs-row cs-setrow fl-temprow' + (chosen === TempEntry ? ' selected' : ''),
+    title: 'The temporary filter: give it a name at the right to save it' },
+    el('span', { className: 'cs-name', textContent: '(temp)' }),
+    el('span', { className: 'fl-marks', textContent: temp.length ? `${temp.length} line${temp.length > 1 ? 's' : ''}` : 'empty' }));
+  tempRow.addEventListener('click', () => { chosen = TempEntry; chosenLine = 0; keyNote = ''; draw(); });
+  const rows = [tempRow];
   filterSets.sets.forEach((s, k) => {
     const marks = [s.name === filterSets.rootDefault ? 'root default' : '', s.name === filterSets.childDefault ? 'child default' : ''].filter(Boolean);
     const row = el('div', { className: 'cs-row cs-setrow' + (s.name === chosen ? ' selected' : '') },
@@ -122,24 +121,17 @@ function drawSets() {
   const at = filterSets.sets.findIndex(s => s.name === chosen);
   manageEl.querySelector('.cs-sets .up').disabled = at <= 0;
   manageEl.querySelector('.cs-sets .down').disabled = at < 0 || at >= filterSets.sets.length - 1;
-  const set = chosen !== PaneEntry && keptNamed(chosen);
+  const set = chosen !== TempEntry && keptNamed(chosen);
   const others = name => filterSets.sets.filter(s => s.name.toLowerCase() !== name.toLowerCase());
-  const renamed = (from, to) => ({ rootDefault: filterSets.rootDefault === from ? to : filterSets.rootDefault,
-    childDefault: filterSets.childDefault === from ? to : filterSets.childDefault });
   manageEl.querySelector('.cs-setbuttons').replaceChildren(
-    button('New...', async () => {
-      const name = (await askText('Name of the new filter set', ''))?.trim();
-      if (!name || keptNamed(name) && !await askYes(`Replace the filter set ${name}?`)) return;
-      chosen = name;
+    // New: the temporary filter empty, chosen, the cursor in its name (empty: it stays the temporary one).
+    button('New', async () => {
+      if (temp.length && !await askYes('The temporary filter has lines that are not saved. Start a new one in its place?')) return;
+      chosen = TempEntry;
       chosenLine = 0;
-      saveFilters({ ...filterSets, sets: [...others(name), { name, lines: [newFilterLine()] }] });
-    }),
-    button('Rename...', async () => {
-      const name = (await askText('New name of the set', set.name))?.trim();
-      if (!name || name === set.name || keptNamed(name)) return;
-      chosen = name;
-      saveFilters({ ...filterSets, ...renamed(set.name, name), sets: filterSets.sets.map(s => s === set ? { ...s, name } : s) });
-    }, !!set),
+      focusName = true;
+      saveFilters({ ...filterSets, temp: { lines: [] } });
+    }, true, 'A new filter: the temporary one, empty; give it a name to save it'),
     button('Duplicate...', async () => {
       const name = (await askText('Name of the copy', `${set.name} (2)`))?.trim();
       if (!name || keptNamed(name)) return;
@@ -148,23 +140,52 @@ function drawSets() {
     }, !!set),
     button('Delete...', async () => {
       if (!await askYes(`Delete the filter set ${set.name}? Panes filtered by it keep its lines.`)) return;
-      chosen = null;
-      saveFilters({ ...filterSets, ...renamed(set.name, null), sets: others(set.name) });
+      chosen = TempEntry;
+      saveFilters({ ...filterSets, ...renamedDefaults(set.name, null), sets: others(set.name) });
     }, !!set));
-  // The set chosen: in the pane, its key, the defaults.
+  // A kept set: its key, the defaults.
   const extra = manageEl.querySelector('.fl-setextra');
   if (!set) return extra.replaceChildren();
   extra.replaceChildren(
-    pane ? el('div', { className: 'fl-row' }, button(`Use in ${pane.title}`, () => {
-      pane.set = { name: set.name, lines: clone(set.lines) };
-      toWindow({ kind: 'apply', id: pane.id, set: pane.set });
-      draw();
-    }, !(pane.set?.name === set.name), `The pane ${pane.title} filtered by this set`)) : null,
     el('div', { className: 'fl-row' }, el('span', { className: 'cs-caption', textContent: 'Key' }), keyField(set), keyNote ? el('span', { className: 'fl-note', textContent: keyNote }) : null),
     el('div', { className: 'fl-row' }, check('Default for a new root pane', filterSets.rootDefault === set.name,
       on => saveFilters({ ...filterSets, rootDefault: on ? set.name : null }), 'A new pane without a parent (New pane, a preset\'s tree) starts filtered by this set')),
     el('div', { className: 'fl-row' }, check('Default for a new child pane (a tab too)', filterSets.childDefault === set.name,
       on => saveFilters({ ...filterSets, childDefault: on ? set.name : null }), 'A new child pane or tab starts filtered by this set')));
+}
+const renamedDefaults = (from, to) => ({ rootDefault: filterSets.rootDefault === from ? to : filterSets.rootDefault,
+  childDefault: filterSets.childDefault === from ? to : filterSets.childDefault });
+
+// The name of the filter chosen, at the top of the right part. The temporary filter's is empty ("(temp)" in italic):
+// a name typed (Enter, or leaving the box) saves it under that name, the temporary one empty again, the panes using it
+// using the name now. A kept set's: a name typed renames it; empty, or one another set has: as it was.
+function nameField() {
+  const set = chosenSet(), temp = chosen === TempEntry;
+  const box = el('input', { className: 'fl-name' + (temp ? ' fl-tempname' : ''), value: temp ? '' : set?.name ?? '', spellcheck: false,
+    placeholder: '(temp)', title: temp ? 'Type a name and press Enter to save this filter under it' : 'The name of this filter set' });
+  let done = false;
+  const commit = async () => {
+    if (done) return;
+    done = true;
+    const name = box.value.trim();
+    if (temp) {
+      if (!name) return;
+      if (keptNamed(name) && !await askYes(`Replace the filter set ${name}?`)) { done = false; return box.select(); }
+      chosen = name;
+      saveFilters({ ...filterSets, temp: { lines: [] },
+        sets: [...filterSets.sets.filter(s => s.name.toLowerCase() !== name.toLowerCase()), { name, lines: clone(filterSets.temp.lines) }] }, name);
+      return;
+    }
+    if (!name || name === set.name || keptNamed(name)) { box.value = set.name; done = false; return; }
+    chosen = name;
+    saveFilters({ ...filterSets, ...renamedDefaults(set.name, name), sets: filterSets.sets.map(s => s === set ? { ...s, name } : s) }, null, [set.name, name]);
+  };
+  box.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); commit(); }
+    else if (e.key === 'Escape') { e.preventDefault(); box.value = temp ? '' : set?.name ?? ''; box.blur(); }
+  });
+  box.addEventListener('blur', commit);
+  return box;
 }
 
 // A set's key: focused, it takes the next key pressed (keys.js strokeOf); Backspace or Del takes the key away. The window
@@ -196,7 +217,9 @@ const Brackets = n => [[0, ''], [1, '('], [2, '(('], [3, '(((']].map(([v, t]) =>
 function drawLines() {
   const set = chosenSet(), list = manageEl.querySelector('.fl-lines');
   const label = manageEl.querySelector('.cs-setname');
-  label.textContent = !set ? 'No set chosen' : chosen === PaneEntry ? `The filter of ${pane.title} (applied as you change it)` : `Set: ${set.name}`;
+  const name = nameField();
+  label.replaceChildren(el('span', { className: 'cs-caption', textContent: 'Name' }), name);
+  if (focusName) { focusName = false; requestAnimationFrame(() => name.focus()); }
   const lines = set?.lines ?? [];
   // The brackets: a line is indented one step per bracket open before it (the lines after an opening bracket, up to
   // and with the one that closes it; nested, deeper). While they do not match, the field where one is missing has a red
@@ -439,27 +462,26 @@ function dayBox(value, change) {
 
 // ---------- The buttons at the bottom ----------
 
+// Opened for a pane: the filter chosen used there, none there, or what it had when Manage filters opened for it (its
+// filter without a name became the temporary one: that back too).
 function drawBottom() {
-  const own = chosen === PaneEntry && pane;
+  const set = chosenSet(), temp = chosen === TempEntry;
+  const uses = pane && (temp ? !!pane.set?.temp : pane.set?.name === set?.name);
   manageEl.querySelector('.fl-bottom').replaceChildren(
-    ...(own ? [
-      button('Keep as...', async () => {
-        const name = (await askText('Name of the filter set', pane.set?.name ?? ''))?.trim();
-        if (!name || !pane.set?.lines?.length) return;
-        if (keptNamed(name) && !await askYes(`Replace the filter set ${name}?`)) return;
-        const kept = { name, lines: clone(pane.set.lines), ...(keptNamed(name)?.key ? { key: keptNamed(name).key } : {}) };
-        pane.set = { name, lines: clone(pane.set.lines) };
-        toWindow({ kind: 'apply', id: pane.id, set: pane.set });
-        chosen = name;
-        saveFilters({ ...filterSets, sets: [...filterSets.sets.filter(s => s.name.toLowerCase() !== name.toLowerCase()), kept] });
-      }, !!pane.set?.lines?.length, 'This filter kept under a name: in the list of filters, and the pane filtered by it'),
-      button('None', () => { pane.set = null; toWindow({ kind: 'apply', id: pane.id, set: null }); draw(); }, !!pane.set, 'The pane not filtered'),
-      button('Cancel', () => { pane.set = pane.before ? clone(pane.before) : null; toWindow({ kind: 'apply', id: pane.id, set: pane.set }); draw(); },
-        JSON.stringify(pane.set ?? null) !== JSON.stringify(pane.before ?? null), 'What the pane had when Manage filters opened for it, back'),
+    ...(pane ? [
+      button(`Use in ${pane.title}`, () => toWindow({ kind: 'apply', id: pane.id, set: temp ? { temp: true, lines: clone(set.lines) } : { name: set.name, lines: clone(set.lines) } }),
+        !!set?.lines?.length && !uses, `The pane ${pane.title} filtered by this filter`),
+      button('None', () => toWindow({ kind: 'apply', id: pane.id, set: null }), !!pane.set?.lines?.length, `The pane ${pane.title} not filtered`),
+      button('Cancel', () => {
+        const before = pane.before;
+        if (before && !before.name && !before.temp) {
+          saveFilters({ ...filterSets, temp: { lines: clone(before.lines) } });
+          toWindow({ kind: 'apply', id: pane.id, set: { temp: true, lines: clone(before.lines), ...(before.off ? { off: true } : {}) } });
+        } else toWindow({ kind: 'apply', id: pane.id, set: before ? clone(before) : null });
+      }, true, `What the pane ${pane.title} had when Manage filters opened for it, back`),
     ] : []),
     button('Close', () => toWindow({ kind: 'close' })));
 }
-
 // ---------- The arrows, the keys, the line between the parts ----------
 
 manageEl.querySelector('.cs-sets .up').addEventListener('click', () => {
@@ -481,7 +503,7 @@ for (const bar of manageEl.querySelectorAll('.bm-arrows')) bar.addEventListener(
 manageEl.querySelector('.cs-setlist').addEventListener('keydown', e => {
   if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
   e.preventDefault();
-  const names = [...(pane ? [PaneEntry] : []), ...filterSets.sets.map(s => s.name)];
+  const names = [TempEntry, ...filterSets.sets.map(s => s.name)];
   const at = names.indexOf(chosen) + (e.key === 'ArrowUp' ? -1 : 1);
   if (at < 0 || at >= names.length) return;
   chosen = names[at];

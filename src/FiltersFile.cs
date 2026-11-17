@@ -5,7 +5,8 @@ namespace Foldex;
 
 /// <summary>
 /// filters.json (docs/plans/executed/32-PLAN-filter-sets.md 3.4): the kept filter sets, in the order Manage filters gives
-/// them, each { name, lines, key }; and the defaults for a new root pane and a new child pane (a set's name, or null).
+/// them, each { name, lines, key }; the one temporary filter (temp: its lines, until it is saved under a name); and the
+/// defaults for a new root pane and a new child pane (a set's name, or null).
 /// Written by Foldex, whole, through a temporary file; a file that cannot be read counts as empty. The lines are the
 /// page's (web/filters.js): kept as they come, only a set without a name or lines left out.
 /// </summary>
@@ -15,7 +16,7 @@ static class FiltersFile
 
     static readonly JsonDocumentOptions Options = new() { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true };
 
-    /// <summary>{ sets: [{ name, lines, key }], rootDefault, childDefault }.</summary>
+    /// <summary>{ sets: [{ name, lines, key }], temp: { lines }, rootDefault, childDefault }.</summary>
     public static JsonObject Load(string dataDir)
     {
         JsonObject? root = null;
@@ -38,7 +39,9 @@ static class FiltersFile
         }
         string? Default(string field) => root?[field]?.GetValueKind() == JsonValueKind.String && names.Contains(root[field]!.GetValue<string>())
             ? root[field]!.GetValue<string>() : null;
-        return new JsonObject { ["sets"] = sets, ["rootDefault"] = Default("rootDefault"), ["childDefault"] = Default("childDefault") };
+        // The one temporary filter, until it gets a name: its lines only.
+        var temp = new JsonObject { ["lines"] = root?["temp"]?["lines"] is JsonArray tl ? tl.DeepClone() : new JsonArray() };
+        return new JsonObject { ["sets"] = sets, ["temp"] = temp, ["rootDefault"] = Default("rootDefault"), ["childDefault"] = Default("childDefault") };
     }
 
     public static JsonObject Save(string dataDir, JsonNode filters)

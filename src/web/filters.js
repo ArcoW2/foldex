@@ -4,7 +4,7 @@
 // an exception (not). The rules without a page: the tests run this file under Jint; app.js applies a set to a pane,
 // filterspane.js edits one.
 //
-// A set: { name (when kept), lines: [line], off (switched off in its pane) }.
+// A set: { name (when kept), temp (the temporary filter: true), lines: [line], off (switched off in its pane) }.
 // A line: { join: 'and' | 'or' (the first line's is not used), open, close (brackets before and after it, counts),
 //   not, folders, files (checks), field (a column's id), cond, orEmpty }.
 // A cond by the field's kind (filterKind):
@@ -236,10 +236,12 @@ function filterLineText(line, titleOf) {
   return `${line.not ? 'Not ' : ''}${who}${what}${line.orEmpty && !['has', 'none'].includes(c.op) ? ', or empty' : ''}`;
 }
 
-// What a pane's head shows of its set: the kept name, or the name's wildcards of a one-line set, else "Filter".
+// What a pane's head shows of its set: the kept name, "temp" for the temporary filter, or the name's wildcards of a
+// one-line set, else "Filter".
 function filterHeadText(set) {
   if (!set?.lines?.length) return '';
   if (set.name) return set.name;
+  if (set.temp) return 'temp';
   const [line] = set.lines;
   return set.lines.length === 1 && line.field === 'name' && line.cond?.op === 'wild' && !line.not ? line.cond.text || 'Filter' : 'Filter';
 }

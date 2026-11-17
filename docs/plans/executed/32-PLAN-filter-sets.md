@@ -227,6 +227,17 @@ None.
   field that can. The first line has a space as wide as And / Or, so every line's fields start at the same place.
   Tested in the test copy: `A And (B Or (C And D)) Or E` indented 0, 0, 1, 2, 0 steps; a closing bracket fewer: the
   last line indented and its closing field outlined; three closing: the first opening field outlined.
+- **The temporary filter** (as asked afterwards, in the place of Keep as... and of the pane's own row): one filter without a
+  name, kept in `filters.json` (`temp`) and on top of the list as "(temp)" in italic. At the right the filter's name
+  is a field: the temporary one's is empty ("(temp)" in italic as its placeholder); a name typed (Enter, or leaving the
+  field) saves it under that name, the temporary one empty again, the panes using it using the name now. A kept set's
+  name field renames it, its panes following (Rename... gone). New: the temporary filter empty, the cursor in its name
+  (it asks first when the temporary one has lines). Opened for a pane whose filter has no name (a wildcard one of
+  before), that filter becomes the temporary one, so changing it filters the pane at once; Use in, None and Cancel at the
+  bottom for that pane. A pane on the temporary filter has `temp` in its set and follows it; its head shows `[temp]`.
+  Tested in the test copy: a list's *.exe filter becoming (temp), a line added to it, the name Programs typed (saved,
+  the list on Programs, the head `[Programs]`, (temp) empty), New (the cursor in the name), Programs renamed to
+  Programs 2 in its field (the list following), None, Use in, Cancel (the list back on (temp) with its two lines).
 - **Keys**: a kept set's key is taken in Manage filters (keys.js `strokeOf`), refused when keys.json, a bookmark or
   another set has it (`filterKeyClash`); bound as `filters.apply` with the set's name (keys.js `buildKeys`).
   `filters.toggle` on Ctrl+Alt+F.

@@ -378,7 +378,8 @@ async function rbClick(e) {
   }
   if (el.matches('[data-path]')) {
     const item = rbItemAt(rbPath(el.dataset.path));
-    if (!item || el.classList.contains('off')) return;
+    // Whether it runs asked now, not from how it was drawn (greyed out before the panes were there, at the start).
+    if (!item || !actionEnabled(item.action, item.params ?? []) && !rbListOnly(item)) return rbRefreshSoon();
     if (e.target.closest('[data-arrow]') || rbListOnly(item)) return rbOpenList(el, item);
     await runAction(item.action, item.params ?? [], { from: 'ribbon', el });
     rbSlide(false);

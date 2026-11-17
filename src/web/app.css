@@ -1435,6 +1435,11 @@ dialog.select-columns .ask-buttons, dialog.sort-window .ask-buttons { margin-top
 /* A field's condition and its "or ... is empty": one box under the field, so they read as the value's. */
 .fl-cond { display: flex; flex-direction: column; gap: 6px; margin-left: 1.2em; padding: 6px 8px; border-left: 2px solid var(--border); }
 .fl-setextra { display: flex; flex-direction: column; gap: 6px; }
+/* The temporary filter (filterspane.js): "(temp)" in italic, in the list and as its name's placeholder, until it is saved. */
+.fl-temprow .cs-name { font-style: italic; }
+.cs-setname { display: flex; align-items: center; gap: 8px; font-weight: 400; }
+.fl-name { width: 20em; font-weight: 600; }
+.fl-tempname::placeholder { font-style: italic; font-weight: 400; }
 .fl-key { color: var(--fg-dim); font-size: 0.9em; margin-left: auto; }
 .fl-marks { color: var(--accent); font-size: 0.85em; }
 .fl-note { color: var(--fg-dim); }
