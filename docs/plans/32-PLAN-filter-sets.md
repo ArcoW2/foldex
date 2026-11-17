@@ -25,7 +25,9 @@ files of this week. A set can be kept under a name. Two sets can be defaults: on
 pane, one for a new child (a new tab is a child); a child that becomes a root keeps the filter it has. A filtered pane
 shows its filter at the start of its head, in italic between brackets; a click there switches it off and on (off:
 dimmed), and when the head is too narrow the filter gives way before the name. Home's group Filter has Filter... (the
-active pane's set, edited), the list of kept sets and Manage filters, in the corners as LexPen's.
+active pane's set, in Manage filters), the list of kept sets (ending with Manage filters...) and Manage filters: a pane,
+docked or floating as every Manage..., the kept sets beside the editor of the one chosen; in the corners as LexPen's.
+The search bar's filter stays as it is: a quick filter for once, apart from these sets.
 
 ## Status
 
@@ -37,7 +39,7 @@ active pane's set, edited), the list of kept sets and Manage filters, in the cor
 |---|---|---|---|
 | Filter lines | the tests a line can hold, each used or not, and an item against them | -- | 3.1 |
 | Combining | and / or, brackets, exceptions; the order they are worked out in | -- | 3.2 |
-| The editor | the lines of a set: add (with and), change, remove, move, brackets | Filter lines; open question 1 | 3.3 |
+| Manage filters | a pane (docked or floating): the kept sets, and the editor of the one chosen: add (with and), change, remove, move, brackets | Filter lines | 3.3 |
 | Kept sets | `filters.json` (name, lines), the defaults, every window told | -- | 3.4 |
 | Defaults | one for a new root, one for a new child (a tab too); a child made a root keeps its own | Kept sets | 3.5 |
 | In the head | the filter in italic between brackets at the head's start, a click switches it, giving way to the name | -- | 3.6 |
@@ -77,9 +79,12 @@ passes every test the line uses; a line using none lets every item through. Whic
 - Worked out as usual: Not first, then And before Or, brackets first of all. `A Or B And C` is `A Or (B And C)`.
 - An empty set (no lines) lets every item through.
 
-### 3.3 The editor
+### 3.3 Manage filters, the editor
 
-- Opened by Filter... (the active pane's set) and from Manage filters (a kept set). Where it lives: open question 1.
+- The editor is Manage filters: a pane of its own, docked or floating as every Manage... (Manage the bookmarks, Manage
+  column sets), first floating; plan 14 3.7's list gets its row. At its left the kept sets (and, on top, the active
+  pane's set when it is not a kept one), at its right the editor of the one chosen. Filter... opens it on the active
+  pane's set.
 - A list of the lines, each as it reads (`And Not Files, name *.tmp`); under the list, the line chosen with all it can
   be: its And / Or, Not, its brackets, and every test of 3.1 with its values.
 - Add: a new line after the one chosen, joined with And. Remove, Up, Down.
@@ -113,7 +118,9 @@ passes every test the line uses; a line using none lets every item through. Whic
   again, the same set. Kept with the pane, so it stays over a restart.
 - The head too narrow: the filter is cut first (to `[...]` at the least) so the name keeps its room; its whole text
   in the tooltip.
-- The filter mark the head has now (plan 10: filtered by the search bar) stays for the search bar.
+- The search bar's filter (plan 10: typed text, the pane filtered while you type, its mark in the head) is another
+  thing and stays as it is: a quick filter for once, not a set. Both can be on at once: an item shows when it passes
+  both.
 
 ### 3.7 Ribbon and menus
 
@@ -121,13 +128,13 @@ Home, after Find: the group Filter.
 
 | Button | Action |
 |---|---|
-| Filter... (large) | `pane.filter`: the editor on the active pane's set |
-| Filters (the list) | `filters.list`: None, then every kept set, the pane's checked; a choice applies it to the active pane |
+| Filter... (large) | `pane.filter`: Manage filters on the active pane's set |
+| Filters (the list) | `filters.list`: None, then every kept set, the pane's checked, and at its end Manage filters...; a set chosen applies it to the active pane |
 | Manage filters | `filters.manage` |
 | Left corner | `filters.manage` |
 | Right corner | `filters.list` |
 
-- The pane menu's Filter... opens the editor too; a submenu Filters with the kept sets beside it.
+- The pane menu's Filter... opens Manage filters too; a submenu Filters with the kept sets (and Manage filters...) beside it.
 - Icons: a funnel (Filter..., as now), a funnel with lines (the list), the framed window with a funnel (Manage filters).
 
 ### 3.8 Tests
@@ -141,8 +148,5 @@ Home, after Find: the group Filter.
 
 ## 4. Open questions
 
-1. **The editor and Manage filters: where.** One pane (docked or floating, as Manage the bookmarks) with the kept sets
-   at the left and the editor of the chosen one at the right, Filter... opening it on the active pane's set; or the
-   editor as a floating window of its own beside the pane, and Manage filters only the list of sets?
-2. **Keys.** A key per kept set (as bookmarks have), a key for switching the active pane's filter off and on, or only
+1. **Keys.** A key per kept set (as bookmarks have), a key for switching the active pane's filter off and on, or only
    the list?
