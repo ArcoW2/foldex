@@ -2330,10 +2330,10 @@ dialog.bm-icons { width: min(520px, calc(100vw - 32px)); }
 /* Not in front, with the setting ignoreActivationClick (app.js setInert): the page answers no mouse, not even
    hovering. */
 body[data-inert] { pointer-events: none; }
-/* Settings ignoreRootPaneActivationClick and ignoreChildPaneActivationClick: a root pane, a child pane (.child) that is
-   not active lights nothing under the mouse (app.js setPaneInert). */
-body[data-pane-inert-root] .pane:not(.active):not(.child) > .body *,
-body[data-pane-inert-child] .pane.child:not(.active) > .body * { pointer-events: none; }
+/* Settings ignoreRootPaneActivationClick and ignoreChildPaneActivationClick: a root folder pane, a child folder pane
+   (.child) that is not active lights nothing under the mouse (app.js setPaneInert); other panes always answer. */
+body[data-pane-inert-root] .pane:is(.tree, .list):not(.active):not(.child) > .body *,
+body[data-pane-inert-child] .pane:is(.tree, .list).child:not(.active) > .body * { pointer-events: none; }
 .pane.preview .rows:has(> .own-note), .preview-page .rows:has(> .own-note) { display: flex; flex-direction: column; height: 100%; }
 .own-note { flex: none; padding: 4px 8px; color: var(--fg-dim); }
 .own-note + .own-image { flex: 1; min-height: 0; }

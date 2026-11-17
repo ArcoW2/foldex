@@ -3973,7 +3973,10 @@ for (const type of ['mousedown', 'mouseup', 'pointerup', 'click', 'dblclick', 'a
 // nothing there, a double click included (stopped as above). Its head (title, menu, close) acts at once. Nor does the
 // mouse light anything in such a pane (no hover colours or tooltips; app.css body[data-pane-inert-root],
 // [data-pane-inert-child]): only its body itself answers the mouse, so it still scrolls and the press still lands.
-const ignoresFirstClick = id => !!(layout.pane(id)?.source != null ? settings.ignoreChildPaneActivationClick : settings.ignoreRootPaneActivationClick);
+// Only a folder pane (a tree, a list, a scrap): a press in any other pane (the preview, the log, a Manage pane) acts at
+// once, as its first press always did.
+const ignoresFirstClick = id => !!document.querySelector(`.pane[data-pane="${id}"]:is(.tree, .list)`)
+  && !!(layout.pane(id)?.source != null ? settings.ignoreChildPaneActivationClick : settings.ignoreRootPaneActivationClick);
 const setPaneInert = (on = true) => {
   document.body.toggleAttribute('data-pane-inert-root', on && !!settings.ignoreRootPaneActivationClick);
   document.body.toggleAttribute('data-pane-inert-child', on && !!settings.ignoreChildPaneActivationClick);
