@@ -71,8 +71,8 @@ A line tests one field of an item, for the folders, the files or both:
 | Kind of field | Conditions |
 |---|---|
 | Text (Name, Type, Extension, Folder, a text property) | matches wildcards (`;` between them: `*.cs;*.md`); matches a regex; contains; is; case does not matter |
-| Number (Size, Total size, Free space, a number property) | a range: from and to, each open; a size in bytes, KB, MB, GB |
-| Date (Date modified, created, accessed, a date property) | a range: from and to, each open, an absolute date (with a time or not), or relative to now (n minutes, hours, days, weeks, months or years ago); the last n days is from n days ago to open |
+| Number (Size, Total size, Free space, a number property) | is a value; a range: from and to, each with no limit when empty; a size in bytes, KB, MB, GB |
+| Date (Date modified, created, accessed, a date property) | is on a day: today, a day, or n days ago or from now (the new line's default: today); a range: from and to, each with no limit, an absolute date (with a time or not), or relative to now: n minutes, hours, days, weeks, months or years ago, or from now; the last n days is from n days ago, no limit after |
 | Yes / no (a boolean property) | true, false |
 | Attributes | each attribute (hidden, system, read-only, archive, compressed, encrypted, offline, link): has / has not / either |
 | A list of values (Git status, a property with fixed values) | is one of the values chosen |
@@ -213,6 +213,11 @@ None.
   order. A line row: And / Or, the brackets opened (`(` to `(((`), Not, what it tests, the brackets closed. The field:
   a box to type in with its list under it (Up, Down, Enter, Esc). Dates: open, a day, a day and a time, or n minutes
   to years ago; sizes with a unit, kept in bytes.
+- **Dates and numbers**: "open" reads "no limit" (a range without an end on that side); relative to now a date is
+  some time ago or some time from now (`ahead`); a date can be on one day (`on`: today, a day, n days ago or from now:
+  that day from its start to its end), a number or size can be one value (`is`). Unit tested (`DatesFromNow`,
+  `ADateOnADayAndANumberThatIs`); in the test copy a date field chosen starts as "is today", a range to "7 days from
+  now".
 - **The line chosen**: under its field, the field's condition and its "or <field> is empty" together in one box (a line at
   its left), so the empty check reads as part of the field's value: "or Date modified is empty".
 - **Brackets in the editor**: a line is indented a step per bracket open before it (the lines after an opening bracket,

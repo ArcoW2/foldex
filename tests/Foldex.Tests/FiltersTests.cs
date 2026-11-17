@@ -65,6 +65,30 @@ public class FiltersTests
         Assert.Equal("""["src","C:"]""", Shown("L({ field: 'modified', cond: { op: 'range', from: { abs: '2026-11-15T00:00' }, to: { abs: '2026-11-15T23:59' } } })"));
     }
 
+    // Relative to now in the future too (ahead): from 3 days ago to 1 day from now; nothing is modified from tomorrow on.
+    [Fact]
+    public void DatesFromNow()
+    {
+        Assert.Equal("""["src","beach.jpg","x.tmp","C:"]""", Shown("L({ field: 'modified', cond: { op: 'range', from: { rel: 3, unit: 'days' }, to: { rel: 1, unit: 'days', ahead: true } } })"));
+        Assert.Equal("""["C:"]""", Shown("L({ field: 'modified', cond: { op: 'range', from: { rel: 1, unit: 'days', ahead: true } } })"));
+        Assert.Equal("\"Date modified from 2 weeks from now\"", Run("filterLineText(L({ field: 'modified', cond: { op: 'range', from: { rel: 2, unit: 'weeks', ahead: true } } }), id => 'Date modified')").GetRawText());
+    }
+
+    // A value of its own: a date on a day (today, a day, n days ago or from now), a number that is one.
+    [Fact]
+    public void ADateOnADayAndANumberThatIs()
+    {
+        Assert.Equal("""["beach.jpg","C:"]""", Shown("L({ field: 'modified', cond: { op: 'on', day: { rel: 1 } } })"));
+        Assert.Equal("""["C:"]""", Shown("L({ field: 'modified', cond: { op: 'on', day: { rel: 0 } } })"));
+        Assert.Equal("""["notes.txt","C:"]""", Shown("L({ field: 'modified', cond: { op: 'on', day: { abs: '2026-11-07' } } })"));
+        Assert.Equal("""["src","notes.txt","C:"]""", Shown("L({ field: 'size', cond: { op: 'is', value: 1200 } })"));
+        Assert.Equal("""["Date modified is today","Size is 1200","Name is a.txt"]""", Run("""
+            [filterLineText(L({ field: 'modified', cond: { op: 'on', day: { rel: 0 } } }), id => id === 'modified' ? 'Date modified' : 'Size'),
+             filterLineText(L({ field: 'size', cond: { op: 'is', value: 1200 } }), id => 'Size'),
+             filterLineText(L({ cond: { op: 'is', text: 'a.txt' } }), id => 'Name')]
+            """).GetRawText());
+    }
+
     // A photo without a date taken: only with "or empty", or "has no value"; GPS: has a value.
     [Fact]
     public void EmptyValuesOrEmptyAndHasAValue()

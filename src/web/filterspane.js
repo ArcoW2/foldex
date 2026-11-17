@@ -316,7 +316,7 @@ function fieldPicker(line) {
 
 // A field's first condition when it is chosen.
 const defaultCond = kind => ({ text: { op: 'wild', text: '' }, size: { op: 'range', from: null, to: null }, number: { op: 'range', from: null, to: null },
-  date: { op: 'range', from: { rel: 7, unit: 'days' }, to: null }, bool: { op: 'true' }, attrs: { op: 'attrs', attrs: {} },
+  date: { op: 'on', day: { rel: 0 } }, bool: { op: 'true' }, attrs: { op: 'attrs', attrs: {} },
   list: { op: 'in', values: [] }, flag: { op: 'has' } })[kind] ?? { op: 'has' };
 
 const HasNone = [['has', 'has a value'], ['none', 'has no value']];
@@ -342,14 +342,17 @@ function conditionRows(kind, c, line) {
       return rows;
     }
     case 'size': case 'number': {
-      const rows = [op([['range', 'in a range'], ...HasNone])];
+      const rows = [op([['is', 'is'], ['range', 'in a range'], ...HasNone])];
+      if (c.op === 'is') rows.push(el('div', { className: 'fl-row' }, el('span', { className: 'cs-caption', textContent: 'Value' }),
+        number(kind, c.value, v => setCond(x => { x.value = v; }), 'Empty: no value given yet')));
       if (c.op === 'range') rows.push(el('div', { className: 'fl-row' }, el('span', { className: 'cs-caption', textContent: 'From' }),
         number(kind, c.from, v => setCond(x => { x.from = v; })), el('span', { className: 'cs-caption', textContent: 'to' }),
         number(kind, c.to, v => setCond(x => { x.to = v; }))));
       return rows;
     }
     case 'date': {
-      const rows = [op([['range', 'in a range'], ...HasNone])];
+      const rows = [op([['on', 'is on a day'], ['range', 'in a range'], ...HasNone])];
+      if (c.op === 'on') rows.push(el('div', { className: 'fl-row' }, el('span', { className: 'cs-caption', textContent: 'Day' }), dayBox(c.day, v => setCond(x => { x.day = v; }))));
       if (c.op === 'range') rows.push(el('div', { className: 'fl-row' }, el('span', { className: 'cs-caption', textContent: 'From' }), dateBox(c.from, v => setCond(x => { x.from = v; }))),
         el('div', { className: 'fl-row' }, el('span', { className: 'cs-caption', textContent: 'To' }), dateBox(c.to, v => setCond(x => { x.to = v; }))));
       return rows;
@@ -372,10 +375,10 @@ function conditionRows(kind, c, line) {
   return [];
 }
 
-// A number of a range, empty: open; a size with its unit (kept in bytes).
-function number(kind, value, change) {
+// A number of a range, empty: no limit; a size with its unit (kept in bytes).
+function number(kind, value, change, empty = 'Empty: no limit at this end of the range') {
   const wrap = el('span', { className: 'cs-size' });
-  const box = el('input', { type: 'number', min: 0, step: 'any', placeholder: 'open' });
+  const box = el('input', { type: 'number', min: 0, step: 'any', placeholder: empty.startsWith('Empty: no limit') ? 'no limit' : '', title: empty });
   if (kind !== 'size') {
     box.value = value ?? '';
     box.addEventListener('change', () => change(box.value === '' ? null : Number(box.value)));
@@ -391,26 +394,45 @@ function number(kind, value, change) {
   return wrap;
 }
 
-// A date of a range: open, a day, a day and a time, or relative to now (n units ago).
+// A date of a range: no limit at that end, a day, a day and a time, or relative to now: n units ago, or n units from
+// now (in the future).
 function dateBox(value, change) {
-  const mode = !value ? 'open' : value.rel != null ? 'rel' : value.abs?.includes('T') ? 'time' : 'day';
+  const mode = !value ? 'none' : value.rel != null ? (value.ahead ? 'ahead' : 'ago') : value.abs?.includes('T') ? 'time' : 'day';
   const wrap = el('span', { className: 'fl-date' });
-  const modes = select([['open', 'open'], ['day', 'a day'], ['time', 'a day and time'], ['rel', 'ago']], mode, v => change(
-    v === 'open' ? null : v === 'rel' ? { rel: 7, unit: 'days' } : { abs: today(v === 'time') }));
+  const modes = select([['none', 'no limit'], ['day', 'a day'], ['time', 'a day and time'], ['ago', 'some time ago'], ['ahead', 'some time from now']], mode,
+    v => change(v === 'none' ? null : v === 'ago' || v === 'ahead' ? { rel: value?.rel ?? 7, unit: value?.unit ?? 'days', ...(v === 'ahead' ? { ahead: true } : {}) }
+      : { abs: today(v === 'time') }), 'No limit: the range has no end on this side; ago and from now: counted from the moment the filter is used');
   wrap.append(modes);
   if (mode === 'day' || mode === 'time') {
     const box = el('input', { type: mode === 'day' ? 'date' : 'datetime-local', value: value.abs });
     box.addEventListener('change', () => box.value && change({ abs: box.value }));
     wrap.append(box);
-  } else if (mode === 'rel') {
+  } else if (mode === 'ago' || mode === 'ahead') {
+    const rel = (n, u) => ({ rel: Number(n) || 0, unit: u, ...(mode === 'ahead' ? { ahead: true } : {}) });
     const n = el('input', { type: 'number', min: 0, step: 1, value: value.rel });
-    const unit = select(DateUnits, value.unit ?? 'days', u => change({ rel: Number(n.value) || 0, unit: u }));
-    n.addEventListener('change', () => change({ rel: Number(n.value) || 0, unit: unit.value }));
-    wrap.append(n, unit, ' ago');
+    const unit = select(DateUnits, value.unit ?? 'days', u => change(rel(n.value, u)));
+    n.addEventListener('change', () => change(rel(n.value, unit.value)));
+    wrap.append(n, unit, mode === 'ahead' ? ' from now' : ' ago');
   }
   return wrap;
 }
-const today = time => {
+// The day of "is on a day": today, a day, or n days ago or from now.
+function dayBox(value, change) {
+  const mode = !value || value.rel != null && +value.rel === 0 ? 'today' : value.rel != null ? (value.ahead ? 'ahead' : 'ago') : 'day';
+  const wrap = el('span', { className: 'fl-date' });
+  wrap.append(select([['today', 'today'], ['day', 'a day'], ['ago', 'some days ago'], ['ahead', 'some days from now']], mode,
+    v => change(v === 'today' ? { rel: 0 } : v === 'day' ? { abs: today(false) } : { rel: value?.rel || 1, ...(v === 'ahead' ? { ahead: true } : {}) })));
+  if (mode === 'day') {
+    const box = el('input', { type: 'date', value: value.abs });
+    box.addEventListener('change', () => box.value && change({ abs: box.value }));
+    wrap.append(box);
+  } else if (mode === 'ago' || mode === 'ahead') {
+    const n = el('input', { type: 'number', min: 1, step: 1, value: value.rel });
+    n.addEventListener('change', () => change({ rel: Math.max(1, Number(n.value) || 1), ...(mode === 'ahead' ? { ahead: true } : {}) }));
+    wrap.append(n, mode === 'ahead' ? ' days from now' : ' days ago');
+  }
+  return wrap;
+}const today = time => {
   const d = new Date(), p = x => String(x).padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}${time ? `T${p(d.getHours())}:${p(d.getMinutes())}` : ''}`;
 };

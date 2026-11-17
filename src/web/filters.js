@@ -9,9 +9,12 @@
 //   not, folders, files (checks), field (a column's id), cond, orEmpty }.
 // A cond by the field's kind (filterKind):
 //   text:  { op: 'wild' | 'regex' | 'contains' | 'is' | 'has' | 'none', text }
-//   size, number: { op: 'range' | 'has' | 'none', from, to }   (numbers; a size in bytes; null: open)
-//   date:  { op: 'range' | 'has' | 'none', from, to }          (each null, { abs: 'YYYY-MM-DD' or 'YYYY-MM-DDTHH:MM' }
-//                                                               or { rel: n, unit: 'minutes' ... 'years' })
+//   size, number: { op: 'range' | 'is' | 'has' | 'none', from, to, value }
+//          (numbers; a size in bytes; from or to null: no limit at that end)
+//   date:  { op: 'range' | 'on' | 'has' | 'none', from, to, day }
+//          (from, to: { abs: 'YYYY-MM-DD' or 'YYYY-MM-DDTHH:MM' } or { rel: n, unit: 'minutes' ... 'years', ahead }: n
+//          units ago, or from now when ahead; null: no limit at that end. day: { abs: 'YYYY-MM-DD' } or { rel: n days,
+//          ahead }; 0 days: today)
 //   bool:  { op: 'true' | 'false' | 'has' | 'none' }
 //   attrs: { op: 'attrs', attrs: { R: 'has' | 'not', ... } }   (a letter of the Attributes column: R H S A C E L O)
 //   list:  { op: 'in' | 'has' | 'none', values: [...] }       (Git status: its words)
@@ -57,12 +60,25 @@ function wildTest(text) {
   return name => res.some(re => re.test(name));
 }
 
+// A day as the ms of its start: an absolute one ('YYYY-MM-DD'), or relative to today (n days ago, or from now when
+// ahead; 0: today); null: none.
+function filterDay(d, now) {
+  if (!d) return null;
+  if (d.rel != null) {
+    const t = new Date(now);
+    t.setHours(0, 0, 0, 0);
+    t.setDate(t.getDate() + (Number(d.rel) || 0) * (d.ahead ? 1 : -1));
+    return t.getTime();
+  }
+  return filterDate({ abs: (d.abs ?? '').slice(0, 10) }, false, now);
+}
+
 // A date of a range as ms: an absolute one (a day without a time: its start for `from`, its end for `to`) or one
-// relative to now; null: open.
+// relative to now: n units ago, or from now (ahead); null: no limit.
 function filterDate(d, end, now) {
   if (!d) return null;
   if (d.rel != null) {
-    const n = Number(d.rel) || 0;
+    const n = (Number(d.rel) || 0) * (d.ahead ? -1 : 1);
     if (d.unit === 'months' || d.unit === 'years') {
       const t = new Date(now);
       if (d.unit === 'months') t.setMonth(t.getMonth() - n); else t.setFullYear(t.getFullYear() - n);
@@ -134,9 +150,14 @@ function filterCond(kind, c, v, now) {
     }
     case 'size': case 'number': {
       const n = Number(v);
+      if (c.op === 'is') return c.value != null && c.value !== '' && n === Number(c.value);
       return (c.from == null || c.from === '' || n >= Number(c.from)) && (c.to == null || c.to === '' || n <= Number(c.to));
     }
     case 'date': {
+      if (c.op === 'on') {   // on a day: from its start to its end
+        const day = filterDay(c.day, now);
+        return day != null && v >= day && v < new Date(new Date(day).setDate(new Date(day).getDate() + 1)).getTime();
+      }
       const from = filterDate(c.from, false, now), to = filterDate(c.to, true, now);
       return (from == null || v >= from) && (to == null || v <= to);
     }
@@ -200,14 +221,17 @@ function filterTestOf(set, kindOf, now = Date.now()) {
 function filterLineText(line, titleOf) {
   const who = line.folders && line.files ? '' : line.folders ? 'Folders, ' : line.files ? 'Files, ' : 'Nothing, ';
   const c = line.cond ?? {}, f = titleOf(line.field);
-  const date = d => !d ? '' : d.rel != null ? `${d.rel} ${d.unit ?? 'days'} ago` : (d.abs ?? '').replace('T', ' ');
+  const date = d => !d ? '' : d.rel != null ? `${d.rel} ${d.unit ?? 'days'} ${d.ahead ? 'from now' : 'ago'}` : (d.abs ?? '').replace('T', ' ');
   const what = c.op === 'has' ? `${f} has a value` : c.op === 'none' ? `${f} has no value`
     : c.op === 'wild' ? `${f} matches ${c.text || '*'}` : c.op === 'regex' ? `${f} matches /${c.text ?? ''}/`
-    : c.op === 'contains' ? `${f} contains ${c.text ?? ''}` : c.op === 'is' ? `${f} is ${c.text ?? ''}`
+    : c.op === 'contains' ? `${f} contains ${c.text ?? ''}` : c.op === 'is' && c.value == null ? `${f} is ${c.text ?? ''}`
     : c.op === 'true' ? `${f} is yes` : c.op === 'false' ? `${f} is no`
     : c.op === 'in' ? `${f} is ${(c.values ?? []).join(' or ') || 'any'}`
     : c.op === 'attrs' ? `${f}: ${Object.entries(c.attrs ?? {}).filter(([, w]) => w !== 'either').map(([a, w]) => (w === 'not' ? 'not ' : '') + (FilterAttributes.find(x => x[0] === a)?.[1] ?? a)).join(', ') || 'any'}`
-    : c.op === 'range' ? `${f} ${c.from != null && c.from !== '' ? `from ${typeof c.from === 'object' ? date(c.from) : c.from}` : ''}${c.to != null && c.to !== '' ? ` to ${typeof c.to === 'object' ? date(c.to) : c.to}` : ''}`.trimEnd()
+    : c.op === 'on' ? `${f} is ${!c.day ? '?' : c.day.rel != null ? (+c.day.rel === 0 ? 'today' : `${c.day.rel} days ${c.day.ahead ? 'from now' : 'ago'}`) : c.day.abs}`
+    : c.op === 'is' && c.value != null ? `${f} is ${c.value}`
+    : c.op === 'range' ? [f, c.from != null && c.from !== '' ? `from ${typeof c.from === 'object' ? date(c.from) : c.from}` : '',
+      c.to != null && c.to !== '' ? `to ${typeof c.to === 'object' ? date(c.to) : c.to}` : ''].filter(Boolean).join(' ')
     : f;
   return `${line.not ? 'Not ' : ''}${who}${what}${line.orEmpty && !['has', 'none'].includes(c.op) ? ', or empty' : ''}`;
 }
