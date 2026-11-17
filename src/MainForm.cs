@@ -787,6 +787,7 @@ sealed class MainForm : Form
                     }
                 }
                 if (own is null && error is not null && reachable && File.Exists(path)) own = await Task.Run(() => Safely(() => Shell.OwnPreview.Properties(path)));
+                if (own is not null) own["lexPen"] = LexPenExe() is not null;   // the bar's Open in LexPen only when it is installed
                 Post(new JsonObject { ["event"] = "previewShown", ["pane"] = pane, ["path"] = path, ["handler"] = handler, ["error"] = error, ["own"] = own });
                 break;
             }
@@ -827,9 +828,7 @@ sealed class MainForm : Form
             case "openLexPen":
             {
                 var path = msg["path"]!.GetValue<string>();
-                var command = Microsoft.Win32.Registry.ClassesRoot.OpenSubKey(@"Applications\LexPen.exe\shell\open\command")?.GetValue("") as string;
-                var exe = command is null ? null : command.StartsWith('"') ? command[1..Math.Max(1, command.IndexOf('"', 1))] : command.Split(' ')[0];
-                if (exe is null || !File.Exists(exe))
+                if (LexPenExe() is not string exe)
                 {
                     Post(new JsonObject { ["event"] = "executeFailed", ["error"] = "LexPen is not installed (no Applications\\LexPen.exe in the registry)" });
                     break;
@@ -1099,6 +1098,14 @@ sealed class MainForm : Form
     // in this window; floating, its window's (PaneForm.Preview), over the whole window.
     readonly Dictionary<string, PreviewHost> previews = [];
     readonly Dictionary<string, CoreWebView2Frame> frames = [];   // the panes' frames by pane id (FrameCreated)
+    // LexPen.exe as its registration names it (Applications\LexPen.exe), or null when it is not installed.
+    static string? LexPenExe()
+    {
+        var command = Microsoft.Win32.Registry.ClassesRoot.OpenSubKey(@"Applications\LexPen.exe\shell\open\command")?.GetValue("") as string;
+        var exe = command is null ? null : command.StartsWith('"') ? command[1..Math.Max(1, command.IndexOf('"', 1))] : command.Split(' ')[0];
+        return exe is not null && File.Exists(exe) ? exe : null;
+    }
+
     PreviewHost PreviewOf(string pane)
     {
         if (floating.TryGetValue(pane, out var f)) return f.Preview;

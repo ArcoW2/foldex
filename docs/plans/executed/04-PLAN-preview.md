@@ -116,7 +116,7 @@ None.
   are shown.
 - **Open in LexPen.** The op `openLexPen` starts LexPen.exe with the file, found through
   `HKCR\Applications\LexPen.exe\shell\open\command`. That is what a later launch does, and LexPen hands the file to its
-  running window.
+  running window. The button shows only when LexPen is installed (`lexPen` in what the host sends).
 
 **Page** (`src/web/previewpane.js`, `preview.html`, `previewdoc.css`):
 

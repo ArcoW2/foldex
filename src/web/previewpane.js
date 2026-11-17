@@ -35,7 +35,8 @@ const fmtDate = ms => ms == null ? '' : new Date(ms).toLocaleString();
 
 // ---------- The bar above an own preview (3.4) ----------
 
-// What the bar has for a kind: Open in LexPen and Copy for text the preview reads, zoom for what has a size.
+// What the bar has for a kind: Open in LexPen (when it is installed: o.lexPen) and Copy for text the preview reads, zoom for
+// what has a size.
 const TEXT_KINDS = new Set(['text', 'code', 'markdown', 'html', 'csv']);
 const ZOOM_KINDS = new Set(['text', 'code', 'markdown', 'html', 'csv', 'zip', 'hex', 'pdf', 'image']);
 
@@ -48,7 +49,7 @@ function bar(o) {
     b.append(x);
     return x;
   };
-  if (TEXT_KINDS.has(o.kind)) button('Open in LexPen', 'Open this file in LexPen', () => toWindow({ kind: 'openLexPen' }));
+  if (TEXT_KINDS.has(o.kind) && o.lexPen) button('Open in LexPen', 'Open this file in LexPen', () => toWindow({ kind: 'openLexPen' }));
   button('Open', 'Open this file with its program, as a double-click does', () => toWindow({ kind: 'openDefault' }));
   if (TEXT_KINDS.has(o.kind)) button('Copy text', 'Copy the text of this file (as far as it is read) to the clipboard', () => toWindow({ kind: 'copy', text: o.text }));
   if (o.cut && TEXT_KINDS.has(o.kind)) button('Show all', `Only the start of this file (${fmtSize(o.size)}) is read; read all of it`, () => toWindow({ kind: 'showAll' }));
