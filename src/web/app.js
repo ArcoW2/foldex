@@ -298,8 +298,13 @@ function paneElement(id, kind, title) {
   // Filtered by the search bar (search.js): this pane active and the keyboard in the bar.
   el.querySelector('.filtered').addEventListener('click', () => { activate(id); focusSearch(); });
   // The head dragged: the pane moves to another dock place (not from the connector, the pin, the filter mark or the
-  // branch marks).
+  // branch marks). A press on the head never gives it the keyboard: the pane's contents get it, as a press there does
+  // (its buttons and the path's parts still act on their click).
   el.querySelector('.head').addEventListener('mousedown', e => {
+    if (e.button === 0) {
+      e.preventDefault();
+      views.get(id)?.body.focus();
+    }
     if (!e.target.closest('.connector, .pin, .filtered, .marks span, .scrap-button')) dragToDock(id, e);
   });
   el.querySelector('.head').addEventListener('contextmenu', e => openPaneMenu(id, e));
