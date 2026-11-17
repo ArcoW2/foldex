@@ -17,9 +17,11 @@ kept or chosen by name, a new pane always starts unfiltered, and a filtered pane
 
 ## 2. The solution, in brief
 
-A filter is a set of lines. Each line tests one thing of an item: its name by wildcards or a regex, its attributes, its
-date modified or created within a range; a line can be an exception (not). Lines are joined by and (a new line's
-default) or or, and brackets group them. A set can be kept under a name. Two sets can be defaults: one for a new root
+A filter is a set of lines. A line can hold every test there is, each one used or not: Folders and Files (checks),
+the name by wildcards or a regex, attributes, date modified and date created within a range; an item passes a line when
+it passes all the tests the line uses, and a line can be an exception (not). Lines are joined by and (a new line's
+default) or or, and brackets group them: "Folders" or "Files and modified this week" shows every folder and only the
+files of this week. A set can be kept under a name. Two sets can be defaults: one for a new root
 pane, one for a new child (a new tab is a child); a child that becomes a root keeps the filter it has. A filtered pane
 shows its filter at the start of its head, in italic between brackets; a click there switches it off and on (off:
 dimmed), and when the head is too narrow the filter gives way before the name. Home's group Filter has Filter... (the
@@ -33,9 +35,9 @@ active pane's set, edited), the list of kept sets and Manage filters, in the cor
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| Filter lines | each kind of line and its test on an item | -- | 3.1 |
+| Filter lines | the tests a line can hold, each used or not, and an item against them | -- | 3.1 |
 | Combining | and / or, brackets, exceptions; the order they are worked out in | -- | 3.2 |
-| The editor | the lines of a set: add (with and), change, remove, move, brackets | Filter lines; open question 2 | 3.3 |
+| The editor | the lines of a set: add (with and), change, remove, move, brackets | Filter lines; open question 1 | 3.3 |
 | Kept sets | `filters.json` (name, lines), the defaults, every window told | -- | 3.4 |
 | Defaults | one for a new root, one for a new child (a tab too); a child made a root keeps its own | Kept sets | 3.5 |
 | In the head | the filter in italic between brackets at the head's start, a click switches it, giving way to the name | -- | 3.6 |
@@ -46,19 +48,27 @@ active pane's set, edited), the list of kept sets and Manage filters, in the cor
 
 ### 3.1 Filter lines
 
-| Line | Tests | Values |
+A line holds every test below, each used or not (unused: it lets everything through). An item passes the line when it
+passes every test the line uses; a line using none lets every item through. Which tests to use, and how lines combine
+(3.2), is the user's: any line can hold any of them.
+
+| Test | Passes | Values |
 |---|---|---|
+| Folders, Files | a folder when Folders is checked, a file when Files is checked; both checked (the default): either | two checks |
 | Name (wildcards) | the name against wildcards, `;` between them (`*.cs;*.md`), as the filter now | case does not matter |
 | Name (regex) | the name against a regular expression | case does not matter, unless asked [not yet decided] |
-| Attributes | which attributes it has | hidden, system, read-only, archive, compressed, encrypted, offline, link (a junction or symbolic link); each: has / has not / either |
+| Attributes | the attributes it has and has not | hidden, system, read-only, archive, compressed, encrypted, offline, link (a junction or symbolic link); each: has / has not / either |
 | Date modified | within a range | from and to, each a date or open; or the last n days, weeks or months |
 | Date created | within a range | as Date modified |
 
-- An exception is a line marked Not: an item passes when the line's test fails (`Not Name *.tmp`).
+- Examples: all folders, files of this week only: `Folders` Or `Files, modified the last 7 days`. Folders of this
+  week and every file: `Folders, modified the last 7 days` Or `Files`. Everything but temporary files: `Not Files,
+  name *.tmp;*.bak`.
+- An exception is a line marked Not: an item passes when it does not pass the line.
 - The values come from the listing the pane has (name, attributes, dates, as the columns show them): a filter reads
   nothing more from disk.
-- Folders: open question 1.
-
+- A filter of now (Filter...'s wildcards) is a set of one line: Files, its wildcards; Folders checked too, since folders
+  are always shown now.
 ### 3.2 Combining
 
 - The first line stands alone; every other line starts with And or Or (a new line: And).
@@ -69,9 +79,9 @@ active pane's set, edited), the list of kept sets and Manage filters, in the cor
 
 ### 3.3 The editor
 
-- Opened by Filter... (the active pane's set) and from Manage filters (a kept set). Where it lives: open question 2.
-- A list of the lines, each as it reads (`And Not Name *.tmp`); under the list, the line chosen with all it can be:
-  its And / Or, Not, its kind (3.1), its values, its brackets.
+- Opened by Filter... (the active pane's set) and from Manage filters (a kept set). Where it lives: open question 1.
+- A list of the lines, each as it reads (`And Not Files, name *.tmp`); under the list, the line chosen with all it can
+  be: its And / Or, Not, its brackets, and every test of 3.1 with its values.
 - Add: a new line after the one chosen, joined with And. Remove, Up, Down.
 - Applied to the pane at once as lines change (the pane shows what passes), so a set is tried while it is made; Cancel
   puts back what the pane had.
@@ -122,18 +132,17 @@ Home, after Find: the group Filter.
 
 ### 3.8 Tests
 
-- Unit (Jint): each kind of line on items (names, attributes, dates, open ranges, the last n days); Not; And before
-  Or; brackets, and unmatched brackets refused; an empty set. `filters.json` read, cleaned and written back.
+- Unit (Jint): each test on items (Folders and Files, names, regex, attributes, dates, open ranges, the last n days),
+  several in one line; Not; And before Or; brackets, and unmatched brackets refused; an empty line and an empty set;
+  the examples of 3.1. `filters.json` read, cleaned and written back.
 - In the test copy: a set made in the editor and kept; chosen from the list on another pane; None; the defaults for a
   new root, a new child and a new tab; a child detached keeping its filter; the head's `[name]`, a click switching it
   off (dimmed, every item) and on; a narrow head cutting the filter first.
 
 ## 4. Open questions
 
-1. **Folders.** Are folders filtered too (a date range then also hides folders outside it), or always shown as now,
-   so a filtered pane can still be gone through? Or a choice per set?
-2. **The editor and Manage filters: where.** One pane (docked or floating, as Manage the bookmarks) with the kept sets
+1. **The editor and Manage filters: where.** One pane (docked or floating, as Manage the bookmarks) with the kept sets
    at the left and the editor of the chosen one at the right, Filter... opening it on the active pane's set; or the
    editor as a floating window of its own beside the pane, and Manage filters only the list of sets?
-3. **Keys.** A key per kept set (as bookmarks have), a key for switching the active pane's filter off and on, or only
+2. **Keys.** A key per kept set (as bookmarks have), a key for switching the active pane's filter off and on, or only
    the list?
