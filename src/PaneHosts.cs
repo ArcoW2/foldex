@@ -68,7 +68,7 @@ static class PaneHosts
 
     static List<int> Ids(JsonNode msg) => msg["projects"]?.AsArray().Select(n => n!.GetValue<int>()).ToList() ?? [];
 
-    /// <summary>The Manage projects pane (docs/plans/15-PLAN-projects.md 3.7): a request of its page ({ id, op, ... }),
+    /// <summary>The Manage projects pane (docs/plans/executed/15-PLAN-projects.md 3.7): a request of its page ({ id, op, ... }),
     /// answered with { id, result } or { id, error }; the work done through AppHost.</summary>
     public static void Projects(AppHost app, MainForm window, JsonObject msg, Action<JsonObject> reply)
     {

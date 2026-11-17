@@ -1,6 +1,6 @@
 # Plan 15: Projects and window sessions
 
-Status: partly executed; see Status and 6. As built.
+Status: executed; see Status and 6. As built.
 
 - 2026-11-11: draft, taken out of plan 12 (3.4): the layout in the project.
 - 2026-11-11: revised: widened to projects as LexPen's (plan 01 3.5), taking plan 01's projects and window sessions
@@ -16,6 +16,7 @@ Status: partly executed; see Status and 6. As built.
 - 2026-11-12: checked in the test copy: Delete, the name dialog, a Shift launch, the ribbon group; several virtual
   desktops left for a check by hand.
 - 2026-11-12: Open project first in a project's submenu; Manage: Clone..., Delete... and Clone... buttons, the names
+- 2026-11-17: executed.
   in the Delete question, a focus background.
 
 Builds on plan 12 (docking panes) and plan 03 (connected panes). As LexPen's projects
@@ -57,12 +58,12 @@ once. A named project stays until deleted; of the unnamed ones only the last clo
 | Settings | `projectsSort`, `defaultLayout` | 3.6, 3.7 |
 | `state.json` | keeps only places; its layout became project 1 | 3.8; 6.1 |
 | Checks in the test copy | Delete with its question; the name dialog; a Shift launch; the ribbon's Projects group | 3.10; 6.4 |
+| Checks by hand | windows on several virtual desktops (start, launch, closed last per desktop) | 3.10; 6.2; 6.4 |
 
 ### Not yet built
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| Checks by hand | windows on several virtual desktops (start, launch, closed last per desktop) | you: making desktops changes your own Windows session | 3.10; 6.2; 6.4 |
 
 ## 3. Details
 
@@ -302,3 +303,4 @@ None.
   (screenshot); OK removed them.
 - The Projects menu in LexPen's order: Manage projects, New project, Rename this project, then the projects (they were
   last). Test copy, real mouse events over CDP: that order.
+- Checked by hand by the user (2026-11-17): the right project opens per virtual desktop.

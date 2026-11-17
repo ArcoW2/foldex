@@ -1,5 +1,5 @@
 'use strict';
-// The Manage projects window's page (projects.html; ProjectsForm hosts it), docs/plans/15-PLAN-projects.md 3.7, as
+// The Manage projects window's page (projects.html; ProjectsForm hosts it), docs/plans/executed/15-PLAN-projects.md 3.7, as
 // LexPen's: every project in one list with a checkbox, its name, open or closed, its panes' folders, created and last
 // used; a row unfolds to show its window's panes as a tree. A search filters on name and folders; the list sorts by
 // name, created or last used (View menu or the column headers; the setting projectsSort). The menus (Project, Select,

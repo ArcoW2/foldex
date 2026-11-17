@@ -1,5 +1,5 @@
 'use strict';
-// Projects in a window (docs/plans/15-PLAN-projects.md 3.6, as LexPen's): the window's project at the left of the bottom
+// Projects in a window (docs/plans/executed/15-PLAN-projects.md 3.6, as LexPen's): the window's project at the left of the bottom
 // bar; a click there (or the action projects.menu) opens the Projects menu (menu.js): Manage projects, New project,
 // Rename this project, then every project, each with the panes of its window by name as a tree (roots, their children
 // indented). The host keeps the projects (AppHost, ProjectStore); a name is asked in a small dialog of the page

@@ -10,7 +10,7 @@ namespace Foldex;
 /// A Foldex window: one WebView2 showing the page (web\index.html). The page and the host talk through JSON messages:
 /// the page asks ({ op, ... }), the host tells ({ event, ... }). When the page's process fails, the window makes a new
 /// page and nothing else stops (docs/plans/02-PLAN-ui-technology.md 3.5). It is a window of a project (Key, ProjectStore):
-/// its layout is that window's session (docs/plans/15-PLAN-projects.md).
+/// its layout is that window's session (docs/plans/executed/15-PLAN-projects.md).
 /// </summary>
 sealed class MainForm : Form
 {

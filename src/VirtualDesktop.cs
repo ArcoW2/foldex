@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 namespace Foldex;
 
 /// <summary>
-/// Windows' virtual desktops, through the documented IVirtualDesktopManager (from LexPen; docs/plans/15-PLAN-projects.md
+/// Windows' virtual desktops, through the documented IVirtualDesktopManager (from LexPen; docs/plans/executed/15-PLAN-projects.md
 /// 3.5): which desktop a window is on, whether it is on the one shown now, and moving one of our windows to a desktop.
 /// Every call fails quietly (null, true, false): without desktops (an error, an older Windows) a window simply stays
 /// where it opens.

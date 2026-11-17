@@ -2,7 +2,7 @@ using System.Text.Json.Nodes;
 
 namespace Foldex.Tests;
 
-// Projects (docs/plans/15-PLAN-projects.md 3.1 to 3.4, 3.8): ProjectStore without windows.
+// Projects (docs/plans/executed/15-PLAN-projects.md 3.1 to 3.4, 3.8): ProjectStore without windows.
 public class ProjectStoreTests : IDisposable
 {
     readonly string dir = Path.Combine(Path.GetTempPath(), "foldex-projects-" + Guid.NewGuid().ToString("N"));

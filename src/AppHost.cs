@@ -8,7 +8,7 @@ namespace Foldex;
 
 /// <summary>
 /// The one Foldex process: its windows, the pipe later launches hand their arguments over, the browser environment all
-/// windows share, the projects with every window's session (State\projects.json, docs/plans/15-PLAN-projects.md) and
+/// windows share, the projects with every window's session (State\projects.json, docs/plans/executed/15-PLAN-projects.md) and
 /// what Foldex remembers by itself besides (State\state.json).
 /// </summary>
 sealed class AppHost : ApplicationContext
@@ -523,7 +523,7 @@ sealed class AppHost : ApplicationContext
         if (windows.Count == 0) ExitThread();
     }
 
-    // ---------- Projects (ProjectStore; docs/plans/15-PLAN-projects.md) ----------
+    // ---------- Projects (ProjectStore; docs/plans/executed/15-PLAN-projects.md) ----------
 
     static string ProjectsPath => DataFolder.StatePath(DataDir, ProjectStore.FileName);
     readonly ProjectStore projects = LoadProjects();

@@ -4,7 +4,7 @@ using System.Text.Json.Nodes;
 namespace Foldex;
 
 /// <summary>
-/// Projects (docs/plans/15-PLAN-projects.md 3.1, as LexPen's ProjectStore): a project has a number, a name you can give
+/// Projects (docs/plans/executed/15-PLAN-projects.md 3.1, as LexPen's ProjectStore): a project has a number, a name you can give
 /// it and one window (kept as a list of windows, as LexPen's file has it); the window keeps its session (the page's
 /// layout: panes, docks, the active pane), its place and its virtual desktop. Kept in State\projects.json, written whole and atomically (a crash never leaves a broken file).
 /// Pure apart from that file, so the rules can be tested without windows. Unnamed projects: only the last closed one

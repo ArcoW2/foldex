@@ -293,7 +293,7 @@ action('view.menu', { title: 'Views', hint: 'details, icons or thumbnails, for t
     openMenu(r.left, ctx.el ? r.bottom : r.top, viewsMenu(id));
   } });
 action('palette', { title: 'All actions and keys', group: 'app', run: () => openPalette() });
-// Projects (docs/plans/15-PLAN-projects.md 3.6; projectmenu.js).
+// Projects (docs/plans/executed/15-PLAN-projects.md 3.6; projectmenu.js).
 action('projects.menu', { title: 'Projects', hint: 'every project and its windows, as at the project in the bottom bar', group: 'projects',
   dropDownOnly: true, dropDown: () => projectListItems(), run: () => projectsMenu() });
 action('projects.manage', { title: 'Manage projects', hint: 'every project in one list: open, close, merge, rename, delete',
