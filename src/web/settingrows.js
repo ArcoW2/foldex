@@ -8,7 +8,7 @@
 // The tabs of the settings window, each with its groups in order: the app itself, the panes, what is in them, and
 // searching and scraps.
 const SETTING_TABS = [
-  ['App', ['Theme', 'Fonts', 'Mouse', 'Memory']],
+  ['App', ['Theme', 'Fonts', 'Mouse', 'Status line', 'Memory']],
   ['Panes', ['Colours', 'Behaviour', 'Scrollbars']],
   ['Contents', ['Rows', 'Columns', 'Highlights', 'Trees', 'Items', 'Thumbnails']],
   ['Search and scrap', ['Search bar']],
