@@ -53,8 +53,11 @@ function setRibbon({ ribbon, user, problems }) {
 }
 
 // This window's ribbon state from its layout (app.js start), and kept there when it changes.
+// The tab: the one shown when the window closed with the setting ribbonRememberTab, else Home (the first tab when there
+// is none named so).
 function rbWindow(saved) {
   Object.assign(rbWin, { tab: null, row: RB_ROW_FULL, show: 'always' }, saved ?? {});
+  if (settings.ribbonRememberTab !== true) rbWin.tab = 'Home';
   rb.tab = rbWin.tab;
   if (rb.model) renderRibbon();
 }

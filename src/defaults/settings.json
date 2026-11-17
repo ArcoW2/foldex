@@ -39,6 +39,7 @@
   "searchDelay": 600,              // ms after typing in a pane before it filters (more than 3 characters) or jumps, 100 to 2000
   "sortColumnIntensity": 200,     // the text of the columns the pane is sorted on, 0 to 200 %: 100 the theme's dim text, 200 the full text
   "otherColumnsIntensity": 160,   // the text of every other column, the name too, the same way
+  "ribbonRememberTab": false,       // a window opens on the ribbon tab it showed when it closed; false: always on Home
   "ribbonGroupNames": true,        // the ribbon's group names under their buttons; false: a group's name is its tooltip
   "ribbonLabelWidth": 24,          // characters a small button's label may take before it is cut off with ..., 8 to 40
   "logDetail": "changes",         // what the Log shows besides errors and messages: messages, copies (copy, move), changes (also delete, new, rename), verbose (also every folder shown)

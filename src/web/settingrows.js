@@ -23,6 +23,8 @@ const SETTING_ROWS = [
     hint: 'The colours of the window, the branch colours included. Your own themes go in themes\\ in the data folder.' },
   { tab: 'App', group: 'Theme', name: 'themeDark', kind: 'theme', title: 'Theme in dark mode',
     hint: 'The colours of the window in dark mode.' },
+  { tab: 'App', group: 'Ribbon', name: 'ribbonRememberTab', kind: 'toggle', title: 'Remember the ribbon tab',
+    hint: 'Foldex opens a window on the ribbon tab it showed when it was closed; off: always on Home.' },
   { tab: 'App', group: 'Ribbon', name: 'ribbonGroupNames', kind: 'toggle', title: 'Group names',
     hint: 'The name of each group under its buttons; off, a group\'s name is its tooltip.' },
   { tab: 'App', group: 'Ribbon', name: 'ribbonLabelWidth', kind: 'range', range: [8, 40, 1], unit: ' characters', title: 'Label width',
