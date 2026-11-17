@@ -18,6 +18,7 @@ function toWindow(msg) {
 function fromWindow(m) {
   if (m.kind === 'look') return applyPaneLook(m);
   if (m.kind === 'menu') return paneMenu(m);
+  if (m.kind === 'closeMenus') return closeMenus();   // a press or a menu elsewhere in the window (menu.js)
   paneHandlers[m.kind]?.(m);
 }
 addEventListener('message', e => { if (e.origin === APP_ORIGIN && e.data?.toPane) fromWindow(e.data.toPane); });

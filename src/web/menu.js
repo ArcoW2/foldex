@@ -23,8 +23,22 @@ function closeMenus(from = 0) {
   for (const m of openMenus.splice(from)) m.el.remove();
 }
 
+// One menu open in the whole window (CLAUDE.md, Menus): its panes are pages of their own (frames, floating windows),
+// each with its own menus, and a press in one page is not seen by another. A press anywhere, or a menu opening, closes
+// the menus of every other page: a pane's page tells its window (menusClose), the window tells every pane's page that
+// is shown, but the one it came from (closeMenus; panechannel.js).
+function closeOtherMenus() {
+  if (typeof toWindow === 'function') return toWindow({ kind: 'menusClose' });
+  if (typeof paneChannels !== 'undefined') closePanesMenus(null);
+}
+function closePanesMenus(except) {
+  for (const ch of paneChannels.values())
+    if (ch !== except && (ch.floating ? ch.floatReady : ch.ready)) ch.send({ kind: 'closeMenus' });
+}
+
 function openMenu(x, y, items, level = 0, back = null) {
   closeMenus(level);
+  if (level === 0) closeOtherMenus();
   const el = document.createElement('div');
   el.className = 'menu';
   el.tabIndex = -1;
@@ -139,6 +153,7 @@ function openMenu(x, y, items, level = 0, back = null) {
 document.addEventListener('mousedown', e => {
   menuSwallow = null;
   if (e.target.closest('.menu')) return;
+  closeOtherMenus();
   const again = openMenus.length > 0 && e.button === 0 && menuOpener?.isConnected && menuOpener.contains(e.target);
   if (openMenus.length) closeMenus();
   if (again) {

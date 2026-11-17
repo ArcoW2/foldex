@@ -229,6 +229,7 @@ function fromWindow(m) {
       else paneSearch.delete(PanePage);
       return;
     case 'menu': return windowMenu(m);
+    case 'closeMenus': return closeMenus();   // a press or a menu elsewhere in the window (menu.js)
     case 'away':
       windowAway = activation.away = m.on;
       return setInert(m.on && !document.hasFocus());

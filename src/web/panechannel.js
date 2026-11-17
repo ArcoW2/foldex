@@ -91,6 +91,9 @@ function paneChannel({ id, page, title, view, state, receive, menu }) {
       case 'activate':   // a press in its page: its pane the active one, this window's menus closed
         closeMenus();
         return views.has(id) && activate(id);   // a dialog's window has no pane here
+      case 'menusClose':   // a press or a menu in its page: every other menu of this window closed (menu.js)
+        closeMenus();
+        return closePanesMenus(ch);
       case 'menuPick': return ch.runs?.[m.id]?.();
       case 'menuAsk': return menu && ch.menuThere(menu(), m.x, m.y);
       case 'key':   // a key the pane does not use: this window's (keys.js), as if pressed here
