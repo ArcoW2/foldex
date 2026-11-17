@@ -144,6 +144,25 @@ sealed class MainForm : Form
         if (!web.ContainsFocus) web.Focus();
     }
 
+    // Closed (the X, Alt+F4, the taskbar): first the page's layout as it is now, which the page sends only a moment after
+    // a change (the active pane chosen just before Alt+F4 was lost); the window closes when it comes, or after half a
+    // second at the most.
+    bool layoutAsked, closeWhenLaidOut;
+    protected override void OnFormClosing(FormClosingEventArgs e)
+    {
+        if (!layoutAsked && pageReady && e.CloseReason == CloseReason.UserClosing)
+        {
+            layoutAsked = closeWhenLaidOut = true;
+            e.Cancel = true;
+            Tell(new JsonObject { ["event"] = "flushLayout" });
+            var wait = new System.Windows.Forms.Timer { Interval = 500 };
+            wait.Tick += (_, _) => { wait.Dispose(); if (!IsDisposed) Close(); };
+            wait.Start();
+            return;
+        }
+        base.OnFormClosing(e);
+    }
+
     // The page only once the window is on its desktop and in its project: which layout it gets depends on that.
     protected override async void OnShown(EventArgs e)
     {
@@ -604,6 +623,7 @@ sealed class MainForm : Form
             case "layout":
                 pageLayout = msg["layout"]?.DeepClone() as JsonObject;
                 if (pageLayout is not null) app.SaveSession(this, pageLayout);
+                if (closeWhenLaidOut && msg["flushed"]?.GetValue<bool>() == true) { closeWhenLaidOut = false; BeginInvoke(Close); }
                 break;
             case "layoutReset":
                 // View > Projects > Reset layout (plan 15 3.6): the page again, on the default layout, at the folder it showed.

@@ -3416,6 +3416,11 @@ function tellLayout() {
   clearTimeout(layoutTimer);
   layoutTimer = setTimeout(() => post({ op: 'layout', layout: windowLayout() }), 800);
 }
+// The window closing (MainForm OnFormClosing): the layout as it is now, at once; the window closes when it has it.
+function flushLayout() {
+  clearTimeout(layoutTimer);
+  post({ op: 'layout', layout: windowLayout(), flushed: true });
+}
 
 // View > Projects > Save layout as default (plan 15 3.6): this window's panes and docks become defaultLayout in your
 // settings.json, the layout a new project starts with.
@@ -4249,6 +4254,7 @@ const events = {
   bars(m) { setBars(m.bars); },
   // In front or not (MainForm WM_ACTIVATE): whether a press only brings the window back.
   windowActive(m) { windowActiveCame(m); },
+  flushLayout() { flushLayout(); },
   barsFailed(m) { status(`The bars could not be written: ${m.error}`, true); },
   // The ribbon changed in a window (plan 19 3.5): this one draws it again (ribbon.js setRibbon).
   ribbon(m) { setRibbon(m.ribbon); },
