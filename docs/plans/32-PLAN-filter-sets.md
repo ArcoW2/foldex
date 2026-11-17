@@ -17,9 +17,10 @@ kept or chosen by name, a new pane always starts unfiltered, and a filtered pane
 
 ## 2. The solution, in brief
 
-A filter is a set of lines. A line can hold every test there is, each one used or not: Folders and Files (checks),
-the name by wildcards or a regex, attributes, date modified and date created within a range; an item passes a line when
-it passes all the tests the line uses, and a line can be an exception (not). Lines are joined by and (a new line's
+A filter is a set of lines. A line tests one field of an item, for folders, files or both (two checks): any column
+Foldex has or can show (Name by default, chosen from a list you can type in), with the conditions its kind allows (a
+text matching wildcards or a regex, a number or date range, absolute or relative to now, true or false, attributes,
+has a value); a field that does not apply to an item leaves the line out for it, and a line can be an exception (not). Lines are joined by and (a new line's
 default) or or, and brackets group them: "Folders" or "Files and modified this week" shows every folder and only the
 files of this week. A set can be kept under a name. Two sets can be defaults: one for a new root
 pane, one for a new child (a new tab is a child); a child that becomes a root keeps the filter it has. A filtered pane
@@ -38,7 +39,7 @@ bar's filter stays as it is: a quick filter for once, apart from these sets.
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| Filter lines | the tests a line can hold, each used or not, and an item against them | -- | 3.1 |
+| Filter lines | Folders and Files, a field (any column), its conditions by kind, Not; an item against them | -- | 3.1 |
 | Combining | and / or, brackets, exceptions; the order they are worked out in | -- | 3.2 |
 | Manage filters | a pane (docked or floating): the kept sets, and the editor of the one chosen: add (with and), change, remove, move, brackets | Filter lines | 3.3 |
 | Kept sets | `filters.json` (name, lines), the defaults, every window told | -- | 3.4 |
@@ -52,27 +53,38 @@ bar's filter stays as it is: a quick filter for once, apart from these sets.
 
 ### 3.1 Filter lines
 
-A line holds every test below, each used or not (unused: it lets everything through). An item passes the line when it
-passes every test the line uses; a line using none lets every item through. Which tests to use, and how lines combine
-(3.2), is the user's: any line can hold any of them.
+A line tests one field of an item, for the folders, the files or both:
 
-| Test | Passes | Values |
-|---|---|---|
-| Folders, Files | a folder when Folders is checked, a file when Files is checked; both checked (the default): either | two checks |
-| Name (wildcards) | the name against wildcards, `;` between them (`*.cs;*.md`), as the filter now | case does not matter |
-| Name (regex) | the name against a regular expression | case does not matter, unless asked [not yet decided] |
-| Attributes | the attributes it has and has not | hidden, system, read-only, archive, compressed, encrypted, offline, link (a junction or symbolic link); each: has / has not / either |
-| Date modified | within a range | from and to, each open, an absolute date (with a time or not), or relative to now (n minutes, hours, days, weeks, months or years ago); the last n days is from n days ago to open |
-| Date created | within a range | as Date modified |
+- **Folders, Files**: two checks; a folder passes only when Folders is checked, a file only when Files is checked;
+  both checked (the default): either.
+- **Field**: any column Foldex has or can show (its own columns and Windows' properties, as Select columns lists
+  them), chosen from a drop-down with a search box (type to find a column); a new line's field is Name.
+- **Condition**: what the field must be. Which conditions there are depends on the field's kind; the editor shows only
+  those of the field chosen (nothing that does not apply is shown).
+- **Not**: an exception; an item passes when it does not pass the line.
 
-- Examples: all folders, files of this week only: `Folders` Or `Files, modified the last 7 days`. Folders of this
-  week and every file: `Folders, modified the last 7 days` Or `Files`. Everything but temporary files: `Not Files,
-  name *.tmp;*.bak`.
-- An exception is a line marked Not: an item passes when it does not pass the line.
-- The values come from the listing the pane has (name, attributes, dates, as the columns show them): a filter reads
-  nothing more from disk.
-- A filter of now (Filter...'s wildcards) is a set of one line: Files, its wildcards; Folders checked too, since folders
-  are always shown now.
+| Kind of field | Conditions |
+|---|---|
+| Text (Name, Type, Extension, Folder, a text property) | matches wildcards (`;` between them: `*.cs;*.md`); matches a regex; contains; is; case does not matter, unless asked [not yet decided] |
+| Number (Size, Total size, Free space, a number property) | a range: from and to, each open; a size in bytes, KB, MB, GB |
+| Date (Date modified, created, accessed, a date property) | a range: from and to, each open, an absolute date (with a time or not), or relative to now (n minutes, hours, days, weeks, months or years ago); the last n days is from n days ago to open |
+| Yes / no (a boolean property) | true, false |
+| Attributes | each attribute (hidden, system, read-only, archive, compressed, encrypted, offline, link): has / has not / either |
+| A list of values (Git status, a property with fixed values) | is one of the values chosen |
+| Every kind | has a value; has no value |
+
+- A field that does not apply to an item (a property only files have, for a folder; GPS for a folder): the line is
+  left out for that item, as if it were not there (it lets the item through). A field that applies but has no value
+  for the item (a photo without GPS): the condition decides; it passes only "has no value".
+- So: all images with a GPS location: `Files, Extension matches *.jpg;*.heic` And `Files, GPS has a value`. All folders,
+  files of this week only: `Folders` Or `Files, Date modified from 7 days ago`. Everything but temporary files:
+  `Not Files, Name matches *.tmp;*.bak`.
+- The values are those the columns show (`columns.js columnText` and its kinds): a field that is not in the listing
+  (a Windows property, Git status) is read as a column's is (`askProps`, the Git status asked); an item whose value is
+  not read yet is not shown until it is [not yet checked: how long a large folder then takes].
+- A filter of now (Filter...'s wildcards) is a set of one line: Files, Name matches its wildcards; Folders checked too,
+  since folders are always shown now.
+
 ### 3.2 Combining
 
 - The first line stands alone; every other line starts with And or Or (a new line: And).
@@ -88,7 +100,8 @@ passes every test the line uses; a line using none lets every item through. Whic
 - It looks as Manage column sets does: at the left the kept sets (on top the active pane's set when it is not a kept
   one), each with its key and its default marks; at the right, on top, the lines of the set chosen, a row each with its
   And / Or, its opening brackets, Not, what it tests in short, its closing brackets; under them the line chosen with
-  every test of 3.1 and its values. Narrow: the two parts on top of each other, the sets first (as Manage column sets).
+  Folders and Files, its field (the drop-down to type in) and only the conditions of that field's kind (3.1). Narrow: the two
+  parts on top of each other, the sets first (as Manage column sets).
 - Add: a new line after the one chosen, joined with And. Remove, Up, Down.
 - Applied to the pane at once as lines change (the pane shows what passes), so a set is tried while it is made; Cancel
   puts back what the pane had.
@@ -149,8 +162,9 @@ Home, after Find: the group Filter.
 
 ### 3.9 Tests
 
-- Unit (Jint): each test on items (Folders and Files, names, regex, attributes, dates, open ranges, the last n days),
-  several in one line; dates absolute (with and without a time) and relative to now, either end open; Not; And before Or; brackets, and unmatched brackets refused; an empty line and an empty set;
+- Unit (Jint): each kind's conditions on items (text by wildcards, regex, contains; number and date ranges, dates
+  absolute and relative to now, either end open; yes / no; attributes; a list of values; has a value), a field that does
+  not apply (left out) and one without a value; Folders and Files; Not; And before Or; brackets, and unmatched brackets refused; an empty line and an empty set;
   the examples of 3.1. `filters.json` read, cleaned and written back, keys with it; a set's key that is taken refused.
 - In the test copy: a set made in the editor and kept; chosen from the list on another pane; None; the defaults for a
   new root, a new child and a new tab; a child detached keeping its filter; the head's `[name]`, a click switching it
