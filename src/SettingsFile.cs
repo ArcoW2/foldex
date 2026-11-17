@@ -17,6 +17,25 @@ static class SettingsFile
     static readonly JsonDocumentOptions Options = new() { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true };
     static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
 
+    /// <summary>A setting that became others: its value in your file is theirs, unless your file sets them itself; the
+    /// next time a setting is written, the file gets the new names in its place.</summary>
+    static readonly Dictionary<string, string[]> Renamed = new()
+    {
+        ["ignorePaneActivationClick"] = ["ignoreRootPaneActivationClick", "ignoreChildPaneActivationClick"],
+    };
+
+    // Your settings with an old name given to its new names (those your file does not set).
+    static JsonObject Renaming(JsonObject own)
+    {
+        foreach (var (old, names) in Renamed)
+        {
+            if (!own.TryGetPropertyValue(old, out var value)) continue;
+            own.Remove(old);
+            foreach (var name in names) if (!own.ContainsKey(name)) own[name] = value?.DeepClone();
+        }
+        return own;
+    }
+
     /// <summary>{ values: every setting with its value, user: the names you set, defaults: { ... }, problems: [...] }.
     /// A user file that cannot be read leaves the defaults in place and says so.</summary>
     public static JsonObject Merge(string defaults, string? user, string userName = Name)
@@ -26,7 +45,7 @@ static class SettingsFile
         var values = (JsonObject)defaultValues.DeepClone();
         var mine = new JsonArray();
         if (user is not null && Parse(user, userName, problems) is JsonObject own)
-            foreach (var (name, value) in own)
+            foreach (var (name, value) in Renaming(own))
             {
                 if (Problem(defaultValues, name, value) is string problem)
                 {
@@ -44,9 +63,8 @@ static class SettingsFile
     public static string Set(string defaults, string? user, string name, JsonNode? value)
     {
         var defaultValues = Parse(defaults, Name, new JsonArray()) ?? new JsonObject();
-        var own = (user is null ? null : Parse(user, Name, new JsonArray())) ?? new JsonObject();
-        if (Problem(defaultValues, name, value) is string problem) throw new ArgumentException(problem);
-        if (JsonNode.DeepEquals(value, Standard(defaultValues, name))) own.Remove(name);
+        var own = Renaming((user is null ? null : Parse(user, Name, new JsonArray())) ?? new JsonObject());
+        if (Problem(defaultValues, name, value) is string problem) throw new ArgumentException(problem);        if (JsonNode.DeepEquals(value, Standard(defaultValues, name))) own.Remove(name);
         else own[name] = value!.DeepClone();
         return own.ToJsonString(Indented);
     }

@@ -3727,26 +3727,35 @@ function ownWindowFocus(kind) {
   }
 }
 
-// With the setting ignorePaneActivationClick: a press in the body of a pane that is not the active one only makes it the
-// active pane (the keyboard to it); it selects, opens or presses nothing there, a double click included (stopped as
-// above). Its head (title, menu, close) acts at once. Nor does the mouse light anything in such a pane (no hover colours
-// or tooltips; app.css body[data-pane-inert]): only its body itself answers the mouse, so it still scrolls and the press
-// still lands.
-const setPaneInert = (on = true) => document.body.toggleAttribute('data-pane-inert', on && !!settings.ignorePaneActivationClick);
+// With the settings ignoreRootPaneActivationClick (a pane without a parent, normally a tree) and
+// ignoreChildPaneActivationClick (a pane following another, normally a list; a tab too): a press in the body of such a
+// pane that is not the active one only makes it the active pane (the keyboard to it); it selects, opens or presses
+// nothing there, a double click included (stopped as above). Its head (title, menu, close) acts at once. Nor does the
+// mouse light anything in such a pane (no hover colours or tooltips; app.css body[data-pane-inert-root],
+// [data-pane-inert-child]): only its body itself answers the mouse, so it still scrolls and the press still lands.
+const ignoresFirstClick = id => !!(layout.pane(id)?.source != null ? settings.ignoreChildPaneActivationClick : settings.ignoreRootPaneActivationClick);
+const setPaneInert = (on = true) => {
+  document.body.toggleAttribute('data-pane-inert-root', on && !!settings.ignoreRootPaneActivationClick);
+  document.body.toggleAttribute('data-pane-inert-child', on && !!settings.ignoreChildPaneActivationClick);
+};
 // A drag answers in every pane (a drop on a folder row of a pane that is not active).
 addEventListener('dragenter', () => setPaneInert(false), true);
 addEventListener('dragleave', e => { if (!e.relatedTarget) setPaneInert(); }, true);
 addEventListener('drop', () => setPaneInert(), true);
 addEventListener('dragend', () => setPaneInert(), true);
 addEventListener('pointerdown', e => {
-  if (!settings.ignorePaneActivationClick || e.button !== 0) return;
+  if (e.button !== 0) return;
   const el = e.target.closest?.('.pane[data-pane]');
   const id = el?.dataset.pane;
-  if (!id || id === activePane || !e.target.closest('.body') || !views.has(id)) return;
+  if (!id || id === activePane || !e.target.closest('.body') || !views.has(id) || !ignoresFirstClick(id)) return;
   activation.until = performance.now() + activation.double;
   e.preventDefault();
   e.stopImmediatePropagation();
   views.get(id).body.focus();
+  // Active even when its body had the keyboard already (no focus event then): in a pane's page its window is told, as
+  // the press stopped here would have told it (viewpage.js).
+  if (PanePage) toWindow({ kind: 'activate' });
+  else activate(id);
 }, true);
 
 // ---------- Between panes (3.6), and back and forward per pane (plan 17) ----------

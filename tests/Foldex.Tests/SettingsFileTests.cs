@@ -61,6 +61,23 @@ public class SettingsFileTests
         Assert.Throws<ArgumentException>(() => SettingsFile.Set(Defaults, null, "nope", JsonValue.Create(1)));
     }
 
+    // ignorePaneActivationClick split into one for a root pane and one for a child: the old name's value is both new
+    // ones' (a new one set in the file wins), no problem reported; written back, the file has the new names.
+    [Fact]
+    public void ARenamedSettingGivesItsValueToItsNewNames()
+    {
+        var shipped = File.ReadAllText(SettingsFile.DefaultsPath);
+        var merged = SettingsFile.Merge(shipped, """{ "ignorePaneActivationClick": true, "ignoreChildPaneActivationClick": false }""");
+        Assert.Empty(merged["problems"]!.AsArray());
+        Assert.True(merged["values"]!["ignoreRootPaneActivationClick"]!.GetValue<bool>());
+        Assert.False(merged["values"]!["ignoreChildPaneActivationClick"]!.GetValue<bool>());
+        var text = SettingsFile.Set(shipped, """{ "ignorePaneActivationClick": true }""", "theme", JsonValue.Create("dark"));
+        var own = JsonNode.Parse(text)!.AsObject();
+        Assert.False(own.ContainsKey("ignorePaneActivationClick"));
+        Assert.True(own["ignoreRootPaneActivationClick"]!.GetValue<bool>());
+        Assert.True(own["ignoreChildPaneActivationClick"]!.GetValue<bool>());
+    }
+
     [Fact]
     public void ShippedDefaultsParse()
     {
