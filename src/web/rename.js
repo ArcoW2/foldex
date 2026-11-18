@@ -4,21 +4,23 @@
 // leaving the box renames (a changed extension asks first, as Explorer does), Esc cancels. A file's companions (the
 // files beside it with the same name and another extension: photo.xmp beside photo.jpg) are renamed along when the
 // name changes, as the setting renameCompanions says; Shift+Enter does the other. While the name is edited the
-// companions that would go along are highlighted (holding Shift shows what Shift+Enter would do). A new folder or file is made
-// by Windows ("New folder", "New file.txt", numbered when taken), then renamed in place.
+// companions that would go along are highlighted (holding Shift shows what Shift+Enter would do). A new folder or file gets
+// its name first, in a row of its own, and is made with it (newItem).
 
-let renaming = null;   // { view, item, input, asking, companions, shift }
-let pendingNew = null; // a new folder or file asked for: { pane, folder }, renamed once it is there
+let renaming = null;   // { view, item, input, asking, companions, shift, own, watch }
+let pendingNew = null; // a new folder or file asked of the host: { pane, folder }, focused once it is there
 
 const diskId = id => /^[A-Za-z]:\\|^\\\\/.test(id ?? '');
 const extensionOf = (item, name) => item.folder ? '' : name.lastIndexOf('.') > 0 ? name.slice(name.lastIndexOf('.')).toLowerCase() : '';
+const renameItems = view => view.flat ?? view.entries;
 
 // The rename box over an item's name (a list's row or tile, a tree's row). `own`: a name of Foldex's own, not the
-// item's on disk ({ at: the row, done: name => ... }; a quick access shortcut, plan 26 3.10): Enter gives it the name.
+// item's on disk: { at: the row, or item: the row's item; done: name => ..., check: name => a problem or null,
+// end: () => ... when the box goes }; a quick access shortcut (plan 26 3.10), a new folder or file (newItem).
 function startRename(view, id, own = null) {
-  const items = view.flat ?? view.entries;
+  const items = renameItems(view);
   if (!items) return;
-  const i = own?.at ?? items.findIndex(x => same(x.id, id));
+  const i = own?.item ? items.indexOf(own.item) : own?.at ?? items.findIndex(x => same(x.id, id));
   const item = items[i];
   if (!item) return;
   if (!own && (!diskId(item.id) || isDrive(item))) return status('Only files and folders on disk can be renamed.', true);
@@ -26,19 +28,16 @@ function startRename(view, id, own = null) {
   if (view.scrollTo) view.scrollTo(i);
   else scrollIntoView(view.body, i);
   view.render();
-  const name = view.rows.querySelector(`[data-index="${i}"] .name`);
-  if (!name) return;
-  const at = name.getBoundingClientRect(), body = view.body.getBoundingClientRect();
-  const cell = name.closest('.cell, .tile').getBoundingClientRect();
   const input = Object.assign(document.createElement('input'), { className: 'rename', value: item.name, spellcheck: false });
-  Object.assign(input.style, {
-    left: `${at.left - body.left + view.body.scrollLeft - 3}px`, top: `${at.top - body.top + view.body.scrollTop - 2}px`,
-    width: `${Math.max(160, cell.right - at.left + 6)}px`, height: `${at.height + 4}px`,
-  });
   view.body.append(input);
-  renaming = { view, item, input, asking: false, companions: own ? [] : companionsOf(view, item), shift: false, own };
+  // The box follows its item when the pane draws its rows again (the folder read again, items come and go, scrolled):
+  // at its row when that is drawn; gone when the item is (renamed or deleted elsewhere).
+  const watch = new MutationObserver(() => placeRename());
+  watch.observe(view.rows, { childList: true });
+  renaming = { view, item, input, asking: false, companions: own ? [] : companionsOf(view, item), shift: false, own, watch };
+  if (!placeRename()) return;
   view.render();   // the companions highlighted
-  selectName(input, own ? { folder: true } : item);
+  selectName(input, own?.item ?? (own ? { folder: true } : item));
   // Its keys are its own: no action, no typing into the pane, no row clicked.
   const shift = on => {
     if (renaming?.input !== input || renaming.shift === on) return;
@@ -67,6 +66,33 @@ function startRename(view, id, own = null) {
   });
 }
 
+// The rename box over its item's name, where that row is drawn now. False (and the box gone) when the item is no
+// longer in the pane.
+function placeRename() {
+  const r = renaming;
+  if (!r) return false;
+  const { view, input } = r;
+  const items = renameItems(view) ?? [];
+  let i = items.indexOf(r.item);
+  if (i < 0 && !r.own) {
+    i = items.findIndex(x => same(x.id, r.item.id));   // read again: the same item, a new object
+    if (i >= 0) r.item = items[i];
+  }
+  if (i < 0) {
+    endRename();
+    return false;
+  }
+  const name = view.rows.querySelector(`[data-index="${i}"] .name`);
+  if (!name) return true;   // its row is not drawn (scrolled away): the box stays where it was
+  const at = name.getBoundingClientRect(), body = view.body.getBoundingClientRect();
+  const cell = name.closest('.cell, .tile').getBoundingClientRect();
+  Object.assign(input.style, {
+    left: `${at.left - body.left + view.body.scrollLeft - 3}px`, top: `${at.top - body.top + view.body.scrollTop - 2}px`,
+    width: `${Math.max(160, cell.right - at.left + 6)}px`, height: `${at.height + 4}px`,
+  });
+  return true;
+}
+
 // The name selected as the setting renameSelect says: without its extension, or all of it (a folder: all of it).
 function selectName(input, item) {
   input.focus();
@@ -76,9 +102,11 @@ function selectName(input, item) {
 
 function endRename() {
   if (!renaming) return;
-  const { view, input } = renaming;
+  const { view, input, watch, own } = renaming;
   renaming = null;
+  watch.disconnect();
   input.remove();
+  own?.end?.();
   view.render();
   if (activePane === view.id) view.body.focus();
 }
@@ -105,8 +133,13 @@ async function commitRename() {
   if (!r || r.asking) return;
   const name = r.input.value.trim();
   if (r.own) {
+    const problem = name && r.own.check?.(name);
+    if (problem) {
+      status(problem, true);
+      return selectName(r.input, r.own.item ?? { folder: true });
+    }
     endRename();
-    if (name !== r.item.name) r.own.done(name);
+    if (r.own.item ? name : name !== r.item.name) r.own.done(name);
     return;
   }
   if (!name || name === r.item.name) return endRename();
@@ -145,22 +178,62 @@ async function commitRename() {
     status(`Renamed along: ${moved.join(', ') || 'none'}${left.length ? `; not renamed (the new name is taken): ${left.join(', ')}` : ''}.`, left.length > 0);
 }
 
-// F8, F7: a new folder or file in the active pane's folder, renamed in place once it is there.
+// F8, F7: a new folder or file in the active pane's folder. Its name first: a row of its own ("New folder", "New
+// file.txt") with the name box, at the top of a list or as the first child of the tree's folder; nothing is made yet.
+// Enter (or leaving the box) makes it with the name typed; Esc, or an empty name, makes nothing.
 function newItem(kind) {
   const folder = currentFolder();
-  if (!folder) return;
-  pendingNew = { pane: activePane, folder };
-  post({ op: 'fileOp', kind: kind === 'file' ? 'newFile' : 'newFolder', ids: [], target: folder });
+  const view = views.get(activePane);
+  if (!folder || !(view instanceof ListView || view instanceof TreeView)) return;
+  const isFolder = kind !== 'file';
+  const name = isFolder ? 'New folder' : 'New file.txt';
+  const like = (view.flat ?? view.all ?? []).find(x => !x.up && !x.qa && (isFolder ? x.folder : /\.txt$/i.test(x.name ?? '')));
+  const parent = view instanceof TreeView ? view.focused() : null;
+  const row = { id: `${folder}\\${name}`, name, folder: isFolder, icon: like?.icon ?? -1, newItem: true, subs: false, files: false,
+    depth: parent ? parent.depth + 1 : 0, parent };
+  // The names there now: a name taken is refused, as Explorer does.
+  const taken = () => new Set((parent ? parent.children ?? [] : view.all ?? []).filter(x => !x.up).map(x => x.name.toLowerCase()));
+  view.newRow = row;
+  if (parent && !parent.expanded) view.toggle(parent.id);
+  view.render();
+  startRename(view, row.id, {
+    item: row,
+    check: n => /[\\/:*?"<>|]/.test(n) ? 'A name cannot hold \\ / : * ? " < > |'
+      : taken().has(n.toLowerCase()) ? `There is already an item named "${n}" here.` : null,
+    end: () => {
+      if (view.newRow === row) view.newRow = null;
+      const items = renameItems(view);
+      if (items?.includes(row)) items.splice(items.indexOf(row), 1);
+    },
+    done: n => {
+      pendingNew = { pane: view.id, folder };
+      post({ op: 'fileOp', kind: isFolder ? 'newFolder' : 'newFile', ids: [], target: folder, name: n });
+    },
+  });
 }
 
-// A file operation done: a new item renamed where it was asked for; a tree focused on a renamed item under its new
-// name (a list keeps its selection and focus itself, ListView.reread).
+// The new item's row in a pane's rows while its name is asked (newItem): at the top of a list (after ".."), as the
+// first child of the tree's folder (under its row). Put back each time the rows are drawn, as the folder may be read
+// again meanwhile.
+function placeNewRow(view, items) {
+  const row = view.newRow;
+  if (!row || items.includes(row)) return;
+  if (row.parent) {
+    const at = items.indexOf(row.parent);
+    if (at >= 0) items.splice(at + 1, 0, row);
+  } else {
+    const at = items.findIndex(x => !x.up);
+    items.splice(at < 0 ? items.length : at, 0, row);
+  }
+}
+
+// A file operation done: a new item focused where it was asked for (a list focuses what arrived itself, ListView.reread);
+// a tree focused on a renamed item under its new name (a list keeps its selection and focus itself).
 function fileOpDone(op) {
   if (op.created && pendingNew && same(folderOf(op.created), pendingNew.folder)) {
     const view = views.get(pendingNew.pane);
     pendingNew = null;
-    if (view instanceof TreeView) treeShows(view, op.created, true);
-    else if (view instanceof ListView && same(view.location, folderOf(op.created))) view.renameOnLoad = op.created;
+    if (view instanceof TreeView) treeShows(view, op.created, false);
   }
   if (op.kind === 'rename' && op.moved?.length) {
     const [from, to] = op.moved[0];

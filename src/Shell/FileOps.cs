@@ -58,18 +58,18 @@ sealed class FileOps
     /// <summary>Starts a copy or move of items (parsing names) into a folder, a delete (to the Recycle Bin; `confirmed`:
     /// Foldex asked already, Windows does not ask again), a permanent delete (deletePermanent), a rename of one item (rename: `target` is its new name), or a
     /// new folder or file in `target` ("New folder", "New file.txt"; numbered by Windows when the name is taken). Returns at once.</summary>
-    public Operation Start(string kind, IReadOnlyList<string> ids, string? target, IntPtr owner, bool confirmed)
+    public Operation Start(string kind, IReadOnlyList<string> ids, string? target, IntPtr owner, bool confirmed, string? name = null)
     {
         var op = new Operation { Id = ++lastId, Kind = kind, Items = ids.Count, Ids = [.. ids] };
         operations.Add(op);
         changed(op);
-        var thread = new Thread(() => Run(op, ids, target, owner, confirmed)) { IsBackground = true, Name = $"file operation {op.Id}" };
+        var thread = new Thread(() => Run(op, ids, target, owner, confirmed, name)) { IsBackground = true, Name = $"file operation {op.Id}" };
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
         return op;
     }
 
-    void Run(Operation op, IReadOnlyList<string> ids, string? target, IntPtr owner, bool confirmed)
+    void Run(Operation op, IReadOnlyList<string> ids, string? target, IntPtr owner, bool confirmed, string? name)
     {
         try
         {
@@ -87,8 +87,9 @@ sealed class FileOps
             var sink = new Sink(this, op);
             fo.Advise(sink, out var cookie);
             var dest = target is null || op.Kind == "rename" ? null : Native.Item(target);
-            if (op.Kind == "newFolder") fo.NewItem(dest!, Native.FileAttributeDirectory, "New folder", null, IntPtr.Zero);
-            if (op.Kind == "newFile") fo.NewItem(dest!, Native.FileAttributeNormal, "New file.txt", null, IntPtr.Zero);
+            // A new folder or file by the name given in its row (rename.js newItem); numbered when it is taken meanwhile.
+            if (op.Kind == "newFolder") fo.NewItem(dest!, Native.FileAttributeDirectory, name ?? "New folder", null, IntPtr.Zero);
+            if (op.Kind == "newFile") fo.NewItem(dest!, Native.FileAttributeNormal, name ?? "New file.txt", null, IntPtr.Zero);
             foreach (var id in ids)
             {
                 var item = Native.Item(id);

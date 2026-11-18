@@ -1126,6 +1126,7 @@ class TreeView {
   }
 
   render() {
+    placeNewRow(this, this.flat);   // a new folder or file's row while its name is asked (rename.js)
     const fontPx = this.fontPx();
     const cols = shownColumns(this.cols).map(c => ({ ...columnInfo(c.id), width: (c.width ?? columnInfo(c.id).width) * fontPx }));
     const sorted = new Set(this.cols.sort.map(s => s.id));
@@ -2027,7 +2028,7 @@ class ListView {
     const kept = focus && this.entries.find(x => same(x.id, focus));
     const firstItem = this.entries.find(x => !x.up);
     if (kept) this.select(kept, {}, true);
-    else if (firstItem && !this.renameOnLoad) this.select(firstItem, {}, true);
+    else if (firstItem) this.select(firstItem, {}, true);
     itemListed(this);   // an item opened as a bookmark (plan 26 3.12): selected and focused
     const now = layout.state(this.id).focus;
     for (const f of layout.followers(this.id, layout.keyOf(this.id)))
@@ -2037,17 +2038,11 @@ class ListView {
     this.askColumnValues();
     if (this.cols.sort.some(s => propsFor(s.id).length)) this.sortEntries();
     this.autoFit();
-    // A new folder or file made here (F8, F7; rename.js): focused and renamed in place.
-    const made = this.renameOnLoad && this.entries.find(x => same(x.id, this.renameOnLoad));
-    if (made) {
-      this.renameOnLoad = null;
-      this.select(made, {});
-      startRename(this, made.id);
-    }
     ribbonRefresh();
   }
 
   render() {
+    placeNewRow(this, this.entries);   // a new folder or file's row while its name is asked (rename.js)
     if (this.thumbsView() && !(this.message && !this.entries.length)) return this.renderThumbs();
     if (this.iconsView() && !(this.message && !this.entries.length)) return this.renderIcons();
     if (this.message && !this.entries.length) {

@@ -740,7 +740,7 @@ sealed class MainForm : Form
                 break;
             case "fileOp":
                 app.FileOps.Start(msg["kind"]!.GetValue<string>(), ids, msg["target"]?.GetValue<string>(), Handle,
-                    msg["confirmed"]?.GetValue<bool>() == true);
+                    msg["confirmed"]?.GetValue<bool>() == true, msg["name"]?.GetValue<string>());
                 break;
             case "preview":
             {
