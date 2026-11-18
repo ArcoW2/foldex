@@ -196,7 +196,7 @@ sealed class FolderCache : IDisposable
                 if (cancel.IsCancellationRequested) break;
                 batcher.Add(EntryOf(f, item, foldersOnly, tree, icons));
             }
-            if (fromCache && f.Network) _ = Task.Run(() => Check(location));   // a share may not report its changes: checked
+            if (fromCache) _ = Task.Run(() => Check(location));   // shown from the cache: checked against the disk behind it
             return new ShellListing.Result(batcher.Rest, null, false, clock.ElapsedMilliseconds, "disk", icons.ElapsedMilliseconds,
                 cancel.IsCancellationRequested, f.Target);
         }
@@ -271,7 +271,11 @@ sealed class FolderCache : IDisposable
             if (folders.TryGetValue(key, out var known) && known.Complete && !known.Stale) return (known, true);
             f = known ?? (folders[key] = new Folder(location) { Network = NetworkGuard.IsNetwork(location) });
             if (f.Reading is not null) wait = f.Reading;
-            else f.Reading = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            else
+            {
+                f.Reading = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                f.Complete = false;   // read again: a change reported meanwhile waits for the new read (Changed), not lost with the old
+            }
         }
         if (wait is not null)
         {
@@ -407,32 +411,54 @@ sealed class FolderCache : IDisposable
         }
     }
 
-    // A share's folder shown again from the cache (3.7): its bare read made again; the items that changed put in, and
-    // the windows told when any did.
+    // A folder shown from the cache (3.7; a share's, and one on disk too, should its watch have missed something): its
+    // bare read made again; the items that differ looked at once more (a change its watch put in meanwhile is newer than
+    // this read) and put in, and the windows told when any did.
     void Check(string location)
     {
         if (!NetworkGuard.Reachable(location).GetAwaiter().GetResult()) return;
         Dictionary<string, Item> fresh;
         try { fresh = Read(location); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException) { return; }
-        List<string> differs = [];
+        List<string> differs;
         lock (gate)
         {
             if (!folders.TryGetValue(Key(location), out var f) || !f.Complete) return;
-            foreach (var (name, item) in fresh)
-                if (!f.Items.TryGetValue(name, out var had) || had.Info.LastWriteTimeUtc != item.Info.LastWriteTimeUtc
-                    || had.Info.Attributes != item.Info.Attributes || had.Info is FileInfo a && item.Info is FileInfo b && a.Length != b.Length)
-                {
-                    f.Items[name] = item;
-                    differs.Add(name);
-                }
-            foreach (var name in f.Items.Keys.Where(n => !fresh.ContainsKey(n)).ToList())
+            differs = fresh.Where(p => !f.Items.TryGetValue(p.Key, out var had) || Differs(had.Info, p.Value.Info)).Select(p => p.Key)
+                .Concat(f.Items.Keys.Where(n => !fresh.ContainsKey(n))).ToList();
+        }
+        if (differs.Count == 0) return;
+        var now = differs.ToDictionary(n => n, n => Look(Path.Combine(location, n)), StringComparer.OrdinalIgnoreCase);
+        List<string> told = [];
+        lock (gate)
+        {
+            if (!folders.TryGetValue(Key(location), out var f) || !f.Complete) return;
+            foreach (var (name, info) in now)
             {
-                f.Items.Remove(name);
-                differs.Add(name);
+                var had = f.Items.GetValueOrDefault(name);
+                if (info is null) { if (f.Items.Remove(name)) told.Add(name); }
+                else if (had is null || Differs(had.Info, info))
+                {
+                    f.Items[name] = new Item(info);
+                    told.Add(name);
+                }
             }
         }
-        if (differs.Count > 0) Tell(location, differs.Count > MaxNames ? null : differs);   // the items that changed, as a watch tells them
+        if (told.Count > 0) Tell(location, told.Count > MaxNames ? null : told);   // the items that changed, as a watch tells them
+    }
+
+    static bool Differs(FileSystemInfo had, FileSystemInfo now) => had.LastWriteTimeUtc != now.LastWriteTimeUtc
+        || had.Attributes != now.Attributes || had is FileInfo a && now is FileInfo b && a.Length != b.Length;
+
+    // An item as it is on disk now; null when it is not there.
+    static FileSystemInfo? Look(string path)
+    {
+        try
+        {
+            FileSystemInfo info = Directory.Exists(path) ? new DirectoryInfo(path) : new FileInfo(path);
+            return info.Exists ? info : null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException) { return null; }
     }
 
     // ---------- Memory (3.5) ----------
@@ -524,6 +550,12 @@ sealed class FolderCache : IDisposable
         var before = GC.GetTotalMemory(true);
         Trim(true);
         return (before, GC.GetTotalMemory(true), items);
+    }
+
+    /// <summary>For the tests: a folder's watch stopped without its read being let go, as a watch that missed changes.</summary>
+    internal void Deafen(string location)
+    {
+        lock (gate) if (folders.TryGetValue(Key(location), out var f)) f.Watcher!.EnableRaisingEvents = false;
     }
 
     public void Dispose()

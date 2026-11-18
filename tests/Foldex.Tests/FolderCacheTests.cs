@@ -76,6 +76,61 @@ public class FolderCacheTests : IDisposable
         lock (told) Assert.Contains(sub, told, StringComparer.OrdinalIgnoreCase);
     }
 
+    // A folder read again (F5, its changes lost) while files come in (git on a checkout): what its watch reports during
+    // that read goes into the new read, not into the old one the new read then replaces.
+    [Fact]
+    public void FilesMadeWhileAFolderIsReadAgainAreAllInIt()
+    {
+        using var cache = new FolderCache((_, _) => { });
+        var big = Path.Combine(dir, "big");
+        Directory.CreateDirectory(big);
+        for (var i = 0; i < 20000; i++) File.WriteAllText(Path.Combine(big, $"a{i}.txt"), "");
+        cache.List(big, null, default, false, false);
+        var writer = Task.Run(() =>
+        {
+            // Named to come first: a read under way has passed their place, so only the watch can report them.
+            for (var i = 0; i < 6000; i++) File.WriteAllText(Path.Combine(big, $"0{i}.txt"), "");
+        });
+        while (!writer.IsCompleted)   // read again and again while they come in
+        {
+            cache.Invalidate(big);
+            cache.List(big, null, default, false, false);
+        }
+        writer.Wait();
+        var onDisk = Directory.GetFileSystemEntries(big).Select(Path.GetFileName).ToList();
+        var want = onDisk.Count;
+        var have = 0;
+        // The watch reports within a moment. Looked at without the check made when it is shown from the cache; read
+        // again only when its watch lost changes (too many at once: a window is told to read it again).
+        for (var i = 0; i < 100 && have != want; i++)
+        {
+            Thread.Sleep(50);
+            if (!cache.Has(big)) cache.List(big, null, default, false, false);
+            have = cache.Entries(big, onDisk!, false, false)?.Count ?? -1;
+        }
+        Assert.Equal(want, have);
+    }
+
+    // A folder shown from the cache is checked against the disk behind it: what its watch missed is put in, and the
+    // windows are told which items changed.
+    [Fact]
+    public void AFolderShownFromTheCacheIsCheckedAgainstTheDisk()
+    {
+        var told = new System.Collections.Concurrent.ConcurrentQueue<IReadOnlyList<string>?>();
+        using var cache = new FolderCache((_, names) => told.Enqueue(names));
+        cache.List(dir, null, default, false, false);
+        cache.Deafen(dir);   // its watch misses what comes now
+        File.WriteAllText(Path.Combine(dir, "c.txt"), "c");
+        File.Delete(Path.Combine(dir, "a.txt"));
+        Thread.Sleep(500);
+        Assert.Equal(["a.txt", "b.txt", "empty", "sub"], Names(cache.List(dir, null, default, false, false)));   // as cached; checked behind it
+        for (var i = 0; i < 60 && told.IsEmpty; i++) Thread.Sleep(50);
+        Assert.True(told.TryDequeue(out var names));
+        Assert.Contains("a.txt", names!);
+        Assert.Contains("c.txt", names!);   // Windows may report more (a folder made just before, as sub)
+        Assert.Equal(["b.txt", "c.txt", "empty", "sub"], Names(cache.List(dir, null, default, false, false)));
+    }
+
     [Fact]
     public void AChangeOnDiskIsInTheCacheWithoutReadingAgain()
     {

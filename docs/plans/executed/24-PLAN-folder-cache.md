@@ -134,9 +134,10 @@ limit, and a share found unreachable is not tried again for a while; meanwhile i
 ### 3.7 Network shares and other places
 
 - Network shares: cached, as the setting cacheNetwork says (on by default). They report changes too, less reliably;
-  some NAS devices do not report at all. So a cached network folder is checked when a pane shows it again: a quick
-  read of names and dates (the bare read only), the changes put in. While the check runs the pane shows what the cache
-  has. Off: network folders are read every time, as now.
+  some NAS devices do not report at all. So a cached folder is checked when a pane shows it again: a quick read of
+  names and dates (the bare read only), the changes put in. While the check runs the pane shows what the cache has.
+  A folder on a local drive is checked the same way, should its watch have missed something. Off: network folders are
+  read every time, as now.
 - Cloud folders (Synology Drive, OneDrive): their files are on a local drive (placeholders), changes by the sync
   client are reported as any change; cached as local folders. Reading a placeholder's icon or contents can make the
   client download it: the extras must not open the files (as now).
@@ -229,6 +230,12 @@ None.
   cached and answering.
 - Network shares: cached as the setting cacheNetwork says (on by default). A share's folder answered from the cache is
   read again in the background (the bare read), the changes put in and the windows told.
+  2026-11-18: so is every folder answered from the cache, on a local drive too (a folder found half empty after a
+  checkout). What differs is looked at on disk once more before it is put in, as a change the watch put in after the
+  check's read is newer than that read. A folder read again (F5, its changes lost) counts as not read while it is
+  read: the changes its watch reports meanwhile wait for the new read instead of going into the old one it replaces
+  (they were lost: a unit test making 6000 files while the folder was read again and again missed 165, 32 and 21 of
+  them in three runs on the old code; none with the change).
 - No waiting on the network: src/Shell/NetworkGuard.cs. A path is on a share when it is a UNC path or its drive is a
   network drive (GetDriveType, which touches no network). Before a listing, Windows' menu, opening an item and the Git
   column, the share's root is checked on a worker with a limit; one that does not answer is marked down for its server
