@@ -97,8 +97,9 @@ Built outside this plan: companion files for the rename in place (F2 on one file
 - **Token list**: beside the pattern a list of every token with what it gives for the first item; choosing one puts it
   in at the cursor, with its format chosen there for a date or time, so nothing has to be remembered. Typing tokens
   stays possible.
-- **Token syntax**: a setting, renameTokens (Settings > Panes): xplorer2's (the default) or Total Commander's ([N],
-  [C], [E], [N1-3], [YMD]). Both write the same tokens; only how they are written differs. [xplorer2's syntax: not yet
+- **Token syntax**: a setting, renameTokens (Settings > Panes): "dollar", xplorer2's (the default), or "bracket",
+  Total Commander's ([N], [C], [E], [N1-3], [YMD]); the setting and its choices name no other program (Dollar
+  tokens, Bracket tokens). Both write the same tokens; only how they are written differs. [xplorer2's syntax: not yet
   checked; read from its manual before building.]
 - **Find and replace**: a text or a regular expression, case or not, the first or every match; the replacement may
   use the regular expression's groups.

@@ -62,15 +62,15 @@ function partOf(text, from, length) {
   return [start, Math.min(text.length, start + Math.max(0, length))];
 }
 
-// A pattern's tokens filled in for an item, the index-th (0 first) of those renamed. xplorer2's syntax: $B the name,
+// A pattern's tokens filled in for an item, the index-th (0 first) of those renamed. The dollar syntax: $B the name,
 // $E the extension, $N the whole name, $P the parent folder, $G the one above it, $1 / $003 a counter (its start
 // and digits as written), $[first:length] a part of the name, ${Column} or ${Column:format} a column's value, $$ a $.
-// Total Commander's: [N], [E], [P], [G], [C] (the counter's start, step and digits from o.counter), [N2-5] or [N2,4]
+// The bracket syntax: [N], [E], [P], [G], [C] (the counter's start, step and digits from o.counter), [N2-5] or [N2,4]
 // a part of the name, [Y] [M] [D] [h] [m] [s] the date modified, [=Column] or [=Column:format], [[ a [.
 function expandTokens(template, item, index, o) {
   const { base, ext } = splitName(item.name, item.folder);
   const part = (from, length) => base.slice(...partOf(base, from, length));
-  if (o.syntax === 'totalcommander') {
+  if (o.syntax === 'bracket') {
     const c = o.counter ?? { start: 1, step: 1, digits: 1 };
     const modified = format => item.value('modified', format);
     return template.replace(/\[\[|\[N(-?\d+)(?:([-,])(-?\d+))?\]|\[=([^\]:]+)(?::([^\]]+))?\]|\[([NEPGCYMDhms])\]/g, (t, from, sep, to, col, fmt, one) => {

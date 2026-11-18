@@ -42,7 +42,7 @@ function renameItem(x) {
 
 // The tokens of the syntax in use, for the list: [label, token]; dates with a format of their own.
 function renameTokens(syntax) {
-  const tc = syntax === 'totalcommander';
+  const tc = syntax === 'bracket';
   const col = (name, format) => tc ? `[=${name}${format ? ':' + format : ''}]` : `\${${name}${format ? ':' + format : ''}}`;
   const dates = name => DateFormats.map(f => [`${name} as ${f}`, col(name, f)]);
   return [
@@ -60,8 +60,8 @@ async function openRenameMany(view, ids) {
   const entries = view.entries.filter(x => ids.some(id => same(id, x.id)));
   if (entries.length < 2) return;
   await askPropList();
-  const syntax = settings.renameTokens === 'totalcommander' ? 'totalcommander' : 'xplorer2';
-  const o = { ...RenameDefaults, syntax, template: syntax === 'totalcommander' ? '[N]' : '$B', companions: settings.renameCompanions !== false };
+  const syntax = settings.renameTokens === 'bracket' ? 'bracket' : 'dollar';
+  const o = { ...RenameDefaults, syntax, template: syntax === 'bracket' ? '[N]' : '$B', companions: settings.renameCompanions !== false };
 
   // The names in each folder now (for "exists in that folder"): the pane's own items for its folder; for items of
   // other folders (a scrap) what the host says is there.
@@ -210,7 +210,7 @@ function renameHere(a) {
     const s = settingsNow();
     for (const [name, el] of Object.entries(rows)) el.hidden = !({
       template: ['pattern', 'part', 'replace', 'replaceAll'], match: ['replace', 'replaceAll'], part: ['part'], date: ['date'],
-      counter: syntax === 'totalcommander' ? ['pattern', 'part', 'replace', 'replaceAll'] : [] }[name].includes(s.mode));
+      counter: syntax === 'bracket' ? ['pattern', 'part', 'replace', 'replaceAll'] : [] }[name].includes(s.mode));
     rows.template.querySelector('.find-label').textContent = s.mode === 'pattern' ? 'New name' : 'Put in';
     const n = ++asked;
     const got = await askWindow({ settings: s });

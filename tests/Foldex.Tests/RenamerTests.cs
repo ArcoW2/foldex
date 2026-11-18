@@ -16,7 +16,7 @@ public class RenamerTests
           raw: which => which === 'taken' ? taken : which === 'modified' ? modified : null, ...extra });
         const base = { mode: 'pattern', target: 'name', template: '', match: '', regex: false, matchCase: false, from: 1, length: 1,
           fromEnd: false, dateFrom: 'found', dateFormat: 'yyyy-MM-dd', shiftDays: 0, shiftHours: 0, caseTo: '',
-          counter: { start: 1, step: 1, digits: 1 }, syntax: 'xplorer2' };
+          counter: { start: 1, step: 1, digits: 1 }, syntax: 'dollar' };
         const one = (name, o, i = 0) => renameOne(item(name), i, { ...base, ...o });
         """;
 
@@ -43,9 +43,9 @@ public class RenamerTests
     public void TotalCommandersTokens()
     {
         var r = Run("""
-            [one('IMG_1.jpg', { syntax: 'totalcommander', template: '[P]_[N]_[C]', counter: { start: 10, step: 5, digits: 3 } }, 2),
-             one('IMG_1.jpg', { syntax: 'totalcommander', template: '[N2-4][[x]' }), one('IMG_1.jpg', { syntax: 'totalcommander', template: '[Y]-[M]-[D] [h][m]' }),
-             one('IMG_1.jpg', { syntax: 'totalcommander', template: '[=Date taken:yyyy] [N-1,1]' })]
+            [one('IMG_1.jpg', { syntax: 'bracket', template: '[P]_[N]_[C]', counter: { start: 10, step: 5, digits: 3 } }, 2),
+             one('IMG_1.jpg', { syntax: 'bracket', template: '[N2-4][[x]' }), one('IMG_1.jpg', { syntax: 'bracket', template: '[Y]-[M]-[D] [h][m]' }),
+             one('IMG_1.jpg', { syntax: 'bracket', template: '[=Date taken:yyyy] [N-1,1]' })]
             """);
         Assert.Equal("""["Holiday_IMG_1_020.jpg","MG_[x].jpg","2026-11-12 1430.jpg","2020 1.jpg"]""", r.GetRawText());
     }

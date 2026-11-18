@@ -56,7 +56,7 @@
   "previewRemoteImages": true,     // images from the internet shown in a markdown or HTML preview; false: nothing fetched
   "previewTextKB": 256,           // how much of a text-like file a preview reads, in KB (Show all reads the rest)
   "previewWindowsTypes": "",      // extensions (".pdf; .svg") shown by Windows' preview handler instead of Foldex's own viewer
-  "renameTokens": "xplorer2",     // the Rename dialog's tokens: "xplorer2" ($B, $1, ${Date taken}) or "totalcommander" ([N], [C], [=Date taken])
+  "renameTokens": "dollar",       // the Rename dialog's tokens: "dollar" ($B, $1, ${Date taken}) or "bracket" ([N], [C], [=Date taken])
   "renameCompanions": true,       // renaming a file renames the files beside it with the same name and another extension; Shift+Enter: the other
   "scrollbarsSlim": true,          // scrollbars drawn slim until the mouse is over their pane
   "scrollbarWidth": 12,             // px, 4 to 30: the vertical scrollbars' width
