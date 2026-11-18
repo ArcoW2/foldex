@@ -51,6 +51,21 @@ sealed class FolderCache : IDisposable
     /// <summary>Bare reads made so far (the host's log of reads, for the tests and the settings window).</summary>
     public int Reads;
 
+    // Reading from disk or a share now, and whether a read was made since the host last asked (TakeReading).
+    int reading, readSeen;
+
+    T ReadingDisk<T>(Func<T> read)
+    {
+        Interlocked.Increment(ref reading);
+        Volatile.Write(ref readSeen, 1);
+        try { return read(); }
+        finally { Interlocked.Decrement(ref reading); }
+    }
+
+    /// <summary>Whether the cache reads from disk or a share now, or did since the last time this was asked (so a short
+    /// read is seen too): the status line's disk icon (AppHost).</summary>
+    public bool TakeReading() => (Interlocked.Exchange(ref readSeen, 0) == 1) | Volatile.Read(ref reading) > 0;
+
     /// <summary>`changed`: a folder's items changed (reported by its watch, or found by a check of a share shown
     /// again), told once the folder has been quiet for QuietMs: with the names of the items that changed, for the
     /// windows to ask for those only (Entries) and put them in where they are; without (null: changes lost, a share
@@ -250,9 +265,9 @@ sealed class FolderCache : IDisposable
         return entry;
     }
 
-    static void Extras(Item item, bool files)
+    void Extras(Item item, bool files)
     {
-        var (subs, has) = ShellListing.Contents(item.Info.FullName, files);
+        var (subs, has) = ReadingDisk(() => ShellListing.Contents(item.Info.FullName, files));
         item.Subs = subs;
         if (!files) return;
         item.Files = has;
@@ -288,11 +303,11 @@ sealed class FolderCache : IDisposable
             Interlocked.Increment(ref Reads);
             Dictionary<string, Item> items;
             string? target = null;
-            try { items = Read(location); }
+            try { items = ReadingDisk(() => Read(location)); }
             catch (UnauthorizedAccessException) when (ShellListing.LinkTarget(location) is string to)
             {
                 target = to;   // a compatibility link that denies its own listing: its target (plan 05 3.1)
-                items = Read(to);
+                items = ReadingDisk(() => Read(to));
             }
             lock (gate)
             {
@@ -418,7 +433,7 @@ sealed class FolderCache : IDisposable
     {
         if (!NetworkGuard.Reachable(location).GetAwaiter().GetResult()) return;
         Dictionary<string, Item> fresh;
-        try { fresh = Read(location); }
+        try { fresh = ReadingDisk(() => Read(location)); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException) { return; }
         List<string> differs;
         lock (gate)

@@ -161,7 +161,20 @@ sealed class AppHost : ApplicationContext
             foreach (var w in windows) w.Tell((JsonObject)cacheInfo.DeepClone());
         };
         cacheTimer.Start();
+        // The status line's disk icon: shown while the cache reads from disk or a share (a short read for one tick at
+        // least); a window is told only when that changes.
+        diskTimer.Tick += (_, _) =>
+        {
+            var on = Cache.TakeReading();
+            if (on == diskReading) return;
+            diskReading = on;
+            foreach (var w in windows) w.Tell(new JsonObject { ["event"] = "diskReading", ["on"] = on });
+        };
+        diskTimer.Start();
     }
+
+    readonly System.Windows.Forms.Timer diskTimer = new() { Interval = 150 };
+    bool diskReading;
 
     /// <summary>Read-ahead starts once the first window has shown its folders.</summary>
     public void StartReadAhead()

@@ -4312,6 +4312,8 @@ const events = {
   paneHost(m) { views.get(m.pane)?.fromHost?.(m.msg); },
   projects(m) { paneOfKind('projects')?.fromHost(m); },
   cacheInfo(m) { paneOfKind('settings')?.fromHost(m); },
+  // The folder cache reading from disk or a share: the disk icon at the right of the status line.
+  diskReading(m) { $('disk').hidden = !m.on; },
   // Settings or themes changed (the settings window, a file edited by hand): every window is told.
   settings(m) {
     const before = settings;

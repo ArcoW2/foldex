@@ -1651,6 +1651,14 @@ dialog.ask form {
   to { left: 100%; }
 }
 
+/* The disk icon (app.js diskReading): at the right end while the folder cache reads from disk or a share, its light
+   flickering as a drive's does; the progress bar stops before it. */
+#disk { flex: none; align-self: center; display: inline-flex; margin-left: auto; padding: 0 4px; color: var(--fg-dim); }
+#disk[hidden] { display: none; }
+#disk .led { fill: var(--accent); animation: disk-led .9s steps(1) infinite; }
+@keyframes disk-led { 0%, 30%, 55%, 80% { opacity: 1; } 15%, 45%, 70%, 90% { opacity: .2; } }
+#statusline:has(#disk:not([hidden])) #progress { right: 24px; }
+
 .ask-line {
   color: var(--fg-dim);
   padding-left: 8px;
