@@ -164,7 +164,7 @@ action('pane.newTab', { title: 'New tab', hint: 'this pane again as a tab: the s
   enabled: () => !!activeView() && !(activeView() instanceof PreviewView), run: () => newTab(activePane) });
 action('pane.rename', { title: 'Rename pane', hint: 'a name for the task the pane is kept for, on its head and its tab; empty: none',
   group: 'panes', enabled: () => !!activeView() && !(activeView() instanceof PreviewView), run: () => renamePane(activePane) });
-action('pane.toggle', { title: 'Show or hide a pane', hint: 'as Ctrl+O in Xplorer2: hides the other child of the parent, shows a hidden one again, or makes one',
+action('pane.toggle', { title: 'Show or hide a pane', hint: 'hides the other child of the parent, shows a hidden one again, or makes one',
   group: 'panes', enabled: () => !!activeView(), run: () => togglePane() });
 action('pane.hidden', { title: 'Hidden panes', hint: 'the panes hidden with Show or hide a pane: a click shows one again', group: 'panes',
   run: (params, ctx) => {

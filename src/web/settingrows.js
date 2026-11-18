@@ -103,7 +103,7 @@ const SETTING_ROWS = [
   { tab: 'Contents', group: 'Highlights', name: 'hoverIntensity', kind: 'range', range: [0, 200, 5], unit: '%', title: 'Hover',
     hint: 'The highlight of the item under the mouse, the same way.' },
   { tab: 'Contents', group: 'Items', name: 'renameTokens', kind: 'choice', title: 'Rename tokens',
-    options: [['xplorer2', 'xplorer2: $B, $E, $1, ${Date taken}'], ['totalcommander', 'Total Commander: [N], [E], [C], [=Date taken]']],
+    options: [['xplorer2', 'Dollar tokens: $B, $E, $1, ${Date taken}'], ['totalcommander', 'Bracket tokens: [N], [E], [C], [=Date taken]']],
     hint: 'How the Rename dialog (F2 with several items selected) writes its tokens; its token list puts them in either way.' },
   { tab: 'Contents', group: 'Items', name: 'renameCompanions', kind: 'toggle', title: 'Rename companion files',
     hint: 'Renaming photo.jpg to beach.jpg also renames photo.xmp and photo.raw beside it (highlighted while you type the name). Shift+Enter does the other.' },
