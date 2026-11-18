@@ -381,7 +381,8 @@ body.bar-dragging .bars {
    text). */
 #ribbon { flex: none; background: var(--bg-bar); border-bottom: 1px solid var(--border); user-select: none; position: relative; outline: none;
   --rb-row: calc(var(--rb-r, 30) * 1px); }   /* three: a large button's icon, two lines of label and a split's arrow row */
-#ribbon button { background: none; border: 1px solid transparent; color: var(--fg); font: inherit; cursor: default; }
+#ribbon button { border: 1px solid transparent; color: var(--fg); font: inherit; cursor: default; }
+:where(#ribbon) button { background: none; }   /* weightless: a button's own background (lit, pressed, on) wins */
 .rb-tabs { display: flex; gap: 1px; padding: 2px 8px 0; }
 .rb-tab { padding: 3px 10px; position: relative; border-radius: 4px 4px 0 0; }
 .rb-tab:hover { background: var(--hover); }
@@ -443,6 +444,11 @@ body.bar-dragging .bars {
 #ribbon .rb-btn.on { background: var(--select); color: var(--accent); }
 .rb-btn.off { opacity: .45; }
 .rb-btn.off:hover { background: none; }
+/* Pressed: darker than lit while the mouse button is down (a split button's part on its own). */
+#ribbon { --rb-down: color-mix(in srgb, var(--hover), var(--fg) 18%); }
+#ribbon .rb-btn:not(.off):not(:has([data-arrow])):active, #ribbon .rb-btn:not(.off) [data-arrow]:active, #ribbon .rb-corner:active { background: var(--rb-down); }
+#ribbon .rb-btn:not(.off):has([data-arrow]):active:not(:has([data-arrow]:active)) { background: linear-gradient(var(--rb-down), var(--rb-down)) no-repeat;
+  background-size: var(--rb-main-w, 100%) var(--rb-main-h, 100%); }
 /* 22 x 18 to hit, into the group's padding and down to its edge; the mark a small corner at the outside. */
 #ribbon .rb-corner { width: 22px; height: calc(18px * var(--rb-f, 1)); padding: 0; margin-bottom: -2px; border: 0; border-radius: 2px; flex: none; position: relative; }
 .rb-corner:hover { background: var(--hover); }
