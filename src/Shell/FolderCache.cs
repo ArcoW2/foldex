@@ -342,7 +342,17 @@ sealed class FolderCache : IDisposable
             w.Changed += (_, e) => Changed(f, WatcherChangeTypes.Changed, e.FullPath, null);
             w.Deleted += (_, e) => Changed(f, WatcherChangeTypes.Deleted, e.FullPath, null);
             w.Renamed += (_, e) => Changed(f, WatcherChangeTypes.Renamed, e.FullPath, e.OldFullPath);
-            w.Error += (_, _) => { lock (gate) f.Stale = true; Tell(f.Path, null); };   // changes lost: read again
+            // Changes lost, or the watch broke (its folder gone): read again, under a new watch (Bare).
+            w.Error += (_, _) =>
+            {
+                lock (gate)
+                {
+                    f.Stale = true;
+                    if (f.Watcher == w) f.Watcher = null;
+                }
+                ThreadPool.QueueUserWorkItem(_ => w.Dispose());   // not from its own event
+                Tell(f.Path, null);
+            };
             w.EnableRaisingEvents = true;
             return w;
         }
@@ -379,6 +389,15 @@ sealed class FolderCache : IDisposable
                 else f.Items.Remove(name);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException) { f.Items.Remove(name); }
+        }
+        // A folder in it gone (deleted, renamed or moved away) or made (again): its own read and the reads under it are
+        // let go, as their watches went with the folder they watched (a watch on a folder deleted and made again under
+        // that name tells nothing more: git does that on a checkout). Read anew when next asked; a pane showing one
+        // is told to read it again.
+        if (kind != WatcherChangeTypes.Changed)
+        {
+            DropUnder(path);
+            if (old is not null) DropUnder(old);
         }
         if (kind != WatcherChangeTypes.Changed && Path.GetDirectoryName(f.Path.TrimEnd('\\')) is { } parent
             && folders.TryGetValue(Key(parent), out var up) && up.Items.TryGetValue(Path.GetFileName(f.Path.TrimEnd('\\')), out var me))
@@ -446,6 +465,19 @@ sealed class FolderCache : IDisposable
         f.Watcher?.Dispose();
         f.Watcher = null;
         folders.Remove(Key(f.Path));
+    }
+
+    // A folder's read and the reads of the folders under it let go (under the gate), each told as changed as a whole.
+    void DropUnder(string path)
+    {
+        var key = Key(path);
+        foreach (var f in folders.Values.Where(f => Key(f.Path).Equals(key, StringComparison.OrdinalIgnoreCase)
+            || Key(f.Path).StartsWith(key + "\\", StringComparison.OrdinalIgnoreCase)).ToList())
+        {
+            if (f.Reading is not null) continue;   // being read now: that read is the new one
+            Drop(f);
+            Tell(f.Path, null);
+        }
     }
 
     // ---------- Read-ahead (3.6) ----------

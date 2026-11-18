@@ -42,6 +42,40 @@ public class FolderCacheTests : IDisposable
         Assert.Null(all.Entries.First(e => e!["name"]!.GetValue<string>() == "a.txt")!["subs"]);
     }
 
+    // A cached folder deleted and made again under its name (git on a checkout): its old watch tells nothing more, so its
+    // read is let go when its parent's watch sees it go; read anew, it has what is in it now. A pane showing it is told.
+    [Fact]
+    public void AFolderDeletedAndMadeAgainIsReadAnew()
+    {
+        var told = new List<string>();
+        using var cache = new FolderCache((path, _) => { lock (told) told.Add(path); });
+        var sub = Path.Combine(dir, "empty");
+        cache.List(dir, null, default, false, false);
+        Assert.Empty(cache.List(sub, null, default, false, false).Entries);
+        Directory.Delete(sub);
+        Directory.CreateDirectory(sub);
+        File.WriteAllText(Path.Combine(sub, "new.txt"), "n");
+        List<string> names = [];
+        for (var i = 0; i < 50; i++)   // the parent's watcher reports within a moment
+        {
+            Thread.Sleep(50);
+            names = Names(cache.List(sub, null, default, false, false));
+            if (names.Count > 0) break;
+        }
+        Assert.Equal(["new.txt"], names);
+        // And watched again: a change after it is in the cache too.
+        File.WriteAllText(Path.Combine(sub, "later.txt"), "l");
+        for (var i = 0; i < 50; i++)
+        {
+            Thread.Sleep(50);
+            names = Names(cache.List(sub, null, default, false, false));
+            if (names.Count > 1) break;
+        }
+        Assert.Equal(["later.txt", "new.txt"], names);
+        for (var i = 0; i < 40 && !told.Contains(sub, StringComparer.OrdinalIgnoreCase); i++) Thread.Sleep(50);
+        lock (told) Assert.Contains(sub, told, StringComparer.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public void AChangeOnDiskIsInTheCacheWithoutReadingAgain()
     {
