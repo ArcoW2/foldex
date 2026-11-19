@@ -19,7 +19,8 @@ just the file.
 The Find dialog gets a Containing text with its options (case, whole words; normal, verbatim or regular expression;
 known files or all files; by default only the start of a file) and Additional rules that are a filter set of plan
 32: the same lines, brackets, and, or and not, the same engine and line editor. Plan 32's fields get one more,
-Contents: a line on it tests whether a file holds a text, in a search and in a pane's filter alike. The rules are
+Contents: a line on it tests whether a file holds a text, known files or all files, in a search and in a pane's
+filter alike, with a warning that it can be very slow. The rules are
 tested on what the name search finds, the text on what passes them. Both are kept with a
 scrap's search and in saved searches. F3 on a file in a scrap whose search has a text opens its preview already
 searching that text, on the first match; in any preview Foldex draws (PDF and markdown included) a find bar after
@@ -39,7 +40,7 @@ Nothing yet.
 | Which files | known files or all files (Word, PDF, other binaries); the encoding found by itself | -- | 3.1 |
 | Only the start | a check (on) and a size in the dialog; its default a setting (2 MB) | -- | 3.1 |
 | Additional rules | a filter set (plan 32): its lines, brackets, and / or / not, its engine and line editor | -- | 3.2 |
-| Contents field | a field of plan 32's lines: the file holds a text, in an encoding (automatic by default); slow (the tortoise); in Find and in a pane's filter | Which files | 3.2 |
+| Contents field | a field of plan 32's lines: the file holds a text, in an encoding (automatic by default), known files or all files; in Find and in a pane's filter; the tortoise and a warning that it can be very slow | Which files | 3.2 |
 | Contents, more | the text kind's other conditions on Contents: wildcards, a regular expression | Contents field | 3.2 |
 | Kept | all of it in a scrap's search and in Predefined | -- | 3.3 |
 | Find in the preview | a find bar in Foldex's own preview, after LexPen's: Ctrl+F, F3, Shift+F3, case, whole word, regular expression; PDF's text too; a warning where a preview cannot be searched | -- | 3.5 |
@@ -85,13 +86,20 @@ Nothing yet.
 - In the dialog: the lines of the set, a row each as Manage filters shows them; a double click edits one, Add, Change,
   Remove, Up, Down, brackets, as there. The line being edited is Manage filters' line editor: Folders and Files, the
   field, its conditions, And / Or, Not.
-- **Contents**, a new field in plan 32's field list (so in Manage filters too): its value is the file itself, and a
-  line on it tests whether the file holds a text. First as a text and an encoding: Contains, the text, and Encoding
-  (Automatic, as 3.1, by default; or one chosen). Later the text kind's other conditions on it (matches wildcards,
-  matches a regular expression; plan 32 3.1). A folder: the line does not apply to it (plan 32's rule: left out).
-- It is a slow field (the tortoise, plan 32 3.1): the page's engine asks the host whether a file holds the text, as
-  it asks for a Windows property, and the item waits for the answer. The host's check is the one of 3.1 (Known files
-  or All files, Only the start, the encoding), so a Contents line and the Containing text find the same.
+- **Contents**, a new field in plan 32's field list, so in a pane's filter (Manage filters) as much as in Find's
+  rules: its value is the file itself, and a line on it tests whether the file holds a text. First as a text and an
+  encoding: Contains, the text, and Encoding (Automatic, as 3.1, by default; or one chosen). Later the text kind's
+  other conditions on it (matches wildcards, matches a regular expression; plan 32 3.1). A folder: the line does not
+  apply to it (plan 32's rule: left out).
+- The line has its own **Known files / All files** (3.1's choice; Known files by default), as a filter has no Find
+  dialog to take it from: with Known files only the files Foldex reads as text are opened, any other file does not
+  pass; with All files Word, PDF and other binaries are read too. Only the start of a file always holds for it, at
+  the setting's size (3.1).
+- It is a slow field (the tortoise, plan 32 3.1), and slower than any other: every file the line is tested on is
+  opened and read. So it says more than the tortoise does: in the field list its tooltip, and under a line using it a
+  warning, that it can be very slow (in a large folder, on a share, and most of all with All files). The page's
+  engine asks the host whether a file holds the text, as it asks for a Windows property, and the item waits for the
+  answer. The host's check is the one of 3.1, so a Contents line and the Containing text find the same.
 - Containing text stays in the dialog as the quick way; Contents is for what it cannot say: two texts, a text in
   some files only, a file without a text (`Not Contents contains "TODO"`).
 - Where they are tested: the scrap's page tests every item the name search streams to it with the set (the same
@@ -111,8 +119,9 @@ Nothing yet.
   (BOM, UTF-8, the code page); only the start (a match before and after the limit); Known files skipping a binary,
   All files reading it; rules combined as a filter set is (plan 32's tests reused); a Contents line, its Not and its
   encoding, on files made for it; a Normal text with `*`, `?` and `;`.
-- In the test copy, Contents as a pane's filter: a folder filtered on a text, the tortoise, the files appearing as the
-  host answers.
+- In the test copy, Contents as a pane's filter: a folder filtered on a text, the tortoise and the warning under the
+  line, the files appearing as the host answers; with Known files a .docx holding the text does not pass, with All
+  files it does.
 - In the test copy: a search with a text and a size rule into a scrap; Search again keeps both; a Word file and a PDF
   found with All files and not with Known files.
 - Find in the preview (3.5), unit where the page allows, else in the test copy over CDP: a text, a code file, a
