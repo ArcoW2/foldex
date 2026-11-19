@@ -145,13 +145,17 @@ function drawSets() {
     }, !!set));
   // A kept set: its key, the defaults.
   const extra = manageEl.querySelector('.fl-setextra');
-  if (!set) return extra.replaceChildren();
+  if (!set) {
+    extra.replaceChildren();
+    return void leftLeast();
+  }
   extra.replaceChildren(
     el('div', { className: 'fl-row' }, el('span', { className: 'cs-caption', textContent: 'Key' }), keyField(set), keyNote ? el('span', { className: 'fl-note', textContent: keyNote }) : null),
-    el('div', { className: 'fl-row' }, check('Default for a new root pane', filterSets.rootDefault === set.name,
+    el('div', { className: 'fl-row' }, check('Default for root pane', filterSets.rootDefault === set.name,
       on => saveFilters({ ...filterSets, rootDefault: on ? set.name : null }), 'A new pane without a parent (New pane, a preset\'s tree) starts filtered by this set')),
-    el('div', { className: 'fl-row' }, check('Default for a new child pane (a tab too)', filterSets.childDefault === set.name,
+    el('div', { className: 'fl-row' }, check('Default for child/tab pane', filterSets.childDefault === set.name,
       on => saveFilters({ ...filterSets, childDefault: on ? set.name : null }), 'A new child pane or tab starts filtered by this set')));
+  leftLeast();
 }
 const renamedDefaults = (from, to) => ({ rootDefault: filterSets.rootDefault === from ? to : filterSets.rootDefault,
   childDefault: filterSets.childDefault === from ? to : filterSets.childDefault });
@@ -545,10 +549,26 @@ manageEl.querySelector('.fl-lines').addEventListener('keydown', e => {
   drawEditor();
 });
 
+// The left part never narrower than its texts need: the defaults' checks, the key, the buttons, each on one line at its
+// own width (app.css .fl-check); kept as its least width, so a width kept from before cannot squeeze them either.
+function leftLeast() {
+  const left = manageEl.querySelector('.cs-sets');
+  const need = Math.ceil(Math.max(0, ...[...left.querySelectorAll('.fl-setextra > .fl-row, .cs-setbuttons')].map(x => {
+    const was = x.style.width;
+    x.style.width = 'max-content';
+    const w = x.getBoundingClientRect().width;
+    x.style.width = was;
+    return w;
+  })));
+  left.style.minWidth = need ? `${need}px` : '';
+  return need;
+}
+
 manageEl.querySelector('.cs-split').addEventListener('mousedown', e => {
   e.preventDefault();
   const left = manageEl.querySelector('.cs-sets'), x0 = e.clientX, w0 = left.getBoundingClientRect().width;
-  const width = x => Math.round(Math.max(160, Math.min(manageEl.clientWidth - 320, w0 + x - x0)));
+  const least = Math.max(160, leftLeast());
+  const width = x => Math.round(Math.max(least, Math.min(manageEl.clientWidth - 320, w0 + x - x0)));
   const move = m => manageEl.style.setProperty('--cs-left', `${width(m.clientX)}px`);
   const up = m => {
     removeEventListener('mousemove', move);
