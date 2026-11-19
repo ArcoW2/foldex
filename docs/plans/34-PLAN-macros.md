@@ -4,7 +4,8 @@ Status: not started.
 
 - 2026-11-19: draft, at the user's request.
 
-Takes over plan 01's Macros part (plan 01 3.3: LexPen's `MacroStore.cs`, its recording, `PLAN-macros.md`). Builds on
+Takes over plan 01's Macros part (plan 01 3.3: LexPen's `MacroStore.cs`, its recording, `PLAN-macros.md`); recording
+is plan 35. Builds on
 plan 26 and 27 (bookmarks: entries with names, icons and keys, kept in folders to any depth, Manage the bookmarks) and
 plan 19 / 30 (the ribbon). LexPen is the model: `..\LexPen\docs\plans\executed\PLAN-macros.md` and
 `PLAN-macro-window.md`, `..\LexPen\web\macrolang.js`, `..\LexPen\src\MacroStore.cs`. It covers xplorer2's user
@@ -22,11 +23,12 @@ plan 01 meant to bring them over.
 A macro is a script in LexPen's macro language: a step per line, each step a Foldex action by name or a statement
 (variables, if, switch, goto, gosub), plus a statement that runs a program, document or URL with parameters, and a
 loop over a list of items. System variables say where Foldex is: the active pane's folder, the focused item, the
-selected items, the first selected, the other pane's folder. Macros are kept as the bookmarks are: a tree with folders
-to any depth in your order, each macro with a name, an icon and keys. Manage macros (a pane, docked or floating) holds
-the tree and the editor; New offers a folder, a macro, and Run a program (a form that writes the one-line macro). They
-run from their key, from a Macros menu on the ribbon (the tree as submenus), from F1 and from a ribbon button of
-their own. A macro can be recorded from what you do, as in LexPen.
+selected items, the first selected, the other pane's folder. Macros are arranged as the bookmarks are, but kept apart
+from them, in a folder of their own that can be copied on its own: a tree with folders to any depth in your order,
+each macro with a name, an icon and keys. Manage macros (a pane, docked or floating) holds the tree and the editor;
+New offers a folder, a macro, and Run a program (a form that writes the one-line macro). They run from their key,
+from a Macros menu on the ribbon (the tree as submenus), from F1 and from a ribbon button of their own. Recording a
+macro is plan 35.
 
 ## Status
 
@@ -42,12 +44,13 @@ Nothing yet.
 | System variables | the active pane's folder, the focused item, the selected items, the first selected, the other pane, ... | -- | 3.2 |
 | Run | `run`: a program, document or URL with parameters, where it starts, its window, as administrator, waiting for it | -- | 3.3 |
 | For each | a loop over a list of items (the selected ones) | -- | 3.4 |
-| The tree | macros in folders to any depth, your order, a name, an icon and keys each; where kept | open question 1 | 3.5 |
-| Manage macros | a pane (docked or floating): the tree, New (Folder, Macro, Run a program), the editor, Run, Key, Icon, Move to folder | open question 1 | 3.6 |
+| The tree | macros in folders to any depth, your order, a name, an icon and keys each; `macros\` in the data folder, apart from the bookmarks | -- | 3.5 |
+| Manage macros | a pane (docked or floating): the tree, New (Folder, Macro, Run a program), the editor, Run, Key, Icon, Move to folder | The tree | 3.6 |
 | Run a program | the form: program, parameters (fixed text and variables), start in, window, as administrator | Run | 3.6 |
 | Running them | keys, the Macros menu on the ribbon, F1, a ribbon button for one macro; errors on the status line and in the Log | -- | 3.7 |
-| Recording | your actions written as a new macro, as LexPen's (Macro N) | open question 2 | 3.8 |
-| Tests | see 3.9 | -- | 3.9 |
+| Tests | see 3.8 | -- | 3.8 |
+
+Moved out: recording macros to plan 35.
 
 ## 3. Details
 
@@ -114,7 +117,10 @@ keep the selected and the focused items apart (the project's words):
   Foldex's own grouping. Every macro has an id (never known by its name), a name (any text), an icon (as a
   bookmark's: from a file, SHELL32.dll by default) and two keys (as a bookmark's, plan 26 3.6: one key or a chord, a
   clash asked).
-- Where it is kept: open question 1.
+- Kept apart from the bookmarks: a folder of its own in the data folder, `macros\`, holding `macros.json` (the tree,
+  each macro's id, name, icon, keys and text), written by Foldex whole, through a temporary file, as bookmarks.json.
+  Nothing of it is in bookmarks.json or keys.json, so copying `macros\` to another PC copies every macro and nothing
+  else. A file that cannot be read counts as empty and is not overwritten until a macro is changed.
 
 ### 3.6 Manage macros
 
@@ -142,26 +148,16 @@ keep the selected and the focused items apart (the project's words):
 - While a macro runs: the status line says which; Esc stops it. An error stops it: the line and why on the status
   line (a warning) and in the Log.
 
-### 3.8 Recording
-
-- As LexPen (`PLAN-macro-window.md` 3.1): Record and Stop; every action you run (keys, ribbon, menus) is written as a
-  step with its parameters; a folder typed or clicked becomes `go`. Stop saves it as "Macro N" at the top of
-  the tree. Whether wanted now: open question 2.
-
-### 3.9 Tests
+### 3.8 Tests
 
 - Unit (Jint, as the other page tests): every statement copied keeps LexPen's tests' results; `for each`; the
   functions on a path; the system variables from a pane state made for it; a left-out statement refused when read.
 - Unit (host): `run` with each option builds the start it should (program, arguments, folder, window, verb); the
-  tree's file read, written and read back; a broken file counts as empty.
+  tree's file read, written and read back; a broken file counts as empty and stays as it is.
 - In the test copy: Run a program with `notepad.exe` and the focused file: Notepad opens it; a key given and pressed;
   a `for each` over three selected files with `wait`; a macro in a folder two deep, run from the ribbon's list and
   from F1; Manage macros floated, docked and floated again; a failing program: the warning and the Log line.
 
 ## 4. Open questions
 
-1. **Where the tree is kept.** As the bookmarks: one `macros.json` with the tree, names, icons, keys and each macro's
-   text (the recommendation: one file, one shape, as bookmarks.json; editing only in Manage macros). Or as LexPen:
-   one file per macro (`macros\<folder>\<name>.fxm`, folders as folders on disk) with the order, icons and keys in a
-   file beside them, so a macro can be copied as a file and edited in LexPen?
-2. **Recording.** Wanted in this plan, or later (macros written by hand and with Run a program first)?
+None.
