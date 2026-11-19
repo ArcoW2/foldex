@@ -25,6 +25,7 @@
   "F2": "item.rename",
   "Backspace": "folder.up",
   "Alt+Up": "folder.up",
+  "Ctrl+Left": "folder.up",         // back up the tree, as Alt+Left goes back in the history (a text field keeps it: a word left)
   "Alt+Left": "history.back",
   "Alt+Right": "history.forward",
   "Alt+Shift+Left": "pane.toParent",

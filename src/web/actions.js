@@ -262,7 +262,13 @@ action('filters.escape', { title: 'Clear the filter', hint: "the search bar's fi
     return paneSearch.has(activePane) || filterable() && !!set && (!set.off || escapedFilters.has(activePane));
   },
   run: () => {
-    if (paneSearch.has(activePane)) return setSearch(activePane, '');
+    if (paneSearch.has(activePane)) {
+      // As the bar's own Esc: its text gone too (a bar with the keyboard keeps what it shows), the keyboard to the pane.
+      setSearch(activePane, '');
+      for (const box of searchBoxes()) box.value = '';
+      showSearch('');
+      return views.get(activePane)?.body.focus();
+    }
     const set = paneFilterSet(activePane);
     if (!set) return;
     if (set.off) escapedFilters.delete(activePane);

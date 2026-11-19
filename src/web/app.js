@@ -2182,6 +2182,9 @@ class ListView {
     // shows it at once (also when Foldex starts with one).
     // An item that is in the folder but not shown (yet: a filter's answer to come) keeps the focus: never the top
     // instead of the item it had.
+    // Come up from a folder (up): that folder.
+    if (this.cameFrom && same(parentOf(this.cameFrom), this.location)) layout.state(this.id).focus = this.cameFrom;
+    this.cameFrom = null;
     const focus = layout.state(this.id).focus;
     const kept = focus && this.entries.find(x => same(x.id, focus));
     const there = focus && this.all.some(x => same(x.id, focus));
@@ -2360,8 +2363,11 @@ class ListView {
   }
 
   // Up through the parent (3.3).
+  // Up (Backspace, Alt+Up, Ctrl+Left): the folder above, the one it came from focused there (done).
   up() {
-    if (this.location) goTo(this.id, parentOf(this.location));
+    if (!this.location) return;
+    this.cameFrom = this.location;
+    goTo(this.id, parentOf(this.location));
   }
 
   // F5: read again from disk, where it is (reread); after an error, opened again, from disk too.
