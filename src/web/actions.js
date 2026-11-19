@@ -251,6 +251,11 @@ action('filters.list', { title: 'Filters', hint: 'the kept filter sets: one chos
   } });
 action('filters.manage', { title: 'Manage filters', hint: 'the kept filter sets: make, change, name, a key, the defaults for new panes', group: 'view',
   run: () => openManageFilters(filterable() ? activePane : null) });
+// Esc in a pane: the search bar's filter emptied; without one, the pane's filter switched off (as Filter on or off does
+// when it is on). Only ever off: Esc never switches a filter on.
+action('filters.escape', { title: 'Clear the filter', hint: "the search bar's filter of the active pane emptied; with none, the pane's filter switched off",
+  group: 'view', enabled: () => !!activePane && (paneSearch.has(activePane) || filterable() && !!paneFilterSet(activePane) && !paneFilterSet(activePane).off),
+  run: () => paneSearch.has(activePane) ? setSearch(activePane, '') : togglePaneFilter(activePane) });
 action('filters.toggle', { title: 'Filter on or off', hint: 'the active pane\'s filter switched off (every item shown) or on again', group: 'view',
   enabled: () => filterable() && !!paneFilterSet(activePane), checked: () => !!paneFilterSet(activePane) && !paneFilterSet(activePane).off,
   run: () => togglePaneFilter(activePane) });
