@@ -96,6 +96,8 @@ sealed class AppHost : ApplicationContext
     // One read per folder (docs/plans/executed/24-PLAN-folder-cache.md): the folder cache for every window, the folders you use
     // (for read-ahead), read-ahead itself; Windows' low-memory notice checked now and then.
     public Shell.FolderCache Cache { get; }
+    /// <summary>The panes' filters worked out in the background, their results kept in the cache (plan 36).</summary>
+    public Shell.FilterJobs Filters { get; }
     /// <summary>Network and its machines, known at once and listed again in the background (Shell/PlaceCache.cs).</summary>
     public Shell.PlaceCache Places { get; }
     public Shell.FolderUse Use { get; } = new(DataFolder.StatePath(DataDir, Shell.FolderUse.Name));
@@ -149,6 +151,18 @@ sealed class AppHost : ApplicationContext
                 }));
         }
         Cache = new Shell.FolderCache((folder, names) => Changed(folder, names?.Select(n => Path.Combine(folder, n))));
+        Filters = new Shell.FilterJobs(Cache)
+        {
+            // Every window's trees ask again for the folders whose filter answers went (plan 36 3.7).
+            Stale = chain =>
+            {
+                foreach (var w in windows.ToList())
+                    if (w.IsHandleCreated) w.BeginInvoke(() => w.Tell(new JsonObject
+                    {
+                        ["event"] = "filterStale", ["folders"] = new JsonArray([.. chain.Select(n => JsonValue.Create(n))]),
+                    }));
+            },
+        };
         Places = new Shell.PlaceCache((place, ids) => Changed(place, ids));
         ConfigureCache();
         // Now and then: the folder use written, and Windows asked whether memory is short (then the cache lets go of
@@ -180,7 +194,7 @@ sealed class AppHost : ApplicationContext
     public void StartReadAhead()
     {
         if (readAhead is not null) return;
-        readAhead = new Shell.ReadAhead(Cache, Use);
+        readAhead = new Shell.ReadAhead(Cache, Use, Filters);
         readAhead.Start();
     }
 

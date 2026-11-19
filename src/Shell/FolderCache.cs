@@ -21,6 +21,9 @@ sealed class FolderCache : IDisposable
         public JsonNode? Subs;        // for a tree: whether it has folders in it
         public JsonNode? Files;       // and files (asked only when a tree shows files)
         public bool FilesKnown;
+        // Filter results (plan 36 3.2): per key (a filter's id, with the date for one relative by the date) whether it
+        // passes. A change on disk makes a new Item, so they go with the old one.
+        public Dictionary<string, bool>? Results;
         public bool Folder => (Info.Attributes & FileAttributes.Directory) != 0;
     }
 
@@ -35,11 +38,15 @@ sealed class FolderCache : IDisposable
         public readonly List<(WatcherChangeTypes Kind, string Path, string? OldPath)> Pending = [];
         public DateTime LastUsed = DateTime.UtcNow;
         public int Entries;                          // items with their entry worked out (for the memory count)
+        public int Results;                          // filter results kept on its items (for the memory count)
+        // Per filter key: whether something in it or under it passes (plan 36 3.7, a tree); dropped when anything in it
+        // changes, and up the chain.
+        public Dictionary<string, bool> Holds = new(StringComparer.Ordinal);
     }
 
     // What a cached item takes, measured (plan 24 3.5): the bare read and the entry worked out. Used to keep the cache
     // under its budget; see the plan's As built for how they were measured.
-    public static long BareBytes = 600, EntryBytes = 1400;
+    public static long BareBytes = 600, EntryBytes = 1400, ResultBytes = 120;
 
     readonly Dictionary<string, Folder> folders = new(StringComparer.OrdinalIgnoreCase);
     readonly object gate = new();
@@ -137,7 +144,7 @@ sealed class FolderCache : IDisposable
         lock (gate) return (folders.Values.Sum(SizeOf), folders.Count);
     }
 
-    static long SizeOf(Folder f) => f.Items.Count * BareBytes + f.Entries * EntryBytes;
+    static long SizeOf(Folder f) => f.Items.Count * BareBytes + f.Entries * EntryBytes + f.Results * ResultBytes;
 
     /// <summary>Whether a path goes through the cache: a folder on disk or on a share (so a window gets the changes of
     /// either item by item).</summary>
@@ -314,6 +321,8 @@ sealed class FolderCache : IDisposable
                 f.Items = items;
                 f.Target = target;
                 f.Entries = 0;
+                f.Results = 0;          // read anew (F5 too): its filter results go with the old items (plan 36 3.2)
+                DropHolds(f.Path);
                 f.Complete = true;
                 f.Stale = f.Watcher is null;   // not watched (Windows refused): read again whenever asked
                 foreach (var (kind, path, old) in f.Pending) Apply(f, kind, path, old);
@@ -396,6 +405,7 @@ sealed class FolderCache : IDisposable
     void Apply(Folder f, WatcherChangeTypes kind, string path, string? old)
     {
         if (f.Watcher is null) return;
+        DropHolds(f.Path);   // an item of it changed: whether something under it passes is not known any more (plan 36)
         var name = Path.GetFileName(path);
         if (old is not null) f.Items.Remove(Path.GetFileName(old));
         if (kind == WatcherChangeTypes.Deleted) f.Items.Remove(name);
@@ -544,6 +554,94 @@ sealed class FolderCache : IDisposable
             Extras(item, false);
         }
         return true;
+    }
+
+    // ---------- Filter results (docs/plans/executed/36-PLAN-filter-results-in-cache.md 3.2, 3.7) ----------
+
+    /// <summary>A folder's items for a filter (read when it is not cached; null when it cannot be read): name, whether a
+    /// folder, the entry to test (the listing's when worked out, else one without its icon) and the result kept for
+    /// `key` (null: not tested yet, or no key).</summary>
+    public List<(string Name, bool Folder, JsonObject Entry, bool? Result)>? ForFilter(string location, string? key)
+    {
+        if (!Caches(location)) return null;
+        var (f, _) = Bare(location);
+        if (f is null) return null;
+        List<Item> items;
+        lock (gate)
+        {
+            f.LastUsed = DateTime.UtcNow;
+            items = [.. f.Items.Values];
+        }
+        var list = new List<(string, bool, JsonObject, bool?)>(items.Count);
+        foreach (var item in items)
+        {
+            bool? result = null;
+            lock (gate) if (key is not null && item.Results is { } r && r.TryGetValue(key, out var v)) result = v;
+            list.Add((item.Info.Name, item.Folder, item.Entry ?? ShellListing.FilterEntry(item.Info), result));
+        }
+        return list;
+    }
+
+    /// <summary>Results of `key` kept on a folder's items, by name; an item since changed (another Item now) or gone
+    /// is left as it is. Another key of the same filter (`filter`, its id: the date changed) is let go on them.</summary>
+    public void Store(string location, string key, string filter, IEnumerable<(string Name, bool Pass)> results)
+    {
+        lock (gate)
+        {
+            if (!folders.TryGetValue(Key(location), out var f) || !f.Complete) return;
+            foreach (var (name, pass) in results)
+            {
+                if (!f.Items.TryGetValue(name, out var item)) continue;
+                item.Results ??= new(StringComparer.Ordinal);
+                foreach (var old in item.Results.Keys.Where(k => k != key && KeyOf(k) == filter).ToList()) item.Results.Remove(old);
+                item.Results[key] = pass;
+            }
+            f.Results = f.Items.Values.Sum(i => i.Results?.Count ?? 0);
+        }
+    }
+
+    // A result's filter id: its key without the date ("id" or "id@2026-11-19").
+    static string KeyOf(string key) => key.Split('@')[0];
+
+    /// <summary>Whether something in a folder or under it passes for `key`, when known (plan 36 3.7).</summary>
+    public bool? Holds(string location, string key)
+    {
+        lock (gate) return folders.TryGetValue(Key(location), out var f) && f.Complete && f.Holds.TryGetValue(key, out var h) ? h : null;
+    }
+
+    public void SetHolds(string location, string key, bool holds)
+    {
+        lock (gate) if (folders.TryGetValue(Key(location), out var f) && f.Complete) f.Holds[key] = holds;
+    }
+
+    /// <summary>A folder's items changed or were read again: it and the folders above it (whose "something under it
+    /// passes" may change), for the filter jobs (plan 36) to let go of what they found there. Told off the cache's lock.</summary>
+    public Action<IReadOnlyList<string>>? FilterGone;
+
+    // Something changed in a folder: what is known of passes in it and above it is not known any more.
+    void DropHolds(string path)
+    {
+        var chain = new List<string>();
+        for (var at = path; !string.IsNullOrEmpty(at); at = Path.GetDirectoryName(at.TrimEnd('\\')))
+        {
+            if (folders.TryGetValue(Key(at), out var f)) f.Holds.Clear();
+            chain.Add(Key(at));
+            if (Path.GetDirectoryName(at.TrimEnd('\\')) == at) break;
+        }
+        if (FilterGone is { } gone) ThreadPool.QueueUserWorkItem(_ => gone(chain));
+    }
+
+    /// <summary>A filter changed or gone (plan 36 3.6): its results let go on every cached item, its marks too.</summary>
+    public void Forget(string filter)
+    {
+        lock (gate)
+            foreach (var f in folders.Values)
+            {
+                foreach (var item in f.Items.Values)
+                    if (item.Results is { } r) foreach (var k in r.Keys.Where(k => KeyOf(k) == filter).ToList()) r.Remove(k);
+                foreach (var k in f.Holds.Keys.Where(k => KeyOf(k) == filter).ToList()) f.Holds.Remove(k);
+                f.Results = f.Items.Values.Sum(i => i.Results?.Count ?? 0);
+            }
     }
 
     /// <summary>The folders in a cached folder (for read-ahead a level deeper); empty when it is not cached.</summary>

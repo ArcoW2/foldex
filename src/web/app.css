@@ -2396,3 +2396,6 @@ body[data-pane-inert-child] .pane:is(.tree, .list).child:not(.active) > .body * 
 .own-video.own-sound { flex: none; height: 40px; }
 /* Windows' preview as a picture of itself while a dialog or menu is over it (app.js previewCoverCheck). */
 .preview-cover { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+
+/* A tree's folder while the host does not yet know whether something under it passes the filter (plan 36 3.7). */
+.row.filter-unknown { opacity: .5; }

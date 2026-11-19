@@ -217,6 +217,36 @@ function filterTestOf(set, kindOf, now = Date.now()) {
   };
 }
 
+// A set's id and the key its results are kept under in the host's folder cache (docs/plans/executed/36-PLAN-filter-results-in-cache.md
+// 3.1, 3.8): the id follows the lines (lines changed: another id; the same lines again: the same id); the key is the
+// id, with today's date for a set relative by the date, and null for one relative by the clock (minutes, hours), whose
+// results are not kept.
+function filterKey(set, now = Date.now()) {
+  const lines = set?.lines ?? [];
+  const text = JSON.stringify(lines);
+  let a = 0x811c9dc5, b = 0x9e3779b9 ^ text.length;
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    a = Math.imul(a ^ c, 16777619) >>> 0;
+    b = Math.imul(b ^ c, 2246822519) >>> 0;
+  }
+  const filter = a.toString(16).padStart(8, '0') + b.toString(16).padStart(8, '0');
+  const relative = lines.flatMap(filterRelative);
+  if (relative.includes('clock')) return { filter, key: null };
+  if (!relative.includes('date')) return { filter, key: filter };
+  const d = new Date(now), two = n => String(n).padStart(2, '0');
+  return { filter, key: `${filter}@${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())}` };
+}
+
+// How a line depends on now: 'clock' (minutes or hours ago or from now), 'date' (a day, days and longer), or not.
+function filterRelative(line) {
+  const c = line.cond ?? {}, out = [];
+  const one = d => { if (d && typeof d === 'object' && d.rel != null) out.push(['minutes', 'hours'].includes(d.unit) ? 'clock' : 'date'); };
+  if (c.op === 'on') one(c.day);
+  if (c.op === 'range') { one(c.from); one(c.to); }
+  return out;
+}
+
 // A line as it reads in short: "Files, Name matches *.tmp", for the editor's list and the head.
 function filterLineText(line, titleOf) {
   const who = line.folders && line.files ? '' : line.folders ? 'Folders, ' : line.files ? 'Files, ' : 'Nothing, ';

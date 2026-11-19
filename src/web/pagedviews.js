@@ -17,7 +17,8 @@ const PageActions = new Set(['item.rename', 'folder.new', 'file.new']);
 // The methods of a stand-in answered here, from what its page told: they read the layout and that only.
 const PagedHere = new Set(['ids', 'content', 'iconsView', 'thumbsView', 'shows', 'tabTitle', 'folderTitle', 'showsFiles', 'quickAccessShown', 'topFolder']);
 // The events of the host every pane's page gets as well: what they change is used there too.
-const PageEvents = new Set(['settings', 'columnSets', 'bookmarks', 'searches', 'renames', 'filters', 'propList', 'fileOp', 'folderChanged']);
+const PageEvents = new Set(['settings', 'columnSets', 'bookmarks', 'searches', 'renames', 'filters', 'propList', 'fileOp', 'folderChanged',
+  'filterStale']);
 
 const isPaged = v => !!v?.paged;
 

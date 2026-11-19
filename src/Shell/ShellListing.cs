@@ -112,6 +112,25 @@ static class ShellListing
     }
 
     /// <summary>A file or folder on disk as a listing gives it, with the own columns.</summary>
+    /// <summary>An item's entry as DiskEntry gives it, without its icon: what a filter tests (plan 36 3.3), for items
+    /// tested in the background that no pane shows.</summary>
+    internal static JsonObject FilterEntry(FileSystemInfo info)
+    {
+        var folder = (info.Attributes & FileAttributes.Directory) != 0;
+        var entry = new JsonObject
+        {
+            ["id"] = info.FullName,
+            ["name"] = info.Name,
+            ["folder"] = folder,
+            ["size"] = folder ? null : ((FileInfo)info).Length,
+            ["modified"] = new DateTimeOffset(info.LastWriteTimeUtc).ToUnixTimeMilliseconds(),
+            ["hidden"] = (info.Attributes & FileAttributes.Hidden) != 0,
+            ["link"] = (info.Attributes & FileAttributes.ReparsePoint) != 0,
+        };
+        OwnColumns(entry, info, folder);
+        return entry;
+    }
+
     internal static JsonObject DiskEntry(FileSystemInfo info, Stopwatch? icons = null)
     {
         var folder = (info.Attributes & FileAttributes.Directory) != 0;

@@ -88,10 +88,14 @@ sealed class ReadAhead : IDisposable
     readonly Thread thread;
     volatile bool stopping;
 
-    public ReadAhead(FolderCache cache, FolderUse use)
+    readonly FilterJobs? filters;
+
+    /// <summary>`filters`: a folder read ahead is tested with the filters in use too (plan 36 3.5).</summary>
+    public ReadAhead(FolderCache cache, FolderUse use, FilterJobs? filters = null)
     {
         this.cache = cache;
         this.use = use;
+        this.filters = filters;
         thread = new Thread(Run) { IsBackground = true, Priority = ThreadPriority.Lowest, Name = "readAhead" };
         thread.SetApartmentState(ApartmentState.STA);
     }
@@ -114,7 +118,9 @@ sealed class ReadAhead : IDisposable
             tried.Add(next);
             if (NetworkGuard.IsNetwork(next) && !NetworkGuard.Reachable(next).GetAwaiter().GetResult()) continue;
             if (!Directory.Exists(next)) continue;
-            if (cache.ReadAhead(next, () => stopping || cache.Busy)) Done++;
+            if (!cache.ReadAhead(next, () => stopping || cache.Busy)) continue;
+            Done++;
+            filters?.Ahead(next, () => stopping || cache.Busy).GetAwaiter().GetResult();
         }
     }
 

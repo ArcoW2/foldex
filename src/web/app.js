@@ -1019,6 +1019,7 @@ class TreeView {
     const kids = [];
     const at = n ? n.id : this.root;
     if (!at) return;
+    this.filterStale(at);
     list(`tree:${this.id}:${n ? n.id : ''}`, at, !this.showsFiles(), part => kids.push(...part), m => {
       if (m.error) return;
       this.put(n, kids.concat(m.entries).sort(this.comparer()).map(e => this.add(e, n ?? null)));
@@ -1031,6 +1032,7 @@ class TreeView {
   patch(n, told) {
     const at = n ? n.id : this.root;
     if (!at) return;
+    this.filterStale(at);
     if (!told) return this.reread(n);
     askHost({ op: 'changedEntries', location: at, ids: told, foldersOnly: !this.showsFiles(), tree: true }).then(m => {
       const shown = n ? n.children : this.top;
@@ -1090,7 +1092,24 @@ class TreeView {
   flatten() {
     this.flat = [];
     const hidden = showsHidden(this.id), test = paneFilterTest(this.id), search = searchTest(this.id);
-    const filter = n => test(n) !== false;   // a value not read yet (a tree reads no properties): shown
+    // A filter on folders on disk is the host's (plan 36 3.7): an item shows when it passes; a folder also when
+    // something under it does, dimmed while that is not known yet. Elsewhere (the tops, This PC) as before: a value not
+    // read yet (a tree reads no properties) shows.
+    const host = this.hostFilter();
+    const filter = n => {
+      n.filterUnknown = false;
+      const folder = n.parent ? n.parent.id : this.folder ? this.root : null;
+      if (!host) return test(n) !== false;
+      if (!folder || !isDiskPath(folder) || n.qa || n.bm) return true;   // the tops, This PC's drives: the ways in
+      const pass = this.hostFolder(host, folder, 'results').get(n.name?.toLowerCase());
+      if (pass === true) return true;
+      if (n.folder === false) return false;
+      const holds = this.hostFolder(host, folder, 'holds').get(n.name?.toLowerCase());
+      if (holds === true) return true;
+      if (pass === false && holds === false) return false;
+      n.filterUnknown = true;
+      return true;
+    };
     // The search text (search.js): the folders and files that match, and the folders leading to them (of what the
     // tree has read).
     const leads = new Map();
@@ -1113,6 +1132,63 @@ class TreeView {
     this.render();
     this.autoFit();
     tellWatched();
+  }
+
+  // The host's work for the pane's filter in this tree (plan 36 3.7): per folder shown, its items' results and, for
+  // its folders, whether something under each passes; each asked for until done. Null: no filter on.
+  hostFilter() {
+    const set = paneFilterSet(this.id);
+    if (!set?.lines?.length || set.off || filterProblem(set)) return (this.filtering = null);
+    const { filter, key } = filterKey(set);
+    if (this.filtering?.want !== (key ?? filter))
+      this.filtering = { want: key ?? filter, set, filter, key, folders: new Map(), run: `${this.id}:${Date.now()}` };
+    return this.filtering;
+  }
+
+  // A folder's answers of one kind ('results' or 'holds'), asked for the first time they are needed.
+  hostFolder(f, folder, what) {
+    const k = `${what}|${folder.toLowerCase()}`;
+    let got = f.folders.get(k);
+    if (!got) {
+      f.folders.set(k, got = new Map());
+      this.askTreeFilter(f, folder, what, got);
+    }
+    return got;
+  }
+
+  async askTreeFilter(f, folder, what, got) {
+    const fields = [...new Set(f.set.lines.map(l => l.field))];
+    const ask = { op: what === 'holds' ? 'filterHolds' : 'filterResults', location: folder, key: f.key, filter: f.filter,
+      run: f.run, set: f.set, kinds: Object.fromEntries(fields.map(id => [id, filterKindOf(id)])),
+      props: [...new Set(fields.flatMap(propsFor))], git: fields.includes('git') };
+    for (let done = false, from = 0; !done && this.filtering === f && f.folders.get(`${what}|${folder.toLowerCase()}`) === got;) {
+      const m = await askHost({ ...ask, now: Date.now(), from });
+      from = m.next ?? 0;
+      if (this.filtering !== f) return;
+      for (const [name, v] of Object.entries(m.results ?? {})) got.set(name.toLowerCase(), v);
+      done = !!m.done;
+      if (!this.flattening) this.flattening = requestAnimationFrame(() => { this.flattening = 0; this.flatten(); });
+    }
+  }
+
+  // The host let go of its answers for these folders (filterStale): asked anew, the tree drawn again.
+  filterGone(folders) {
+    const f = this.filtering;
+    if (!f) return;
+    let any = false;
+    for (const folder of folders)
+      for (const what of ['results', 'holds']) any = f.folders.delete(`${what}|${folder.toLowerCase()}`) || any;
+    if (any && !this.flattening) this.flattening = requestAnimationFrame(() => { this.flattening = 0; this.flatten(); });
+  }
+
+  // A folder of the tree changed or was read again: the host's answers for it, and for the folders above it whether
+  // something under them passes, asked anew when next needed.
+  filterStale(folder) {
+    const f = this.filtering;
+    if (!f || !folder) return;
+    f.folders.delete(`results|${folder.toLowerCase()}`);
+    for (let at = parentOf(folder); at && at !== ThisPC; at = parentOf(at) === at ? null : parentOf(at))
+      f.folders.delete(`holds|${at.toLowerCase()}`);
   }
 
   // Whether a node gets an expander: a folder with something to show (plan 16; plan 18 3.4): its items once read, else
@@ -1143,7 +1219,8 @@ class TreeView {
       const row = document.createElement('div');
       row.className = 'row cols' + (n === focus ? ' selected focused' : '') + (n.hidden ? ' hidden' : '') + (i % 2 ? ' odd' : '')
         + (isCompanion(this, n.id) ? ' companion' : '') + (n.qa ? ` qa-${n.qa}` : '') + (n.inQa ? ' qa' : '')
-        + (n.missing || n.bm && !n.bmGroup && bookmarkMissing(n.id) ? ' missing' : '');
+        + (n.missing || n.bm && !n.bmGroup && bookmarkMissing(n.id) ? ' missing' : '')
+        + (n.filterUnknown ? ' filter-unknown' : '');   // the host not yet knows whether something under it passes (plan 36 3.7)
       // An entry of the area can be dragged; where a drag would go: a line before or after a row, a quick access folder
       // lit (plan 27 3.3).
       if (n.bm) row.draggable = true;
@@ -1701,6 +1778,7 @@ class ListView {
       this.thumbsAsked = null;
     }
     this.location = location;
+    this.filtering = null;   // the host's filter results asked anew (plan 36: a refresh restarts the filter here)
     this.entries = [];
     this.all = [];
     this.selected = new Set();
@@ -1871,6 +1949,7 @@ class ListView {
   // selection instead, the first of it focused and in view.
   reread(op = null, fresh = false) {
     if (!this.location || this.message) return;
+    if (fresh) this.filtering = null;   // F5: the host read it anew, its filter results with it (plan 36 3.2)
     // The folder's watcher may read it again before this is done (and so stop it): the operation waits for that one.
     op ??= this.opPending ?? null;
     this.opPending = op;
@@ -1918,6 +1997,12 @@ class ListView {
       if (this.location !== at || listeners.has(this.id)) return;
       if (m.whole) return this.reread();
       const ids = new Set(told.map(id => id.toLowerCase()));
+      // The host's filter results of these items went with their change (plan 36 3.2): asked again.
+      for (const id of told) {
+        const name = id.split('\\').pop().toLowerCase();
+        this.filtering?.results.delete(name);
+        this.filtering?.again.delete(name);
+      }
       const s = layout.state(this.id), top = this.body.scrollTop;
       const was = this.entries.findIndex(x => same(x.id, s.focus));
       const offset = was >= 0 && !this.iconsView() && !this.thumbsView() ? was * RowHeight - top : null;
@@ -1965,18 +2050,71 @@ class ListView {
   // always. An item whose value for the filter is not read yet (a property, the Git status) waits: asked for
   // (askFilterValues) and shown when it comes, if it passes.
   passes() {
-    const hidden = showsHidden(this.id), filter = paneFilterTest(this.id), search = searchTest(this.id);
+    const hidden = showsHidden(this.id), search = searchTest(this.id);
+    // A folder on disk: its filter is the host's (plan 36 3.4), what passes known per item, the rest asked for.
+    const host = this.hostFilter();
+    const filter = host ? x => host.results.get(x.name.toLowerCase()) ?? 'host' : paneFilterTest(this.id);
     const waiting = this.filterWaiting = [];
     return x => {
       if (x.up) return true;
       if (!((hidden || !x.hidden) && this.shows(x) && search(x))) return false;
       const f = filter(x);
+      if (f === 'host') {   // not tested yet: shown when the host says it passes
+        const name = x.name.toLowerCase();   // an item come or changed since: asked again, once
+        if (host.done && !host.again.has(name)) { host.again.add(name); this.askHostFilter(host, true); }
+        return false;
+      }
       if (f !== 'wait') return f;
       if (!isDiskPath(x.id)) return true;   // no property can be read of it: shown
       waiting.push(x);
       return false;
     };
   }
+
+  // The host's work on this folder for the pane's filter (plan 36 3.4): its results by name, asked for until it is
+  // done; another folder or another filter (its key) starts again. Null: no filter on, or not a folder on disk.
+  // A filter that reads only what the listing has (name, size, dates, attributes) is worked out here as the items come:
+  // the same engine, at once; keeping its results would save nothing.
+  hostFilter() {
+    const set = paneFilterSet(this.id);
+    if (!set?.lines?.length || set.off || filterProblem(set) || !this.location || !isDiskPath(this.location)
+      || !paneFilterFields(this.id).length) return (this.filtering = null);
+    const { filter, key } = filterKey(set);
+    const want = `${this.location}|${key ?? filter}`;
+    // Its filter changed: the old one's results let go in the host, unless another pane still uses it (plan 36 3.6).
+    const before = this.filtering?.filter;
+    if (before && before !== filter && ![...layout.panes.keys()].some(p => { const s = paneFilterSet(p); return s?.lines?.length && filterKey(s).filter === before; }))
+      post({ op: 'filterForget', filter: before });
+    if (this.filtering?.want !== want) {
+      this.filtering = { want, set, filter, key, location: this.location, results: new Map(), again: new Set(), done: false, asking: false,
+        run: `${this.id}:${Date.now()}` };
+      this.askHostFilter(this.filtering);
+    }
+    return this.filtering;
+  }
+
+  async askHostFilter(f, again = false) {
+    if (f.asking || this.filtering !== f) return;
+    f.asking = true;
+    if (again) Object.assign(f, { done: false, run: `${this.id}:${Date.now()}` });
+    const fields = [...new Set(f.set.lines.map(l => l.field))];
+    const kinds = Object.fromEntries(fields.map(id => [id, filterKindOf(id)]));
+    const ask = { op: 'filterResults', location: f.location, key: f.key, filter: f.filter, set: f.set, kinds,
+      props: [...new Set(fields.flatMap(propsFor))], git: fields.includes('git') };
+    try {
+      for (let from = 0; this.filtering === f && !f.done;) {
+        const m = await askHost({ ...ask, run: f.run, now: Date.now(), from });
+        from = m.next ?? 0;
+        if (this.filtering !== f) return;
+        for (const [name, pass] of Object.entries(m.results ?? {})) f.results.set(name.toLowerCase(), pass);
+        f.done = !!m.done;
+        this.filterShown();
+      }
+    } finally { f.asking = false; }
+  }
+
+  // The host's results came: shown again from what it read, without asking again (a new item meanwhile does, passes).
+  filterShown() { this.searchChanged(); }
 
   // The values the filter waits for, read: Windows' properties of the waiting items, the folder's Git status; then
   // filtered again.
@@ -4363,6 +4501,13 @@ const events = {
   columnsFailed(m) { status(`The column sets could not be written: ${m.error}`, true); },
   propList(m) { propListCame(m.list); },
   git(m) { columnReply(m); },
+  // A pane's filter worked out by the host (plan 36 3.4, 3.7).
+  filterResults(m) { columnReply(m); },
+  filterHolds(m) { columnReply(m); },
+  // Folders whose filter answers went in the host (a change in them or under them): the trees here ask again.
+  filterStale(m) {
+    for (const v of views.values()) if (v instanceof TreeView && !isPaged(v)) v.filterGone(m.folders ?? []);
+  },
   props(m) { columnReply(m); },
   // The window's project renamed, or the window moved to another (plan 15 3.6).
   project(m) { showProject(m.project); },

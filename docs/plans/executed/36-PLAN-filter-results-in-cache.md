@@ -1,8 +1,9 @@
 # Plan 36: Filter results in the folder cache, worked out in the background
 
-Status: not started.
+Status: executed; see Status and 6 (As built).
 
 - 2026-11-19: draft, at the user's request.
+- 2026-11-19: executed.
 
 Builds on plan 24 (the folder cache: one read per folder, kept current by its watch, read-ahead in the background),
 plan 32 (filter sets: lines, the engine `filters.js`, kept sets, a pane's filter switched off and on) and plan 20
@@ -35,21 +36,19 @@ for; one relative by the date (days and longer) keeps them until the date change
 
 ### Built
 
-Nothing yet.
+| Part | What | Reference |
+|---|---|---|
+| Filter ids | an id per filter that follows its lines; kept sets and a pane's own set alike | 3.1; 6.1 |
+| Results in the cache | per item: the filter keys it was tested with and the outcome; dropped on a change on disk; Refresh restarts the filter on the folders refreshed | 3.2; 6.1 |
+| The engine in the host | `filters.js` run by the host (Jint), with the values the host has or reads | 3.3; 6.1 |
+| Requests with a filter | a pane asks with its filter's key; what passes comes as it is tested, each answer only what is new | 3.4; 6.2 |
+| In the background | testing goes on after the pane leaves; a folder read ahead tested with the filters in use | 3.5; 6.2 |
+| Off and on, changed | off: all shown; on: the key's results used again; a change: another id, the old results dropped | 3.6; 6.2 |
+| Trees | a folder shown when it or something under it passes, dimmed while not known yet; the folders under it tested in the background, the deepest first | 3.7; 6.3 |
+| Relative dates | relative by the clock: no results kept, a warning under such a line; relative by the date: kept, replaced when the date changes | 3.8; 6.1 |
+| Tests | see 3.9 and 6.4 | 3.9; 6.4 |
 
 ### Not yet built
-
-| Part | What | Waits for | Reference |
-|---|---|---|---|
-| Filter ids | a new id per filter each time its lines change; kept sets and a pane's own set alike | -- | 3.1 |
-| Results in the cache | per item: the filter ids it was tested with and the outcome; dropped on a change on disk; Refresh restarts the filter on the folders refreshed | -- | 3.2 |
-| The engine in the host | `filters.js` run by the host (Jint), with the values the host has or reads | -- | 3.3 |
-| Requests with a filter | a pane asks with its filter's id; only what passes comes; the rest as it is tested | Filter ids; Results in the cache; The engine in the host | 3.4 |
-| In the background | testing goes on after the pane leaves, as read-ahead; low priority, stoppable | Requests with a filter | 3.5 |
-| Off and on, changed | off: all shown; on: the id's results used again; a change: a new id, the old results dropped | Filter ids | 3.6 |
-| Trees | a folder shown when it or something under it passes, dimmed while not known yet; the folders under it tested in the background | In the background | 3.7 |
-| Relative dates | relative by the clock: no results kept, a warning under such a line that using it again is slow; relative by the date: kept, dropped when the date changes | Results in the cache | 3.8 |
-| Tests | see 3.9 | -- | 3.9 |
 
 ## 3. Details
 
@@ -162,3 +161,59 @@ Nothing yet.
 ## 4. Open questions
 
 None.
+
+
+## 6. As built
+
+### 6.1 Ids, results, the engine (2026-11-19)
+
+- The id is not a GUID made at a change but a hash of the set's lines (`filters.js` `filterKey`): changed lines give
+  another id, the same lines again the same one, so Cancel in Manage filters finds its results back by itself and no
+  id has to be stored. The key results are kept under: the id; `id@YYYY-MM-DD` for a set relative by the date (another
+  day: another key, the day before's results replaced item by item as they are tested); none for a set relative by
+  the clock (`filterRelative`).
+- A range "from 7 days ago" is worked out from the moment it is tested, so a result kept for the day can be a few
+  hours off by the evening: the trade-off chosen (kept until the date changes) over testing again all day.
+- The host's engine (`Shell/FilterEngine.cs`): Jint (now in the app, as it was in the tests) runs the page's
+  filters.js (from the page's own files) with a `filterAll`; the items are the listing's entries (the cache's, or one
+  without its icon for an item no pane shows: `ShellListing.FilterEntry`), with the Windows properties
+  (`ShellProps.Values`) and the Git status (`GitStatus.Of`) the set needs, read before they are tested.
+- Kept on the cache's items (`FolderCache.Item.Results`); a change on disk makes another Item, a folder read again
+  (F5, or a watch that lost track) other Items, so their results go with the old ones. They count toward the cache's
+  memory (`ResultBytes`, 120 per result: chosen, not measured).
+
+### 6.2 Requests, background, off and on
+
+- `Shell/FilterJobs.cs`: per folder and key one job (`filterResults`), started by the first request and going on
+  when nobody asks any more; a request gets what was found after its `from` and waits at most 400 ms for more; the
+  page asks until `done`. A job without a key (relative by the clock) is the asking pane's own (`run`).
+- A list uses the host only for a set with a slow field (a Windows property, the Git status): a set that reads only
+  what the listing has is tested by the page at once with the same engine, as before; keeping those results would
+  save nothing. A tree always uses the host (its folders' "holds a pass").
+- Changed: the page posts `filterForget` for the old id when no other pane of the window uses it; the host drops its
+  results and its jobs. Read-ahead tests a folder it read with the keys used in the last 30 minutes.
+- A change in a folder (`FolderCache.FilterGone`) drops the jobs for it, and the tree jobs for it and the folders
+  above it; the windows are told (`filterStale`) and their trees ask again. A list drops the changed items' results
+  when it takes in the change (`patch`) and asks again for an item it has no result for, once per item.
+
+### 6.3 Trees
+
+- A node whose parent is not a folder on disk (the tops, This PC's drives, quick access) always shows: those are the
+  ways in. In a folder on disk: a file when it passes; a folder when it passes, or holds a pass (`filterHolds`), dimmed
+  (`filter-unknown`) while that is not known.
+- Looking under a tree's folders takes turns (two at a time, chosen, not measured), the deepest folder waiting first,
+  and a long look hands its turn over between folders when a deeper one waits: a folder opened later does not wait for
+  a whole drive above it.
+
+### 6.4 Tests
+
+- `dotnet test`: 285 passed. New: `FilterResultsTests`: the host's engine as the page's; results kept, gone with a
+  changed file and with F5; another day's key replaced; a forgotten filter's results gone; a tree's "holds a pass" three
+  folders down, gone when the last pass is deleted; a set without a key keeps nothing; the key in the page (the same
+  lines the same id, other lines another, a date for days and today, none for hours).
+- In a test copy over CDP: a list filtered on Windows' item type: the host's result for every item the same as the
+  page's own engine on the same values; on C:\Windows\System32 (5019 items, every file's item type read) the first
+  time 43.5 s, off and on again 367 ms, away and back 833 ms with the folder's listing. A tree filtered on files
+  `*.log`: the folders that lead to one shown, the others gone, after 578 ms; a .log made in a hidden folder brought it
+  back in 1.2 s, deleted it went in 3.0 s; the tree's page answering in 7 ms meanwhile, with D:\temp (50178 folders)
+  open in the same tree. Not tried in the app: the read-ahead with filters, a relative by the clock warning shown.

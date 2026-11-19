@@ -659,6 +659,27 @@ sealed class MainForm : Form
                 Post(new JsonObject { ["event"] = "answer", ["req"] = msg["req"]?.DeepClone(), ["whole"] = entries is null, ["entries"] = entries });
                 break;
             }
+            case "filterResults":
+            case "filterHolds":
+            {
+                // A pane's filter worked out here (plan 36 3.4, 3.7): what is known now, waited for a moment when it is
+                // not done; the page asks again until it is. A share that is down: nothing (it is not touched).
+                var r = new Shell.FilterJobs.Request(msg["location"]!.GetValue<string>(), msg["key"]?.GetValue<string>(),
+                    msg["filter"]!.GetValue<string>(), msg["run"]?.GetValue<string>() ?? "", msg["set"]!.DeepClone(),
+                    msg["kinds"] as JsonObject is { } kinds ? (JsonObject)kinds.DeepClone() : [],
+                    msg["props"] is JsonArray props ? [.. props.Select(p => p!.GetValue<string>())] : [],
+                    msg["git"]?.GetValue<bool>() == true, msg["now"]?.GetValue<long>() ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                    msg["from"]?.GetValue<int>() ?? 0);
+                var reachable = Path.IsPathFullyQualified(r.Location) && await NetworkGuard.Reachable(r.Location);
+                var (results, done, next) = !reachable ? ([], true, 0)
+                    : msg["op"]!.GetValue<string>() == "filterHolds" ? await app.Filters.Holds(r, TimeSpan.FromMilliseconds(400))
+                    : await app.Filters.Results(r, TimeSpan.FromMilliseconds(400));
+                Post(new JsonObject { ["event"] = msg["op"]!.GetValue<string>(), ["req"] = msg["req"]?.DeepClone(), ["location"] = r.Location, ["results"] = results, ["done"] = done, ["next"] = next });
+                break;
+            }
+            case "filterForget":
+                app.Filters.Forget(msg["filter"]!.GetValue<string>());
+                break;
             case "git":
             {
                 var folder = msg["folder"]!.GetValue<string>();
