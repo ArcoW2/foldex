@@ -42,7 +42,7 @@ Nothing yet.
 | Part | What | Waits for | Reference |
 |---|---|---|---|
 | Filter ids | a new id per filter each time its lines change; kept sets and a pane's own set alike | -- | 3.1 |
-| Results in the cache | per item: the filter ids it was tested with and the outcome; dropped on a change on disk | -- | 3.2 |
+| Results in the cache | per item: the filter ids it was tested with and the outcome; dropped on a change on disk; Refresh restarts the filter on the folders refreshed | -- | 3.2 |
 | The engine in the host | `filters.js` run by the host (Jint), with the values the host has or reads | -- | 3.3 |
 | Requests with a filter | a pane asks with its filter's id; only what passes comes; the rest as it is tested | Filter ids; Results in the cache; The engine in the host | 3.4 |
 | In the background | testing goes on after the pane leaves, as read-ahead; low priority, stoppable | Requests with a filter | 3.5 |
@@ -68,6 +68,11 @@ Nothing yet.
   yet", never "does not pass".
 - A change of the item on disk (the watch, plan 24 3.4) drops its whole map: its values changed, so every filter
   tests it again. A folder read again (its changes lost) drops the maps of all its items.
+- **Refresh** (F5, plan 24: the folder read again) restarts the filter on the folder or folders it was given for:
+  the pane's folder, or in a tree the folders it refreshes. Their items' maps are dropped (every filter id, not only
+  the pane's), and the pane's filter tests them again at once, the background (3.5) the other ids in use. Nothing
+  outside those folders is touched; in a tree the "holds a pass" of the folders above them (3.7) is worked out again
+  as their results come.
 - Memory: the maps count toward the cache's memory (plan 24 3.5); they go with their folder when it gives way.
 
 ### 3.3 The engine in the host
@@ -146,7 +151,8 @@ Nothing yet.
   pass" up the chain and dropped when the last passing item goes; a filter by the clock keeps nothing, one by the date
   keeps its results until the date changes and then none.
 - In the test copy: a folder filtered on a Windows property, left and opened again: shown at once, no reading again;
-  the filter off and on: at once; the filter changed: tested again; a file changed on disk: tested again and its
+  the filter off and on: at once; the filter changed: tested again; F5: that folder tested again, another folder's
+  results kept; a file changed on disk: tested again and its
   row coming or going; a tree with a filter showing only the folders that lead to a passing file, the ones not known
   yet dimmed and going or staying as they become known; the window answering while a large folder is tested in the
   background.
