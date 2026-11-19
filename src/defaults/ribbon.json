@@ -45,7 +45,8 @@
         { "action": "hidden.toggle", "size": "large", "label": "Hidden", "tip": "H" } ] },
       { "name": "Show", "items": [
         { "action": "view.menu", "size": "large", "label": "Views" },
-        { "action": "preview.toggle", "size": "large", "label": "Preview", "tip": "P" } ] } ] },
+        { "action": "preview.toggle", "size": "large", "label": "Preview", "tip": "P" },
+        { "action": "preview.float", "label": "In window", "stack": true } ] } ] },
 
     { "name": "View", "groups": [
       { "name": "Panes", "items": [
@@ -77,7 +78,7 @@
         { "action": "columns.manage", "size": "large", "label": "Manage\ncolumn sets" } ] },
       { "name": "Bookmarks", "corners": { "left": "bookmarks.manage", "right": "bookmarks.menu" }, "items": [
         { "action": "bookmarks.manage", "size": "large", "label": "Manage\nbookmarks" },
-        { "action": "bookmarks.add", "label": "Add the current folder" } ] },
+        { "action": "bookmarks.add", "label": "Add current folder" } ] },
       { "name": "Bars", "items": [
         { "action": "bars.change", "label": "Change bars" },
         { "action": "bars.reset", "label": "Reset bars", "stack": true },

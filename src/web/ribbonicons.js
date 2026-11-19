@@ -88,7 +88,9 @@ const RIBBON_ICONS = (() => {
     'pane.hidden': ['Hidden panes', '<rect x="4.5" y="1.5" width="10" height="8.5" rx="1" stroke-dasharray="2 1.5"/>' + '<rect x="1.5" y="5.5" width="10" height="9" rx="1"/>' + p('M1.5 8h10')],
     'pane.next': ['Next pane', win + p('M6.5 2.5v11M9 8h4M11.5 6l1.5 2-1.5 2')],
     'pane.previous': ['Previous pane', win + p('M9.5 2.5v11M7 8H3M4.5 6L3 8l1.5 2')],
-    'pane.detach': ['Detach from parent', p('M6.5 5.5h-2a2.5 2.5 0 0 0 0 5h2M9.5 5.5h2a2.5 2.5 0 0 1 0 5h-2M7 2.5l.8 1.6M9 13.5l-.8-1.6')],
+    'preview.float': ['Preview in a window', '<rect x="1.5" y="5.5" width="9.5" height="9" rx="1"/>' + p('M1.5 7.5h9.5M5 5.5v-4h9.5v9H11')
+      + p('M3 11.2s1.3-1.9 3.25-1.9 3.25 1.9 3.25 1.9-1.3 1.9-3.25 1.9S3 11.2 3 11.2z')],
+    'pane.detach': ['Detach from parent',p('M6.5 5.5h-2a2.5 2.5 0 0 0 0 5h2M9.5 5.5h2a2.5 2.5 0 0 1 0 5h-2M7 2.5l.8 1.6M9 13.5l-.8-1.6')],
     'pane.pin': ['Pin', p('M6 2h4M7 2v4.5L4.5 9.5h7L9 6.5V2M8 9.5V14')],
     'pane.toParent': ['To the parent pane', win + p('M6.5 2.5v11M13 8H9M10.5 6L9 8l1.5 2')],
     'pane.toChild': ['To the child pane', win + p('M9.5 2.5v11M3 8h4M5.5 6L7 8l-1.5 2')],
