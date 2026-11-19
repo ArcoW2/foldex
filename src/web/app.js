@@ -3166,7 +3166,7 @@ function dragToDock(id, e) {
   const placeAt = (x, y) => dockPlaceAt(id, x, y);
   const move = m => {
     if (!mark) {
-      if (Math.abs(m.clientX - x0) + Math.abs(m.clientY - y0) < 6) return;
+      if (Math.hypot(m.clientX - x0, m.clientY - y0) < 10) return;   // a press that moves a little is no drag
       mark = document.createElement('div');
       mark.className = 'dock-mark';
       document.body.append(mark);
