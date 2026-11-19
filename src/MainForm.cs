@@ -637,6 +637,19 @@ sealed class MainForm : Form
             case "drives":
                 await TellDrives();
                 break;
+            case "freeSpace":
+            {
+                // The status line's free space (the drive or share of the active pane's folder); a share that is down: none.
+                var folder = msg["folder"]?.GetValue<string>() ?? "";
+                var space = Path.IsPathFullyQualified(folder) && await NetworkGuard.Reachable(folder)
+                    ? await Task.Run(() => Drives.Space(folder)) : null;
+                Post(new JsonObject
+                {
+                    ["event"] = "answer", ["req"] = msg["req"]?.DeepClone(),
+                    ["value"] = space is { } got ? new JsonObject { ["free"] = got.Free, ["total"] = got.Total } : null,
+                });
+                break;
+            }
             // Columns (docs/plans/executed/11-PLAN-columns.md 3.6): the Git status of a folder's items, the properties Windows
             // has for columns (once per run), their values for items, and the column sets written.
             case "netLogon":

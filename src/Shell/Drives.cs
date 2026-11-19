@@ -36,4 +36,14 @@ static class Drives
         }
         return list;
     }
+
+    /// <summary>The free space (for the user: quotas count) and the size of the volume a folder is on, a share's too;
+    /// null when Windows cannot say (no such folder, a place that is no folder on disk). Touches the volume: off the
+    /// window's thread, a share checked first.</summary>
+    public static (long Free, long Total)? Space(string folder) =>
+        GetDiskFreeSpaceEx(folder.EndsWith('\\') ? folder : folder + '\\', out var free, out var total, out _) ? ((long)free, (long)total) : null;
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    static extern bool GetDiskFreeSpaceEx(string directory, out ulong freeForUser, out ulong total, out ulong totalFree);
 }

@@ -1653,11 +1653,22 @@ dialog.ask form {
 
 /* The disk icon (app.js diskReading): at the right end while the folder cache reads from disk or a share, its light
    flickering as a drive's does; the progress bar stops before it. */
-#disk { flex: none; align-self: center; display: inline-flex; margin-left: auto; padding: 0 4px; color: var(--fg-dim); }
-#disk[hidden] { display: none; }
+#disk { flex: none; align-self: center; display: inline-flex; padding: 0 4px; color: var(--fg-dim); }
+/* Its place kept while it is off: the drive's activity never moves the rest of the status line. */
+#disk[hidden] { display: inline-flex; visibility: hidden; }
 #disk .led { fill: var(--accent); animation: disk-led .9s steps(1) infinite; }
 @keyframes disk-led { 0%, 30%, 55%, 80% { opacity: 1; } 15%, 45%, 70%, 90% { opacity: .2; } }
-#statusline:has(#disk:not([hidden])) #progress { right: 24px; }
+
+/* The status line in blocks, each of its own size, a thin line between them: the message takes the room there is
+   (cut off with "..."), the reading bar lies over its right end; the drive's light and its free space keep their
+   places at the right. */
+#statusline { gap: 0; align-items: center; }
+#statusline > * + * { border-left: 1px solid var(--border); }
+#project, #hidden-panes, #log-button { margin: 0 6px; }
+#status-area { position: relative; flex: 1; min-width: 0; align-self: stretch; display: flex; align-items: center; padding: 0 8px; }
+#status { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-width: 0; }
+#free { flex: none; width: 17ch; padding: 0 8px; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: var(--fg-dim); font-variant-numeric: tabular-nums; }
 
 .ask-line {
   color: var(--fg-dim);

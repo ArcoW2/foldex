@@ -4631,6 +4631,7 @@ const events = {
   fileOp(m) {
     logOp(m.op);
     if (!m.op.finished) return;
+    showFree(true);     // the status line's free space after it (bars.js)
     fileOpDone(m.op);   // a new item renamed (rename.js)
     reloadLists(m.op);
     // A scrap's entries follow what moved and drop what was deleted (plan 06 3.1).

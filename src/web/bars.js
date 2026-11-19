@@ -298,6 +298,7 @@ function segmentButton(s) {
 // The active pane's folder (app.js): every path bar shows it, the drives bar marks its drive.
 function showLocation(text) {
   barLocation = text ?? '';
+  showFree();
   for (const input of document.querySelectorAll('.bar-path')) if (document.activeElement !== input) input.value = shownLocation(barLocation);
   let column = false;
   for (const el of document.querySelectorAll('.bar')) {
@@ -310,6 +311,28 @@ function showLocation(text) {
   }
   if (column) fitBars();
 }
+
+// The status line's free space (#free, the window's page): of the drive or share of the active pane's folder, asked
+// of the host when that folder changes, every few seconds and after a file operation; empty for a place not on disk.
+let freeOf = '';
+async function showFree(again = false) {
+  const el = document.getElementById('free');
+  if (!el) return;
+  const folder = onDiskPath(barLocation) ? barLocation : '';
+  if (!again && folder === freeOf) return;
+  freeOf = folder;
+  if (!folder) {
+    el.textContent = '';
+    el.title = 'Free space of the drive of the active pane\'s folder';
+    return;
+  }
+  const space = (await askHost({ op: 'freeSpace', folder })).value;
+  if (freeOf !== folder) return;   // the active pane went elsewhere meanwhile
+  const where = driveOf(folder)?.slice(0, 2) ?? folder.split('\\').slice(0, 4).join('\\');
+  el.textContent = space ? `${driveOf(folder)?.slice(0, 2) ?? ''} ${formatSize(space.free)} free`.trim() : '';
+  el.title = space ? `${where} ${formatSize(space.free)} free of ${formatSize(space.total)}` : `${where} free space not known`;
+}
+if (typeof document !== 'undefined') setInterval(() => showFree(true), 5000);
 
 function setDrives(list) {
   drives = list;
