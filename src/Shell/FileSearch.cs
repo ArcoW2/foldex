@@ -12,8 +12,11 @@ namespace Foldex.Shell;
 /// </summary>
 static class FileSearch
 {
+    /// <summary>`TextPattern`: the Containing text as the page built it (plan 20 3.1; null: none), `TextCase`, `AllFiles`
+    /// and `StartBytes` (only that much of each file read; 0: all of it).</summary>
     public sealed record Options(string? LookIn, IReadOnlyList<string>? Within, bool Subfolders, bool DepthFirst,
-        bool UseIndex, bool Files, bool Folders, bool Regex, int Fuzzy, string Named)
+        bool UseIndex, bool Files, bool Folders, bool Regex, int Fuzzy, string Named,
+        string? TextPattern = null, bool TextCase = false, bool AllFiles = false, long StartBytes = 0)
     {
         public static Options From(JsonObject m) => new(
             m["lookIn"]?.GetValue<string>(),
@@ -25,7 +28,11 @@ static class FileSearch
             m["folders"]?.GetValue<bool>() ?? true,
             m["regex"]?.GetValue<bool>() ?? false,
             Math.Clamp(m["fuzzy"]?.GetValue<int>() ?? 100, 0, 100),
-            m["named"]?.GetValue<string>() ?? "");
+            m["named"]?.GetValue<string>() ?? "",
+            m["textPattern"]?.GetValue<string>() is { Length: > 0 } p ? p : null,
+            m["textCase"]?.GetValue<bool>() ?? false,
+            m["allFiles"]?.GetValue<bool>() ?? false,
+            m["startOnly"]?.GetValue<bool>() == true ? Math.Max(1, m["startKB"]?.GetValue<long>() ?? 2048) * 1024 : 0);
     }
 
     /// <summary>The engine used (walk, everything, windows, scrap) and how many were found; throws ArgumentException for
@@ -33,20 +40,30 @@ static class FileSearch
     public static (string Engine, int Count) Run(Options o, Action<JsonArray> batch, CancellationToken cancel)
     {
         var test = NameTest(o);
+        var text = TextSearch.Make(o.TextPattern, o.TextCase);
         var found = 0;
         var pending = new JsonArray();
         var since = System.Diagnostics.Stopwatch.StartNew();
-        void Found(FileSystemInfo info)
+        // What was found goes over every 250 ms, also while candidates that do not match are tested (a text check can
+        // take a while per file), so an item shows soon after it is found (plan 20 3.6).
+        void Flush()
         {
-            var folder = (info.Attributes & FileAttributes.Directory) != 0;
-            if (!(folder ? o.Folders : o.Files) || !test(info.Name)) return;
-            try { pending.Add(ShellListing.DiskEntry(info)); }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return; }
-            found++;
-            if (since.ElapsedMilliseconds < 250) return;
+            if (pending.Count == 0 || since.ElapsedMilliseconds < 250) return;
             batch(pending);
             pending = [];
             since.Restart();
+        }
+        void Found(FileSystemInfo info)
+        {
+            Flush();
+            var folder = (info.Attributes & FileAttributes.Directory) != 0;
+            if (!(folder ? o.Folders : o.Files) || !test(info.Name)) return;
+            // A text: folders never hold one; a file is read last, as it is the slowest test (plan 20 3.1).
+            if (text is not null && (folder || !TextSearch.Holds(info.FullName, text, o.AllFiles, o.StartBytes, cancel))) return;
+            try { pending.Add(ShellListing.DiskEntry(info)); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return; }
+            found++;
+            Flush();
         }
         string engine;
         if (o.Within is not null)

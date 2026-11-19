@@ -14,7 +14,7 @@ static class SearchesFile
 
     static readonly JsonDocumentOptions Options = new() { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true };
 
-    /// <summary>{ predefined: { name: options }, lookIn: [...], named: [...], last: options }; `last` the options of the
+    /// <summary>{ predefined: { name: options }, lookIn: [...], named: [...], text: [...], last: options }; `last` the options of the
     /// last search run (without its folder), where the next Find starts; only once there was one.</summary>
     public static JsonObject Load(string dataDir)
     {
@@ -31,6 +31,7 @@ static class SearchesFile
             ["predefined"] = root?["predefined"] is JsonObject p ? p.DeepClone() : new JsonObject(),
             ["lookIn"] = Texts(root?["lookIn"]),
             ["named"] = Texts(root?["named"]),
+            ["text"] = Texts(root?["text"]),   // the Containing texts used before (plan 20 3.1)
         };
         if (root?["last"] is JsonObject last) clean["last"] = last.DeepClone();
         return clean;

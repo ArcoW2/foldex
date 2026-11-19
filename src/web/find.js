@@ -14,11 +14,14 @@ const SearchListMax = 20;   // earlier folders and names offered (chosen, not me
 async function openFind({ again = null } = {}) {
   const active = activeView();
   const saved = again ? layout.pane(again.id).search ?? {} : {};
-  const start = { ...SearchDefaults, ...(again ? saved : searches.last) };
+  // Only the start's size and Sort when done start from the settings (plan 20 3.1, 3.6).
+  const defaults = { ...SearchDefaults, startKB: settings.searchStartKB ?? SearchDefaults.startKB,
+    sortWhenDone: settings.findSortWhenDone ?? SearchDefaults.sortWhenDone };
+  const start = { ...defaults, ...(again ? saved : searches.last) };
   // Look in: the active pane's folder, or the active scrap (a search in its items); Search again: what it had.
   const lookScrap = again ? views.get(saved.lookInScrap) ?? null : active instanceof ScrapView ? active : null;
   if (!again) start.lookIn = lookScrap ? '' : currentFolder() ?? searches.lookIn[0] ?? '';
-  const r = await dialogWindow('Find files or folders', { what: 'find', start, defaults: SearchDefaults, searches,
+  const r = await dialogWindow('Find files or folders', { what: 'find', start, defaults, searches,
     lookScrap: lookScrap && { id: lookScrap.id, title: lookScrap.tabTitle() },
     scraps: scrapViews().map(v => ({ id: v.id, title: v.tabTitle() })), again: again?.id ?? null }, m => {
     searches = m.searches;
@@ -67,6 +70,26 @@ function findHere(a) {
     title: 'How closely a name must hold Named: 100 exactly; lower finds names with a few letters different' });
   const named = el('input', { value: start.named, spellcheck: false, className: 'find-named' });
   named.setAttribute('list', 'find-named');
+  // Containing text (plan 20 3.1): the text, how it is read, which files, only their start.
+  const text = el('input', { value: start.text ?? '', spellcheck: false, className: 'find-text',
+    title: 'Files holding this text; empty: any. Normal: * any run of characters, ? one character, ; between alternatives' });
+  text.setAttribute('list', 'find-text');
+  const [textCase, textCaseLabel] = check('Case sensitive', start.textCase);
+  const [textWord, textWordLabel] = check('Whole words', start.textWord);
+  const radio = (group, label, on, title = '') => {
+    const box = el('input', { type: 'radio', name: group, checked: on });
+    return [box, el('label', { title }, box, ` ${label}`)];
+  };
+  const [modeNormal, modeNormalLabel] = radio('textMode', 'Normal', start.textMode === 'normal', '* any run of characters, ? one character, ; between alternatives');
+  const [modeVerbatim, modeVerbatimLabel] = radio('textMode', 'Verbatim', start.textMode === 'verbatim', 'every character is itself');
+  const [modeRegex, modeRegexLabel] = radio('textMode', 'Regular expression', start.textMode === 'regex');
+  const [known, knownLabel] = radio('textFiles', 'Known files', !start.allFiles, 'the files Foldex reads as text: fast');
+  const [allFiles, allFilesLabel] = radio('textFiles', 'All files (slower)', start.allFiles, "also Word, PDF and other files: their text through Windows' filters, else their bytes");
+  const [startOnly, startOnlyLabel] = check('Only the start of a file:', start.startOnly);
+  const startKB = el('input', { type: 'number', min: 1, step: 1, value: start.startKB, className: 'find-start',
+    title: 'How much of each file is searched, in KB' });
+  const [sortWhenDone, sortWhenDoneLabel] = check('Sort when done', start.sortWhenDone);
+  sortWhenDoneLabel.title = "When the search ends, the scrap is sorted by its sort; off: it keeps the order found";
   const predefined = el('select', {}, el('option', { value: '', textContent: '' }),
     ...Object.keys(searches.predefined).sort(collator.compare).map(n => el('option', { value: n, textContent: n })));
   const save = el('button', { type: 'button', textContent: 'Save' });
@@ -80,7 +103,14 @@ function findHere(a) {
 
   const syncFuzzy = () => { fuzzy.disabled = regex.checked; };
   const syncClear = () => { clearFirst.disabled = !into.value; };
+  const syncText = () => {
+    const none = !text.value;
+    for (const x of [textCase, textWord, modeNormal, modeVerbatim, modeRegex, known, allFiles, startOnly]) x.disabled = none;
+    startKB.disabled = none || !startOnly.checked;
+  };
   regex.addEventListener('change', syncFuzzy);
+  text.addEventListener('input', syncText);
+  startOnly.addEventListener('change', syncText);
   into.addEventListener('change', () => {
     clearFirst.checked = !!again && into.value === again.id;   // on for the scrap's own search again, else off
     syncClear();
@@ -96,7 +126,19 @@ function findHere(a) {
     regex.checked = o.regex;
     fuzzy.value = o.fuzzy;
     named.value = o.named;
+    text.value = o.text ?? '';
+    textCase.checked = !!o.textCase;
+    textWord.checked = !!o.textWord;
+    modeNormal.checked = (o.textMode ?? 'normal') === 'normal';
+    modeVerbatim.checked = o.textMode === 'verbatim';
+    modeRegex.checked = o.textMode === 'regex';
+    known.checked = !o.allFiles;
+    allFiles.checked = !!o.allFiles;
+    startOnly.checked = o.startOnly ?? true;
+    startKB.value = o.startKB ?? a.defaults.startKB;
+    sortWhenDone.checked = o.sortWhenDone ?? a.defaults.sortWhenDone;
     syncFuzzy();
+    syncText();
   };
   predefined.addEventListener('change', () => {
     const o = searches.predefined[predefined.value];
@@ -111,6 +153,10 @@ function findHere(a) {
     lookIn: lookScrap ? null : lookIn.value.trim(), lookInScrap: lookScrap?.id ?? null,
     subfolders: subfolders.checked, depthFirst: depth.checked, useIndex: useIndex.checked, files: files.checked,
     folders: folders.checked, regex: regex.checked, fuzzy: Math.min(100, Math.max(0, Number(fuzzy.value) || 0)), named: named.value.trim(),
+    text: text.value, textCase: textCase.checked, textWord: textWord.checked,
+    textMode: modeRegex.checked ? 'regex' : modeVerbatim.checked ? 'verbatim' : 'normal', allFiles: allFiles.checked,
+    startOnly: startOnly.checked, startKB: Math.max(1, Math.round(Number(startKB.value) || a.defaults.startKB)),
+    sortWhenDone: sortWhenDone.checked,
   });
   save.addEventListener('click', async () => {
     const name = await askTextOver(dialog, 'Name of this search', predefined.value);
@@ -136,14 +182,19 @@ function findHere(a) {
     el('div', { className: 'find-row find-checks' }, filesLabel, foldersLabel, regexLabel,
       el('label', { className: 'find-fuzzy-label' }, 'Fuzzy ', fuzzy)),
     el('div', { className: 'find-row' }, el('span', { className: 'find-label', textContent: 'Named' }), named),
+    el('div', { className: 'find-row' }, el('span', { className: 'find-label', textContent: 'Containing' }), text),
+    el('div', { className: 'find-row find-checks' }, textCaseLabel, textWordLabel, modeNormalLabel, modeVerbatimLabel, modeRegexLabel),
+    el('div', { className: 'find-row find-checks' }, knownLabel, allFilesLabel, el('span', { className: 'find-gap' }),
+      startOnlyLabel, startKB, el('span', { textContent: 'KB' })),
     el('div', { className: 'find-row' }, el('span', { className: 'find-label', textContent: 'Predefined' }), predefined, save),
     el('div', { className: 'find-row' }, el('span', { className: 'find-label', textContent: 'Into' }), into, clearFirstLabel),
-    el('div', { className: 'ask-buttons' }, clearButton, el('span', { className: 'find-gap' }), ok, cancel),
-    list('find-lookin', searches.lookIn), list('find-named', searches.named));
+    el('div', { className: 'ask-buttons' }, clearButton, sortWhenDoneLabel, el('span', { className: 'find-gap' }), ok, cancel),
+    list('find-lookin', searches.lookIn), list('find-named', searches.named), list('find-text', searches.text ?? []));
   dialog.append(el('div', { className: 'find-title', textContent: 'Find files or folders' }), form);
   document.body.append(dialog);
   syncFuzzy();
   syncClear();
+  syncText();
   dialog.showModal();
   named.select();   // the keyboard in Named (3.3)
 
@@ -159,6 +210,12 @@ function findHere(a) {
       lookIn.focus();
       return status('Find: a folder to look in.', true);
     }
+    try { new RegExp(searchExpression(o.text, o.textMode, o.textWord) ?? ''); }
+    catch {
+      e.preventDefault();
+      text.focus();
+      return status('Find: the containing text is no regular expression.', true);
+    }
   });
   return new Promise(resolve => dialog.addEventListener('close', () => {
     dialog.remove();
@@ -171,7 +228,8 @@ function findHere(a) {
 function remember(o) {
   const front = (list, value) => value ? [value, ...list.filter(v => v.toLowerCase() !== value.toLowerCase())].slice(0, SearchListMax) : list;
   const { lookIn, lookInScrap, ...last } = o;
-  searches = { ...searches, lookIn: front(searches.lookIn, o.lookIn), named: front(searches.named, o.named), last };
+  searches = { ...searches, lookIn: front(searches.lookIn, o.lookIn), named: front(searches.named, o.named),
+    text: front(searches.text ?? [], o.text), last };
   post({ op: 'searchesSave', searches });
 }
 

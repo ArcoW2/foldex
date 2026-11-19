@@ -1772,7 +1772,7 @@ dialog.find {
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 0;
-  width: min(560px, calc(100vw - 32px));
+  width: min(620px, calc(100vw - 32px));
 }
 
 dialog.find::backdrop {
@@ -1824,7 +1824,7 @@ dialog.find input:focus, dialog.find select:focus {
   outline: 1px solid var(--accent);
 }
 
-dialog.find .find-fuzzy {
+dialog.find .find-fuzzy, dialog.find .find-start {
   width: 4.5em;
   color: var(--fg);
   background: var(--bg);
@@ -1833,7 +1833,9 @@ dialog.find .find-fuzzy {
   font: inherit;
 }
 
-dialog.find .find-fuzzy:disabled { opacity: .5; }
+dialog.find .find-fuzzy:disabled, dialog.find .find-start:disabled { opacity: .5; }
+dialog.find .find-start { width: 6em; }
+dialog.find label:has(input:disabled) { opacity: .5; }   /* Containing text's options while there is no text */
 
 dialog.find > form > .find-row > button {
   color: var(--fg);

@@ -2343,9 +2343,34 @@ class ScrapView extends ListView {
 
   // Entries added: each item once, in its own order; nothing on disk changes (3.2).
   add(entries) {
+    const before = this.all.length;
     this.all = scrapMerge(this.all, entries);
-    this.searchChanged();
+    if (this.searching) this.addFound(this.all.slice(before));
+    else this.searchChanged();
     this.keep();
+  }
+
+  // While a search runs (plan 20 3.6): what it found is put at the end, not sorted in, so nothing already shown moves
+  // and a batch costs only itself; the sort comes once, when it ends (searched).
+  addFound(fresh) {
+    this.entries = this.entries.concat(fresh.filter(this.passes()));
+    this.render();
+    tellWatched();
+    if (activePane === this.id) this.tellCount();
+  }
+
+  // By its sort; without one (or while it keeps the order found: Sort when done off) in its own order, the order the
+  // items came in (plan 20 3.6), not by name.
+  comparer() {
+    if (this.cols.sort.length && !this.keepFound) return super.comparer();
+    const at = new Map(this.all.map((x, k) => [x.id, k]));
+    return (a, b) => at.get(a.id) - at.get(b.id);
+  }
+
+  // Sorted by a click on a title or the Sort window: it no longer keeps the order found.
+  sortEntries() {
+    this.keepFound = false;
+    return super.sortEntries();
   }
 
   // Items asked from the host by their ids (a restart of the page, a paste, Add to scrap), then added.
@@ -2418,10 +2443,11 @@ class ScrapView extends ListView {
     layout.pane(this.id).search = kept;
     tellLayout();
     this.searching = true;
+    this.sortWhenDone = options.sortWhenDone !== false;
     this.stopButton.hidden = false;
     this.drawFoot();
     if (activePane === this.id) this.tellCount();
-    post({ op: 'search', channel: this.id, ...options });
+    post({ op: 'search', channel: this.id, ...options, textPattern: searchExpression(options.text, options.textMode, options.textWord) });
   }
 
   stop() { post({ op: 'searchStop', channel: this.id }); }
@@ -2429,7 +2455,9 @@ class ScrapView extends ListView {
   searched(m) {
     this.searching = false;
     this.stopButton.hidden = true;
-    this.drawFoot();
+    // Done or stopped: sorted once by its sort (plan 20 3.6); Sort when done off: the order found kept until sorted.
+    this.keepFound = !this.sortWhenDone;
+    this.searchChanged();
     if (m.error) return status(`${this.tabTitle()}: ${m.error}`, true);
     const engine = { walk: 'Foldex walked the folders', everything: 'from Everything', windows: 'from the Windows Search index',
       scrap: 'in the scrap' }[m.engine] ?? m.engine;

@@ -20,7 +20,7 @@ dialog.inline.ask { width: 380px; }
 dialog.bm-edit { width: 620px; }
 dialog.bm-icons { width: 520px; }
 dialog.bm-pick { width: 420px; }
-dialog.inline.find { width: 560px; border: 0; border-radius: 0; }
+dialog.inline.find { width: 620px; border: 0; border-radius: 0; }
 dialog.inline.rename-many { width: 760px; }
 dialog.inline .rn-list { max-height: 360px; }
 dialog.inline.size-window { width: 420px; }

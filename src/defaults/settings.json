@@ -37,6 +37,8 @@
   "treeLinesIntensity": 55,       // 1 to 100: how strong the tree lines are, the dim text colour at that %
   "followDelay": 150,              // ms the cursor rests in a pane before its children follow it, 0 to 1000
   "searchDelay": 600,              // ms after typing in a pane before it filters (more than 3 characters) or jumps, 100 to 2000
+  "searchStartKB": 2048,           // Find's Containing text: how much of each file is searched when Only the start is checked, in KB
+  "findSortWhenDone": true,        // Find's Sort when done as it starts: the scrap sorted by its sort when the search ends
   "sortColumnIntensity": 200,     // the text of the columns the pane is sorted on, 0 to 200 %: 100 the theme's dim text, 200 the full text
   "otherColumnsIntensity": 160,   // the text of every other column, the name too, the same way
   "ribbonRememberTab": false,       // a window opens on the ribbon tab it showed when it closed; false: always on Home

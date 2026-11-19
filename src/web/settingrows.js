@@ -11,7 +11,7 @@ const SETTING_TABS = [
   ['App', ['Theme', 'Fonts', 'Mouse', 'Ribbon', 'Status line', 'Memory']],
   ['Panes', ['Colours', 'Behaviour', 'Scrollbars']],
   ['Contents', ['Rows', 'Columns', 'Highlights', 'Trees', 'Items', 'Thumbnails', 'Preview']],
-  ['Search and scrap', ['Search bar']],
+  ['Search and scrap', ['Search bar', 'Find']],
 ];
 
 const SETTING_ROWS = [
@@ -88,6 +88,10 @@ const SETTING_ROWS = [
     hint: "Extensions (such as .pdf; .svg) that Windows' preview handler shows instead of Foldex's own viewer, when Windows has one for them." },
   { tab: 'Search and scrap', group: 'Search bar', name: 'searchDelay', kind: 'range', range: [100, 2000, 50], unit: 'ms', title: 'Typing delay',
     hint: 'How long after typing in a pane it acts: more than 3 characters filter the pane (in the search bar), fewer go to the first item starting with them.' },
+  { tab: 'Search and scrap', group: 'Find', name: 'searchStartKB', kind: 'range', range: [64, 65536, 64], unit: ' KB', title: 'Only the start of a file',
+    hint: "How much of each file Find's Containing text searches when Only the start of a file is checked; the dialog can change it for one search." },
+  { tab: 'Search and scrap', group: 'Find', name: 'findSortWhenDone', kind: 'toggle', title: 'Sort when done',
+    hint: "When a search ends, its scrap is sorted by its sort; off: it keeps the order the items were found in. Find's check starts this way." },
   { tab: 'Contents', group: 'Columns', name: 'sortColumnIntensity', kind: 'range', range: [0, 200, 5], unit: '%', title: 'Sort columns',
     hint: "The text of the columns the pane is sorted on: 100% the theme's grey, lower fainter, higher brighter (200% the theme's full text colour)." },
   { tab: 'Contents', group: 'Columns', name: 'otherColumnsIntensity', kind: 'range', range: [0, 200, 5], unit: '%', title: 'Columns',
