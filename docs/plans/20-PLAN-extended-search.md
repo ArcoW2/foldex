@@ -21,7 +21,10 @@ known files or all files; by default only the start of a file) and Additional ru
 32: the same lines, brackets, and, or and not, the same engine and line editor. Plan 32's fields get one more,
 Contents: a line on it tests whether a file holds a text, known files or all files, in a search and in a pane's
 filter alike, with a warning that it can be very slow. The rules are
-tested on what the name search finds, the text on what passes them. Both are kept with a
+tested on what the name search finds, the text on what passes them. Every item found shows in the scrap at once, at
+its end; when the search ends the scrap is sorted once by its own sort (none: kept as found). Searching and filtering
+never hold the window up: Stop works at once, a search goes on wherever the panes go, a filter starts again on the
+folder a pane moves to. Both are kept with a
 scrap's search and in saved searches. F3 on a file in a scrap whose search has a text opens its preview already
 searching that text, on the first match; in any preview Foldex draws (PDF and markdown included) a find bar after
 LexPen's searches with Ctrl+F, F3 and Shift+F3.
@@ -42,6 +45,8 @@ Nothing yet.
 | Additional rules | a filter set (plan 32): its lines, brackets, and / or / not, its engine and line editor | -- | 3.2 |
 | Contents field | a field of plan 32's lines: the file holds a text, in an encoding (automatic by default), known files or all files; in Find and in a pane's filter; the tortoise and a warning that it can be very slow | Which files | 3.2 |
 | Contents, more | the text kind's other conditions on Contents: wildcards, a regular expression | Contents field | 3.2 |
+| Found at once | each batch added at the scrap's end, not sorted in; sorted once at the end; a scrap without a sort keeps the order found | -- | 3.6 |
+| Responsive | the window answering while a search or a slow filter runs; Stop at once; a search independent of the panes; a filter restarted on a new folder | -- | 3.6 |
 | Kept | all of it in a scrap's search and in Predefined | -- | 3.3 |
 | Find in the preview | a find bar in Foldex's own preview, after LexPen's: Ctrl+F, F3, Shift+F3, case, whole word, regular expression; PDF's text too; a warning where a preview cannot be searched | -- | 3.5 |
 | F3 from a text scrap | the floating preview opened searching the scrap's text, on its first match, reading as far as the search did | Containing text; Find in the preview | 3.5 |
@@ -155,6 +160,35 @@ Nothing yet.
   Show all's limit) when the search read it whole, not previewTextKB; so a match the search found is in what it shows.
 - The bar searches with JavaScript's regular expressions, the search ran .NET's. A regular expression only .NET reads
   the same way may find nothing in the preview: the bar shows no match, as for any text.
+
+### 3.6 While it searches and filters
+
+- **Found at once.** The host hands what it found over in batches while it runs (`FileSearch.Run`, every 250 ms);
+  each batch shows in the scrap at once, added at its end, without waiting for the search to end. Today every batch
+  filters and sorts the whole scrap again (`ScrapView.searchChanged`), so items already there move while you look at
+  them and the work grows with the scrap: a batch is only added at the end now, after its rules (3.2) and the
+  scrap's own filter and search bar; nothing already shown moves, the focus and the selection stay.
+- **Sorted at the end.** When the search ends (done or stopped) the scrap is sorted once by the sort it has (its
+  columns' sort, plan 28 3.4). A scrap without a sort (its sort list empty: a new scrap's, or emptied in the Sort
+  window) keeps the order found. Today a scrap without a sort is sorted by name (`byName`): for a scrap, an empty sort
+  means its own order (`scrapMerge`'s). A click on a title sorts by that column, as in any list (`sortAfterClick`).
+- **Responsive.** The search runs in the host, never in the page (as now); the text check (3.1) and the rules'
+  slow fields as well. The page does only the small work per batch above, so keys, the mouse, other panes and their
+  folders keep answering while a search runs, however many items come.
+- **Stop** (the scrap's head, its menu) ends the search at once: the host's walk, the index's query, the text checks
+  and the rules' questions still waiting are all dropped (the search's cancellation, `FileSearch`'s
+  CancellationToken, reaches each of them); what was found stays, and is sorted (above).
+- **A search is not tied to a place.** Once started it goes on whatever the panes do: the active pane moving to other
+  folders, another pane made active, the scrap's own parent changing focus, another search started into another scrap.
+  It ends only when done, stopped, or its scrap closed.
+- **A filter is tied to its folder.** A pane's filter with a slow field (Contents, a Windows property) shows what has
+  passed so far and the rest as it is answered. When the pane moves to another folder, the questions still open for
+  the old one are dropped (in the page and in the host's queue) and the filter starts on the new folder; going back
+  starts it there again.
+- Tests: a search finding many items over several seconds: items show from the first batch on, none already shown
+  moves, the keyboard moves the focus in another pane meanwhile; Stop: the search ends at once, the scrap sorted; a
+  scrap without a sort: the order found kept; the active pane moved to three folders during a search: the search goes
+  on unchanged; a folder filtered on Contents, left before it is done: no more answers for it, the new folder filtered.
 
 ## 4. Open questions
 
