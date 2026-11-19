@@ -17,9 +17,10 @@ just the file.
 ## 2. The solution, in brief
 
 The Find dialog gets a Containing text with its options (case, whole words; normal, verbatim or regular expression;
-known files or all files; optionally only the start of a file) and Additional rules that are a filter set of plan 32:
-the same lines, brackets, and, or and not, the same engine and line editor, a text field's line with xplorer2's Text
-settings. The rules are tested on what the name search finds, the text on what passes them. Both are kept with a
+known files or all files; by default only the start of a file) and Additional rules that are a filter set of plan
+32: the same lines, brackets, and, or and not, the same engine and line editor. Plan 32's fields get one more,
+Contents: a line on it tests whether a file holds a text, in a search and in a pane's filter alike. The rules are
+tested on what the name search finds, the text on what passes them. Both are kept with a
 scrap's search and in saved searches. F3 on a file in a scrap whose search has a text opens its preview already
 searching that text, on the first match; in any preview Foldex draws (PDF and markdown included) a find bar after
 LexPen's searches with Ctrl+F, F3 and Shift+F3.
@@ -34,10 +35,12 @@ Nothing yet.
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| Containing text | the text and its list; case sensitive, whole words; normal, verbatim or regular expression | open question 1 | 3.1 |
+| Containing text | the text and its list; case sensitive, whole words; normal (the filter's wildcards), verbatim or regular expression | -- | 3.1 |
 | Which files | known files or all files (Word, PDF, other binaries); the encoding found by itself | -- | 3.1 |
-| Only the start | a check and a size in the dialog; its default a setting (2 MB) | open question 3 | 3.1 |
-| Additional rules | a filter set (plan 32): its lines, brackets, and / or / not, its engine and line editor; Text settings for a text field | open question 2 | 3.2 |
+| Only the start | a check (on) and a size in the dialog; its default a setting (2 MB) | -- | 3.1 |
+| Additional rules | a filter set (plan 32): its lines, brackets, and / or / not, its engine and line editor | -- | 3.2 |
+| Contents field | a field of plan 32's lines: the file holds a text, in an encoding (automatic by default); slow (the tortoise); in Find and in a pane's filter | Which files | 3.2 |
+| Contents, more | the text kind's other conditions on Contents: wildcards, a regular expression | Contents field | 3.2 |
 | Kept | all of it in a scrap's search and in Predefined | -- | 3.3 |
 | Find in the preview | a find bar in Foldex's own preview, after LexPen's: Ctrl+F, F3, Shift+F3, case, whole word, regular expression; PDF's text too; a warning where a preview cannot be searched | -- | 3.5 |
 | F3 from a text scrap | the floating preview opened searching the scrap's text, on its first match, reading as far as the search did | Containing text; Find in the preview | 3.5 |
@@ -50,7 +53,9 @@ Nothing yet.
 - In the Tab order right after Named (plan 06 3.3), before its own options.
 - The text, with a list of earlier ones; Case sensitive; Whole words.
 - How the text is read, one of three:
-  - **Normal**: a few characters have a meaning of their own (xplorer2's; which and what each does: open question 1).
+  - **Normal**: the wildcards of a filter's text (plan 32 3.1, `filters.js` `wildTest`): `*` any run of characters,
+    `?` one character, `;` between alternatives (`TODO;FIXME`). In a file a match lies within one line and may start
+    anywhere in it (a filter matches a whole name). Unlike a filter, `,` is no separator here: a text often holds one.
   - **Verbatim**: every character is itself; none has a meaning of its own.
   - **Regular expression** (xplorer2's "RE").
 - **As LexPen does**: the page builds one regular expression from the text, its mode and Whole words, and the search
@@ -65,8 +70,8 @@ Nothing yet.
 - **The encoding** is found by itself, as xplorer2's Default: a BOM when there is one, else UTF-8 when the bytes are
   valid UTF-8, else the system's code page. No encoding list.
 - **Only the start of a file**: a check and, after it, a size (in KB or MB); a file is searched only up to there.
-  The size starts at a new setting (Settings, Contents; 2 MB as shipped), changed for one search in the dialog.
-  Whether the check starts on: open question 3.
+  The check starts on and the size at a new setting (Settings, Contents; 2 MB as shipped); both can be changed for
+  one search in the dialog.
 - Searched on the files that pass the name and the rules (3.2), last, as it is the slowest; folders never match a
   text. The text check is ported from LexPen's `FolderSearch.cs` (`ReadText`: what cannot be text skipped with Known
   files), with the encoding above and the start limit instead of its fixed 10 MB.
@@ -78,11 +83,17 @@ Nothing yet.
   are kept in the same shape, tested by the same engine (`filters.js`, `filterTestOf`) and edited with the same line
   editor (Manage filters' line part, 3.3 there), in the Find dialog under the text.
 - In the dialog: the lines of the set, a row each as Manage filters shows them; a double click edits one, Add, Change,
-  Remove, Up, Down, brackets, as there. The line being edited shows, as xplorer2's Rule definition window:
-  - the field (Property & description) with what it is;
-  - for a text field, **Text settings**: Find, Verbatim, Regular expression (how they relate to plan 32's text
-    conditions: open question 2);
-  - the line's join (Boolean context): And, Or, Not.
+  Remove, Up, Down, brackets, as there. The line being edited is Manage filters' line editor: Folders and Files, the
+  field, its conditions, And / Or, Not.
+- **Contents**, a new field in plan 32's field list (so in Manage filters too): its value is the file itself, and a
+  line on it tests whether the file holds a text. First as a text and an encoding: Contains, the text, and Encoding
+  (Automatic, as 3.1, by default; or one chosen). Later the text kind's other conditions on it (matches wildcards,
+  matches a regular expression; plan 32 3.1). A folder: the line does not apply to it (plan 32's rule: left out).
+- It is a slow field (the tortoise, plan 32 3.1): the page's engine asks the host whether a file holds the text, as
+  it asks for a Windows property, and the item waits for the answer. The host's check is the one of 3.1 (Known files
+  or All files, Only the start, the encoding), so a Contents line and the Containing text find the same.
+- Containing text stays in the dialog as the quick way; Contents is for what it cannot say: two texts, a text in
+  some files only, a file without a text (`Not Contents contains "TODO"`).
 - Where they are tested: the scrap's page tests every item the name search streams to it with the set (the same
   engine as a pane's filter, so a slow field is read as there); what passes goes back to the host for the text check
   (3.1). One engine, so a rule means the same in a filter and in a search; the cost is a round trip per batch of
@@ -98,7 +109,10 @@ Nothing yet.
 
 - Unit: the expression built from a text in each mode, with and without Whole words and Case sensitive; the encodings
   (BOM, UTF-8, the code page); only the start (a match before and after the limit); Known files skipping a binary,
-  All files reading it; rules combined as a filter set is (plan 32's tests reused).
+  All files reading it; rules combined as a filter set is (plan 32's tests reused); a Contents line, its Not and its
+  encoding, on files made for it; a Normal text with `*`, `?` and `;`.
+- In the test copy, Contents as a pane's filter: a folder filtered on a text, the tortoise, the files appearing as the
+  host answers.
 - In the test copy: a search with a text and a size rule into a scrap; Search again keeps both; a Word file and a PDF
   found with All files and not with Known files.
 - Find in the preview (3.5), unit where the page allows, else in the test copy over CDP: a text, a code file, a
@@ -135,10 +149,4 @@ Nothing yet.
 
 ## 4. Open questions
 
-1. **Normal mode's special characters.** Which characters have a meaning of their own in Normal (`$` and `[]` are
-   named), and what does each do? [xplorer2's list: not yet checked.]
-2. **Text settings in a rule.** For a text field, are Find, Verbatim and Regular expression the line's text
-   conditions in place of plan 32's (matches wildcards, matches a regex, contains, is), or added to them, in the search
-   only or in Manage filters too?
-3. **Only the start: the check's default.** On (every search reads at most the setting's size unless unchecked) or off
-   (the size only used when checked)?
+None.
