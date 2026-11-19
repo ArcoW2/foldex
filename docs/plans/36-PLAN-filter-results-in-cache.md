@@ -28,7 +28,8 @@ item, so it is tested again. Switching a filter off shows everything; on again, 
 results are still there. A changed filter is a new id; the results of the old one are dropped. In a tree a folder
 shows when it passes itself or holds, at any depth, an item that passes; the host tests the folders under it in the
 background, as read-ahead reads them, and a folder not known yet shows dimmed. A filter relative to now by the clock
-(minutes, hours) keeps no results; one relative by the date (days and longer) keeps them until the date changes.
+(minutes, hours) keeps no results, so using it again is as slow as the first time, which the line editor warns
+for; one relative by the date (days and longer) keeps them until the date changes.
 
 ## Status
 
@@ -47,7 +48,7 @@ Nothing yet.
 | In the background | testing goes on after the pane leaves, as read-ahead; low priority, stoppable | Requests with a filter | 3.5 |
 | Off and on, changed | off: all shown; on: the id's results used again; a change: a new id, the old results dropped | Filter ids | 3.6 |
 | Trees | a folder shown when it or something under it passes, dimmed while not known yet; the folders under it tested in the background | In the background | 3.7 |
-| Relative dates | relative by the clock: no results kept; relative by the date: kept, dropped when the date changes | Results in the cache | 3.8 |
+| Relative dates | relative by the clock: no results kept, a warning under such a line that using it again is slow; relative by the date: kept, dropped when the date changes | Results in the cache | 3.8 |
 | Tests | see 3.9 | -- | 3.9 |
 
 ## 3. Details
@@ -124,7 +125,11 @@ Nothing yet.
 - A line relative to now (plan 32 3.1: "modified within 7 days", "today", "30 minutes ago") changes its result
   without any change on disk, so its results cannot always be kept:
   - **Relative by the clock** (minutes, hours): its outcome changes from moment to moment. A filter with such a line
-    keeps no results in the cache: every request tests again, as the page does today.
+    keeps no results in the cache: every request tests again, as the page does today. So every time it is used again
+    (the folder opened again, the filter switched on again, a search run again) it is as slow as the first time, and
+    with a slow field in the same filter (a Windows property, Contents) extra slow. The line editor says so under such
+    a line, as it warns for a slow field (plan 32 3.1, plan 20 3.2): a relative time is not kept, so using this filter
+    again is as slow as the first time; days instead of minutes or hours are kept.
   - **Relative by the date** (today, a day, days, weeks, months, years ago or from now): its outcome changes only
     when the date does. Its results are kept as any others, and dropped for every filter id with such a line when the
     date changes (at midnight, or when Foldex sees a new date after the PC slept); its folders in use are then
