@@ -73,7 +73,7 @@ updated whenever a plan is written, built or closed that touches a feature here.
 | Scrap containers (collect from many folders, save) | P+ | built (kept while Foldex runs, plan 06) | 4 | -- |
 | Mini scrap (docked drop stack) | P+ | built (a docked scrap, plan 06) | 4 | Scrap containers; docking (plan 01) or bars (plan 10) |
 | Find files on any property, results as a pane | P+ | part: by name into a scrap built (plan 06); any field, as a filter set (plan 32): plan 20 | 3 | Hyperfilters (the criteria); Scrap containers (the results) |
-| Text in files (IFilters, regex) | P+ | plan 20 (normal, verbatim, regex; known or all files, IFilters where installed; only the start) | 3 | Find files |
+| Text in files (IFilters, regex) | P+ | built (plan 20: normal, verbatim, regex; known or all files, IFilters where installed; only the start; the preview finding it) | 3 | Find files |
 | Indexed search (Windows search index) | U | built (Use search index, with Everything, plan 06) | 3 | Find files |
 | MFT name search | U | -- | 3 | Find files; the elevated helper (plan 05) |
 | Saved searches | P+ | -- | 2 | Find files |

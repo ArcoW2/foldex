@@ -426,21 +426,29 @@ function pdfZoom() {
   pdfPageShown();
 }
 
-async function pdfDraw(p) {
+// A page drawn at the pane's width, with pdf.js's text layer over it (its text, see-through, for the find bar to find
+// and light; previewfind.js). Its promise: drawn (the find bar waits for it).
+function pdfDraw(p) {
   const pdf = pdfShown;
-  if (!pdf || p.done === pdfWidth()) return;
+  if (!pdf || p.done === pdfWidth()) return p.drawing;
   const width = p.done = pdfWidth();
-  const page = await pdf.doc.getPage(p.n);
-  const plain = page.getViewport({ scale: 1 });
-  p.size = plain;
-  const viewport = page.getViewport({ scale: width / plain.width * devicePixelRatio });
-  const canvas = el('canvas');
-  canvas.width = viewport.width;
-  canvas.height = viewport.height;
-  canvas.style.width = `${width}px`;
-  p.el.style.height = `${width * plain.height / plain.width}px`;
-  await page.render({ canvas, canvasContext: canvas.getContext('2d'), viewport }).promise.catch(() => { });
-  if (pdfShown === pdf && p.done === width) p.el.replaceChildren(canvas);
+  return (p.drawing = (async () => {
+    const page = await pdf.doc.getPage(p.n);
+    const plain = page.getViewport({ scale: 1 });
+    p.size = plain;
+    const viewport = page.getViewport({ scale: width / plain.width * devicePixelRatio });
+    const canvas = el('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    canvas.style.width = `${width}px`;
+    p.el.style.height = `${width * plain.height / plain.width}px`;
+    await page.render({ canvas, canvasContext: canvas.getContext('2d'), viewport }).promise.catch(() => { });
+    const layer = el('div', 'pv-textlayer');
+    layer.style.setProperty('--total-scale-factor', String(width / plain.width));
+    await new pdfjs.TextLayer({ textContentSource: page.streamTextContent(), container: layer,
+      viewport: page.getViewport({ scale: width / plain.width }) }).render().catch(() => { });
+    if (pdfShown === pdf && p.done === width) p.el.replaceChildren(canvas, layer);
+  })());
 }
 
 // The bar's page: the page a third down the pane, of all.
@@ -556,4 +564,5 @@ paneHandlers.show = m => {
   else if (m.what === 'still') still(m);
   else if (m.what === 'info') info(m.groups ?? []);
   else message(m.text ?? '');
+  pvFindShown(m.what === 'own' ? m.find : null);   // the find bar on what is shown now (previewfind.js)
 };

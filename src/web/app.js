@@ -2592,6 +2592,7 @@ class PreviewView {
     if (m.kind === 'showAll' && this.path) this.ask({ all: true });
     if (m.kind === 'download' && this.path) this.ask({ download: true });
     if (m.kind === 'close' && layout.pane(this.id)?.fixed) closePane(this.id);   // Esc in F3's preview
+    if (m.kind === 'status') status(m.text, m.warn);   // its find bar's word (previewfind.js)
   }
 
   // Floated or docked again (app.js floatPane, dockPane): Windows' preview where the pane is now.
@@ -2604,7 +2605,7 @@ class PreviewView {
   // The host asked for the preview of the file: its own viewer, Windows' or the properties (plan 04 3.1), with the
   // preview settings; xtra: Show all, Download and preview.
   ask(extra = {}) {
-    post({ op: 'preview', pane: this.id, path: this.path, rect: this.rect(), textKB: settings.previewTextKB ?? 256,
+    post({ op: 'preview', pane: this.id, path: this.path, rect: this.rect(), textKB: this.textKB ?? settings.previewTextKB ?? 256,
       windowsTypes: settings.previewWindowsTypes ?? '', ...extra });
   }
 
@@ -2627,7 +2628,8 @@ class PreviewView {
   }
 
   // Foldex's own preview, when Windows has none for the file (Shell/OwnPreview.cs): drawn by its page.
-  showOwn(own) { this.showing({ what: 'own', own, remoteImages: settings.previewRemoteImages !== false }); }
+  // `find`: F3 from a scrap searched for a text (plan 20 3.5): the page opens its find bar on it.
+  showOwn(own) { this.showing({ what: 'own', own, remoteImages: settings.previewRemoteImages !== false, find: this.find ?? null }); }
 
   // A video or sound its page's player cannot play (a codec it lacks): the picture Windows makes of it (a frame of a
   // video), said to be a still, else that it cannot be previewed.
@@ -3853,6 +3855,13 @@ function floatPreview() {
   Object.assign(layout.pane(id), { fixed: true, path: item });
   const view = new PreviewView(id);
   views.set(id, view);
+  // From a scrap searched for a text (plan 20 3.5): the preview searching it, and reading as far as the search did.
+  const search = views.get(activePane) instanceof ScrapView ? layout.pane(activePane).search : null;
+  if (search?.text) {
+    view.find = { text: search.text, pattern: searchExpression(search.text, search.textMode, search.textWord),
+      case: !!search.textCase, word: !!search.textWord, regex: search.textMode === 'regex' };
+    view.textKB = search.startOnly === false ? 32 * 1024 : Math.max(settings.previewTextKB ?? 256, search.startKB ?? 0);
+  }
   // Where the last one was; an F3 window open there already: the new one at its right.
   const open = [...layout.panes.values()].filter(p => p.fixed && p.id !== id && p.floating?.bounds).map(p => p.floating.bounds);
   let bounds = paneHomes.f3?.bounds ?? open.at(-1) ?? null;

@@ -1,8 +1,10 @@
 # Plan 20: Extended search options
 
-Status: draft 2026-11-12; not started.
+Status: partly executed; see Status and 6 (As built).
 
 - 2026-11-12: draft, at the user's request: the Find dialog's Containing text and Additional rules, split off plan 06.
+- 2026-11-19: partly executed: stage 1 (Containing text, the preview's find bar, F3 from a text scrap, the scrap
+  while it fills, Sort when done).
 
 Builds on plan 06 (the scrap and the Find dialog) and plan 32 (filter sets: the lines, their engine and their
 editor). Built in two stages around plan 36 (filter results in the folder cache, the filter engine run by the host):
@@ -35,25 +37,28 @@ LexPen's searches with Ctrl+F, F3 and Shift+F3.
 
 ### Built
 
-Nothing yet.
+| Part | What | Reference |
+|---|---|---|
+| Containing text | the text and its list; case sensitive, whole words; normal (the filter's wildcards), verbatim or regular expression | 3.1; 6.1 |
+| Which files | known files or all files (Word, PDF, other binaries: Windows' IFilter, else the bytes); the encoding found by itself | 3.1; 6.1 |
+| Only the start | a check (on) and a size in the dialog; its default a setting (2048 KB) | 3.1; 6.1 |
+| Found at once | each batch added at the scrap's end, not sorted in; sorted once at the end; a scrap without a sort keeps the order found | 3.6; 6.2 |
+| Sort when done | a check at the bottom of the Find dialog; its default a setting (on) | 3.6; 6.2 |
+| Responsive | the window answering while a search runs; Stop at once; a search independent of the panes | 3.6; 6.2 |
+| Kept: the text | the text, its options, Sort when done in a scrap's search, Find's last search and Predefined | 3.3; 6.1 |
+| Find in the preview | a find bar in Foldex's own preview, after LexPen's: Ctrl+F, F3, Shift+F3, case, whole word, regular expression; PDF's text too; a warning where a preview cannot be searched | 3.5; 6.3 |
+| F3 from a text scrap | the floating preview opened searching the scrap's text, on its first match, reading as far as the search did | 3.5; 6.3 |
+| Tests, stage 1 | see 3.4 and 6.4 | 3.4; 6.4 |
 
 ### Not yet built
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| Containing text | the text and its list; case sensitive, whole words; normal (the filter's wildcards), verbatim or regular expression | -- | 3.1 |
-| Which files | known files or all files (Word, PDF, other binaries); the encoding found by itself | -- | 3.1 |
-| Only the start | a check (on) and a size in the dialog; its default a setting (2 MB) | -- | 3.1 |
-| Found at once | each batch added at the scrap's end, not sorted in; sorted once at the end; a scrap without a sort keeps the order found | -- | 3.6 |
-| Sort when done | a check at the bottom of the Find dialog; its default a setting (on) | Found at once | 3.6 |
-| Responsive | the window answering while a search runs; Stop at once; a search independent of the panes | -- | 3.6 |
-| Kept | the text, its options, Sort when done in a scrap's search and in Predefined; the rules once they are built | -- | 3.3 |
 | Additional rules | a filter set (plan 32): its lines, brackets, and / or / not, its line editor; tested by the host's engine during the search | plan 36 (the engine in the host) | 3.2 |
-| Contents field | a field of plan 32's lines: the file holds a text, in an encoding (automatic by default), known files or all files; in Find and in a pane's filter; the tortoise and a warning that it can be very slow | plan 36; Which files | 3.2 |
+| Contents field | a field of plan 32's lines: the file holds a text, in an encoding (automatic by default), known files or all files; in Find and in a pane's filter; the tortoise and a warning that it can be very slow | plan 36 | 3.2 |
 | Contents, more | the text kind's other conditions on Contents: wildcards, a regular expression | Contents field | 3.2 |
-| Find in the preview | a find bar in Foldex's own preview, after LexPen's: Ctrl+F, F3, Shift+F3, case, whole word, regular expression; PDF's text too; a warning where a preview cannot be searched | -- | 3.5 |
-| F3 from a text scrap | the floating preview opened searching the scrap's text, on its first match, reading as far as the search did | Containing text; Find in the preview | 3.5 |
-| Tests | see 3.4 | -- | 3.4 |
+| Kept: the rules | the rules in a scrap's search, Find's last search and Predefined | Additional rules | 3.3 |
+| Tests, stage 2 | the rules and Contents, see 3.4 | Additional rules; Contents field | 3.4 |
 
 ## 3. Details
 
@@ -201,3 +206,60 @@ Nothing yet.
 ## 4. Open questions
 
 None.
+
+
+## 6. As built
+
+### 6.1 Stage 1: Containing text (2026-11-19)
+
+- The page builds the expression (`scraps.js` `searchExpression`): Normal escapes the text, `*` becomes `[^\r\n]*`,
+  `?` `[^\r\n]`, `;` alternatives; Whole words wraps it in `\b(?:...)\b`. The host runs it (`Shell/TextSearch.cs`,
+  .NET Regex, CultureInvariant, Multiline, a 2 s time-out per file) in `FileSearch.Run` after the name test, files only.
+- Known files: the own preview's text kinds (text, code, markdown, HTML, CSV) or a file of another type whose start
+  looks like text (`OwnPreview.LooksLikeText`), read as the preview reads them (`OwnPreview.Decode`). So the encoding
+  without a BOM is UTF-8 when valid, else Latin-1, not the system's code page as 3.1 says: one reader for the search
+  and the preview, so both find the same.
+- All files, any other file: Windows' IFilter (`LoadIFilter` from query.dll), initialised with the index and other
+  attributes to apply (without them the plain text filter gives no text at all); a filter that gives no text, or no
+  filter: the file's bytes. On this PC .docx, .xlsx, .doc, .msg, .odt and .pdf have a filter (their
+  PersistentHandler in the registry); whether .pdf's comes with Windows or with another program: not checked.
+- The settings are in Settings > Search and scrap > Find (the tab that holds the search's settings), not Contents as
+  3.1 says: `searchStartKB` (2048) and `findSortWhenDone` (true). The earlier texts are kept in searches.json `text`.
+- The dialog is 620 px wide (it was 560): the rows of Containing text's options fit then.
+
+### 6.2 Stage 1: the scrap while it fills
+
+- `FileSearch.Run` sends what it found every 250 ms also while it tests candidates that do not match (before, only
+  when the next match came, so a slow text check could hold a found item back).
+- `ScrapView.add` while searching only appends (`addFound`: the batch through the scrap's own filter, no sort);
+  `searched` sorts once (`searchChanged`). `ScrapView.comparer`: without a sort, or with Sort when done off
+  (`keepFound`), the scrap's own order; a click on a title or the Sort window (`sortEntries`) ends `keepFound`.
+
+### 6.3 Stage 1: the preview's find bar
+
+- `previewfind.js` in preview.html: the bar over the content's top right; keys in the capture phase, before pane.js;
+  CSS highlights (`pv-find`, `pv-find-cur`), also in previewdoc.css for markdown and HTML in their shadow root.
+- PDF: pdf.js's text of every page (`getTextContent`) for the matches and the count; the current match lit in its
+  page's text layer (pdf.js 6's `TextLayer`, drawn with the page in `pdfDraw`, its CSS from pdf.js's own rules).
+- F3 from a scrap with a text (`floatPreview`): the view's `find` (text, expression, case, whole words, regex) goes
+  with the own preview's show; the bar uses the scrap's expression while its text is unchanged. The preview reads
+  the file to the search's start limit (at least previewTextKB), or 32 MB when the search read files whole.
+- Found while testing, not in this plan: a floating window's WebView2 did not serve the own preview's files (only
+  the main window called `OwnPreview.Serve`), so a PDF, an image or a video in an F3 window could not load; PaneForm
+  serves them now. A preview pane's page could not put a word on the status line (`PreviewView.receive` had no
+  `status`); it can now (Ctrl+F on an image).
+
+### 6.4 Stage 1: tests
+
+- `dotnet test`: 279 passed. New: `TextSearchTests` (the expression in each mode read the same by JavaScript under
+  Jint and by .NET; whole words; the encodings; Known files and All files on a binary; only the start; Windows' text
+  filter through the IFilter interop; a search with a text), `ScrapTests` (searches.json's `text`).
+- In a test copy (built to src\bin\alt, its own data folder, CDP into its pages) on a folder made for it: a search
+  for "needle" found a.txt, b.md and d.cs, not a 3 MB file with it past 2 MB, not a PDF (Known files), not a folder
+  named after it; with the whole file the large one too; with All files the PDF; a regular expression and Whole words
+  as expected. Through the dialog: its rows, the options disabled without a text, OK into a new scrap, the text kept.
+  On C:\Program Files ("copyright"): items from the first second on, the first ones not moving, the scrap's page
+  answering in 11 to 28 ms while it ran, Stop ending it. Sort when done on and off with a sort by name, descending.
+  F3 from the scrap on a.txt: the window with the keyboard, the bar on "needle", 1 of 2 lit; F3, Shift+F3, Esc, Ctrl+F
+  (its text selected), Esc twice closing the window; b.md (shadow root) and e.pdf (3 matches over 2 pages, lit in the
+  text layer); Ctrl+F on an image: the warning; the docked preview (Alt+P) with the bar.
