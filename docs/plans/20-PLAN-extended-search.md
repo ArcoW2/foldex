@@ -22,7 +22,8 @@ known files or all files; by default only the start of a file) and Additional ru
 Contents: a line on it tests whether a file holds a text, known files or all files, in a search and in a pane's
 filter alike, with a warning that it can be very slow. The rules are
 tested on what the name search finds, the text on what passes them. Every item found shows in the scrap at once, at
-its end; when the search ends the scrap is sorted once by its own sort (none: kept as found). Searching and filtering
+its end; when the search ends the scrap is sorted once by its own sort (none: kept as found), unless the Find
+dialog's Sort when done (its default a setting, on) is unchecked. Searching and filtering
 never hold the window up: Stop works at once, a search goes on wherever the panes go, a filter starts again on the
 folder a pane moves to. Both are kept with a
 scrap's search and in saved searches. F3 on a file in a scrap whose search has a text opens its preview already
@@ -46,6 +47,7 @@ Nothing yet.
 | Contents field | a field of plan 32's lines: the file holds a text, in an encoding (automatic by default), known files or all files; in Find and in a pane's filter; the tortoise and a warning that it can be very slow | Which files | 3.2 |
 | Contents, more | the text kind's other conditions on Contents: wildcards, a regular expression | Contents field | 3.2 |
 | Found at once | each batch added at the scrap's end, not sorted in; sorted once at the end; a scrap without a sort keeps the order found | -- | 3.6 |
+| Sort when done | a check at the bottom of the Find dialog; its default a setting (on) | Found at once | 3.6 |
 | Responsive | the window answering while a search or a slow filter runs; Stop at once; a search independent of the panes; a filter restarted on a new folder | -- | 3.6 |
 | Kept | all of it in a scrap's search and in Predefined | -- | 3.3 |
 | Find in the preview | a find bar in Foldex's own preview, after LexPen's: Ctrl+F, F3, Shift+F3, case, whole word, regular expression; PDF's text too; a warning where a preview cannot be searched | -- | 3.5 |
@@ -116,7 +118,7 @@ Nothing yet.
 ### 3.3 Kept
 
 - Part of a scrap's search (plan 06 3.4) and of a saved search (Predefined), with Find's last search (`searches.json`
-  `last`): the text and all its options of 3.1, the start size, the rules.
+  `last`): the text and all its options of 3.1, the start size, the rules, Sort when done (3.6).
 
 ### 3.4 Tests
 
@@ -172,6 +174,11 @@ Nothing yet.
   columns' sort, plan 28 3.4). A scrap without a sort (its sort list empty: a new scrap's, or emptied in the Sort
   window) keeps the order found. Today a scrap without a sort is sorted by name (`byName`): for a scrap, an empty sort
   means its own order (`scrapMerge`'s). A click on a title sorts by that column, as in any list (`sortAfterClick`).
+- **Sort when done**, a check at the bottom of the Find dialog, on the row of its buttons (beside Clear): checked,
+  the scrap is sorted at the end as above; unchecked, it keeps the order found, whatever its sort, until a click on a
+  title or the Sort window sorts it. Its default is a new setting (Settings, Contents, with the search's other
+  settings; on as shipped); the check is kept with the scrap's search, Find's last search and a saved search (3.3),
+  so Search again and a Predefined search bring back what they had.
 - **Responsive.** The search runs in the host, never in the page (as now); the text check (3.1) and the rules'
   slow fields as well. The page does only the small work per batch above, so keys, the mouse, other panes and their
   folders keep answering while a search runs, however many items come.
@@ -189,6 +196,8 @@ Nothing yet.
   moves, the keyboard moves the focus in another pane meanwhile; Stop: the search ends at once, the scrap sorted; a
   scrap without a sort: the order found kept; the active pane moved to three folders during a search: the search goes
   on unchanged; a folder filtered on Contents, left before it is done: no more answers for it, the new folder filtered.
+  Sort when done unchecked: a sorted scrap keeps the order found at the end; the setting off: the check starts
+  unchecked in a new Find.
 
 ## 4. Open questions
 
