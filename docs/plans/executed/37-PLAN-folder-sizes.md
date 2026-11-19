@@ -1,8 +1,9 @@
 # Plan 37: Folder sizes (Ctrl+D, or automatic), kept while Foldex runs
 
-Status: not started.
+Status: executed; see As built (section 6).
 
 - 2026-11-19: draft, at the user's request.
+- 2026-11-19: executed.
 
 Builds on plan 24 (the folder cache: one read per folder, its watches, its memory), plan 11 / 28 (the columns: Size),
 plan 36 (work in the background in the host, told to the windows as it is done). xplorer2's Ctrl+D (folder sizes;
@@ -32,25 +33,29 @@ Refresh lets go of the sizes in the folder refreshed. Sorting by Size sorts the 
 
 ### Built
 
+| Part | What | Reference |
+|---|---|---|
+| Ctrl+D | the action, its key, its order: the focused folder, the selected ones, the rest | 3.1; 6.1 |
+| Automatic | the setting: every folder a pane shows counted by itself; off by default; shares only when they are cached | 3.2; 6.2 |
+| Counting | the host walks a folder's tree off the window's thread, at low priority, a record per folder; going on when the pane leaves | 3.3; 6.3 |
+| Shown | the Size column of a folder: its size, marked while counted; the status line's total of the selection with them | 3.4; 6.4 |
+| Kept | in the folder cache, under its budget; shown at once wherever the folder shows again; the ones no window shows going first when over it | 3.5; 6.5 |
+| Changes | a change: that folder's own files read again, the difference added up the chain; lost changes and Refresh: counted again or let go | 3.6; 6.6 |
+| Sorting | by Size, folders with a size among the files | 3.7 |
+| Size format | at the user's request during the build: sizes in bytes or short, the tooltip in every unit | 6.7 |
+| Tests | see 3.8 | 3.8; 6.8 |
+
 ### Not yet built
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| Ctrl+D | the action, its key, its order: the focused folder, the selected ones, the rest | -- | 3.1 |
-| Automatic | the setting: every folder a pane shows counted by itself; off by default; shares only when they are cached | Counting | 3.2 |
-| Counting | the host walks a folder's tree off the window's thread, at low priority, a record per folder; going on when the pane leaves | -- | 3.3 |
-| Shown | the Size column of a folder: its size, marked while counted; the status line's total of the selection with them | Counting | 3.4 |
-| Kept | in the folder cache, under its budget; shown at once wherever the folder shows again; the ones no window shows going first when over it | Counting | 3.5 |
-| Changes | a change: that folder's own files read again, the difference added up the chain; lost changes and Refresh: counted again or let go | Kept | 3.6 |
-| Sorting | by Size, folders with a size among the files | Shown | 3.7 |
-| Tests | see 3.8 | -- | 3.8 |
 
 ## 3. Details
 
 ### 3.1 Ctrl+D
 
-- Action `folders.size` ("Folder sizes"), Ctrl+D (free in the shipped keys.json), in F1 and on the ribbon's View tab
-  [where on it: as the ribbon's other view buttons; written when built].
+- Action `folders.size` ("Folder sizes"), Ctrl+D (free in the shipped keys.json), in F1 and on the ribbon's View tab,
+  group Columns, under Fit all columns.
 - The order (CLAUDE.md: the focused item is the one the cursor is on, the selected ones the ones an action for several
   items works on): the focused folder first, then the other selected folders, then the rest of the folders the pane
   shows.
@@ -59,8 +64,8 @@ Refresh lets go of the sizes in the folder refreshed. Sorting by Size sorts the 
 
 ### 3.2 Automatic
 
-- A setting "Folder sizes: count automatically" (`folderSizesAuto`, a toggle, off by default) [its group in the
-  settings window: written when built]. Off by default because one folder shown can start a walk of a whole drive.
+- A setting "Count folder sizes automatically" (`folderSizesAuto`, a toggle, off by default), in the settings window's
+  Contents tab, group Columns. Off by default because one folder shown can start a walk of a whole drive.
 - On: every folder a pane shows is counted as Ctrl+D would (3.1's order, the focused folder first), when the pane
   shows it; a folder with a kept size is not counted again.
 - Shares only when "Cache network shares" (`cacheNetwork`) is on, and never while one is unreachable (plan 24 3.8).
@@ -80,8 +85,8 @@ Refresh lets go of the sizes in the folder refreshed. Sorting by Size sorts the 
 
 ### 3.4 Shown
 
-- In the Size column of a folder's row, as a file's size is shown; while it is counted a mark in its place (an
-  hourglass or "..." [written when built]); a tooltip with the number of files and folders in it.
+- In the Size column of a folder's row, as a file's size is shown; while it is counted "..." in its place (tooltip
+  "Being counted"); a tooltip with the number of files and folders in it.
 - The status line's total of the selection counts a selected folder's size when it has one, and says when some
   selected folders have none.
 
@@ -91,9 +96,9 @@ Refresh lets go of the sizes in the folder refreshed. Sorting by Size sorts the 
   3.6), its files and folders. Any pane, in any window, showing that folder's row shows the size at once.
 - Only while Foldex runs; not on disk. Kept across a restart it would almost always be changed, and a folder's date
   says nothing of changes deeper down, so it would not be reliable.
-- Under the cache's one budget (`folderCacheMB`), no budget of its own. Measured: a record takes about 275 bytes (a
-  table of path to four numbers, 119145 folders under D:\temp, paths of 78 characters on average; PowerShell,
-  2026-11-19); the count used for the budget is set from a measurement of the built record [not yet measured].
+- Under the cache's one budget (`folderCacheMB`), no budget of its own. A record takes 327 bytes, measured on the built
+  record (FolderSizesTests.WhatARecordTakes: 2001 records, paths of 94 characters); the budget counts it so
+  (FolderSizes.RecordBytes).
 - Over the budget: the records of folders no window shows go first, the ones used longest ago and the deepest first; a
   folder's total stays right when the records under it go. A record a window shows never goes. A folder whose record
   went is counted again when it shows with the setting on (3.2), or on Ctrl+D: disk time, never a wrong size.
@@ -133,3 +138,79 @@ Refresh lets go of the sizes in the folder refreshed. Sorting by Size sorts the 
 ## 4. Open questions
 
 None.
+
+## 6. As built
+
+### 6.1 Ctrl+D
+
+- `folders.size` in actions.js (group View), Ctrl+D in keys.json, a button in the shipped ribbon.json (View, Columns).
+  A ribbon of your own (ribbon.json in the data folder) does not get the button by itself: add it in the ribbon's
+  change mode.
+- It runs in the pane's page (a list or a tree, a scrap too): `countSizes` on ListView and TreeView. A list: the
+  focused folder, the other selected folders, then the other folders it shows. A tree (it has no selection): the focused
+  folder, then the other folders it shows.
+- The page marks the folders it asked for as being counted and posts them (`sizeFolders`); the host puts them before
+  what was asked earlier.
+
+### 6.2 Automatic
+
+- After a list is read (and after a folder came in item by item) the page asks the host what it knows of its folders
+  (`folderSizes`) and, with the setting on, counts the rest. A tree asks for the folder rows it draws, once each, and
+  only when it shows the Size column. Switching the setting on counts the lists shown at once.
+- A share with Cache network shares off: the host says it is skipped, the mark goes.
+
+### 6.3 Counting
+
+- `src/Shell/FolderSizes.cs`: one worker thread at below-normal priority, its disk reads at background priority
+  (THREAD_MODE_BACKGROUND_BEGIN); it waits while the folder cache answers a window (`Busy`).
+- One walk at a time: a folder asked for while a large tree is walked waits for that walk.
+- A walk takes a folder in it that has a record as it is (kept current), so counting a folder above folders counted
+  before only reads what is new.
+- A folder in the tree that cannot be read counts as empty; the folder asked for itself: skipped.
+
+### 6.4 Shown
+
+- columns.js keeps the sizes told by path (`folderSizes`); the Size column, its sort and its tooltip read them, so a
+  list, a tree and a scrap show the same.
+- There was no total of the selection in the status line before this plan: now, with more than one item selected,
+  "N selected: size", and "; n folders without a size (Ctrl+D)" when some selected folders have none.
+
+### 6.5 Kept
+
+- The folder cache counts the records in its budget (`ExtraBytes`); over it, the cache lets go of its folders first (a
+  folder is read again sooner than a tree is walked again), then the records: only ones with none under them, the
+  deepest and the ones used longest ago first, never one in a folder a window shows. Its parent is marked, so a
+  deletion there is not mistaken for a file's.
+- The settings window's memory figure for the folder cache counts the records too.
+
+### 6.6 Changes
+
+- The watch (with its subfolders) is on the folder a counted folder is in, not on each counted folder: the folders
+  counted in one list share one watch; a watch above makes the ones under it go. A watch goes when no record is under
+  it any more.
+- A change is put in once things are quiet for 300 ms. Changes under a folder being walked wait for its walk; each
+  change is put in so that seeing it twice does no harm (a folder made: counted, the difference with what was known
+  added).
+- A watch that cannot be made (some shares): the size is told, not kept.
+- F5 lets go in the host when the list or tree asks its folder from disk again (MainForm `list` with `fresh`).
+
+### 6.7 Size format (asked during the build)
+
+- Setting `sizeFormat` (Contents > Columns, "Sizes"): short (1.9 MB, as before) or in bytes (1,966,080, with the
+  separators of Windows' language). Every column of kind size follows it; they sort by the bytes either way.
+- A size cell's tooltip: the bytes, then KB, MB, GB and TB as far as the size reaches (MB too, between KB and GB); a
+  folder's adds its files and folders.
+
+### 6.8 Tests
+
+- Unit (FolderSizesTests): a tree counted with a record per folder and no read of the cache; a junction not followed;
+  a file grown three folders down, a file made, a folder deleted and a folder made, each added up by its difference;
+  F5; over the budget the deepest records go and a change under one that went lets go of the ones above; what a record
+  takes. All tests: 293 passed.
+- In a test copy (CDP): Ctrl+D in a list with three folders: their sizes, the tooltips with files and folders; a file of
+  5 MB written two folders down: the folder's size grew without counting again; sorted by Size descending; two items
+  selected: the total in the status line; F5: the sizes gone; the setting on: counted after the list was read again;
+  sizes in bytes and the tooltips in every unit.
+- Not tried in a test copy: a share, a tree with the Size column, a watch losing changes (covered by code only), the
+  memory budget filling up (covered by the unit test).
+

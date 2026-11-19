@@ -101,6 +101,7 @@ const RIBBON_ICONS = (() => {
     'info.pane': ['Pane info', '<circle cx="8" cy="8" r="6.5"/>' + p('M8 7v4.5') + dot(8, 4.6)],
     'hidden.toggle': ['Hidden items', `<path d="${page}" stroke-dasharray="2 1.6"/>` + p('M6 11.5h3') + dot(12, 12)],
     'columns.fit': ['Fit all columns', win + p('M8 2.5v3M8 10.5v3M4 8h8M5.5 6.5L4 8l1.5 1.5M10.5 6.5L12 8l-1.5 1.5')],
+    'folders.size': ['Folder sizes', p(folder) + p('M5 10.5h6M5 8.5h3.5')],
     'columns.fitName': ['Fit columns', win + p('M8 2.5v3M8 10.5v3M4 8h8M5.5 6.5L4 8l1.5 1.5M10.5 6.5L12 8l-1.5 1.5')],
     // Projects and layouts
     'projects.menu': ['Projects', p(projects)],

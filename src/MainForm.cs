@@ -361,6 +361,7 @@ sealed class MainForm : Form
                 {
                     app.Cache.Invalidate(msg["location"]!.GetValue<string>());
                     Shell.NetworkGuard.Forget(msg["location"]!.GetValue<string>());
+                    app.Sizes.Forget(msg["location"]!.GetValue<string>());   // its folder sizes too (plan 37 3.6)
                 }
                 await List(msg["location"]!.GetValue<string>(), msg["req"]?.GetValue<int>() ?? 0,
                     msg["channel"]?.GetValue<string>() ?? "", msg["foldersOnly"]?.GetValue<bool>() == true, msg["tree"]?.GetValue<bool>() == true);
@@ -694,6 +695,17 @@ sealed class MainForm : Form
             case "filterForget":
                 app.Filters.Forget(msg["filter"]!.GetValue<string>());
                 break;
+            // Folder sizes (docs/plans/executed/37-PLAN-folder-sizes.md): folders to count (Ctrl+D, or the setting: `auto`), told as
+            // each is done (AppHost); the sizes known of folders shown, and which of them wait to be counted.
+            case "sizeFolders":
+                app.Sizes.Count(msg["folders"]!.AsArray().Select(n => n!.GetValue<string>()).ToList(), msg["auto"]?.GetValue<bool>() == true);
+                break;
+            case "folderSizes":
+            {
+                var (sizes, counting) = app.Sizes.Known(msg["folders"]!.AsArray().Select(n => n!.GetValue<string>()).ToList());
+                Post(new JsonObject { ["event"] = "answer", ["req"] = msg["req"]?.DeepClone(), ["sizes"] = sizes, ["counting"] = counting });
+                break;
+            }
             case "git":
             {
                 var folder = msg["folder"]!.GetValue<string>();

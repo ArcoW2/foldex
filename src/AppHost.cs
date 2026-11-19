@@ -100,6 +100,8 @@ sealed class AppHost : ApplicationContext
     public Shell.FilterJobs Filters { get; }
     /// <summary>Network and its machines, known at once and listed again in the background (Shell/PlaceCache.cs).</summary>
     public Shell.PlaceCache Places { get; }
+    /// <summary>Folder sizes worked out in the background, kept current while Foldex runs (plan 37).</summary>
+    public Shell.FolderSizes Sizes { get; }
     public Shell.FolderUse Use { get; } = new(DataFolder.StatePath(DataDir, Shell.FolderUse.Name));
     Shell.ReadAhead? readAhead;
     readonly System.Windows.Forms.Timer cacheTimer = new() { Interval = 5000 };
@@ -125,7 +127,7 @@ sealed class AppHost : ApplicationContext
     public JsonObject CacheInfo()
     {
         var (bytes, count) = Cache.Info();
-        return new JsonObject { ["event"] = "cacheInfo", ["bytes"] = bytes, ["folders"] = count, ["readAhead"] = readAhead?.Done ?? 0, ["reads"] = Cache.Reads };
+        return new JsonObject { ["event"] = "cacheInfo", ["bytes"] = bytes + Sizes.Bytes, ["folders"] = count, ["readAhead"] = readAhead?.Done ?? 0, ["reads"] = Cache.Reads };
     }
 
     /// <summary>The file operations of every window; each window is told of every change.</summary>
@@ -164,6 +166,13 @@ sealed class AppHost : ApplicationContext
             },
         };
         Places = new Shell.PlaceCache((place, ids) => Changed(place, ids));
+        // Sizes known or gone: every window (its panes' pages too) shows them where the folder is.
+        Sizes = new Shell.FolderSizes(Cache, told =>
+        {
+            told["event"] = "folderSizes";
+            foreach (var w in windows.ToList())
+                if (w.IsHandleCreated) w.BeginInvoke(() => w.Tell((JsonObject)told.DeepClone()));
+        });
         ConfigureCache();
         // Now and then: the folder use written, and Windows asked whether memory is short (then the cache lets go of
         // every folder no window shows).

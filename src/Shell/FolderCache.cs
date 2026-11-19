@@ -191,6 +191,12 @@ sealed class FolderCache : IDisposable
 
     bool IsShown(string key) => shownBy.Values.Any(s => s.Contains(key));
 
+    /// <summary>The folders the windows show now (plan 37 3.5: the sizes of the folders in them are not let go).</summary>
+    public HashSet<string> ShownLocations()
+    {
+        lock (gate) return shownBy.Values.SelectMany(s => s).ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
     /// <summary>A listing as ShellListing.List gives it, from the cache: the bare read made or waited for, then this
     /// request's extras, in batches. `count`: the number of items it will give, as soon as it is known. Not a
     /// cached place, or a folder that cannot be read: listed as before (with its error).</summary>
@@ -488,10 +494,13 @@ sealed class FolderCache : IDisposable
 
     // ---------- Memory (3.5) ----------
 
+    /// <summary>What else counts toward the budget: the folder sizes' records (plan 37 3.5).</summary>
+    public Func<long>? ExtraBytes;
+
     // Over the budget: the folders used longest ago let go (under the gate), never one a window shows or one being read.
     void Trim()
     {
-        var total = folders.Values.Sum(SizeOf);
+        var total = folders.Values.Sum(SizeOf) + (ExtraBytes?.Invoke() ?? 0);
         if (total <= BudgetBytes) return;
         foreach (var f in folders.Values.Where(f => f.Reading is null && !IsShown(Key(f.Path))).OrderBy(f => f.LastUsed).ToList())
         {
@@ -536,7 +545,7 @@ sealed class FolderCache : IDisposable
     /// <summary>Whether there is room for more without letting anything go.</summary>
     public bool Room(double share = 1)
     {
-        lock (gate) return folders.Values.Sum(SizeOf) < BudgetBytes * share;
+        lock (gate) return folders.Values.Sum(SizeOf) + (ExtraBytes?.Invoke() ?? 0) < BudgetBytes * share;
     }
 
     /// <summary>Read ahead: a folder's bare read and its folders' tree extras (whether each has folders in it), no icons.

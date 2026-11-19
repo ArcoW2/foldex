@@ -18,7 +18,7 @@ const PageActions = new Set(['item.rename', 'folder.new', 'file.new']);
 const PagedHere = new Set(['ids', 'content', 'iconsView', 'thumbsView', 'shows', 'tabTitle', 'folderTitle', 'showsFiles', 'quickAccessShown', 'topFolder']);
 // The events of the host every pane's page gets as well: what they change is used there too.
 const PageEvents = new Set(['settings', 'columnSets', 'bookmarks', 'searches', 'renames', 'filters', 'propList', 'fileOp', 'folderChanged',
-  'filterStale']);
+  'filterStale', 'folderSizes']);
 
 const isPaged = v => !!v?.paged;
 

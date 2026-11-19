@@ -344,6 +344,10 @@ action('columns.fit', { title: 'Fit all columns', hint: 'every column as wide as
   group: 'view', enabled: () => !!activeColumns(), run: () => activeColumns().fitColumns('all') });
 action('columns.fitName', { title: 'Fit columns', hint: 'the columns whose Fit is manual or auto as wide as their widest value here; the name column when none is',
   group: 'view', enabled: () => !!activeColumns(), run: () => activeColumns().fitColumns('fit') });
+// Folder sizes (docs/plans/executed/37-PLAN-folder-sizes.md): counted in the host, in the Size column; the setting
+// folderSizesAuto does it by itself.
+action('folders.size', { title: 'Folder sizes', hint: 'the size of the folders here in the Size column, counted in the background: the focused folder first, then the selected ones, then the rest; kept while Foldex runs',
+  group: 'view', enabled: () => !!activeColumns(), run: () => activeColumns().countSizes() });
 action('columns.manage', { title: 'Manage column sets', hint: 'rename, delete, duplicate and edit the column sets; which folders use them',
   group: 'view', run: () => openManageSets() });
 // Bars (docs/plans/executed/10-PLAN-bars.md 3.3; bars.js): added from here too, so a window without bars can get one back.

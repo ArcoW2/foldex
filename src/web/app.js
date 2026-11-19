@@ -1268,6 +1268,20 @@ class TreeView {
     this.rows.replaceChildren(...nodes);
     askIcons(missing, []);
     if (noProps.length) this.askProps(noProps, propNames);
+    // Folder sizes (plan 37): the folders drawn asked about once; with the setting on, counted.
+    if (cols.some(c => c.id === 'size')) {
+      const ask = this.flat.slice(first, last).filter(n => n.folder !== false && !n.qa && !n.up && !n.bm && isDiskPath(n.id)
+        && !sizesAsked.has(sizeKey(n.id))).map(n => n.id);
+      for (const id of ask) sizesAsked.add(sizeKey(id));
+      if (ask.length) askFolderSizes(ask).then(() => { if (settings.folderSizesAuto) countFolderSizes(ask, true); });
+    }
+  }
+
+  // Ctrl+D (plan 37 3.1): the focused folder first, then the other folders shown.
+  countSizes() {
+    const focus = this.focused();
+    const folders = this.flat.filter(n => n.folder !== false && !n.qa && !n.up && !n.bm);
+    countFolderSizes([...(focus && folders.includes(focus) ? [focus] : []), ...folders.filter(n => n !== focus)].map(n => n.id));
   }
 
   nodeAt(target) {
@@ -2039,6 +2053,7 @@ class ListView {
       if (focus && offset !== null) this.body.scrollTop = this.entries.indexOf(focus) * RowHeight - offset;
       this.render();
       this.autoFit();   // an item come in or changed: an auto column follows (plan 28 3.6)
+      if (settings.folderSizesAuto && m.entries.some(x => x.folder)) this.countSizes(true);   // a folder come in (plan 37 3.2)
       if (activePane === this.id && $('status').textContent.startsWith(`${this.name}: `))
         status(`${this.name}: ${this.entries.length} items`, false, 'verbose');
     });
@@ -2198,6 +2213,7 @@ class ListView {
     if (this.id === activePane && now) showGlobal(now);
     this.backDone();
     this.askColumnValues();
+    this.askSizes();
     if (this.cols.sort.some(s => propsFor(s.id).length)) this.sortEntries();
     this.autoFit();
     ribbonRefresh();
@@ -2305,6 +2321,7 @@ class ListView {
     if (!quiet) {
       focusItem(this.id, { id: x.id, folder: x.folder });
       recordStep();   // kept with the current step (3.6)
+      this.tellSelection();
     }
     ribbonRefresh();
   }
@@ -2350,6 +2367,39 @@ class ListView {
     this.selected = new Set(this.entries.filter(x => !x.up).map(x => x.id));
     layout.state(this.id).selection = [...this.selected];
     this.render();
+    this.tellSelection();
+  }
+
+  // The status line, with more than one item selected: what they take, a folder by its size (plan 37 3.4), and how many
+  // selected folders have none.
+  tellSelection() {
+    if (this.selected.size < 2) return;
+    let total = 0, without = 0, n = 0;
+    for (const x of this.entries) {
+      if (!this.selected.has(x.id)) continue;
+      n++;
+      const s = x.folder ? folderSizeOf(x) : null;
+      if (!x.folder) total += x.size ?? 0;
+      else if (s && s !== 'counting') total += s.size;
+      else without++;
+    }
+    status(`${n} selected: ${formatSize(total)}${without ? `; ${without} ${without > 1 ? 'folders' : 'folder'} without a size (Ctrl+D)` : ''}`, false, 'verbose');
+  }
+
+  // Folder sizes (plan 37): what the host knows of the folders here; with the setting on, the rest counted.
+  async askSizes() {
+    const folders = this.all.filter(x => x.folder && !x.up).map(x => x.id);
+    await askFolderSizes(folders);
+    if (settings.folderSizesAuto) this.countSizes(true);
+  }
+
+  // Ctrl+D (3.1), or the setting (`auto`): the focused folder first, then the other selected ones, then the rest shown.
+  countSizes(auto = false) {
+    const focus = layout.state(this.id).focus;
+    const folders = this.entries.filter(x => x.folder && !x.up);
+    const first = folders.filter(x => same(x.id, focus));
+    const picked = folders.filter(x => this.selected.has(x.id) && !same(x.id, focus));
+    countFolderSizes([...first, ...picked, ...folders.filter(x => !first.includes(x) && !picked.includes(x))].map(x => x.id), auto);
   }
 
   // A folder opened in this list itself: a list without a parent (or pinned) goes there on its own (plan 12 3.3).
@@ -4442,9 +4492,13 @@ function settingsChanged(before) {
   applyTheme();
   if (before.showHidden !== settings.showHidden) {
     for (const v of views.values()) if (layout.pane(v.id)?.hidden === undefined && !isPaged(v)) if (v instanceof TreeView) v.flatten(); else v.refresh();
-  } else if (before.treeExpanders !== settings.treeExpanders || before.showExtensions !== settings.showExtensions) {
+  } else if (before.treeExpanders !== settings.treeExpanders || before.showExtensions !== settings.showExtensions
+    || before.sizeFormat !== settings.sizeFormat) {
     for (const v of views.values()) if ((v instanceof TreeView || v instanceof ListView) && !isPaged(v)) v.render();
   }
+  // Folder sizes counted by themselves switched on (plan 37 3.2): the lists here count theirs now.
+  if (settings.folderSizesAuto && !before.folderSizesAuto)
+    for (const v of views.values()) if (v instanceof ListView && !isPaged(v) && v.location) v.countSizes(true);
   if (before.quickAccess !== settings.quickAccess) for (const v of views.values()) if (v instanceof TreeView && !isPaged(v)) v.quickAccessChanged();
   if (before.ribbonGroupNames !== settings.ribbonGroupNames || before.ribbonLabelWidth !== settings.ribbonLabelWidth) renderRibbon();
   ribbonRefresh();
@@ -4533,6 +4587,8 @@ const events = {
   git(m) { columnReply(m); },
   // A pane's filter worked out by the host (plan 36 3.4, 3.7).
   filterResults(m) { columnReply(m); },
+  // Folder sizes known or gone in the host (plan 37).
+  folderSizes(m) { folderSizesCame(m); },
   filterHolds(m) { columnReply(m); },
   // Folders whose filter answers went in the host (a change in them or under them): the trees here ask again.
   filterStale(m) {

@@ -101,7 +101,7 @@ updated whenever a plan is written, built or closed that touches a feature here.
 | Feature | Edition | Foldex | Prio | Depends on |
 |---|---|---|---|---|
 | Synchronize / compare folders, subfolders | All / P+ | plan 01 3.3 (later) | 3 | Robust copy (to copy what differs) |
-| Folder statistics, folder sizes | P+ | plan 37 (Ctrl+D or automatic, kept while Foldex runs) | 3 | Columns (a size column for folders) |
+| Folder statistics, folder sizes | P+ | built (plan 37: Ctrl+D or automatic, kept while Foldex runs; folder statistics --) | 3 | Columns (a size column for folders) |
 | Find empty folders | P+ | -- | 3 | Find files |
 | Duplicate finder | P+ | -- | 3 | Scrap containers (the results) |
 | Fast duplicate detection | U | -- | 3 | Duplicate finder |

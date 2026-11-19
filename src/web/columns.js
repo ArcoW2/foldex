@@ -100,8 +100,15 @@ function naturalCompare(a, b) {
   return x.length - y.length;
 }
 
+// Folder sizes (docs/plans/executed/37-PLAN-folder-sizes.md): what the host told, by path (sizeKey): { size, files, folders }, or
+// 'counting' while it is counted.
+const folderSizes = new Map();
+const sizeKey = p => (p.length > 3 ? p.replace(/\\+$/, '') : p).toLowerCase();
+const folderSizeOf = x => x.folder && !x.up && x.id ? folderSizes.get(sizeKey(x.id)) : undefined;
+
 // The value of an item's column to sort by: a number (sizes, dates, numbers, a property's raw value), a text, or null.
 function sortValue(x, id, kind) {
+  if (id === 'size' && x.folder) return folderSizeOf(x)?.size ?? null;
   if (id.includes('.')) {
     const v = x.props?.[id];
     return v ? (v[1] ?? v[0]) : null;
@@ -218,15 +225,33 @@ function propListCame(list) {
 
 // ---------- Values shown ----------
 
+// A size as a column shows it (setting sizeFormat): the number of bytes, or short (1.9 MB). Sorted by the bytes either
+// way (sortValue).
+const shownSize = n => settings?.sizeFormat === 'bytes' ? n.toLocaleString() : formatSize(n);
+
+// A size cell's tooltip: the bytes, then in KB, MB, GB and TB as far as the size reaches.
+function sizeLines(n) {
+  const lines = [`${n.toLocaleString()} bytes`];
+  ['KB', 'MB', 'GB', 'TB'].forEach((unit, k) => {
+    const v = n / 1024 ** (k + 1);
+    if (v >= 1) lines.push(`${v.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${unit}`);
+  });
+  return lines.join('\n');
+}
+
 function columnText(x, id) {
   if (id.includes('.')) return x.props?.[id]?.[0] ?? '';
   const c = columnInfo(id);
   if (id === 'git') return x.git ? GitWords[x.git] ?? x.git : '';
   if (id === 'gps') return hasGps(x) ? 'GPS' : '';
   if (id === 'gpsLocation') return gpsText(x);
+  if (id === 'size' && x.folder) {
+    const s = folderSizeOf(x);
+    return s === 'counting' ? '...' : s ? shownSize(s.size) : '';
+  }
   const v = x[id];
   if (v == null || v === '') return '';
-  if (c.kind === 'size') return formatSize(v);
+  if (c.kind === 'size') return shownSize(v);
   if (c.kind === 'date') return dateFormat.format(v);
   return String(v);
 }
@@ -259,7 +284,78 @@ function columnCell(c, k, x, sorted) {
   cell.className = 'cell' + (k === 0 ? ' first' : '') + (c.id === 'name' ? ' has-name' : RightAligned.has(c.kind) ? ' right' : '')
     + (c.id === 'git' && x.git ? ` git-${x.git === '!' ? 'conflict' : x.git}` : '') + (sorted.has(c.id) ? ' sorted' : '');
   cell.style.width = `${c.width}px`;
+  // A size: its bytes and the larger units; a folder's with what it holds (plan 37).
+  const s = c.id === 'size' && folderSizeOf(x);
+  if (s === 'counting') cell.title = 'Being counted';
+  else if (s) cell.title = `${sizeLines(s.size)}\n${s.files} ${s.files === 1 ? 'file' : 'files'}, ${s.folders} ${s.folders === 1 ? 'folder' : 'folders'}`;
+  else if (c.kind === 'size' && typeof x[c.id] === 'number' && !x.folder) cell.title = sizeLines(x[c.id]);
   return cell;
+}
+
+// ---------- Folder sizes (plan 37) ----------
+
+// The host told sizes known (null: let go), trees of them gone (F5, a folder deleted, changes lost) and folders it would
+// not count (`skipped`): kept here and the views of this page drawn again (sorted again when by size).
+function folderSizesCame(m) {
+  for (const g of m.gone ?? []) {
+    const k = sizeKey(g), under = k.endsWith('\\') ? k : k + '\\';
+    for (const key of [...folderSizes.keys()]) if (key === k || key.startsWith(under)) folderSizes.delete(key);
+    for (const key of [...sizesAsked]) if (key === k || key.startsWith(under)) sizesAsked.delete(key);
+  }
+  for (const [p, s] of Object.entries(m.sizes ?? {})) {
+    if (s) folderSizes.set(sizeKey(p), s);
+    else {
+      folderSizes.delete(sizeKey(p));
+      sizesAsked.delete(sizeKey(p));
+    }
+  }
+  for (const p of m.skipped ?? []) if (folderSizes.get(sizeKey(p)) === 'counting') folderSizes.delete(sizeKey(p));
+  sizesShown();
+}
+
+// The folders a tree asked about (it asks for the rows it draws, once each).
+const sizesAsked = new Set();
+
+let sizesDrawing = false;
+function sizesShown() {
+  if (sizesDrawing) return;
+  sizesDrawing = true;
+  requestAnimationFrame(() => {
+    sizesDrawing = false;
+    for (const v of views.values()) {
+      if (isPaged(v) || !(v instanceof ListView || v instanceof TreeView)) continue;
+      if (v instanceof ListView && v.cols.sort.some(s => s.id === 'size')) v.entries.sort(v.comparer());
+      v.render();
+      if (v instanceof ListView && v.id === activePane) v.tellSelection();
+    }
+  });
+}
+
+// What the host knows of these folders (a list read, a tree's rows drawn); the ones it waits to count marked so.
+async function askFolderSizes(ids) {
+  const folders = ids.filter(isDiskPath);
+  if (!folders.length) return;
+  const m = await askHost({ op: 'folderSizes', folders });
+  const counting = new Set((m.counting ?? []).map(sizeKey));
+  for (const id of folders) {
+    const k = sizeKey(id), s = Object.entries(m.sizes ?? {}).find(([p]) => sizeKey(p) === k)?.[1];
+    if (s) folderSizes.set(k, s);
+    else if (counting.has(k)) folderSizes.set(k, 'counting');
+    else folderSizes.delete(k);   // not known (any more): a size kept here from before is not right
+  }
+  sizesShown();
+}
+
+// Folders counted by the host, in this order (Ctrl+D; `auto`: the setting, for the ones without a size yet).
+function countFolderSizes(ids, auto = false) {
+  const folders = [...new Set(ids.filter(isDiskPath))].filter(id => {
+    const s = folderSizes.get(sizeKey(id));
+    return !s || (!auto && s === 'counting');
+  });
+  if (!folders.length) return;
+  for (const id of folders) folderSizes.set(sizeKey(id), 'counting');
+  post({ op: 'sizeFolders', folders, auto });
+  sizesShown();
 }
 
 // A column's value in its cell; in the first, a part of its own after the item's marks.
