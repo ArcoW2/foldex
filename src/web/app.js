@@ -3791,7 +3791,7 @@ function globalPane(info) {
 }
 
 // F3 (plan 14 3.5): the item the active pane focuses in a new preview, floating in a window of its own beside this
-// one (the first time; then as the last one was), the keyboard staying here. It keeps that item: it follows nothing
+// one (the first time; then as the last one was), the keyboard going to it. It keeps that item: it follows nothing
 // (`fixed`), and F3 again opens another, so two items can be compared side by side. Esc in its window closes it.
 function floatPreview() {
   const item = activePane && !(views.get(activePane) instanceof PreviewView) ? layout.state(activePane).focus : null;
@@ -3805,11 +3805,10 @@ function floatPreview() {
   let bounds = paneHomes.f3?.bounds ?? open.at(-1) ?? null;
   while (bounds && open.some(b => b[0] === bounds[0] && b[1] === bounds[1])) bounds = [bounds[0] + bounds[2], bounds[1], bounds[2], bounds[3]];
   layout.pane(id).floating = { place: { area: 'right' }, bounds };
-  view.channel.float(bounds, null, { beside: true, quiet: true });
+  view.channel.float(bounds, null, { beside: true });
   view.show(item);
   drawHeads();
   tellLayout();
-  views.get(activePane)?.body.focus();   // the keyboard stays in the pane that had it
 }
 
 // A preview or Info pane of one pane (the pane menu's New child pane, the ribbon's Pane preview and Pane info): its

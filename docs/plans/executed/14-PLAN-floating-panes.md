@@ -65,7 +65,7 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 | Speed before and after stages 1-5 | the start, opening a folder of 5150 items, moving the cursor: main before plan 14 and this branch after stage 5 | 3.0; 6.11 |
 | Dock by dragging | a floating pane's window dragged by its title bar over its Foldex window: the place lit as for a head's drag; let go there, it docks there | 3.1; 6.10 |
 | Preview and Info as pages | preview.html: Foldex's own preview, its messages and Info drawn by the page; Windows' preview per pane, over the frame docked, over its window floating; both can float | 3.0; 6.9 |
-| F3 | a preview of the focused item in a new floating window that keeps it, beside the window, the keyboard staying; side by side; Esc closes it | 3.5; 6.9 |
+| F3 | a preview of the focused item in a new floating window that keeps it, beside the window, taking the keyboard; side by side; Esc closes it | 3.5; 6.9 |
 | Settings and Manage projects | pane pages (docked or floating) in place of the host's own windows; the Projects question in a modal floating window | 3.7; 6.8 |
 | F1 | a pane page (docked or floating), not modal; it stays open while actions run, on the active pane | 3.7; 6.7 |
 | Manage column sets | a pane page (docked or floating), no longer a dialog; one of it, opened where it was last (shared with Manage the bookmarks) | 3.7; 6.6 |
@@ -171,7 +171,7 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
   the last floating preview was; its place and size are kept (3.4).
 - It is not the global preview (Alt+P) nor a pane's own: those stay as they are. Esc in the floating window closes
   it; Dock in its menu docks it as a preview pane (3.1).
-- The keyboard stays in the active pane of the main window.
+- The keyboard goes to the new window, so Esc closes it at once.
 - It keeps showing the item it was opened on: it does not follow the focus (it is no child of any pane).
 - A second F3 opens another floating window, for the item focused then: each window keeps its own item, so two
   items can be compared side by side.
@@ -182,8 +182,7 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
   same folder and selection; the layout with a floating pane back after a restart.
 - A floating list's head and ring in its branch colour, changing when another branch becomes active in the main
   window; a floating tree driving a docked list; a scrap floated, files dropped on it, a search into it.
-- F3 on an image, a video and a file without a preview: the floating window with its preview, the keyboard still in
-  the list; another item focused: the window keeps its item; F3 again: a second window with the new item; Esc closes it; its place and size after a restart.
+- F3 on an image, a video and a file without a preview: the floating window with its preview, the keyboard in it; another item focused: the window keeps its item; F3 again: a second window with the new item; Esc closes it; its place and size after a restart.
 - Every window of 3.7 that can be both: floated, docked, floated again, each time showing what it showed; Float and
   Dock not offered where its row says it cannot. Manage the bookmarks: opened floating, docked, a bookmark edited
   from it while docked, closed and opened again where it was; opened again while shown: the same one, forward.
@@ -441,7 +440,7 @@ None.
 - F3 (`preview.float`, F3 in the shipped keys.json): a preview pane `fixed` on the focused item (it follows nothing, is
   never the global preview, its item kept in the layout), floating; the first time beside the window (on another
   screen when there is one, else at its right; PaneForm `beside`), after that where the last one was; an F3 window
-  already there: the new one at its right. Shown without taking the keyboard (`quiet`). Esc in it closes it. They do
+  already there: the new one at its right. It takes the keyboard. Esc in it closes it. They do
   not come back after a restart; their last place does (`homes.f3`). A floating window tells its place once shown, so
   the next F3 knows where the open ones are.
 - Tests in the test copy (CDP into the pages, UI Automation, EnumWindows): the global preview docked on note.txt with

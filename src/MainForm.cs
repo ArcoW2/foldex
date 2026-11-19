@@ -268,7 +268,7 @@ sealed class MainForm : Form
                         ? new Rectangle(b[0]!.GetValue<int>(), b[1]!.GetValue<int>(), b[2]!.GetValue<int>(), b[3]!.GetValue<int>()) : null;
                     Size? first = msg["size"] is JsonArray { Count: 2 } wh ? new Size(wh[0]!.GetValue<int>(), wh[1]!.GetValue<int>()) : null;
                     form = new PaneForm(app, this, id, msg["page"]!.GetValue<string>(), msg["title"]?.GetValue<string>() ?? "Pane", bounds, first: first,
-                        beside: msg["beside"]?.GetValue<bool>() == true, quiet: msg["quiet"]?.GetValue<bool>() == true);
+                        beside: msg["beside"]?.GetValue<bool>() == true);
                     floating[id] = form;
                     form.FormClosed += (_, _) => { if (floating.GetValueOrDefault(id) == form) floating.Remove(id); };
                     form.Show(this);

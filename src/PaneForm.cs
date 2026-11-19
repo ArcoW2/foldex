@@ -53,11 +53,10 @@ sealed class PaneForm : Form
     /// window (Settings, Manage projects, Manage column sets); null: narrow, beside its window's right edge.</param>
     /// <param name="beside">The first time (no <paramref name="bounds"/>) outside its window: on another screen when
     /// there is one, else at its window's right (F3's preview, plan 14 3.5).</param>
-    /// <param name="quiet">Shown without taking the keyboard from its window (F3's preview).</param>
     public PaneForm(AppHost app, MainForm owner, string id, string page, string title, Rectangle? bounds, bool dialog = false, bool modal = true,
-        Size? first = null, bool beside = false, bool quiet = false)
+        Size? first = null, bool beside = false)
     {
-        (this.app, this.owner, Id, this.page, this.dialog, this.quiet) = (app, owner, id, page, dialog, quiet);
+        (this.app, this.owner, Id, this.page, this.dialog) = (app, owner, id, page, dialog);
         Text = dialog ? title : $"{title} - Foldex";
         Icon = owner.Icon;
         if (!dialog || !modal) Owner = owner;   // a modal one is owned by ShowDialog
@@ -92,9 +91,6 @@ sealed class PaneForm : Form
             if (!byPage && !dialog && !owner.IsDisposed) owner.Tell(new JsonObject { ["event"] = "paneClosed", ["pane"] = Id });
         };
     }
-
-    readonly bool quiet;
-    protected override bool ShowWithoutActivation => quiet;
 
     // Beside its window `at`: in the middle of another screen when there is one, else at its window's right on its
     // screen (inside it when there is no room); a size for a preview (chosen, not measured).
