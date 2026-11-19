@@ -14,7 +14,8 @@ static class SearchesFile
 
     static readonly JsonDocumentOptions Options = new() { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true };
 
-    /// <summary>{ predefined: { name: options }, lookIn: [...], named: [...] }.</summary>
+    /// <summary>{ predefined: { name: options }, lookIn: [...], named: [...], last: options }; `last` the options of the
+    /// last search run (without its folder), where the next Find starts; only once there was one.</summary>
     public static JsonObject Load(string dataDir)
     {
         JsonObject? root = null;
@@ -23,12 +24,17 @@ static class SearchesFile
         return Clean(root);
     }
 
-    static JsonObject Clean(JsonNode? root) => new()
+    static JsonObject Clean(JsonNode? root)
     {
-        ["predefined"] = root?["predefined"] is JsonObject p ? p.DeepClone() : new JsonObject(),
-        ["lookIn"] = Texts(root?["lookIn"]),
-        ["named"] = Texts(root?["named"]),
-    };
+        var clean = new JsonObject
+        {
+            ["predefined"] = root?["predefined"] is JsonObject p ? p.DeepClone() : new JsonObject(),
+            ["lookIn"] = Texts(root?["lookIn"]),
+            ["named"] = Texts(root?["named"]),
+        };
+        if (root?["last"] is JsonObject last) clean["last"] = last.DeepClone();
+        return clean;
+    }
 
     static JsonArray Texts(JsonNode? list) => new((list as JsonArray ?? [])
         .Where(n => n?.GetValueKind() == JsonValueKind.String).Select(n => (JsonNode?)n!.GetValue<string>()).ToArray());

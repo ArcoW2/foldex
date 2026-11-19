@@ -4,7 +4,9 @@
 // under Into) becomes the active pane and the results stream into it (ScrapView.search, app.js). A scrap keeps its
 // search, so Search again opens this with it, into that scrap, cleared first.
 
-let searches = { predefined: {}, lookIn: [], named: [] };   // searches.json (SearchesFile.cs): kept for every project
+// searches.json (SearchesFile.cs): kept for every project; `last` the options of the last search run, where a new Find
+// starts (its folder is the active pane's).
+let searches = { predefined: {}, lookIn: [], named: [] };
 const SearchListMax = 20;   // earlier folders and names offered (chosen, not measured)
 
 // `again`: a scrap whose search is opened again. The dialog in a modal floating window of its own (plan 14 3.7,
@@ -12,7 +14,7 @@ const SearchListMax = 20;   // earlier folders and names offered (chosen, not me
 async function openFind({ again = null } = {}) {
   const active = activeView();
   const saved = again ? layout.pane(again.id).search ?? {} : {};
-  const start = { ...SearchDefaults, ...saved };
+  const start = { ...SearchDefaults, ...(again ? saved : searches.last) };
   // Look in: the active pane's folder, or the active scrap (a search in its items); Search again: what it had.
   const lookScrap = again ? views.get(saved.lookInScrap) ?? null : active instanceof ScrapView ? active : null;
   if (!again) start.lookIn = lookScrap ? '' : currentFolder() ?? searches.lookIn[0] ?? '';
@@ -164,10 +166,12 @@ function findHere(a) {
   }, { once: true }));
 }
 
-// The folder and the name go to the front of their lists.
+// The folder and the name go to the front of their lists; the options, without the folder, are where the next Find
+// starts.
 function remember(o) {
   const front = (list, value) => value ? [value, ...list.filter(v => v.toLowerCase() !== value.toLowerCase())].slice(0, SearchListMax) : list;
-  searches = { ...searches, lookIn: front(searches.lookIn, o.lookIn), named: front(searches.named, o.named) };
+  const { lookIn, lookInScrap, ...last } = o;
+  searches = { ...searches, lookIn: front(searches.lookIn, o.lookIn), named: front(searches.named, o.named), last };
   post({ op: 'searchesSave', searches });
 }
 

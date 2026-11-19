@@ -97,6 +97,8 @@ public class ScrapTests : IDisposable
         Assert.Equal("{\"predefined\":{},\"lookIn\":[],\"named\":[]}", SearchesFile.Load(dir).ToJsonString());
         SearchesFile.Save(dir, JsonNode.Parse("""{ "predefined": { "logs": { "named": "*.log" } }, "lookIn": ["C:\\x", 3], "other": 1 }""")!);
         Assert.Equal("{\"predefined\":{\"logs\":{\"named\":\"*.log\"}},\"lookIn\":[\"C:\\\\x\"],\"named\":[]}", SearchesFile.Load(dir).ToJsonString());
+        SearchesFile.Save(dir, JsonNode.Parse("""{ "named": ["*.txt"], "last": { "named": "*.txt", "regex": true }, "other": 1 }""")!);
+        Assert.Equal("{\"predefined\":{},\"lookIn\":[],\"named\":[\"*.txt\"],\"last\":{\"named\":\"*.txt\",\"regex\":true}}", SearchesFile.Load(dir).ToJsonString());
         File.WriteAllText(Path.Combine(dir, SearchesFile.Name), "{ broken");
         Assert.Equal("{\"predefined\":{},\"lookIn\":[],\"named\":[]}", SearchesFile.Load(dir).ToJsonString());
     }
