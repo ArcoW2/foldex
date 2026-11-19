@@ -1974,8 +1974,14 @@ class ListView {
       const before = keep.length || focusBefore ? keep : [...this.selected];
       this.selected = new Set((arrived.length ? arrived : before.map(here)).filter(Boolean).map(x => x.id));
       s.selection = [...this.selected];
-      const focus = arrived[0] ?? (focusBefore && here(focusBefore))
-        ?? (focusBefore && at >= 0 && this.entries.length ? this.entries[Math.min(at, this.entries.length - 1)] : null);
+      // The focus: what arrived; else the item it had; the row in its place only when that item is gone from the folder.
+      // One that is there but not shown yet (a filter's answer to come; a new item too) keeps it, by its id.
+      const known = id => this.all.find(x => same(x.id, id));
+      const made = !arrived.length && landed.map(known).find(Boolean);   // new here, not shown yet: it gets the focus
+      const unseen = made || (focusBefore && !here(focusBefore) && known(focusBefore));
+      const focus = arrived[0] ?? (made ? null : (focusBefore && here(focusBefore))
+        ?? (!unseen && focusBefore && at >= 0 && this.entries.length ? this.entries[Math.min(at, this.entries.length - 1)] : null));
+      if (unseen) s.focus = unseen.id;
       this.body.scrollTop = top;
       if (focus) {
         s.focus = focus.id;
@@ -2116,7 +2122,13 @@ class ListView {
   }
 
   // The host's results came: shown again from what it read, without asking again (a new item meanwhile does, passes).
-  filterShown() { this.searchChanged(); }
+  // The focused item shown now for the first time: scrolled to (it kept the focus while it waited).
+  filterShown() {
+    const f = layout.state(this.id).focus, was = !!f && this.entries.some(x => same(x.id, f));
+    this.searchChanged();
+    const i = f ? this.entries.findIndex(x => same(x.id, f)) : -1;
+    if (!was && i >= 0) this.scrollTo(i);
+  }
 
   // The values the filter waits for, read: Windows' properties of the waiting items, the folder's Git status; then
   // filtered again.
@@ -2134,6 +2146,9 @@ class ListView {
   searchChanged() {
     this.entries = this.all.filter(this.passes()).sort(this.comparer());
     this.selected = new Set([...this.selected].filter(id => this.entries.some(x => x.id === id)));
+    // The focused item kept (by its id, also while a filter hides it) and, shown, in view.
+    const focus = layout.state(this.id).focus, at = focus ? this.entries.findIndex(x => same(x.id, focus)) : -1;
+    if (at >= 0) this.scrollTo(at);
     this.render();
     this.askFilterValues();
     if (paneSearch.has(this.id)) status(`${this.entries.length} of ${this.all.length} items`, false, 'verbose');
@@ -2165,11 +2180,14 @@ class ListView {
     // The focus of this branch, as it was left, comes back when it is still there; nothing focused here yet (a pane
     // opened, another folder): the first item, as Down would. Its followers wait until the focus moves, but a preview
     // shows it at once (also when Foldex starts with one).
+    // An item that is in the folder but not shown (yet: a filter's answer to come) keeps the focus: never the top
+    // instead of the item it had.
     const focus = layout.state(this.id).focus;
     const kept = focus && this.entries.find(x => same(x.id, focus));
+    const there = focus && this.all.some(x => same(x.id, focus));
     const firstItem = this.entries.find(x => !x.up);
     if (kept) this.select(kept, {}, true);
-    else if (firstItem) this.select(firstItem, {}, true);
+    else if (!there && firstItem) this.select(firstItem, {}, true);
     itemListed(this);   // an item opened as a bookmark (plan 26 3.12): selected and focused
     const now = layout.state(this.id).focus;
     for (const f of layout.followers(this.id, layout.keyOf(this.id)))

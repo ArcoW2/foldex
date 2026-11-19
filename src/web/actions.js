@@ -252,13 +252,29 @@ action('filters.list', { title: 'Filters', hint: 'the kept filter sets: one chos
 action('filters.manage', { title: 'Manage filters', hint: 'the kept filter sets: make, change, name, a key, the defaults for new panes', group: 'view',
   run: () => openManageFilters(filterable() ? activePane : null) });
 // Esc in a pane: the search bar's filter emptied; without one, the pane's filter switched off (as Filter on or off does
-// when it is on). Only ever off: Esc never switches a filter on.
-action('filters.escape', { title: 'Clear the filter', hint: "the search bar's filter of the active pane emptied; with none, the pane's filter switched off",
-  group: 'view', enabled: () => !!activePane && (paneSearch.has(activePane) || filterable() && !!paneFilterSet(activePane) && !paneFilterSet(activePane).off),
-  run: () => paneSearch.has(activePane) ? setSearch(activePane, '') : togglePaneFilter(activePane) });
+// when it is on), and on again by the next Esc when an Esc switched it off (escapedFilters: the panes whose filter it
+// did); a filter switched off another way stays off.
+const escapedFilters = new Set();
+action('filters.escape', { title: 'Clear the filter', hint: "the search bar's filter of the active pane emptied; with none, the pane's filter switched off; the next Esc on again",
+  group: 'view', enabled: () => {
+    if (!activePane) return false;
+    const set = paneFilterSet(activePane);
+    return paneSearch.has(activePane) || filterable() && !!set && (!set.off || escapedFilters.has(activePane));
+  },
+  run: () => {
+    if (paneSearch.has(activePane)) return setSearch(activePane, '');
+    const set = paneFilterSet(activePane);
+    if (!set) return;
+    if (set.off) escapedFilters.delete(activePane);
+    else escapedFilters.add(activePane);
+    togglePaneFilter(activePane);
+  } });
 action('filters.toggle', { title: 'Filter on or off', hint: 'the active pane\'s filter switched off (every item shown) or on again', group: 'view',
   enabled: () => filterable() && !!paneFilterSet(activePane), checked: () => !!paneFilterSet(activePane) && !paneFilterSet(activePane).off,
-  run: () => togglePaneFilter(activePane) });
+  run: () => {
+    escapedFilters.delete(activePane);   // switched by hand: Esc no longer switches it back on
+    togglePaneFilter(activePane);
+  } });
 // A kept set's key (Manage filters): that set on the active pane.
 action('filters.apply', { title: 'Filter by a kept set', group: 'view', enabled: params => filterable() && !!keptFilter(params[0]),
   variantTitles: {}, run: params => { const s = keptFilter(params[0]); if (s) setPaneFilter(activePane, { name: s.name, lines: s.lines }); } });
