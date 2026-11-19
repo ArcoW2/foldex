@@ -170,6 +170,24 @@ public class ColumnsTests : IDisposable
         Assert.Equal(["z b a c d", "z b a c d", "z d c b a"], r.EnumerateArray().Select(x => x.GetString()));
     }
 
+    // Folders mixed with the files (setting foldersFirst, or a pane's own): a folder with a size (plan 37) sorts among
+    // the files by it; folders first: before them whatever its size.
+    [Fact]
+    public void FoldersMixedWithTheFiles()
+    {
+        var r = Run("""
+            (() => {
+              folderSizes.set('c:\\z', { size: 7, files: 1, folders: 0 });
+              const items = [
+                { name: 'c', size: 5, folder: false }, { name: 'a', size: 9, folder: false },
+                { id: 'C:\\z', name: 'z', folder: true }, { id: 'C:\\y', name: 'y', folder: true } ];
+              const by = (first, desc) => [...items].sort(sortComparer([{ id: 'size', desc }], first)).map(x => x.name).join(' ');
+              return [by(true, true), by(false, true), by(false, false)];
+            })()
+            """);
+        Assert.Equal(["z y a c", "a z c y", "c z a y"], r.EnumerateArray().Select(x => x.GetString()));
+    }
+
     // A click on a title (3.4): one column (or none) sorts by it, again the other way; several: only that one turned,
     // or null (the Sort window) for a column not in the sort.
     [Fact]
