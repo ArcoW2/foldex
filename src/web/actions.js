@@ -166,6 +166,8 @@ action('pane.rename', { title: 'Rename pane', hint: 'a name for the task the pan
   group: 'panes', enabled: () => !!activeView() && !(activeView() instanceof PreviewView), run: () => renamePane(activePane) });
 action('pane.toggle', { title: 'Show or hide a pane', hint: 'hides the other child of the parent, shows a hidden one again, or makes one',
   group: 'panes', enabled: () => !!activeView(), run: () => togglePane() });
+action('pane.openInOther', { title: 'Open in the other pane', hint: 'the focused folder in the next other child of the parent; with none shown, one shown again or made, as Show or hide a pane',
+  group: 'panes', enabled: () => !!activeView() && !(activeView() instanceof PreviewView) && !!focusedItem()?.folder, run: () => openInOther() });
 action('pane.hidden', { title: 'Hidden panes', hint: 'the panes hidden with Show or hide a pane: a click shows one again', group: 'panes',
   run: (params, ctx) => {
     const r = (ctx.el ?? views.get(activePane)?.body ?? document.body).getBoundingClientRect();

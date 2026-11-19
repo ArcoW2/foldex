@@ -39,7 +39,7 @@ updated whenever a plan is written, built or closed that touches a feature here.
 | Full screen; clone window | P+ | part: new window (-n) built | 3 | -- |
 | Mirror browsing / scrolling | P+ | -- | 3 | -- |
 | Spring-loaded tabs and tree during drag | P+ | -- | 3 | -- |
-| Dual pane, vertical or horizontal | All | part: connected panes side by side (plan 03); one below the other: built (plan 12); Ctrl+O hides and shows the other pane: built (no plan; Hidden panes on View > Panes, the pane menu and the status bar) | 2 | Detachable, floating, docked panes (a child below) |
+| Dual pane, vertical or horizontal | All | part: connected panes side by side (plan 03); one below the other: built (plan 12); Ctrl+O hides and shows the other pane: built (no plan; Hidden panes on View > Panes, the pane menu and the status bar); Ctrl+Shift+O opens the focused folder in the other pane: built (no plan) | 2 | Detachable, floating, docked panes (a child below) |
 | Folder groups (saved sets of tabs) | P+ | -- (projects, plan 15) | 2 | Named window layouts (projects) |
 | Hide a folder from the tree | P+ | -- | 2 | -- |
 

@@ -664,11 +664,12 @@ function execute(paneId, item) {
 }
 
 // A path typed, or Backspace in a follower: its source goes there and the follower follows (open question 7,
-// suggestion); the root shows it in its tree.
+// suggestion); the root shows it in its tree. Returns the tree's reveal, for who waits until it is there.
 function goTo(paneId, path) {
   const opener = layout.ownWay(paneId) ? paneId : layout.pane(paneId).source;
-  views.get(opener)?.reveal?.(path);
+  const shown = views.get(opener)?.reveal?.(path);
   if (opener !== paneId) apply(layout.focus(opener, { id: path, folder: true }));
+  return shown;
 }
 
 function parentOf(path) {
@@ -3686,6 +3687,30 @@ function togglePane() {
     const view = newChildPane(r.newChild, 'right', { pane: r.beside, side: 'right' });
     view.body.focus();
   }
+}
+
+// Ctrl+Shift+O: the folder the active pane focuses opened in the next other child of its parent (of the pane itself
+// when it is a root), in the order the children were made; with no other child shown, as Ctrl+O: a hidden one shown
+// again, else a new one at its right. The keyboard stays in the active pane.
+async function openInOther() {
+  const id = activePane, item = focusedItem();
+  if (!layout.pane(id) || views.get(id) instanceof PreviewView) return;
+  if (!item?.folder) return status('Ctrl+Shift+O: the focused item is no folder.', true);
+  const pane = layout.pane(id), parent = pane.source ?? id;
+  const kids = layout.followers(parent, undefined, true).filter(f => f.kind !== 'preview');
+  const shown = kids.filter(f => !f.away && views.has(f.id));
+  const mine = pane.source !== null ? pane : shown.find(f => f.colour === layout.keyOf(id));
+  const at = shown.indexOf(mine);
+  let target = [...shown.slice(at + 1), ...shown.slice(0, Math.max(at, 0))].find(f => f !== mine)?.id;
+  if (!target) {
+    const hidden = kids.filter(f => f.away).sort((a, b) => b.away.at - a.away.at)[0];
+    if (hidden) unhidePane(target = hidden.id);
+    else target = newChildPane(parent, 'right', { pane: id, side: 'right' }).id;
+  }
+  activate(target);
+  await goTo(target, item.id);
+  activate(id);
+  views.get(id)?.body.focus();
 }
 
 function hidePane(id) {

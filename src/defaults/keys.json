@@ -44,6 +44,7 @@
   "Ctrl+T": "pane.newTab",
   "Ctrl+W": "pane.close",
   "Ctrl+O": "pane.toggle",
+  "Ctrl+Shift+O": "pane.openInOther",
   "F6": "pane.next",
   "Shift+F6": "pane.previous",
   "Ctrl+Alt+Left": ["pane.toSide", "left"],
