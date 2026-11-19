@@ -212,9 +212,9 @@ function newItem(kind) {
   });
 }
 
-// The new item's row in a pane's rows while its name is asked (newItem): at the top of a list (after ".."), as the
-// first child of the tree's folder (under its row). Put back each time the rows are drawn, as the folder may be read
-// again meanwhile.
+// The new item's row in a pane's rows while its name is asked (newItem): in a list where the focused item is (that one
+// a row down), else at the top (after ".."); as the first child of the tree's folder (under its row). Put back each
+// time the rows are drawn, as the folder may be read again meanwhile.
 function placeNewRow(view, items) {
   const row = view.newRow;
   if (!row || items.includes(row)) return;
@@ -222,7 +222,9 @@ function placeNewRow(view, items) {
     const at = items.indexOf(row.parent);
     if (at >= 0) items.splice(at + 1, 0, row);
   } else {
-    const at = items.findIndex(x => !x.up);
+    const focus = layout.state(view.id)?.focus;
+    const here = focus ? items.findIndex(x => !x.up && same(x.id, focus)) : -1;
+    const at = here >= 0 ? here : items.findIndex(x => !x.up);
     items.splice(at < 0 ? items.length : at, 0, row);
   }
 }
