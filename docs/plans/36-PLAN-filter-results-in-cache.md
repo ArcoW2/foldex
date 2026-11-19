@@ -27,7 +27,8 @@ engine (`filters.js`, run by the host), and shows as soon as it passes. A change
 item, so it is tested again. Switching a filter off shows everything; on again, its id is the active one and its
 results are still there. A changed filter is a new id; the results of the old one are dropped. In a tree a folder
 shows when it passes itself or holds, at any depth, an item that passes; the host tests the folders under it in the
-background, as read-ahead reads them.
+background, as read-ahead reads them, and a folder not known yet shows dimmed. A filter relative to now by the clock
+(minutes, hours) keeps no results; one relative by the date (days and longer) keeps them until the date changes.
 
 ## Status
 
@@ -45,8 +46,8 @@ Nothing yet.
 | Requests with a filter | a pane asks with its filter's id; only what passes comes; the rest as it is tested | Filter ids; Results in the cache; The engine in the host | 3.4 |
 | In the background | testing goes on after the pane leaves, as read-ahead; low priority, stoppable | Requests with a filter | 3.5 |
 | Off and on, changed | off: all shown; on: the id's results used again; a change: a new id, the old results dropped | Filter ids | 3.6 |
-| Trees | a folder shown when it or something under it passes; the folders under it tested in the background | In the background; open question 1 | 3.7 |
-| Relative dates | results of a line relative to now not kept past the moment they could change | open question 2 | 3.8 |
+| Trees | a folder shown when it or something under it passes, dimmed while not known yet; the folders under it tested in the background | In the background | 3.7 |
+| Relative dates | relative by the clock: no results kept; relative by the date: kept, dropped when the date changes | Results in the cache | 3.8 |
 | Tests | see 3.9 | -- | 3.9 |
 
 ## 3. Details
@@ -115,29 +116,37 @@ Nothing yet.
 - For that the host tests the folders under a tree's folders in the background (3.5), as deep as needed, and keeps
   per folder whether something under it passes for the id (a folder's own result next to its "holds a pass").
   A change anywhere under it drops that up the chain, as far as it no longer holds.
-- A folder whose contents are not known yet for the id: open question 1.
+- A folder whose contents are not known yet for the id shows, dimmed (as unknown); when the host finds nothing under
+  it passes, it goes; when something does, it shows as any folder. A folder that passes itself is never dimmed.
 
 ### 3.8 Relative dates
 
-- A line relative to now ("modified within 7 days", "today") changes its result without any change on disk: a result
-  kept from yesterday can be wrong today. Such results are kept only until the moment the line's outcome could change
-  (for "today" the next midnight; for "7 days ago" the moment an item's date crosses it), or not kept at all: open
-  question 2.
+- A line relative to now (plan 32 3.1: "modified within 7 days", "today", "30 minutes ago") changes its result
+  without any change on disk, so its results cannot always be kept:
+  - **Relative by the clock** (minutes, hours): its outcome changes from moment to moment. A filter with such a line
+    keeps no results in the cache: every request tests again, as the page does today.
+  - **Relative by the date** (today, a day, days, weeks, months, years ago or from now): its outcome changes only
+    when the date does. Its results are kept as any others, and dropped for every filter id with such a line when the
+    date changes (at midnight, or when Foldex sees a new date after the PC slept); its folders in use are then
+    tested again in the background.
+  - An absolute date (with a time or not) is not relative: kept as any result.
+- Which kind a filter is, is worked out from its lines when its id is made (3.1): no relative line, by the date, or
+  by the clock (one clock line is enough).
 
 ### 3.9 Tests
 
 - Unit (host, Jint): `filters.js` run by the host gives the same results as under the page tests (plan 32's tests run
   through the host's engine too); a result map kept, dropped on a change, dropped for an old id; a tree's "holds a
-  pass" up the chain and dropped when the last passing item goes.
+  pass" up the chain and dropped when the last passing item goes; a filter by the clock keeps nothing, one by the date
+  keeps its results until the date changes and then none.
 - In the test copy: a folder filtered on a Windows property, left and opened again: shown at once, no reading again;
   the filter off and on: at once; the filter changed: tested again; a file changed on disk: tested again and its
-  row coming or going; a tree with a filter showing only the folders that lead to a passing file; the window answering
-  while a large folder is tested in the background.
+  row coming or going; a tree with a filter showing only the folders that lead to a passing file, the ones not known
+  yet dimmed and going or staying as they become known; the window answering while a large folder is tested in the
+  background.
+- Unit (host): a "today" filter across a change of date, with the cache's clock set by the test (the cache reads the
+  date through a clock the tests can set).
 
 ## 4. Open questions
 
-1. **A tree folder not known yet.** While the host has not yet found whether a folder holds something that passes:
-   shown (dimmed, as unknown) and taken away when it turns out empty, or hidden and added when something under it
-   passes?
-2. **Relative dates.** Keep their results until they could change (more work, every result fast), or never keep the
-   results of a line relative to now (simple, such a filter as slow as today)?
+None.
