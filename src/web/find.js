@@ -21,7 +21,10 @@ async function openFind({ again = null } = {}) {
   // Look in: the active pane's folder, or the active scrap (a search in its items); Search again: what it had.
   const lookScrap = again ? views.get(saved.lookInScrap) ?? null : active instanceof ScrapView ? active : null;
   if (!again) start.lookIn = lookScrap ? '' : currentFolder() ?? searches.lookIn[0] ?? '';
-  const r = await dialogWindow('Find files or folders', { what: 'find', start, defaults, searches,
+  // The kept filter sets, for the additional rules (plan 20 3.2), each with its lines in short.
+  const ruleSets = filterSets.sets.map(s => ({ name: s.name, lines: s.lines,
+    text: s.lines.map((l, k) => (k ? (l.join === 'or' ? 'Or ' : 'And ') : '') + filterLineText(l, id => id === 'contents' ? 'Contents' : columnInfo(id).title ?? id)) }));
+  const r = await dialogWindow('Find files or folders', { what: 'find', start, defaults, searches, ruleSets,
     lookScrap: lookScrap && { id: lookScrap.id, title: lookScrap.tabTitle() },
     scraps: scrapViews().map(v => ({ id: v.id, title: v.tabTitle() })), again: again?.id ?? null }, m => {
     searches = m.searches;
@@ -88,6 +91,16 @@ function findHere(a) {
   const [startOnly, startOnlyLabel] = check('Only the start of a file:', start.startOnly);
   const startKB = el('input', { type: 'number', min: 1, step: 1, value: start.startKB, className: 'find-start',
     title: 'How much of each file is searched, in KB' });
+  // Additional rules (plan 20 3.2): a kept filter set (made and changed in Manage filters, the same lines and editor),
+  // its lines in short under it; tested on what the name finds, before the text.
+  const ruleSets = a.ruleSets ?? [];
+  const rulesBox = el('select', {}, el('option', { value: '', textContent: 'None' }),
+    ...ruleSets.map(s => el('option', { value: s.name, textContent: s.name })));
+  rulesBox.value = start.rules?.name && ruleSets.some(s => s.name === start.rules.name) ? start.rules.name : '';
+  const rulesText = el('div', { className: 'find-rules' });
+  const syncRules = () => rulesText.replaceChildren(...(ruleSets.find(s => s.name === rulesBox.value)?.text ?? [])
+    .map(t => el('div', { textContent: t })));
+  rulesBox.addEventListener('change', syncRules);
   const [sortWhenDone, sortWhenDoneLabel] = check('Sort when done', start.sortWhenDone);
   sortWhenDoneLabel.title = "When the search ends, the scrap is sorted by its sort; off: it keeps the order found";
   const predefined = el('select', {}, el('option', { value: '', textContent: '' }),
@@ -137,8 +150,10 @@ function findHere(a) {
     startOnly.checked = o.startOnly ?? true;
     startKB.value = o.startKB ?? a.defaults.startKB;
     sortWhenDone.checked = o.sortWhenDone ?? a.defaults.sortWhenDone;
+    rulesBox.value = o.rules?.name && ruleSets.some(s => s.name === o.rules.name) ? o.rules.name : '';
     syncFuzzy();
     syncText();
+    syncRules();
   };
   predefined.addEventListener('change', () => {
     const o = searches.predefined[predefined.value];
@@ -157,6 +172,7 @@ function findHere(a) {
     textMode: modeRegex.checked ? 'regex' : modeVerbatim.checked ? 'verbatim' : 'normal', allFiles: allFiles.checked,
     startOnly: startOnly.checked, startKB: Math.max(1, Math.round(Number(startKB.value) || a.defaults.startKB)),
     sortWhenDone: sortWhenDone.checked,
+    rules: (s => s ? { name: s.name, lines: s.lines } : null)(ruleSets.find(s => s.name === rulesBox.value)),
   });
   save.addEventListener('click', async () => {
     const name = await askTextOver(dialog, 'Name of this search', predefined.value);
@@ -186,6 +202,8 @@ function findHere(a) {
     el('div', { className: 'find-row find-checks' }, textCaseLabel, textWordLabel, modeNormalLabel, modeVerbatimLabel, modeRegexLabel),
     el('div', { className: 'find-row find-checks' }, knownLabel, allFilesLabel, el('span', { className: 'find-gap' }),
       startOnlyLabel, startKB, el('span', { textContent: 'KB' })),
+    el('div', { className: 'find-row' }, el('span', { className: 'find-label', textContent: 'Rules' }), rulesBox),
+    rulesText,
     el('div', { className: 'find-row' }, el('span', { className: 'find-label', textContent: 'Predefined' }), predefined, save),
     el('div', { className: 'find-row' }, el('span', { className: 'find-label', textContent: 'Into' }), into, clearFirstLabel),
     el('div', { className: 'ask-buttons' }, clearButton, sortWhenDoneLabel, el('span', { className: 'find-gap' }), ok, cancel),
@@ -195,6 +213,7 @@ function findHere(a) {
   syncFuzzy();
   syncClear();
   syncText();
+  syncRules();
   dialog.showModal();
   named.select();   // the keyboard in Named (3.3)
 

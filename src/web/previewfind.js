@@ -1,5 +1,5 @@
 'use strict';
-// The preview's find bar (docs/plans/20-PLAN-extended-search.md 3.5), after LexPen's (its web/find.js), the find row
+// The preview's find bar (docs/plans/executed/20-PLAN-extended-search.md 3.5), after LexPen's (its web/find.js), the find row
 // only: a preview is read-only. Ctrl+F opens it (its text selected), Enter / F3 the next match, Shift+Enter / Shift+F3
 // the previous one, Esc closes it (a second Esc closes an F3 window, previewpane.js); Aa match case, W whole words,
 // .* a regular expression. It searches the text Foldex's own preview shows (text, code, markdown, HTML, CSV, hex, a

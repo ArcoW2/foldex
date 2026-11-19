@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 namespace Foldex.Shell;
 
 /// <summary>
-/// Whether a file holds a text (docs/plans/20-PLAN-extended-search.md 3.1): the Find dialog's Containing text. The page
+/// Whether a file holds a text (docs/plans/executed/20-PLAN-extended-search.md 3.1): the Find dialog's Containing text. The page
 /// builds the regular expression (scraps.js searchExpression), as LexPen's page does for its FolderSearch, so the
 /// search and the preview's find bar agree on what matches. Known files are the ones Foldex reads as text (the own
 /// preview's text kinds, or a file whose start looks like text), read as its preview reads them (OwnPreview.Decode);
@@ -23,18 +23,18 @@ static class TextSearch
 
     /// <summary>Whether the file holds a match. `startBytes`: only that much of it is read (0: all of it). A file that
     /// cannot be read, or not text with Known files, holds nothing.</summary>
-    public static bool Holds(string path, Regex re, bool allFiles, long startBytes, CancellationToken cancel = default)
+    public static bool Holds(string path, Regex re, bool allFiles, long startBytes, CancellationToken cancel = default, string? encoding = null)
     {
         try
         {
-            var text = Text(path, allFiles, startBytes, cancel);
+            var text = Text(path, allFiles, startBytes, cancel, encoding);
             return text is not null && re.IsMatch(text);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or RegexMatchTimeoutException or COMException or InvalidCastException) { return false; }
     }
 
     /// <summary>A file's text as the search reads it; null when it is not searched (not text with Known files).</summary>
-    internal static string? Text(string path, bool allFiles, long startBytes, CancellationToken cancel = default)
+    internal static string? Text(string path, bool allFiles, long startBytes, CancellationToken cancel = default, string? encoding = null)
     {
         var kind = OwnPreview.KindOf(path);
         using (var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
@@ -48,25 +48,38 @@ static class TextSearch
                 text = OwnPreview.LooksLikeText(start.AsSpan(0, got));
                 file.Position = 0;
             }
-            if (text) return Read(file, length);
+            if (text) return Read(file, length, encoding);
             if (!allFiles) return null;
         }
         // A filter that gives no text (one for a type without text, as .bin can have): the bytes after all.
-        return Filtered(path, startBytes, cancel) is { Length: > 0 } filtered ? filtered : Bytes(path, startBytes);
+        return Filtered(path, startBytes, cancel) is { Length: > 0 } filtered ? filtered : Bytes(path, startBytes, encoding);
     }
 
-    static string Read(FileStream file, long length)
+    // `encoding`: one chosen (a Contents line, plan 20 3.2: "utf-8", "utf-16", "utf-16BE", "windows-1252", "iso-8859-1");
+    // none: found by itself, as the preview finds it.
+    static string Read(FileStream file, long length, string? encoding = null)
     {
         var buffer = new byte[length];
         var read = file.ReadAtLeast(buffer, buffer.Length, false);
+        if (Chosen(encoding) is { } chosen) return chosen.GetString(buffer, 0, read);
         return OwnPreview.Decode(buffer.AsSpan(0, read), length < file.Length);
     }
 
+    // An encoding chosen by its name; null: none chosen, or one Windows does not know. The code pages (windows-1252)
+    // need their provider.
+    static Encoding? Chosen(string? name)
+    {
+        if (string.IsNullOrEmpty(name)) return null;
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        try { return Encoding.GetEncoding(name); }
+        catch (ArgumentException) { return null; }
+    }
+
     // Any other file with All files and no IFilter: its bytes, as text.
-    static string Bytes(string path, long startBytes)
+    static string Bytes(string path, long startBytes, string? encoding = null)
     {
         using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-        return Read(file, startBytes > 0 ? Math.Min(startBytes, file.Length) : file.Length);
+        return Read(file, startBytes > 0 ? Math.Min(startBytes, file.Length) : file.Length, encoding);
     }
 
     // ---------- Windows' IFilter (the filters Windows Search reads files with) ----------

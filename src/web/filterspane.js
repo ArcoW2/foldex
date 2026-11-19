@@ -266,8 +266,8 @@ function drawLines() {
 }
 
 // A tortoise: a field read per item after the listing, slow in a large folder (plan 32 3.1).
-function tortoise() {
-  const span = el('span', { className: 'fl-slow', title: 'Read per item: slow in a large folder' });
+function tortoise(title = 'Read per item: slow in a large folder') {
+  const span = el('span', { className: 'fl-slow', title });
   span.innerHTML = TortoiseSvg;
   return span;
 }
@@ -284,7 +284,10 @@ function drawEditor() {
       check('Files', line.files !== false, on => changeLine(l => { l.files = on; }), 'The line is for files')),
     el('div', { className: 'fl-row' }, el('span', { className: 'cs-caption', textContent: 'Field' }), fieldPicker(line)),
   ];
-  if (f.slow) rows.push(el('div', { className: 'fl-row fl-warn' }, tortoise(), ' Read per item after the folder is listed: slow in a large folder.'));
+  if (line.field === 'contents')   // plan 20 3.2: slower than any other field
+    rows.push(el('div', { className: 'fl-row fl-warn' }, tortoise(), ' Every file it is tested on is opened and read: it can be very slow, '
+      + 'in a large folder, on a share, and most of all with All files.'));
+  else if (f.slow) rows.push(el('div', { className: 'fl-row fl-warn' }, tortoise(), ' Read per item after the folder is listed: slow in a large folder.'));
   // What the field's value must be, together in a box under the field: its condition, and "or <field> is empty" (an
   // item that could have the field but has no value for it passes too).
   const cond = el('div', { className: 'fl-cond' }, ...conditionRows(kind, c, line));
@@ -313,7 +316,7 @@ function fieldPicker(line) {
     at = Math.max(0, shown.findIndex(x => x.id === line.field));
     list.replaceChildren(...shown.map((x, k) => {
       const row = el('div', { className: 'fl-fieldrow' + (k === at ? ' hot' : ''), title: x.id },
-        x.slow ? tortoise() : el('span', { className: 'fl-slow' }), el('span', { textContent: x.title }));
+        x.slow ? tortoise(x.id === 'contents' ? 'Every file is opened and read: it can be very slow' : undefined) : el('span', { className: 'fl-slow' }), el('span', { textContent: x.title }));
       row.addEventListener('mousedown', e => { e.preventDefault(); pick(x); });
       return row;
     }));
@@ -345,7 +348,7 @@ function fieldPicker(line) {
 // A field's first condition when it is chosen.
 const defaultCond = kind => ({ text: { op: 'wild', text: '' }, size: { op: 'range', from: null, to: null }, number: { op: 'range', from: null, to: null },
   date: { op: 'on', day: { rel: 0 } }, bool: { op: 'true' }, attrs: { op: 'attrs', attrs: {} },
-  list: { op: 'in', values: [] }, flag: { op: 'has' } })[kind] ?? { op: 'has' };
+  list: { op: 'in', values: [] }, flag: { op: 'has' }, contents: { op: 'contains', text: '', encoding: '', allFiles: false } })[kind] ?? { op: 'has' };
 
 const HasNone = [['has', 'has a value'], ['none', 'has no value']];
 const GitValues = ['Modified', 'Added', 'Deleted', 'Renamed', 'Untracked', 'Ignored', 'Conflict'];
@@ -399,9 +402,27 @@ function conditionRows(kind, c, line) {
         on => setCond(x => { x.values = on ? [...(x.values ?? []), v] : (x.values ?? []).filter(w => w !== v); })))));
       return rows;
     }
+    // A file's contents (docs/plans/executed/20-PLAN-extended-search.md 3.2): it holds a text, read in an encoding, of the known
+    // files (the ones Foldex reads as text) or of all files.
+    case 'contents': {
+      const encoding = select(ContentsEncodings, c.encoding ?? '', v => setCond(x => { x.encoding = v; }));
+      return [
+        op([['contains', 'contains'], ['wild', 'matches wildcards'], ['regex', 'matches a regex']]),
+        el('div', { className: 'fl-row' }, el('span', { className: 'cs-caption', textContent: 'Text' }),
+          text(c.text, v => setCond(x => { x.text = v; }), c.op === 'wild' ? 'TODO;FIXME' : c.op === 'regex' ? '^\\s*#region' : '')),
+        el('div', { className: 'fl-row' }, el('span', { className: 'cs-caption', textContent: 'Encoding' }), encoding),
+        el('div', { className: 'fl-row' }, el('span', { className: 'cs-caption' }),
+          check('All files (Word, PDF and other files too: slower)', !!c.allFiles, on => setCond(x => { x.allFiles = on; }),
+            'Off: only the files Foldex reads as text')),
+      ];
+    }
   }
   return [];
 }
+
+// The encodings a Contents line can read in; '' found by itself (a BOM, else UTF-8 when valid, else Latin-1).
+const ContentsEncodings = [['', 'Automatic'], ['utf-8', 'UTF-8'], ['utf-16', 'UTF-16 LE'], ['utf-16BE', 'UTF-16 BE'],
+  ['windows-1252', 'Windows-1252'], ['iso-8859-1', 'Latin-1']];
 
 // A number of a range, empty: no limit; a size with its unit (kept in bytes).
 function number(kind, value, change, empty = 'Empty: no limit at this end of the range') {

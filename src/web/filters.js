@@ -24,8 +24,9 @@
 const FilterAttributes = [['R', 'Read-only'], ['H', 'Hidden'], ['S', 'System'], ['A', 'Archive'], ['C', 'Compressed'],
   ['E', 'Encrypted'], ['L', 'Link'], ['O', 'Offline']];
 const FilterUnits = { minutes: 60e3, hours: 3600e3, days: 86400e3, weeks: 7 * 86400e3 };
-// Fields read per item after the listing (Windows' properties, the Git status, GPS): slow in a large folder.
-const slowField = id => id.includes('.') || id === 'git' || id === 'gps' || id === 'gpsLocation';
+// Fields read per item after the listing (Windows' properties, the Git status, GPS, a file's contents): slow in a large
+// folder; Contents slower than any (docs/plans/executed/20-PLAN-extended-search.md 3.2).
+const slowField = id => id.includes('.') || id === 'git' || id === 'gps' || id === 'gpsLocation' || id === 'contents';
 // Their mark in a list of fields or columns: a tortoise, on the 16-unit grid of the ribbon's icons, stroked in the text
 // colour (app.css .fl-slow).
 const TortoiseSvg = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
@@ -36,6 +37,7 @@ const DriveFields = new Set(['total', 'free']);
 // The kind of a field for its conditions, from its column's kind (columns.js columnInfo; Windows' properties: text,
 // number, date, bool).
 function filterKind(id, columnKind) {
+  if (id === 'contents') return 'contents';
   if (id === 'attributes') return 'attrs';
   if (id === 'git') return 'list';
   if (id === 'gps') return 'flag';
@@ -125,6 +127,14 @@ const GitWordsOf = s => ({ M: 'Modified', A: 'Added', D: 'Deleted', R: 'Renamed'
 function filterLine(line, x, kindOf, now) {
   if (x.folder ? !line.folders : !line.files) return line.not ? true : false;
   const kind = kindOf(line.field), c = line.cond ?? {};
+  // Contents (plan 20 3.2): whether the file holds the text, as the host found it (x.contents, by the condition's key);
+  // a folder has none: the line left out.
+  if (line.field === 'contents') {
+    if (x.folder) return null;
+    const v = x.contents?.[filterContentsKey(c)];
+    if (v === undefined) return 'wait';
+    return line.not ? !v : v;
+  }
   const got = filterValue(x, line.field, kind);
   if (got.wait) return 'wait';
   if (got.applies === false) return null;
@@ -217,6 +227,36 @@ function filterTestOf(set, kindOf, now = Date.now()) {
   };
 }
 
+// The regular expression a text is searched with in a file (Find's Containing text and a Contents line; plan 20 3.1),
+// built here as LexPen's page builds its FolderSearch's, so the host (.NET) and the preview's find bar (JavaScript)
+// agree on what matches; null: no text. `mode`: "normal" (a filter's wildcards: * any run, ? one character, ; between
+// alternatives; within one line), "verbatim" (every character itself) or "regex". `word`: whole words only.
+function filterTextPattern(text, mode = 'normal', word = false) {
+  if (!text) return null;
+  const escape = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  let body;
+  if (mode === 'regex') body = text;
+  else if (mode === 'verbatim') body = escape(text);
+  else {
+    const parts = text.split(';').filter(p => p !== '');
+    if (!parts.length) return null;
+    body = parts.map(p => escape(p).replace(/\\\*/g, '[^\\r\\n]*').replace(/\\\?/g, '[^\\r\\n]')).join('|');
+  }
+  return word ? `\\b(?:${body})\\b` : `(?:${body})`;
+}
+
+// A Contents line's condition as the key of its answer on an item (x.contents), and the lines the host reads files
+// for: their key, expression (contains: verbatim; matches wildcards: normal; matches a regex), encoding ('' automatic)
+// and whether all files or the known ones (plan 20 3.2).
+const filterContentsKey = c => JSON.stringify([c.op ?? 'contains', c.text ?? '', c.encoding ?? '', !!c.allFiles]);
+function filterContentsLines(set) {
+  return (set?.lines ?? []).filter(l => l.field === 'contents' && l.cond?.text).map(l => ({
+    key: filterContentsKey(l.cond),
+    pattern: filterTextPattern(l.cond.text, l.cond.op === 'regex' ? 'regex' : l.cond.op === 'wild' ? 'normal' : 'verbatim'),
+    encoding: l.cond.encoding ?? '', allFiles: !!l.cond.allFiles,
+  }));
+}
+
 // A set's id and the key its results are kept under in the host's folder cache (docs/plans/executed/36-PLAN-filter-results-in-cache.md
 // 3.1, 3.8): the id follows the lines (lines changed: another id; the same lines again: the same id); the key is the
 // id, with today's date for a set relative by the date, and null for one relative by the clock (minutes, hours), whose
@@ -252,6 +292,9 @@ function filterLineText(line, titleOf) {
   const who = line.folders && line.files ? '' : line.folders ? 'Folders, ' : line.files ? 'Files, ' : 'Nothing, ';
   const c = line.cond ?? {}, f = titleOf(line.field);
   const date = d => !d ? '' : d.rel != null ? `${d.rel} ${d.unit ?? 'days'} ${d.ahead ? 'from now' : 'ago'}` : (d.abs ?? '').replace('T', ' ');
+  if (line.field === 'contents')
+    return `${line.not ? 'Not ' : ''}${who}${f} ${c.op === 'regex' ? `matches /${c.text ?? ''}/` : c.op === 'wild' ? `matches ${c.text ?? ''}` : `contains ${c.text ?? ''}`}`
+      + `${c.encoding ? `, ${c.encoding}` : ''}${c.allFiles ? ', all files' : ''}`;
   const what = c.op === 'has' ? `${f} has a value` : c.op === 'none' ? `${f} has no value`
     : c.op === 'wild' ? `${f} matches ${c.text || '*'}` : c.op === 'regex' ? `${f} matches /${c.text ?? ''}/`
     : c.op === 'contains' ? `${f} contains ${c.text ?? ''}` : c.op === 'is' && c.value == null ? `${f} is ${c.text ?? ''}`

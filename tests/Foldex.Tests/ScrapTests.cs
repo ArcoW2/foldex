@@ -110,7 +110,7 @@ public class ScrapTests : IDisposable
     static JsonElement Js(string expr)
     {
         var engine = new Jint.Engine();
-        foreach (var f in new[] { "panes.js", "docks.js", "scraps.js" }) engine.Execute(File.ReadAllText(Path.Combine(Web, f)));
+        foreach (var f in new[] { "panes.js", "docks.js", "filters.js", "scraps.js" }) engine.Execute(File.ReadAllText(Path.Combine(Web, f)));
         return JsonDocument.Parse(engine.Evaluate($"JSON.stringify({expr})").ToString()).RootElement;
     }
 

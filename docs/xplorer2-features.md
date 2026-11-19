@@ -52,7 +52,7 @@ updated whenever a plan is written, built or closed that touches a feature here.
 | Sorting: secondary, natural, folders first | P+ | part: natural sort, folders first, by any column (plan 11); secondary built (plan 28: sorting on several columns) | 4 | Columns |
 | Wildcard filter | All | built (plan 03; plan 32: a line of a filter set) | 4 | -- |
 | Quick filter box (live) | P+ | built (plan 10: the search bar, Ctrl+Shift+F) | 4 | Wildcard filter; bars (plan 10), for the box |
-| Hyperfilters (rules, saved) | P+ | built (plan 32: filter sets, a line on any column; and / or, brackets; kept, keys, defaults); a Contents field (a file holds a text): plan 20; results kept in the folder cache, worked out in the background: built (plan 36) | 4 | Wildcard filter; Columns (rules on properties) |
+| Hyperfilters (rules, saved) | P+ | built (plan 32: filter sets, a line on any column; and / or, brackets; kept, keys, defaults); a Contents field (a file holds a text): built (plan 20); results kept in the folder cache, worked out in the background: built (plan 36) | 4 | Wildcard filter; Columns (rules on properties) |
 | Colour coding by rule | P+ | -- | 4 | Hyperfilters (the rules) |
 | Colour tags on files | All | -- | 4 | -- |
 | Views: details, list, thumbnails, Ctrl+wheel thumbnail zoom | All | built: details with columns (plan 11), icons (plan 03); Ctrl+wheel font size and icons that grow built (plan 08); thumbnails built (plan 22: grid, mosaic, river, details, cards; Ctrl+wheel) | 3 (mostly detail now) | Columns |
@@ -72,7 +72,7 @@ updated whenever a plan is written, built or closed that touches a feature here.
 | Everything integration | U | built (an engine of Find, plan 06) | 4 | Scrap containers (the results) |
 | Scrap containers (collect from many folders, save) | P+ | built (kept while Foldex runs, plan 06) | 4 | -- |
 | Mini scrap (docked drop stack) | P+ | built (a docked scrap, plan 06) | 4 | Scrap containers; docking (plan 01) or bars (plan 10) |
-| Find files on any property, results as a pane | P+ | part: by name into a scrap built (plan 06); any field, as a filter set (plan 32): plan 20 | 3 | Hyperfilters (the criteria); Scrap containers (the results) |
+| Find files on any property, results as a pane | P+ | built (by name into a scrap, plan 06; any field as a filter set, plan 20) | 3 | Hyperfilters (the criteria); Scrap containers (the results) |
 | Text in files (IFilters, regex) | P+ | built (plan 20: normal, verbatim, regex; known or all files, IFilters where installed; only the start; the preview finding it) | 3 | Find files |
 | Indexed search (Windows search index) | U | built (Use search index, with Everything, plan 06) | 3 | Find files |
 | MFT name search | U | -- | 3 | Find files; the elevated helper (plan 05) |

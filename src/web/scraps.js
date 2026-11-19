@@ -76,16 +76,5 @@ const SearchDefaults = { lookIn: '', subfolders: true, depthFirst: true, useInde
 // FolderSearch's, so the search (.NET) and the preview's find bar (JavaScript) agree on what matches; null: no text.
 // `mode`: "normal" (a filter's wildcards: * any run, ? one character, ; between alternatives; within one line),
 // "verbatim" (every character itself) or "regex". `word`: whole words only.
-function searchExpression(text, mode = 'normal', word = false) {
-  if (!text) return null;
-  const escape = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  let body;
-  if (mode === 'regex') body = text;
-  else if (mode === 'verbatim') body = escape(text);
-  else {
-    const parts = text.split(';').filter(p => p !== '');
-    if (!parts.length) return null;
-    body = parts.map(p => escape(p).replace(/\\\*/g, '[^\\r\\n]*').replace(/\\\?/g, '[^\\r\\n]')).join('|');
-  }
-  return word ? `\\b(?:${body})\\b` : `(?:${body})`;
-}
+// (filters.js filterTextPattern: one builder for Find's text and a filter's Contents line.)
+const searchExpression = (text, mode = 'normal', word = false) => filterTextPattern(text, mode, word);

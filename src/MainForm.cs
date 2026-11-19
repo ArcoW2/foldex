@@ -669,7 +669,7 @@ sealed class MainForm : Form
                     msg["kinds"] as JsonObject is { } kinds ? (JsonObject)kinds.DeepClone() : [],
                     msg["props"] is JsonArray props ? [.. props.Select(p => p!.GetValue<string>())] : [],
                     msg["git"]?.GetValue<bool>() == true, msg["now"]?.GetValue<long>() ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-                    msg["from"]?.GetValue<int>() ?? 0);
+                    msg["from"]?.GetValue<int>() ?? 0, (msg["startKB"]?.GetValue<long>() ?? 0) * 1024);
                 var reachable = Path.IsPathFullyQualified(r.Location) && await NetworkGuard.Reachable(r.Location);
                 var (results, done, next) = !reachable ? ([], true, 0)
                     : msg["op"]!.GetValue<string>() == "filterHolds" ? await app.Filters.Holds(r, TimeSpan.FromMilliseconds(400))

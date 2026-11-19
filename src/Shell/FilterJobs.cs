@@ -39,9 +39,9 @@ sealed class FilterJobs
     /// <summary>What to test with: `Key` (null: keep nothing: relative by the clock), `Filter` (the filter's id),
     /// `Run` (the asking pane's request, for a job without a key), the set, the kind of each field it reads, the
     /// Windows properties and whether the Git status it needs, now (ms since 1970), and how much of the job's answer the
-    /// asker has (`From`).</summary>
+    /// asker has (`From`); a Contents line reads files up to `StartBytes` (plan 20 3.2; 0: whole).</summary>
     public sealed record Request(string Location, string? Key, string Filter, string Run, JsonNode Set, JsonObject Kinds,
-        IReadOnlyList<string> Props, bool Git, long Now, int From = 0);
+        IReadOnlyList<string> Props, bool Git, long Now, int From = 0, long StartBytes = 0);
 
     sealed class Job
     {
@@ -186,22 +186,12 @@ sealed class FilterJobs
         var known = items.Where(i => i.Result is not null).Select(i => (i.Name, i.Result!.Value)).ToList();
         foreach (var (name, pass) in known) all[name] = pass;
         if (known.Count > 0) told?.Invoke(known);
-        var git = r.Git ? GitStatus.Of(location) : null;
+        var needs = new FilterEngine.Needs(r.Props, r.Git, FilterEngine.Contents(r.Set), r.StartBytes);
         foreach (var chunk in items.Where(i => i.Result is null).Chunk(64))
         {
             var entries = chunk.Select(i => (JsonObject)i.Entry.DeepClone()).ToList();
-            if (r.Props.Count > 0)
-            {
-                var files = chunk.Where(i => !i.Folder).Select(i => Path.Combine(location, i.Name)).ToList();
-                var values = files.Count > 0 ? await StaWorker.Once("props", () => ShellProps.Values(files, r.Props)) : new JsonObject();
-                for (var k = 0; k < chunk.Length; k++)
-                {
-                    if (chunk[k].Folder) continue;
-                    var mine = values[Path.Combine(location, chunk[k].Name)] as JsonObject;
-                    entries[k]["props"] = new JsonObject(r.Props.Select(n => KeyValuePair.Create(n, mine?[n]?.DeepClone())));
-                }
-            }
-            if (r.Git) foreach (var e in entries) e["git"] = git?[e["name"]!.GetValue<string>()]?.DeepClone();
+            await FilterEngine.Fill(entries, [.. chunk.Select(i => Path.Combine(location, i.Name))], location, needs,
+                (files, names) => StaWorker.Once("props", () => ShellProps.Values(files, names)));
             var results = FilterEngine.Test(r.Set, r.Kinds, r.Now, entries);
             // A value still not there (none should be): shown, as the page shows an item no property can be read of.
             var batch = chunk.Select((i, k) => (i.Name, results[k] ?? true)).ToList();

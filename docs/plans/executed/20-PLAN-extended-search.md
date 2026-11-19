@@ -1,10 +1,11 @@
 # Plan 20: Extended search options
 
-Status: partly executed; see Status and 6 (As built).
+Status: executed; see Status and 6 (As built).
 
 - 2026-11-12: draft, at the user's request: the Find dialog's Containing text and Additional rules, split off plan 06.
 - 2026-11-19: partly executed: stage 1 (Containing text, the preview's find bar, F3 from a text scrap, the scrap
   while it fills, Sort when done).
+- 2026-11-19: executed.
 
 Builds on plan 06 (the scrap and the Find dialog) and plan 32 (filter sets: the lines, their engine and their
 editor). Built in two stages around plan 36 (filter results in the folder cache, the filter engine run by the host):
@@ -49,16 +50,13 @@ LexPen's searches with Ctrl+F, F3 and Shift+F3.
 | Find in the preview | a find bar in Foldex's own preview, after LexPen's: Ctrl+F, F3, Shift+F3, case, whole word, regular expression; PDF's text too; a warning where a preview cannot be searched | 3.5; 6.3 |
 | F3 from a text scrap | the floating preview opened searching the scrap's text, on its first match, reading as far as the search did | 3.5; 6.3 |
 | Tests, stage 1 | see 3.4 and 6.4 | 3.4; 6.4 |
+| Additional rules | a kept filter set (plan 32) chosen in the dialog, its lines shown; tested by the host's engine during the search | 3.2; 6.5 |
+| Contents field | a field of plan 32's lines: the file holds a text, in an encoding (automatic by default), known files or all files; in Find and in a pane's filter; the tortoise and a warning that it can be very slow | 3.2; 6.5 |
+| Contents, more | contains, matches wildcards, matches a regex | 3.2; 6.5 |
+| Kept: the rules | the rules in a scrap's search, Find's last search and Predefined | 3.3; 6.5 |
+| Tests, stage 2 | see 6.5 | 3.4; 6.5 |
 
 ### Not yet built
-
-| Part | What | Waits for | Reference |
-|---|---|---|---|
-| Additional rules | a filter set (plan 32): its lines, brackets, and / or / not, its line editor; tested by the host's engine during the search | plan 36 (the engine in the host) | 3.2 |
-| Contents field | a field of plan 32's lines: the file holds a text, in an encoding (automatic by default), known files or all files; in Find and in a pane's filter; the tortoise and a warning that it can be very slow | plan 36 | 3.2 |
-| Contents, more | the text kind's other conditions on Contents: wildcards, a regular expression | Contents field | 3.2 |
-| Kept: the rules | the rules in a scrap's search, Find's last search and Predefined | Additional rules | 3.3 |
-| Tests, stage 2 | the rules and Contents, see 3.4 | Additional rules; Contents field | 3.4 |
 
 ## 3. Details
 
@@ -263,3 +261,29 @@ None.
   F3 from the scrap on a.txt: the window with the keyboard, the bar on "needle", 1 of 2 lit; F3, Shift+F3, Esc, Ctrl+F
   (its text selected), Esc twice closing the window; b.md (shadow root) and e.pdf (3 matches over 2 pages, lit in the
   text layer); Ctrl+F on an image: the warning; the docked preview (Alt+P) with the bar.
+
+### 6.5 Stage 2: the rules and Contents (2026-11-19, after plan 36)
+
+- Contents: a field of plan 32's lines (`filters.js`: kind `contents`, a slow field), in Manage filters' field list
+  after the columns. Its line: contains, matches wildcards, matches a regex; the text; an encoding (Automatic,
+  UTF-8, UTF-16 LE, UTF-16 BE, Windows-1252, Latin-1); All files or the known ones. The host reads the files
+  (`FilterEngine.Fill`, `TextSearch` with the encoding chosen, Only the start at the searchStartKB setting) and puts
+  each line's answer on the item (`contents`, by the condition's key); filters.js tests that. The expression builder
+  moved from scraps.js to filters.js (`filterTextPattern`), so the host's engine has it too; scraps.js's
+  `searchExpression` calls it.
+- A folder passes a Contents line: the line does not apply to it and is left out (plan 32's rule).
+- In the field list Contents has the tortoise with its own tooltip; under a Contents line a warning that every file
+  is opened and read and that it can be very slow, in place of the tortoise's usual one.
+- The rules in the Find dialog differ from 3.2: not an editor of lines in the dialog but a choice of a kept filter
+  set (Rules: None or a set's name), its lines in short under it. The dialog is a modal window, so Manage filters cannot
+  be used while it is open; a set is made and changed there, with the same lines and editor, and chosen here. The
+  rules' lines show three lines high, scrolling, so the dialog's window keeps fitting.
+- The host tests the rules during the search (`FileSearch` `Ruled`), on each item the name finds, before the text,
+  with the same engine and `Fill`: no round trip to the page.
+- A scrap's own filter with a Contents line is still the page's (a scrap is not one folder on disk): its items wait
+  for a value that never comes there, so they do not show. Not built: open for when it is wanted.
+- Tests: `dotnet test` 287 passed. New in `FilterResultsTests`: a Contents line contains, wildcards, a regex, Not,
+  an encoding chosen (a Latin-1 file read as UTF-8 does not hold the word, as Windows-1252 it does); a search with rules,
+  and with rules and a text. In a test copy: a list filtered on Contents "needle" (the file with it past the start
+  limit not shown); Contents in the field list; a search with a rule and a text; the dialog's Rules with a kept set,
+  its lines shown, the window still fitting.

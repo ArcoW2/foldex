@@ -4,7 +4,7 @@ using Foldex.Shell;
 
 namespace Foldex.Tests;
 
-// Find's Containing text (docs/plans/20-PLAN-extended-search.md 3.1): the expression the page builds (scraps.js
+// Find's Containing text (docs/plans/executed/20-PLAN-extended-search.md 3.1): the expression the page builds (scraps.js
 // searchExpression), read the same way by JavaScript and .NET; the host's text check (TextSearch): the encodings,
 // Known files and All files, only the start; a search with a text.
 public class TextSearchTests : IDisposable
@@ -20,7 +20,7 @@ public class TextSearchTests : IDisposable
     static Jint.Engine Page()
     {
         var engine = new Jint.Engine();
-        engine.Execute(File.ReadAllText(Path.Combine(Web, "scraps.js")));
+        foreach (var f in new[] { "filters.js", "scraps.js" }) engine.Execute(File.ReadAllText(Path.Combine(Web, f)));
         return engine;
     }
 

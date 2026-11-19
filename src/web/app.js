@@ -299,7 +299,9 @@ function openManageFilters(paneId = null) {
 // filter kind and whether they are slow), the pane it is for with its set.
 function filtersForPage(view, paneFirst = false) {
   const field = (id, title, kind) => ({ id, title, kind: filterKind(id, kind), slow: slowField(id) });
-  const fields = [...OwnColumns.map(c => field(c.id, c.title, c.kind)), ...(propList ?? []).map(p => field(p.name, p.title, p.kind))];
+  // Contents (plan 20 3.2): no column, a field of a filter only; whether a file holds a text.
+  const fields = [...OwnColumns.map(c => field(c.id, c.title, c.kind)), field('contents', 'Contents', 'contents'),
+    ...(propList ?? []).map(p => field(p.name, p.title, p.kind))];
   const p = filtersFor && layout.pane(filtersFor.id) ? filtersFor : null;
   return { kind: 'filters', filters: filterSets, fields, split: layout.pane(view.id)?.split,
     pane: p ? { id: p.id, title: views.get(p.id)?.tabTitle() ?? p.id, set: paneFilterSet(p.id), before: p.before } : null, paneFirst };
@@ -1160,7 +1162,7 @@ class TreeView {
     const fields = [...new Set(f.set.lines.map(l => l.field))];
     const ask = { op: what === 'holds' ? 'filterHolds' : 'filterResults', location: folder, key: f.key, filter: f.filter,
       run: f.run, set: f.set, kinds: Object.fromEntries(fields.map(id => [id, filterKindOf(id)])),
-      props: [...new Set(fields.flatMap(propsFor))], git: fields.includes('git') };
+      props: [...new Set(fields.flatMap(propsFor))], git: fields.includes('git'), startKB: settings.searchStartKB ?? 2048 };
     for (let done = false, from = 0; !done && this.filtering === f && f.folders.get(`${what}|${folder.toLowerCase()}`) === got;) {
       const m = await askHost({ ...ask, now: Date.now(), from });
       from = m.next ?? 0;
@@ -2100,7 +2102,7 @@ class ListView {
     const fields = [...new Set(f.set.lines.map(l => l.field))];
     const kinds = Object.fromEntries(fields.map(id => [id, filterKindOf(id)]));
     const ask = { op: 'filterResults', location: f.location, key: f.key, filter: f.filter, set: f.set, kinds,
-      props: [...new Set(fields.flatMap(propsFor))], git: fields.includes('git') };
+      props: [...new Set(fields.flatMap(propsFor))], git: fields.includes('git'), startKB: settings.searchStartKB ?? 2048 };
     try {
       for (let from = 0; this.filtering === f && !f.done;) {
         const m = await askHost({ ...ask, run: f.run, now: Date.now(), from });
@@ -2585,7 +2587,11 @@ class ScrapView extends ListView {
     this.stopButton.hidden = false;
     this.drawFoot();
     if (activePane === this.id) this.tellCount();
-    post({ op: 'search', channel: this.id, ...options, textPattern: searchExpression(options.text, options.textMode, options.textWord) });
+    // The additional rules (plan 20 3.2): the host tests them with the filter engine; what their fields are and read.
+    const rules = options.rules?.lines?.length ? options.rules : null, fields = rules ? [...new Set(rules.lines.map(l => l.field))] : [];
+    post({ op: 'search', channel: this.id, ...options, textPattern: searchExpression(options.text, options.textMode, options.textWord),
+      rules, rulesKinds: Object.fromEntries(fields.map(id => [id, filterKindOf(id)])), rulesProps: [...new Set(fields.flatMap(propsFor))],
+      rulesGit: fields.includes('git') });
   }
 
   stop() { post({ op: 'searchStop', channel: this.id }); }

@@ -16,7 +16,8 @@ static class FileSearch
     /// and `StartBytes` (only that much of each file read; 0: all of it).</summary>
     public sealed record Options(string? LookIn, IReadOnlyList<string>? Within, bool Subfolders, bool DepthFirst,
         bool UseIndex, bool Files, bool Folders, bool Regex, int Fuzzy, string Named,
-        string? TextPattern = null, bool TextCase = false, bool AllFiles = false, long StartBytes = 0)
+        string? TextPattern = null, bool TextCase = false, bool AllFiles = false, long StartBytes = 0,
+        JsonNode? Rules = null, JsonObject? RulesKinds = null, IReadOnlyList<string>? RulesProps = null, bool RulesGit = false)
     {
         public static Options From(JsonObject m) => new(
             m["lookIn"]?.GetValue<string>(),
@@ -32,7 +33,11 @@ static class FileSearch
             m["textPattern"]?.GetValue<string>() is { Length: > 0 } p ? p : null,
             m["textCase"]?.GetValue<bool>() ?? false,
             m["allFiles"]?.GetValue<bool>() ?? false,
-            m["startOnly"]?.GetValue<bool>() == true ? Math.Max(1, m["startKB"]?.GetValue<long>() ?? 2048) * 1024 : 0);
+            m["startOnly"]?.GetValue<bool>() == true ? Math.Max(1, m["startKB"]?.GetValue<long>() ?? 2048) * 1024 : 0,
+            m["rules"] is JsonObject { } rules && rules["lines"] is JsonArray { Count: > 0 } ? rules.DeepClone() : null,
+            m["rulesKinds"] as JsonObject is { } kinds ? (JsonObject)kinds.DeepClone() : null,
+            m["rulesProps"] is JsonArray props ? [.. props.Select(n => n!.GetValue<string>())] : null,
+            m["rulesGit"]?.GetValue<bool>() == true);
     }
 
     /// <summary>The engine used (walk, everything, windows, scrap) and how many were found; throws ArgumentException for
@@ -41,6 +46,19 @@ static class FileSearch
     {
         var test = NameTest(o);
         var text = TextSearch.Make(o.TextPattern, o.TextCase);
+        // The additional rules (plan 20 3.2): a filter set, tested by the filter engine (as a pane's filter in the host,
+        // plan 36) on each item the name finds, before the text; what they read besides the listing read for it here.
+        var rules = o.Rules is null ? null : new FilterEngine.Needs(o.RulesProps ?? [], o.RulesGit, FilterEngine.Contents(o.Rules), o.StartBytes);
+        var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        bool Ruled(FileSystemInfo info)
+        {
+            if (rules is null) return true;
+            var entry = ShellListing.FilterEntry(info);
+            // On the search's own STA thread: Windows' properties read here, at once.
+            FilterEngine.Fill([entry], [info.FullName], Path.GetDirectoryName(info.FullName) ?? "", rules,
+                (files, names) => Task.FromResult(ShellProps.Values(files, names)), cancel).GetAwaiter().GetResult();
+            return FilterEngine.Test(o.Rules!, o.RulesKinds ?? [], now, [entry])[0] != false;
+        }
         var found = 0;
         var pending = new JsonArray();
         var since = System.Diagnostics.Stopwatch.StartNew();
@@ -57,7 +75,7 @@ static class FileSearch
         {
             Flush();
             var folder = (info.Attributes & FileAttributes.Directory) != 0;
-            if (!(folder ? o.Folders : o.Files) || !test(info.Name)) return;
+            if (!(folder ? o.Folders : o.Files) || !test(info.Name) || !Ruled(info)) return;
             // A text: folders never hold one; a file is read last, as it is the slowest test (plan 20 3.1).
             if (text is not null && (folder || !TextSearch.Holds(info.FullName, text, o.AllFiles, o.StartBytes, cancel))) return;
             try { pending.Add(ShellListing.DiskEntry(info)); }
