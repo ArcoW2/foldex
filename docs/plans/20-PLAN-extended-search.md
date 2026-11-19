@@ -5,7 +5,10 @@ Status: draft 2026-11-12; not started.
 - 2026-11-12: draft, at the user's request: the Find dialog's Containing text and Additional rules, split off plan 06.
 
 Builds on plan 06 (the scrap and the Find dialog) and plan 32 (filter sets: the lines, their engine and their
-editor). The number in the file name is the priority; rename to reorder.
+editor). Built in two stages around plan 36 (filter results in the folder cache, the filter engine run by the host):
+first everything that is not a filter (the text, the preview's find bar, the scrap while it fills), then, on top of
+plan 36, the rules and the Contents field, tested by the host's engine. The number in the file name is the priority;
+rename to reorder.
 
 ## 1. What this is about
 
@@ -20,13 +23,11 @@ The Find dialog gets a Containing text with its options (case, whole words; norm
 known files or all files; by default only the start of a file) and Additional rules that are a filter set of plan
 32: the same lines, brackets, and, or and not, the same engine and line editor. Plan 32's fields get one more,
 Contents: a line on it tests whether a file holds a text, known files or all files, in a search and in a pane's
-filter alike, with a warning that it can be very slow. The rules are
-tested on what the name search finds, the text on what passes them. Every item found shows in the scrap at once, at
-its end; when the search ends the scrap is sorted once by its own sort (none: kept as found), unless the Find
-dialog's Sort when done (its default a setting, on) is unchecked. Searching and filtering
-never hold the window up: Stop works at once, a search goes on wherever the panes go, a filter starts again on the
-folder a pane moves to. Both are kept with a
-scrap's search and in saved searches. F3 on a file in a scrap whose search has a text opens its preview already
+filter alike, with a warning that it can be very slow. The rules are tested by the host's filter engine (plan 36)
+on what the name search finds, the text on what passes them. Every item found shows in the scrap at once, at its
+end; when the search ends the scrap is sorted once by its own sort (none: kept as found), unless the Find dialog's
+Sort when done (its default a setting, on) is unchecked. A search never holds the window up: Stop works at once, and
+it goes on wherever the panes go. Both are kept with a scrap's search and in saved searches. F3 on a file in a scrap whose search has a text opens its preview already
 searching that text, on the first match; in any preview Foldex draws (PDF and markdown included) a find bar after
 LexPen's searches with Ctrl+F, F3 and Shift+F3.
 
@@ -43,13 +44,13 @@ Nothing yet.
 | Containing text | the text and its list; case sensitive, whole words; normal (the filter's wildcards), verbatim or regular expression | -- | 3.1 |
 | Which files | known files or all files (Word, PDF, other binaries); the encoding found by itself | -- | 3.1 |
 | Only the start | a check (on) and a size in the dialog; its default a setting (2 MB) | -- | 3.1 |
-| Additional rules | a filter set (plan 32): its lines, brackets, and / or / not, its engine and line editor | -- | 3.2 |
-| Contents field | a field of plan 32's lines: the file holds a text, in an encoding (automatic by default), known files or all files; in Find and in a pane's filter; the tortoise and a warning that it can be very slow | Which files | 3.2 |
-| Contents, more | the text kind's other conditions on Contents: wildcards, a regular expression | Contents field | 3.2 |
 | Found at once | each batch added at the scrap's end, not sorted in; sorted once at the end; a scrap without a sort keeps the order found | -- | 3.6 |
 | Sort when done | a check at the bottom of the Find dialog; its default a setting (on) | Found at once | 3.6 |
-| Responsive | the window answering while a search or a slow filter runs; Stop at once; a search independent of the panes; a filter restarted on a new folder | -- | 3.6 |
-| Kept | all of it in a scrap's search and in Predefined | -- | 3.3 |
+| Responsive | the window answering while a search runs; Stop at once; a search independent of the panes | -- | 3.6 |
+| Kept | the text, its options, Sort when done in a scrap's search and in Predefined; the rules once they are built | -- | 3.3 |
+| Additional rules | a filter set (plan 32): its lines, brackets, and / or / not, its line editor; tested by the host's engine during the search | plan 36 (the engine in the host) | 3.2 |
+| Contents field | a field of plan 32's lines: the file holds a text, in an encoding (automatic by default), known files or all files; in Find and in a pane's filter; the tortoise and a warning that it can be very slow | plan 36; Which files | 3.2 |
+| Contents, more | the text kind's other conditions on Contents: wildcards, a regular expression | Contents field | 3.2 |
 | Find in the preview | a find bar in Foldex's own preview, after LexPen's: Ctrl+F, F3, Shift+F3, case, whole word, regular expression; PDF's text too; a warning where a preview cannot be searched | -- | 3.5 |
 | F3 from a text scrap | the floating preview opened searching the scrap's text, on its first match, reading as far as the search did | Containing text; Find in the preview | 3.5 |
 | Tests | see 3.4 | -- | 3.4 |
@@ -104,16 +105,16 @@ Nothing yet.
   the setting's size (3.1).
 - It is a slow field (the tortoise, plan 32 3.1), and slower than any other: every file the line is tested on is
   opened and read. So it says more than the tortoise does: in the field list its tooltip, and under a line using it a
-  warning, that it can be very slow (in a large folder, on a share, and most of all with All files). The page's
-  engine asks the host whether a file holds the text, as it asks for a Windows property, and the item waits for the
-  answer. The host's check is the one of 3.1, so a Contents line and the Containing text find the same.
+  warning, that it can be very slow (in a large folder, on a share, and most of all with All files). Its value is
+  read by the host's engine (plan 36 3.3) through the text check of 3.1, so a Contents line and the Containing text
+  find the same; in a pane's filter its results are kept in the folder cache and worked out in the background as any
+  filter's (plan 36).
 - Containing text stays in the dialog as the quick way; Contents is for what it cannot say: two texts, a text in
   some files only, a file without a text (`Not Contents contains "TODO"`).
-- Where they are tested: the scrap's page tests every item the name search streams to it with the set (the same
-  engine as a pane's filter, so a slow field is read as there); what passes goes back to the host for the text check
-  (3.1). One engine, so a rule means the same in a filter and in a search; the cost is a round trip per batch of
-  results. Not chosen: the engine again in C# beside the page's (two engines that can come to differ), or Everything's
-  and the index's own size and date tests (a third way to read the same rule).
+- Where they are tested: in the host, during the search, by plan 36's engine (`filters.js` run by the host): each
+  item the name search finds is tested with the set before it is handed to the scrap, and the text check (3.1) runs
+  on what passes. One engine, so a rule means the same in a filter and in a search, and no round trip to the page.
+  Not chosen: Everything's and the index's own size and date tests (a second way to read the same rule).
 
 ### 3.3 Kept
 
@@ -168,8 +169,9 @@ Nothing yet.
 - **Found at once.** The host hands what it found over in batches while it runs (`FileSearch.Run`, every 250 ms);
   each batch shows in the scrap at once, added at its end, without waiting for the search to end. Today every batch
   filters and sorts the whole scrap again (`ScrapView.searchChanged`), so items already there move while you look at
-  them and the work grows with the scrap: a batch is only added at the end now, after its rules (3.2) and the
-  scrap's own filter and search bar; nothing already shown moves, the focus and the selection stay.
+  them and the work grows with the scrap: a batch is only added at the end now, tested only against the scrap's own
+  filter and search bar (the rules, 3.2, are tested in the host before it); nothing already shown moves, the focus
+  and the selection stay.
 - **Sorted at the end.** When the search ends (done or stopped) the scrap is sorted once by the sort it has (its
   columns' sort, plan 28 3.4). A scrap without a sort (its sort list empty: a new scrap's, or emptied in the Sort
   window) keeps the order found. Today a scrap without a sort is sorted by name (`byName`): for a scrap, an empty sort
@@ -188,15 +190,12 @@ Nothing yet.
 - **A search is not tied to a place.** Once started it goes on whatever the panes do: the active pane moving to other
   folders, another pane made active, the scrap's own parent changing focus, another search started into another scrap.
   It ends only when done, stopped, or its scrap closed.
-- **A filter is tied to its folder.** A pane's filter with a slow field (Contents, a Windows property) shows what has
-  passed so far and the rest as it is answered. When the pane moves to another folder, the questions still open for
-  the old one are dropped (in the page and in the host's queue) and the filter starts on the new folder; going back
-  starts it there again.
+- A pane's filter, a slow one included, is plan 36's: its results kept in the folder cache, worked out in the
+  background, the pane showing what passed so far wherever it goes.
 - Tests: a search finding many items over several seconds: items show from the first batch on, none already shown
   moves, the keyboard moves the focus in another pane meanwhile; Stop: the search ends at once, the scrap sorted; a
   scrap without a sort: the order found kept; the active pane moved to three folders during a search: the search goes
-  on unchanged; a folder filtered on Contents, left before it is done: no more answers for it, the new folder filtered.
-  Sort when done unchecked: a sorted scrap keeps the order found at the end; the setting off: the check starts
+  on unchanged. Sort when done unchecked: a sorted scrap keeps the order found at the end; the setting off: the check starts
   unchecked in a new Find.
 
 ## 4. Open questions

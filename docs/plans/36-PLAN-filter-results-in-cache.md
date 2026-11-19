@@ -79,6 +79,7 @@ Nothing yet.
   text check. A value not read yet is read for the test, at the background's priority (3.5).
 - Today the page tests (`filterTestOf`); with this plan the page only shows what the host says passes. The search
   bar's quick filter stays the page's own (it is typed and gone, plan 32 2).
+- Plan 20's search rules and its Contents field are tested by this engine too, so they are built after it.
 
 ### 3.4 Requests with a filter
 
