@@ -187,6 +187,7 @@ sealed class MainForm : Form
         WebFiles.Serve(core);
         Shell.OwnPreview.Serve(core);   // the files of Foldex's own preview (before the page is loaded)
         core.ContextMenuRequested += (_, m) => WebFiles.BrowserMenu(m);
+        core.PermissionRequested += (_, p) => WebFiles.ClipboardRead(p);
         // Not inside a WebView2 event handler: dialogs and long work must not run there.
         // Files dropped from Explorer come along as objects that carry their path (docs/plans/02 3.6).
         core.WebMessageReceived += (_, m) =>

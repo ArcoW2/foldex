@@ -61,6 +61,15 @@ static class WebFiles
     /// The browser's own right-click menu (Back, Refresh, Save as, ...) is not Foldex's: it shows only on a text field
     /// or a selection (Cut, Copy, Paste), never with Print. False: none shown.
     /// </summary>
+    /// <summary>A text field's own edit menu (menu.js fieldMenu) reads the clipboard for Paste: Foldex's pages may,
+    /// without a question; nothing else is granted.</summary>
+    public static void ClipboardRead(CoreWebView2PermissionRequestedEventArgs p)
+    {
+        if (p.PermissionKind == CoreWebView2PermissionKind.ClipboardRead && Uri.TryCreate(p.Uri, UriKind.Absolute, out var uri)
+            && (uri.Host.Equals(Host, StringComparison.OrdinalIgnoreCase) || uri.Host.Equals(PaneHost, StringComparison.OrdinalIgnoreCase)))
+            p.State = CoreWebView2PermissionState.Allow;
+    }
+
     public static bool BrowserMenu(CoreWebView2ContextMenuRequestedEventArgs m)
     {
         if (!m.ContextMenuTarget.IsEditable && !m.ContextMenuTarget.HasSelection) { m.Handled = true; return false; }

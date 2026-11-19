@@ -49,7 +49,7 @@ function wheelHere({ x, y, dx, dy, mode }) {
   document.scrollingElement?.scrollBy(dx * unit, dy * unit);
 }
 
-function openMenu(x, y, items, level = 0, back = null) {
+function openMenu(x, y, items, level = 0, back = null, { focus = true } = {}) {
   closeMenus(level);
   if (level === 0) closeOtherMenus();
   const el = document.createElement('div');
@@ -158,7 +158,7 @@ function openMenu(x, y, items, level = 0, back = null) {
   if (level === 0) {
     menuOpener = menuDown && performance.now() - menuDown.time < MenuOpenerTime ? menuDown.target : null;
     menuDown = null;
-    el.focus();
+    if (focus) el.focus();   // a text field's menu leaves the keyboard in the field (fieldMenu): it would lose what was typed
   }
   return menu;
 }
@@ -196,3 +196,36 @@ document.addEventListener('keydown', e => {
     e.stopPropagation();
   }
 }, true);
+
+// A text field's right-click: Foldex's own edit menu, not WebView2's (the user's choice; LexPen keeps WebView2's).
+// Each item works on the field's selection as it was when the menu opened; Paste reads the clipboard (the host allows
+// Foldex's pages, WebFiles.ClipboardRead) and types it, so Undo takes it back.
+addEventListener('contextmenu', e => {
+  const f = e.target.closest?.('input, textarea');
+  if (!f || f.disabled || f.tagName === 'INPUT' && !['text', 'search', 'url', 'email', 'password', ''].includes(f.type)) return;
+  e.preventDefault();
+  e.stopPropagation();
+  fieldMenu(f, e.clientX, e.clientY);
+}, true);
+
+function fieldMenu(f, x, y) {
+  const from = f.selectionStart ?? 0, to = f.selectionEnd ?? 0, picked = to > from, readOnly = f.readOnly;
+  const back = () => { f.focus(); f.setSelectionRange(from, to); };
+  const command = name => () => { back(); document.execCommand(name); };
+  openMenu(x, y, [
+    { label: 'Undo', key: 'Ctrl+Z', enabled: !readOnly, run: command('undo') },
+    '-',
+    { label: 'Cut', key: 'Ctrl+X', enabled: picked && !readOnly, run: command('cut') },
+    { label: 'Copy', key: 'Ctrl+C', enabled: picked, run: command('copy') },
+    { label: 'Paste', key: 'Ctrl+V', enabled: !readOnly, run: async () => {
+      back();
+      let text = '';
+      try { text = await navigator.clipboard.readText(); } catch { return; }
+      back();
+      if (text) document.execCommand('insertText', false, text);
+    } },
+    { label: 'Delete', key: 'Del', enabled: picked && !readOnly, run: command('delete') },
+    '-',
+    { label: 'Select all', key: 'Ctrl+A', enabled: !!f.value, run: () => { f.focus(); f.select(); } },
+  ], 0, null, { focus: false });
+}

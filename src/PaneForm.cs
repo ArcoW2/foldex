@@ -141,6 +141,7 @@ sealed class PaneForm : Form
         WebFiles.Serve(core);
         Shell.OwnPreview.Serve(core);   // the files of Foldex's own preview (a PDF, an image, a video), as the window's
         core.ContextMenuRequested += (_, m) => WebFiles.BrowserMenu(m);
+        core.PermissionRequested += (_, p) => WebFiles.ClipboardRead(p);
         // What the pane says goes to its window's page, as a frame's message would; what it asks of the host itself (an
         // `op`, plan 14 stage 6) its window's host answers here.
         core.WebMessageReceived += (_, m) =>

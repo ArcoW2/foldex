@@ -18,6 +18,7 @@ function paneChannel({ id, page, title, view, state, receive, menu }) {
   ch.frameEl = () => {
     if (ch.frame) return ch.frame;
     const frame = document.createElement('iframe');
+    frame.allow = 'clipboard-read; clipboard-write';   // a text field's Paste (menu.js fieldMenu), as the window's
     frame.className = 'pane-frame';
     frame.title = title;
     frame.name = id;   // the host knows the frame by it (MainForm FrameCreated)
