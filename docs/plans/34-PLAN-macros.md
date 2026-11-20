@@ -69,6 +69,11 @@ Moved out: recording macros to plan 35.
 - Copied, not shared: the copy is Foldex's own from then on (plan 01 3.3). What LexPen's language has that has no
   meaning here (the editor's cursor: `moveto`, `type`, `find`, `$$line`, documents and their panes) is left out; a
   macro that uses it is told so when it is read (LexPen's validation, its plan 3.10).
+- **A statement on more lines**, as LexPen's language gets it too (the user adds it there; the two keep one rule, so
+  when LexPen's is built first, Foldex copies it): a line that ends with ` \` (a backslash outside quotes, the
+  last thing on it but spaces) goes on on the next line, for any statement: a long `run`, `if` or `set`. A backslash
+  inside quotes (`"C:\Tools"`, `"\.."`) is text, never this. A problem in such a statement is told at the line it
+  starts on.
 - Steps for panes and items, new: `go "D:\data"` (the active pane goes there; not `goto`, which LexPen keeps for labels), `select "*.log"` (the items
   matching, as Select by pattern), `focus "name"`, `pane "name"` (the pane of that name becomes the active one, plan
   25's names). [The full list: written when the part is built, from the actions F1 lists.]
@@ -95,8 +100,8 @@ keep the selected and the focused items apart (the project's words):
   so `run $$focused` and `"x " & quoted($$focused)` use it as it is; a dot reads one of its fields. Where Foldex
   differs from LexPen: LexPen's values are text only, without fields or lists; an item is more than its path.
   - The fields are the ids of the columns and of the filter's fields: `name`, `ext`, `size`, `modified`, `created`,
-    `accessed`, `attributes`, `type`, `target`, `fullPath`, and `folder` (the folder it is in) and `base` (its name
-    without the extension): `$$focused.size`, `$$selected[2].modified`, `$f.fullPath`.
+    `accessed`, `attributes`, `type`, `target`, `fullPath`, `path` (the folder it is in, as the Folder column), and
+    `base` (its name without the extension): `$$focused.size`, `$$selected[2].modified`, `$f.fullPath`, `$f.path`.
   - `size` is in bytes, always, a number (so it calculates and compares: `if $f.size > 1000000 then`); another unit
     is a division (below). Dates as the setting dateFormat writes them; attributes as the Attributes column's
     letters. A field the item has no value for (a folder's size not counted, a link target of a file that is none):
@@ -120,9 +125,25 @@ keep the selected and the focused items apart (the project's words):
 - `run <what> [<parameters>]`, both expressions: `run "C:\Tools\x.exe" "--verbose " & quoted($$focused)`.
   `<what>` is a program, a document (opened with its program) or a URL: the host starts it as Windows' Run does
   (ShellExecute), so `run $$focused` opens the focused file as a double click would.
-- Options after it, as words: `in <folder>` (where it starts; default `$$location`), `minimized`, `maximized`,
-  `hidden`, `admin` (as administrator: Windows asks, as for any program; not Foldex's elevated helper, plan 05),
-  `wait` (the macro goes on when the program ends; `$$exitCode` then has its code).
+- Options, as words, before or after what it runs, in any order: `in <folder>` (where it starts, an expression;
+  default `$$location`; `..` in it worked out: `in $f.path & "\.."` is the folder above the item's), `minimized`,
+  `maximized`, `hidden`, `admin` (as administrator: Windows asks, as for any program; not Foldex's elevated helper,
+  plan 05), `wait` (the macro goes on when the program ends; `$$exitCode` then has its code). The first expression
+  that is not an option's is what it runs, the next its parameters; two expressions are apart where no operator
+  joins them.
+- With ` \` (3.1) every part on a line of its own:
+
+  ```
+  run \
+    in $f.path & "\.." \
+    "dotnet" "build -c Release" \
+    wait
+  ```
+
+- More: `run "C:\Program Files\7-Zip\7z.exe" "a backup.7z " & quoted($$selected) in $$selected[1].path minimized wait`
+  (the selected items packed, started in the folder of the first); `for each $f in $$selected` / `run "python"
+  "convert.py " & quoted($f.name) in $f.path wait` / `next` (a script per file, each started in its file's folder, so
+  the file's bare name is found).
 - Without `wait` the macro goes on at once. A program that cannot start: `$$error`, and the macro stops unless it
   tests `$$error` (LexPen's rules, its plan 3.5).
 - The host starts it, never the page; the page asks with the macro's line, so what runs is what the macro says.
@@ -178,8 +199,10 @@ keep the selected and the focused items apart (the project's words):
   fields and its text, a list's index (1, its last, past its end), `count`, `prop`; the functions on a path (on an
   item and on a relative path read as text), `quoted` and `unquoted` both ways; a size divided to KB and MB with `round`
   to 0 and 3 decimals, `padleft`, `padright`; the system variables from a pane state made for it; a left-out statement
-  refused when read.
-- Unit (host): `run` with each option builds the start it should (program, arguments, folder, window, verb); the
+  refused when read; a statement on more lines (` \`), a backslash in quotes at a line's end that is not one, a
+  problem told at the statement's first line; `run` with its options before, after and between what it runs.
+- Unit (host): `run` with each option builds the start it should (program, arguments, folder with `..` worked out,
+  window, verb); the
   tree's file read, written and read back; a broken file counts as empty and stays as it is.
 - In the test copy: Run a program with `notepad.exe` and the focused file: Notepad opens it; a key given and pressed;
   a `for each` over three selected files with `wait`; a macro in a folder two deep, run from the ribbon's list and
