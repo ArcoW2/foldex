@@ -1,8 +1,9 @@
 # Plan 34: Macros: run programs, act on panes and items, kept in a tree with keys
 
-Status: not started.
+Status: partly executed (see Status).
 
 - 2026-11-19: draft, at the user's request.
+- 2026-11-20: partly executed: the language (with items, lists, the functions, run and for each as statements).
 
 Takes over plan 01's Macros part (plan 01 3.3: LexPen's `MacroStore.cs`, its recording, `PLAN-macros.md`); recording
 is plan 35. Builds on
@@ -36,22 +37,25 @@ macro is plan 35.
 
 ### Built
 
-Nothing yet.
+| Part | What | Reference |
+|---|---|---|
+| The language | LexPen's macro language copied (`src/web/macrolang.js`): statements, variables, conditions, labels, procedures and functions, a statement on more lines; text with a backslash as it is; Foldex actions as steps; LexPen's editor statements refused | 3.1; 6.1 |
+| Items and functions | an item's fields (`$$focused.size`), a list's index from 1, `count`, `prop`; the functions on a path (with `unquoted`), `round`, `padleft`, `padright`; `$$newline`, `$$tab`, `$$exitCode` | 3.2; 6.1 |
+| Run, in the language | `run` with its options anywhere, in any order; the environment starts it | 3.3; 6.1 |
+| For each | `for each $p in <list>` ... `next` over the selected items, files matching, a list made with append | 3.4; 6.1 |
 
 ### Not yet built
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| The language | LexPen's macro language (`macrolang.js`) copied: statements, variables, conditions, labels; Foldex actions as steps | -- | 3.1 |
-| System variables | the active pane's folder, the focused item, the selected items, the other pane, ... | -- | 3.2 |
-| Items and functions | an item's fields (`$$focused.size`), a list's index from 1, `prop`; the functions on a path (with `unquoted`), `round`, `padleft`, `padright` | The language | 3.2 |
-| Run | `run`: a program, document or URL with parameters, where it starts, its window, as administrator, waiting for it | -- | 3.3 |
-| For each | a loop over a list of items (the selected ones) | -- | 3.4 |
+| System variables | the active pane's folder, the focused item, the selected items, the other pane, ...: the environment that gives them | Running them | 3.2 |
+| Run, the start | the host starts it: a program, document or URL with parameters, where it starts, its window, as administrator, waiting for it | -- | 3.3 |
 | The tree | macros in folders to any depth, your order, a name, an icon and keys each; `macros\` in the data folder, apart from the bookmarks | -- | 3.5 |
 | Manage macros | a pane (docked or floating): the tree, New (Folder, Macro, Run a program), the editor, Run, Key, Icon, Move to folder | The tree | 3.6 |
 | Run a program | the form: program, parameters (fixed text and variables), start in, window, as administrator | Run | 3.6 |
 | Running them | keys, the Macros menu on the ribbon, F1, a ribbon button for one macro; errors on the status line and in the Log | -- | 3.7 |
-| Tests | see 3.8 | -- | 3.8 |
+| The user's guide | `docs/macros/README.md`: every statement, system variable, field and function, with examples; Help in Manage macros opens it | Running them | 3.9 |
+| Tests | see 3.8 (the language's: built) | -- | 3.8 |
 
 Moved out: recording macros to plan 35.
 
@@ -59,8 +63,8 @@ Moved out: recording macros to plan 35.
 
 ### 3.1 The language
 
-- LexPen's macro language as it is (`..\LexPen\web\macrolang.js`; its plan 3.2 to 3.5): a step per line, `#` a
-  comment; text between double quotes with `\"`, `\\`, `\n`, `\t`; `set`, `$name` variables with their number rules,
+- LexPen's macro language as it is (`..\LexPen\src\web\macrolang.js`; its plan 3.2 to 3.5): a step per line, `#` a
+  comment; text between double quotes; `set`, `$name` variables with their number rules,
   `&` joining, `inc`, `dec`, `append`; `if ... then` on one line or as a block with `else`, `elseif`, `endif`;
   `switch` / `case` / `endswitch`; `:label`, `goto`, `gosub`, `return`, `stop`; procedures and functions. No
   JavaScript, for LexPen's reason: a macro can only do what its statements say.
@@ -69,11 +73,13 @@ Moved out: recording macros to plan 35.
 - Copied, not shared: the copy is Foldex's own from then on (plan 01 3.3). What LexPen's language has that has no
   meaning here (the editor's cursor: `moveto`, `type`, `find`, `$$line`, documents and their panes) is left out; a
   macro that uses it is told so when it is read (LexPen's validation, its plan 3.10).
-- **A statement on more lines**, as LexPen's language gets it too (the user adds it there; the two keep one rule, so
-  when LexPen's is built first, Foldex copies it): a line that ends with ` \` (a backslash outside quotes, the
-  last thing on it but spaces) goes on on the next line, for any statement: a long `run`, `if` or `set`. A backslash
-  inside quotes (`"C:\Tools"`, `"\.."`) is text, never this. A problem in such a statement is told at the line it
-  starts on.
+- **Text** (where Foldex differs from LexPen, whose text has the escapes `\"`, `\\`, `\n`, `\t`): a backslash in text
+  is a backslash, so paths are written as they are (`"C:\Tools\x.exe"`, `"\.."`, `"D:\new"`); a double quote in text is
+  written twice (`"say ""hi"""`); a line break and a tab are `$$newline` and `$$tab`.
+- **A statement on more lines**, as LexPen's (one rule; copied from it): a line that ends with ` \` (a backslash
+  outside quotes and comments, the last thing on it but spaces) goes on on the next line, for any statement: a long
+  `run`, `if` or `set`. A backslash inside quotes (`"C:\Tools"`, `"\.."`) is text, never this. A problem in such a
+  statement is told at the line and column where it is; a ` \` on the last line is one.
 - Steps for panes and items, new: `go "D:\data"` (the active pane goes there; not `goto`, which LexPen keeps for labels), `select "*.log"` (the items
   matching, as Select by pattern), `focus "name"`, `pane "name"` (the pane of that name becomes the active one, plan
   25's names). [The full list: written when the part is built, from the actions F1 lists.]
@@ -95,13 +101,18 @@ keep the selected and the focused items apart (the project's words):
 | `$$date`, `$$time` | now, as `2026-11-19` and `14:05:09` |
 | `$$error`, `$$errorText` | the last step failed, and why (as LexPen's) |
 | `$$exitCode` | the exit code of the last `run ... wait` |
+| `$$newline`, `$$tab` | a line break (CR LF) and a tab, for text |
 
-- **An item** (`$$focused`, an item of `$$selected`, the variable of `for each` over items) is a text, its full path,
-  so `run $$focused` and `"x " & quoted($$focused)` use it as it is; a dot reads one of its fields. Where Foldex
-  differs from LexPen: LexPen's values are text only, without fields or lists; an item is more than its path.
-  - The fields are the ids of the columns and of the filter's fields: `name`, `ext`, `size`, `modified`, `created`,
-    `accessed`, `attributes`, `type`, `target`, `fullPath`, `path` (the folder it is in, as the Folder column), and
-    `base` (its name without the extension): `$$focused.size`, `$$selected[2].modified`, `$f.fullPath`, `$f.path`.
+- **An item** (`$$focused`, an item of `$$selected`, the variable of `for each` over items) is a text, its path, name
+  and extension, so `run $$focused` and `"x " & quoted($$focused)` use it as it is; a dot reads one of its fields.
+  Where Foldex differs from LexPen: LexPen's values are text only, without fields or lists; an item is more than its
+  path.
+  - Its path and name, of `d:\abc\def\ghi.jkl`: `pathNameExt` that, `path` `d:\abc\def` (the folder it is in),
+    `nameExt` `ghi.jkl`, `name` `ghi`, `ext` `jkl`; a folder's `name` is its whole name, its `ext` empty. A "folder" is
+    an item that is one, never a path. The other fields as the columns of those ids: `size`, `modified`, `created`,
+    `accessed`, `attributes`, `type`, `target`: `$$focused.size`, `$$selected[2].modified`, `$f.path`.
+  - On a text that is no item (a path read or made), a field gives its path's part: of `"x\y\z.tar.gz"`, `.ext` is
+    `gz`; the other fields: empty.
   - `size` is in bytes, always, a number (so it calculates and compares: `if $f.size > 1000000 then`); another unit
     is a division (below). Dates as the setting dateFormat writes them; attributes as the Attributes column's
     letters. A field the item has no value for (a folder's size not counted, a link target of a file that is none):
@@ -109,13 +120,14 @@ keep the selected and the focused items apart (the project's words):
   - Windows' properties, whose names have dots of their own: `prop($$focused, "System.Photo.DateTaken")`, read only
     when a macro asks (they are slow to read).
 - **A list** is indexed from 1, as LexPen counts (`mid`, `pos`): `$$selected[1]`, `$$selected[$i].name`; past its end:
-  empty text. `count(<list>)` its length.
-- **Functions on a path**, for any text that is one (an item, a line read from a file, full or relative): `name($p)`
-  (without its folder), `base($p)` (without its extension too), `ext($p)`, `path($p)` (the folder it is in, as the
-  field `path`; on a folder the folder above it: `path($f.path)` is the folder above the item's folder, `path($f)` is
-  `$f.path`; on a drive's root: empty), `quoted($p)` (between double quotes when it holds a space; on a list: each
-  item), `unquoted($p)` (the double quotes round it taken off, when there are). On an item they give what its fields
-  give.
+  empty text. `count(<list>)` its length. A list as text: its items' with `, ` between (as `append` makes); `append`
+  keeps what it appended as a list too, so `for each` and an index take its items again (an item stays an item); a
+  text that is no list counts as one item per line.
+- **Functions on a path**, for any text that is one (an item, a line read from a file, full or relative), as the
+  fields: `path($p)`, `nameExt($p)`, `name($p)`, `ext($p)` (on a text they cannot tell a folder: a dot in a folder's
+  name splits it too). `path($f.path)` is the folder above the item's folder, `path($f)` is `$f.path`; of a drive's
+  root, a share's or a bare name: empty. `quoted($p)` (between double quotes when it holds a space; on a list: each
+  item, a space between), `unquoted($p)` (the double quotes round it taken off, when there are).
 - **Numbers and sizes**: LexPen's arithmetic divides already (`/`, up to 6 decimals when it does not come out), so a
   size in another unit is a division, its decimals `round(<number>, <decimals>)`: `round($f.size / 1024, 3) & " kb"`,
   `round($f.size / 1048576, 2) & " MB"`. `padleft(<text>, <length>)` and `padright(<text>, <length>)` a text made that
@@ -210,6 +222,40 @@ keep the selected and the focused items apart (the project's words):
   a `for each` over three selected files with `wait`; a macro in a folder two deep, run from the ribbon's list and
   from F1; Manage macros floated, docked and floated again; a failing program: the warning and the Log line.
 
+### 3.9 The user's guide
+
+- `docs/macros/README.md`, for whoever writes a macro: a user cannot guess the words. What a macro is and where it is
+  kept; every statement with an example; text, numbers and their types, `&`, comparisons; the system variables; items,
+  their fields and lists; every function; `run` with its options; `for each`; actions as steps (where to find their
+  names: F1); procedures, functions and `use`; errors (`onerror`, `$$error`); a few whole macros to start from. Plain
+  ASCII. Manage macros has Help, which opens it.
+
 ## 4. Open questions
 
 None.
+
+## 6. As built
+
+### 6.1 The language (2026-11-20)
+
+- `src/web/macrolang.js`: a copy of LexPen's `src\web\macrolang.js` as it was on 2026-11-20 (with its statement on
+  more lines), Foldex's own from then on. Taken out: LexPen's editor and document statements (`copy`, `paste`,
+  `type`, `moveto`, `find`, `replace` as a statement, `new`, `show`, `open`, `notfound`, `screen`, the operator
+  `opened`) and `$$found`; a macro with one is told "<word> is LexPen's (its editor and documents): Foldex has no
+  <word>" when it is read. `replace(...)` as a function stays.
+- Text: a backslash is a backslash; `""` is a double quote; `$$newline` (CR LF) and `$$tab`.
+- A value is `{ s, type }` as in LexPen, with `item` (an item's fields) or `list` (its values) when it is one. The
+  environment gives an item as `{ pathNameExt, ...fields }` and a list as an array (`macroValueOf`). A typed variable
+  takes the text only. `.field` and `[n]` after a variable, a system variable, a call or a bracket, as many as follow;
+  an unknown field is an error when the macro is read.
+- `run` (`macroRun`): its options (`in <folder>`, `minimized`, `maximized`, `hidden`, `admin`, `wait`) anywhere; the
+  first other expression is what it runs, the second its parameters, a third an error. The run itself is
+  `env.run({ what, params, folder, window, admin, wait })`, which gives `{ exitCode }` or `{ error }`.
+- `for each`: compiled as `forinit` (the list once, in a hidden slot) and `fornext` (the next item into the variable,
+  or past `next`), `next` a jump back; mismatched with if / switch: told as LexPen tells those.
+- `files "*.log"` and `files("*.log")`: `env.files(pattern)`; `prop(item, name)`: `env.prop(path, name)`.
+- Tested: `MacroLangTests` (LexPen's four tests of a statement on more lines, with an action in the place of
+  `type`; text with backslashes and a doubled quote; an item's fields and a text's; a list from 1, past its end,
+  `count`; the functions on paths, numbers and texts, `quoted` on a list, `prop`; `run` with its options on lines of
+  their own and in a `for each`, `$$exitCode`; `for each` over files matching and over a list made with `append`;
+  what is told when a macro is read); `dotnet test` 310 passed.
