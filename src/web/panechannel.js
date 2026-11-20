@@ -101,6 +101,8 @@ function paneChannel({ id, page, title, view, state, receive, menu }) {
         closeMenus();
         return closePanesMenus(ch);
       case 'menuPick': return ch.runs?.[m.id]?.();
+      // Ctrl+F4 or Alt+F4 in a floating pane's window (pane.js, viewpage.js): that window's pane closed, nothing else.
+      case 'closeFloating': return ch.floating && views.has(id) && closePane(id);
       case 'ribbonAlt': return rbAlt(m.letter);   // Alt alone or Alt+a free letter there: the ribbon's key tips
       case 'menuAsk': return menu && ch.menuThere(menu(), m.x, m.y);
       case 'key':   // a key the pane does not use: this window's (keys.js), as if pressed here

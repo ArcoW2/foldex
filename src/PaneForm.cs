@@ -179,6 +179,9 @@ sealed class PaneForm : Form
             loaded = true;
             foreach (var json in queue) core.PostWebMessageAsJson(json);
             queue.Clear();
+            // Opened in front (F3's preview): the keyboard into its page at once, so Page Down, Esc and Ctrl+F4 work
+            // without a click first.
+            if (ActiveForm == this) web.Focus();
         };
         core.Navigate(PaneUrl + page);
     }

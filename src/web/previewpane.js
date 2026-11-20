@@ -102,6 +102,10 @@ function own(o, remoteImages = true) {
   rows.replaceChildren(...(noBar ? [] : [bar(o)]), content);
   rows.classList.toggle('pv-with-bar', !noBar);
   setZoom(zoom);
+  // It scrolls by the keys (Page Down, the arrows) when it has the focus: in a window of its own (F3) at once; docked,
+  // the pane being worked in keeps the keyboard until a click here.
+  content.tabIndex = -1;
+  if (floating) content.focus({ preventScroll: true });
 }
 
 const VIEWERS = {

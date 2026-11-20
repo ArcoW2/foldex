@@ -24,6 +24,13 @@ function fromWindow(m) {
 }
 addEventListener('message', e => { if (e.origin === APP_ORIGIN && e.data?.toPane) fromWindow(e.data.toPane); });
 if (floating) chrome.webview.addEventListener('message', e => { if (e.data?.toPane) fromWindow(e.data.toPane); });
+// Ctrl+F4 or Alt+F4 in a window of its own: that window closed, its pane with it (panechannel.js closeFloating).
+if (floating) addEventListener('keydown', e => {
+  if (e.key !== 'F4' || !(e.ctrlKey || e.altKey) || e.shiftKey) return;
+  e.preventDefault();
+  e.stopPropagation();
+  toWindow({ kind: 'closeFloating' });
+}, true);
 
 // The window's look: its root's own values (the theme's colours, the fonts) and its marks (data-theme, ...).
 function applyPaneLook({ css, data, dates }) {
