@@ -2045,6 +2045,12 @@ body.docking, body.docking * {
   text-align: center;
 }
 
+/* A thin outline round every card, and in River round an item that shows its icon instead of an image (a folder), so
+   it reads as one in the flow of pictures. */
+.thumb-cards, .thumb-river.no-image {
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
 .thumb-details .thumb-name, .thumb-cards .thumb-name {
   font-weight: 600;
 }

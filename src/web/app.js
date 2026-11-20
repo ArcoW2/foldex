@@ -1915,7 +1915,9 @@ class ListView {
       shown.push(x);
       if (wanted.length && !x.folder && propsToAsk(x, wanted)) noProps.push(x);
       const el = document.createElement('div');
-      el.className = `thumb thumb-${kind}` + (this.selected.has(x.id) ? ' selected' : '') + (same(x.id, focus) ? ' focused' : '') + (x.hidden ? ' hidden' : '');
+      const t = thumbStore.get(`${bucket}:${x.id.toLowerCase()}`);
+      el.className = `thumb thumb-${kind}` + (this.selected.has(x.id) ? ' selected' : '') + (same(x.id, focus) ? ' focused' : '') + (x.hidden ? ' hidden' : '')
+        + (t?.url ? '' : ' no-image');   // its icon instead of an image (a folder, a file without a thumbnail)
       Object.assign(el.style, { left: `${b.x}px`, top: `${b.y}px`, width: `${b.w}px`, height: `${b.h}px` });
       el.dataset.index = i;
       el.draggable = true;
@@ -1923,7 +1925,6 @@ class ListView {
       const pic = document.createElement('div');
       pic.className = 'thumb-pic';
       Object.assign(pic.style, { left: `${b.ix}px`, top: `${b.iy}px`, width: `${b.iw}px`, height: `${b.ih}px` });
-      const t = thumbStore.get(`${bucket}:${x.id.toLowerCase()}`);
       if (t?.url) pic.append(Object.assign(document.createElement('img'), { src: t.url, className: 'thumb-img', draggable: false }));
       else pic.append(Object.assign(iconImage(x, missing, 48), { className: 'thumb-icon', draggable: false }));
       // Its icons (3.5): a map pin for a GPS location, RAW.
