@@ -75,7 +75,9 @@ asks UAC once; the time is a setting, and while it runs the ribbon shows a shiel
   ```
 
   - **in other pane**: the other panes are the window's panes showing a folder on disk (a list's folder, a tree's
-    focused folder; docked or floating), but the one right-clicked in. One of them: the entry makes it there at once.
+    focused folder; docked or floating), but the one right-clicked in and the panes above it (its parent, that one's
+    parent, up to its root: `layout.pane(id).source` upwards); its children, the other branches and other trees all
+    count. One of them: the entry makes it there at once.
     More: the entry is "Symbolic link in pane >" (and so for the other kinds), a submenu of those panes by their name
     and folder ("Left - D:\data"; one without a name by its folder alone, plan 25 3.5), the pane Ctrl+Shift+O opens
     into first. None: the entry is off.
