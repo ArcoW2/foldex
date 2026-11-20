@@ -216,6 +216,19 @@ None.
   unknown folder in them is read, without a read of their own; a change added up). In a test copy, the setting off: a folder
   with two files opened, then its parent: the folder's size shown there (3.9 KB). All tests: 296 passed.
 
+### 6.10 A folder of tens of thousands of folders (2026-11-20, a hang the user found)
+
+- The user's D:	emp holds 50338 folders and 1622 files (counted then); going to another folder and back hung the pane
+  for minutes. Profiled in a test copy (the pane sorted on size, sizes counted by themselves): going away took 271 s,
+  214 s of them in `askFolderSizes`, which searched the host's answer through again for every folder (quadratic). The
+  host did the same: `Known` and `Count` searched the queue per folder, and `Listed` (6.8) went through all of the
+  folder's items again after each of its folders was counted.
+- Now: the answer made a map once (`askFolderSizes`); the queue has an index (`queued`); `Listed` keeps per folder its
+  folders and how far the check came (`waitingFolders`), checks from the start again only when a record went
+  meanwhile; an entry keeps its size key (`sizeK`, a sort on size asked for it in every comparison).
+- Measured in the same test copy: away 52 ms, back 713 ms, the longest block of the page 155 ms; the host counting
+  about a thousand folders a second, a little over one core (its background work, as the setting asks).
+
 ### 6.9 Tests
 
 - Unit (FolderSizesTests): a tree counted with a record per folder and no read of the cache; a junction not followed;

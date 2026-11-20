@@ -103,7 +103,8 @@ function naturalCompare(a, b) {
 // 'counting' while it is counted.
 const folderSizes = new Map();
 const sizeKey = p => (p.length > 3 ? p.replace(/\\+$/, '') : p).toLowerCase();
-const folderSizeOf = x => x.folder && !x.up && x.id ? folderSizes.get(sizeKey(x.id)) : undefined;
+// An entry keeps its key once worked out (`sizeK`): a sort on size asks for it in every comparison.
+const folderSizeOf = x => x.folder && !x.up && x.id ? folderSizes.get(x.sizeK ??= sizeKey(x.id)) : undefined;
 
 // The value of an item's column to sort by: a number (sizes, dates, numbers, a property's raw value), a text, or null.
 function sortValue(x, id, kind) {
@@ -380,9 +381,11 @@ async function askFolderSizes(ids) {
   const folders = ids.filter(isDiskPath);
   if (!folders.length) return;
   const m = await askHost({ op: 'folderSizes', folders });
+  // The answer by key once (not searched through per folder: a folder holding tens of thousands of folders took minutes).
   const counting = new Set((m.counting ?? []).map(sizeKey));
+  const sizes = new Map(Object.entries(m.sizes ?? {}).map(([p, s]) => [sizeKey(p), s]));
   for (const id of folders) {
-    const k = sizeKey(id), s = Object.entries(m.sizes ?? {}).find(([p]) => sizeKey(p) === k)?.[1];
+    const k = sizeKey(id), s = sizes.get(k);
     if (s) folderSizes.set(k, s);
     else if (counting.has(k)) folderSizes.set(k, 'counting');
     else folderSizes.delete(k);   // not known (any more): a size kept here from before is not right

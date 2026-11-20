@@ -32,6 +32,12 @@ sealed class FolderSizes : IDisposable
     readonly Dictionary<string, Rec> recs = new(StringComparer.OrdinalIgnoreCase);
     readonly Dictionary<string, FileSystemWatcher> watches = new(StringComparer.OrdinalIgnoreCase);
     readonly LinkedList<string> queue = new();
+    // The queue's folders, for finding one in it at once (a folder holding tens of thousands of folders asked
+    // about: not a search through the queue per folder).
+    readonly Dictionary<string, LinkedListNode<string>> queued = new(StringComparer.OrdinalIgnoreCase);
+    // A folder read whole whose folders are not all counted yet (Listed): how many items it had, its folders, and how
+    // many of them in a row have a record.
+    readonly Dictionary<string, (int Items, List<string> Subs, int At)> waitingFolders = new(StringComparer.OrdinalIgnoreCase);
     readonly HashSet<string> walking = new(StringComparer.OrdinalIgnoreCase);
     readonly List<(WatcherChangeTypes Kind, string Path, string? Old)> pending = [];
     readonly AutoResetEvent wake = new(false);
@@ -77,8 +83,8 @@ sealed class FolderSizes : IDisposable
                 if (!Path.IsPathFullyQualified(folder) || folder.StartsWith(@"\\?\")) continue;
                 if (recs.TryGetValue(folder, out var r)) { known[folder] = Json(r); continue; }
                 if (auto && !cache.Keeps(folder)) { skipped.Add(folder); continue; }
-                if (queue.Find(folder) is { } there) queue.Remove(there);
-                queue.AddFirst(folder);
+                if (queued.Remove(folder, out var there)) queue.Remove(there);
+                queued[folder] = queue.AddFirst(folder);
             }
         }
         if (known.Count > 0 || skipped.Count > 0) tell(new JsonObject { ["sizes"] = known, ["skipped"] = skipped });
@@ -98,7 +104,7 @@ sealed class FolderSizes : IDisposable
                     r.Used = DateTime.UtcNow;
                     sizes[folder] = Json(r);
                 }
-                else if (queue.Contains(folder, StringComparer.OrdinalIgnoreCase) || walking.Contains(folder)) counting.Add(folder);
+                else if (queued.ContainsKey(folder) || walking.Contains(folder)) counting.Add(folder);
             }
         return (sizes, counting);
     }
@@ -146,6 +152,7 @@ sealed class FolderSizes : IDisposable
                 {
                     next = first.Value;
                     queue.RemoveFirst();
+                    queued.Remove(next);
                     walking.Add(next);
                 }
             if (next is null) { wake.WaitOne(1000); continue; }
@@ -197,9 +204,27 @@ sealed class FolderSizes : IDisposable
     {
         var folder = Key(location);
         if (disposed || !Path.IsPathFullyQualified(folder) || folder.StartsWith(@"\\?\")) return;
-        var subs = items.OfType<DirectoryInfo>().Where(d => (d.Attributes & FileAttributes.ReparsePoint) == 0).Select(d => Key(d.FullName)).ToList();
+        // Asked again after each of its folders is counted: its folders and how far the check came are kept, so a folder
+        // of tens of thousands of folders is not gone through again for each (records only come meanwhile; the full check
+        // below, before it is added up, is made once).
+        List<string>? subs = null;
+        var at = 0;
         lock (gate)
-            if (recs.ContainsKey(folder) || walking.Contains(folder) || subs.Any(s => !recs.ContainsKey(s))) return;
+        {
+            if (recs.ContainsKey(folder) || walking.Contains(folder)) return;
+            if (waitingFolders.TryGetValue(folder, out var w) && w.Items == items.Count) (subs, at) = (w.Subs, w.At);
+        }
+        subs ??= items.OfType<DirectoryInfo>().Where(d => (d.Attributes & FileAttributes.ReparsePoint) == 0).Select(d => Key(d.FullName)).ToList();
+        lock (gate)
+        {
+            while (at < subs.Count && recs.ContainsKey(subs[at])) at++;
+            if (at < subs.Count)
+            {
+                waitingFolders[folder] = (items.Count, subs, at);
+                return;
+            }
+            waitingFolders.Remove(folder);
+        }
         if (!Watch(Parent(folder) ?? folder)) return;
         var files = items.OfType<FileInfo>().ToList();
         long own;
@@ -208,7 +233,9 @@ sealed class FolderSizes : IDisposable
         Rec rec;
         lock (gate)
         {
-            if (recs.ContainsKey(folder) || subs.Any(s => !recs.ContainsKey(s))) return;
+            if (recs.ContainsKey(folder)) return;
+            // A record gone meanwhile (F5, a change): checked from the start the next time.
+            if (subs.Any(s => !recs.ContainsKey(s))) { waitingFolders[folder] = (items.Count, subs, 0); return; }
             rec = new Rec { Own = own, OwnFiles = files.Count, Size = own, Files = files.Count, Folders = subs.Count };
             foreach (var s in subs.Select(s => recs[s]))
             {
@@ -218,7 +245,7 @@ sealed class FolderSizes : IDisposable
             }
             recs[folder] = rec;
             count = recs.Count;
-            if (queue.Find(folder) is { } queued) queue.Remove(queued);
+            if (queued.Remove(folder, out var waiting)) queue.Remove(waiting);
         }
         tell(new JsonObject { ["sizes"] = new JsonObject { [folder] = Json(rec) } });
         Trim();
