@@ -582,6 +582,9 @@ function columnHeaderMenu(view) {
         { label: 'This folder and subfolders', enabled: folderUsable, checked: own?.set === s.name && !!own.subfolders,
           run: () => useSet(s, true) } ] })),
       '-',
+      { label: 'Back to generic', enabled: !!choice, title: 'This folder without a set of its own', run: () =>
+        post({ op: 'folderColumnsSave', folders: columnSets.folders.filter(f => f !== choice) }) },
+      '-',
       { label: 'Save as new set...', run: async () => {
         const name = await askText('Name of the new column set', '');
         if (!name) return;
@@ -589,9 +592,7 @@ function columnHeaderMenu(view) {
       } },
       { label: cols.set ? `Update set ${cols.set}` : 'Update set', enabled: !!cols.set, run: () =>
         saveMine([...columnSets.mine.filter(m => m.name.toLowerCase() !== cols.set.toLowerCase()), { name: cols.set, ...copyColumns(cols) }]) },
-      { label: 'Manage sets...', run: () => openManageSets(cols.set ? null : view.id) },
-      { label: 'Back to generic', enabled: !!choice, title: 'This folder without a set of its own', run: () =>
-        post({ op: 'folderColumnsSave', folders: columnSets.folders.filter(f => f !== choice) }) } ] },
+      { label: 'Manage sets...', run: () => openManageSets(cols.set ? null : view.id) } ] },
   ];
 }
 
