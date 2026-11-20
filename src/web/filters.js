@@ -96,6 +96,13 @@ function filterDate(d, end, now) {
   return end ? new Date(+y, mo - 1, +da, 23, 59, 59, 999).getTime() : new Date(+y, mo - 1, +da).getTime();
 }
 
+// A GPS location (the filter field, the GPS column, the thumbnails' mark): a latitude and a longitude, as numbers; both
+// 0 (a camera writing an empty location) is none.
+function hasGps(x) {
+  const lat = x.props?.['System.GPS.LatitudeDecimal']?.[1], lon = x.props?.['System.GPS.LongitudeDecimal']?.[1];
+  return Number.isFinite(lat) && Number.isFinite(lon) && (Math.abs(lat) > 1e-7 || Math.abs(lon) > 1e-7);
+}
+
 // An item's value of a field for a filter: { applies: false } (the field is not an item's of this sort: a drive's for
 // a file, one a folder has no value for), { wait: true } (a value not read yet), or { value } (null: none). `kind`: the
 // field's filter kind.
@@ -112,7 +119,7 @@ function filterValue(x, id, kind) {
     v = x.git ? GitWordsOf(x.git) : null;
   } else if (id === 'gps' || id === 'gpsLocation') {
     if (!x.props || !('System.GPS.LatitudeDecimal' in x.props)) return { wait: true };
-    v = x.props['System.GPS.LatitudeDecimal'] ? true : null;
+    v = hasGps(x) ? true : null;
   } else v = x[id];
   if (v === undefined || v === '') v = null;
   if (DriveFields.has(id) && v == null) return { applies: false };

@@ -8,7 +8,8 @@ public class FiltersTests
 {
     static readonly string Source = File.ReadAllText(Path.Combine(AppHost.FindProjectFolder(AppContext.BaseDirectory, "web")!, "filters.js"));
 
-    // Items: a folder, a text file, a photo with GPS and a date taken, a photo without, a hidden temp file, a drive.
+    // Items: a folder, a text file, a photo with GPS and a date taken, a photo without (its location 0, 0: none), a
+    // hidden temp file, a drive.
     const string Setup = """
         const now = new Date(2026, 10, 17, 12, 0).getTime(), day = 86400e3;
         const kinds = { name: 'text', size: 'size', modified: 'date', attributes: 'attrs', git: 'list', gps: 'flag',
@@ -18,9 +19,10 @@ public class FiltersTests
           { name: 'src', folder: true, modified: now - 2 * day, attributes: 'D' },
           { name: 'notes.txt', folder: false, size: 1200, modified: now - 10 * day, attributes: 'A', ext: 'txt', props: {} },
           { name: 'beach.jpg', folder: false, size: 3e6, modified: now - day, attributes: 'A', ext: 'jpg',
-            props: { 'System.GPS.LatitudeDecimal': ['52.0', 52.0], 'System.Photo.DateTaken': ['1-3-2025', new Date(2025, 2, 1).getTime()] } },
+            props: { 'System.GPS.LatitudeDecimal': ['52.0', 52.0], 'System.GPS.LongitudeDecimal': ['4.3', 4.3],
+              'System.Photo.DateTaken': ['1-3-2025', new Date(2025, 2, 1).getTime()] } },
           { name: 'old.jpg', folder: false, size: 2e6, modified: now - 400 * day, attributes: 'A', ext: 'jpg',
-            props: { 'System.GPS.LatitudeDecimal': null, 'System.Photo.DateTaken': null } },
+            props: { 'System.GPS.LatitudeDecimal': ['0', 0], 'System.GPS.LongitudeDecimal': ['0', 0], 'System.Photo.DateTaken': null } },
           { name: 'x.tmp', folder: false, size: 10, modified: now - 3 * day, attributes: 'AH', ext: 'tmp', props: {} },
           { name: 'C:', folder: true, total: 5e11, attributes: '' },
         ];

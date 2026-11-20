@@ -32,11 +32,10 @@ const propsFor = id => id.includes('.') ? [id] : id === 'gps' ? GpsProps.slice(0
 // An item's GPS location, "52.02587 N, 4.35292 E" (Windows' decimal degrees and their N/S, E/W); '' without one.
 function gpsText(x) {
   const p = x.props ?? {}, lat = p['System.GPS.LatitudeDecimal']?.[1], lon = p['System.GPS.LongitudeDecimal']?.[1];
-  if (lat == null || lon == null) return '';
+  if (!hasGps(x)) return '';
   const part = (v, ref, plus, minus) => `${Math.abs(v).toFixed(5)} ${ref || (v < 0 ? minus : plus)}`;
   return `${part(lat, p['System.GPS.LatitudeRef']?.[0], 'N', 'S')}, ${part(lon, p['System.GPS.LongitudeRef']?.[0], 'E', 'W')}`;
 }
-const hasGps = x => x.props?.['System.GPS.LatitudeDecimal']?.[1] != null;
 
 // Whether an item has properties of `names` it does not have and that were not asked for it yet; those are marked as
 // asked (each name once per item, so a column or card line added later still gets its values).
