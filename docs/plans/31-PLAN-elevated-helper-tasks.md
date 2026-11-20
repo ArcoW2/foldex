@@ -19,8 +19,8 @@ is not enough. And the helper is started for each listing now, so a series of su
 
 The elevated helper gets three more operations: take ownership (for the current user), make a symbolic link, and list
 a folder after taking ownership of it (for SYSTEM and TrustedInstaller folders). A submenu Create link holds, per
-kind that fits the item (a symbolic link; a junction for a folder; a hard link for a file), "in other pane" and "to
-clipboard"; from the clipboard, "Paste symbolic link (junction, hard link) to <item name>" makes it in any folder. No dialog: a link is named as the
+kind that fits the item (a symbolic link; a junction for a folder; a hard link for a file), "in other pane" (with more
+than one other pane, a list of them to choose from) and "to clipboard"; from the clipboard, "Paste symbolic link (junction, hard link) to <item name>" makes it in any folder. No dialog: a link is named as the
 item, and only a name that is there asks for another. A link is not a shortcut: it is the file system's own. Create
 link is in a Foldex submenu at the top of Explorer's right-click menu, as xplorer2 adds its own. The helper stays a while after its last operation, so a series
 asks UAC once; the time is a setting, and while it runs the ribbon shows a shield in a warning colour.
@@ -74,7 +74,11 @@ asks UAC once; the time is a setting, and while it runs the ribbon shows a shiel
   Hard link to clipboard
   ```
 
-  - **in other pane**: made at once in the folder of the pane Ctrl+Shift+O opens into (off when there is none);
+  - **in other pane**: the other panes are the window's panes showing a folder on disk (a list's folder, a tree's
+    focused folder; docked or floating), but the one right-clicked in. One of them: the entry makes it there at once.
+    More: the entry is "Symbolic link in pane >" (and so for the other kinds), a submenu of those panes by their name
+    and folder ("Left - D:\data"; one without a name by its folder alone, plan 25 3.5), the pane Ctrl+Shift+O opens
+    into first. None: the entry is off.
   - **to clipboard**: nothing is made yet; the item is put on the clipboard as a link source of that kind, and Paste
     link makes it where you want it, the item's own folder too.
   - No "next to the item": there it cannot have the item's name, so it always needs another; the clipboard does it
@@ -105,7 +109,8 @@ asks UAC once; the time is a setting, and while it runs the ribbon shows a shiel
   are not full.
 - Unit: what Create link offers for a file (symbolic link, hard link) and a folder (symbolic link, junction on a local
   drive only); a hard link to another drive refused; a name that is there asked with " (2)" offered.
-- In the test copy: a junction and a hard link (no rights needed) in other pane, and to clipboard pasted in a
+- In the test copy: a junction and a hard link (no rights needed) in other pane (one other pane: at once; three: the
+  list, each pane by its name and folder), and to clipboard pasted in a
   third folder and in the item's own folder (the name asked); the Paste entry naming its kind, gone once something else is copied; the Foldex
   submenu in the right-click menu, Explorer's own items and extensions under it as before.
 - By hand (UAC cannot be clicked by the test copy): copy into Program Files with the Windows prompt; take ownership of
