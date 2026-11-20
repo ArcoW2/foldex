@@ -1624,7 +1624,15 @@ class ListView {
     this.body.addEventListener('mousedown', e => {
       if (e.button !== 0) return;
       const x = this.entryAt(e.target);
+      // A press on an item already selected keeps the selection (it may be dragged); let go without a drag, it is the
+      // only one selected (the click), as in Explorer.
+      this.pressedSelected = x && this.selected.has(x.id) && !e.ctrlKey && !e.shiftKey ? x : null;
       if (x && (!this.selected.has(x.id) || e.ctrlKey || e.shiftKey)) this.select(x, e);
+    });
+    this.body.addEventListener('click', e => {
+      const x = this.pressedSelected;
+      this.pressedSelected = null;
+      if (x && x === this.entryAt(e.target) && this.selected.size > 1) this.select(x, e);
     });
     this.body.addEventListener('dblclick', e => {
       const x = this.entryAt(e.target);

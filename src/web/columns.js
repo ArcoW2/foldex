@@ -296,12 +296,32 @@ function columnCell(c, k, x, sorted) {
   cell.className = 'cell' + (k === 0 ? ' first' : '') + (c.id === 'name' ? ' has-name' : RightAligned.has(c.kind) ? ' right' : '')
     + (c.id === 'git' && x.git ? ` git-${x.git === '!' ? 'conflict' : x.git}` : '') + (sorted.has(c.id) ? ' sorted' : '');
   cell.style.width = `${c.width}px`;
-  // A size: its bytes and the larger units; a folder's with what it holds (plan 37).
-  const s = c.id === 'size' && folderSizeOf(x);
-  if (s === 'counting') cell.title = 'Being counted';
-  else if (s) cell.title = `${sizeLines(s.size)}\n${s.files} ${s.files === 1 ? 'file' : 'files'}, ${s.folders} ${s.folders === 1 ? 'folder' : 'folders'}`;
-  else if (c.kind === 'size' && typeof x[c.id] === 'number' && !x.folder) cell.title = sizeLines(x[c.id]);
+  const title = sizeTitle(c, x);
+  if (title) cell.title = title;
   return cell;
+}
+
+// A size cell's tooltip: its bytes and the larger units; a folder's with what it holds (plan 37).
+function sizeTitle(c, x) {
+  const s = c.id === 'size' && folderSizeOf(x);
+  if (s === 'counting') return 'Being counted';
+  if (s) return `${sizeLines(s.size)}\n${s.files} ${s.files === 1 ? 'file' : 'files'}, ${s.folders} ${s.folders === 1 ? 'folder' : 'folders'}`;
+  if (c.kind === 'size' && typeof x[c.id] === 'number' && !x.folder) return sizeLines(x[c.id]);
+  return '';
+}
+
+// The Size cells of the rows drawn, their text and tooltip anew (sizes came): the rows stay, so their icons do not
+// blink as when every row is made again. Size as the first column, or as icons or thumbnails: drawn again whole.
+function sizeCellsAgain(v) {
+  const cols = shownColumns(v.cols), k = cols.findIndex(c => c.id === 'size');
+  if (k <= 0 || v.iconsView?.() || v.thumbsView?.()) return v.render();
+  const items = v instanceof TreeView ? v.flat : v.entries;
+  for (const row of v.rows.children) {
+    const x = items[+row.dataset.index], cell = row.querySelectorAll(':scope > .cell')[k];
+    if (!x || !cell) continue;
+    cell.textContent = columnText(x, 'size');
+    cell.title = sizeTitle(cols[k], x);
+  }
 }
 
 // ---------- Folder sizes (plan 37) ----------
@@ -336,8 +356,18 @@ function sizesShown() {
     sizesDrawing = false;
     for (const v of views.values()) {
       if (isPaged(v) || !(v instanceof ListView || v instanceof TreeView)) continue;
-      if (v instanceof ListView && v.cols.sort.some(s => s.id === 'size')) v.entries.sort(v.comparer());
-      v.render();
+      // Only a pane that shows sizes (its Size column, or sorted on it) drawn again: a tree without it flickered with
+      // every size that came.
+      const sorted = !!v.cols?.sort.some(s => s.id === 'size');
+      const shows = v.thumbsView?.() ? thumbInfo().includes('size') : !!v.cols && shownColumns(v.cols).some(c => c.id === 'size');
+      if (!sorted && !shows) {
+        if (v instanceof ListView && v.id === activePane) v.tellSelection();
+        continue;
+      }
+      if (v instanceof ListView && sorted) {
+        v.entries.sort(v.comparer());
+        v.render();
+      } else sizeCellsAgain(v);
       if (v instanceof ListView && v.id === activePane) v.tellSelection();
     }
   });
