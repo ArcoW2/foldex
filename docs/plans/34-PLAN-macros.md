@@ -111,9 +111,11 @@ keep the selected and the focused items apart (the project's words):
 - **A list** is indexed from 1, as LexPen counts (`mid`, `pos`): `$$selected[1]`, `$$selected[$i].name`; past its end:
   empty text. `count(<list>)` its length.
 - **Functions on a path**, for any text that is one (an item, a line read from a file, full or relative): `name($p)`
-  (without its folder), `base($p)` (without its extension too), `ext($p)`, `folder($p)`, `quoted($p)` (between double
-  quotes when it holds a space; on a list: each item), `unquoted($p)` (the double quotes round it taken off, when
-  there are). On an item they give what its fields give.
+  (without its folder), `base($p)` (without its extension too), `ext($p)`, `path($p)` (the folder it is in, as the
+  field `path`; on a folder the folder above it: `path($f.path)` is the folder above the item's folder, `path($f)` is
+  `$f.path`; on a drive's root: empty), `quoted($p)` (between double quotes when it holds a space; on a list: each
+  item), `unquoted($p)` (the double quotes round it taken off, when there are). On an item they give what its fields
+  give.
 - **Numbers and sizes**: LexPen's arithmetic divides already (`/`, up to 6 decimals when it does not come out), so a
   size in another unit is a division, its decimals `round(<number>, <decimals>)`: `round($f.size / 1024, 3) & " kb"`,
   `round($f.size / 1048576, 2) & " MB"`. `padleft(<text>, <length>)` and `padright(<text>, <length>)` a text made that
@@ -126,7 +128,7 @@ keep the selected and the focused items apart (the project's words):
   `<what>` is a program, a document (opened with its program) or a URL: the host starts it as Windows' Run does
   (ShellExecute), so `run $$focused` opens the focused file as a double click would.
 - Options, as words, before or after what it runs, in any order: `in <folder>` (where it starts, an expression;
-  default `$$location`; `..` in it worked out: `in $f.path & "\.."` is the folder above the item's), `minimized`,
+  default `$$location`; `..` in it worked out: `in $f.path & "\.."` is the folder above the item's, as `in path($f.path)`), `minimized`,
   `maximized`, `hidden`, `admin` (as administrator: Windows asks, as for any program; not Foldex's elevated helper,
   plan 05), `wait` (the macro goes on when the program ends; `$$exitCode` then has its code). The first expression
   that is not an option's is what it runs, the next its parameters; two expressions are apart where no operator
