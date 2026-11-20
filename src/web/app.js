@@ -1531,6 +1531,7 @@ class TreeView {
     this.cols = paneColumns(this.id);
     this.columnsChanged();
     this.sortEntries();
+    this.autoFit();   // an auto column fitted at once, with its minimum and maximum as they are now
   }
 
   // By the sort's columns in turn (plan 28 3.4); without a sort as always (drives first).
@@ -1683,6 +1684,7 @@ class ListView {
       if (again) {
         this.askColumnValues();
         this.sortEntries();
+        this.autoFit();   // an auto column fitted at once, with its minimum and maximum as they are now
       }
     }
   }
@@ -1705,6 +1707,7 @@ class ListView {
     this.cols = paneColumns(this.id);
     this.columnsChanged();
     this.sortEntries();
+    this.autoFit();   // an auto column fitted at once, with its minimum and maximum as they are now
   }
 
   // By the sort's columns in turn (plan 28 3.4); the ".." row (plan 26 3.11) first whatever the sort.
