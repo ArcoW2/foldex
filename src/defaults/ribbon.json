@@ -3,7 +3,8 @@
 // it) or Customize...; Foldex then writes your own ribbon.json in %LOCALAPPDATA%\Foldex, which replaces this one whole.
 // Reset to the shipped ribbon removes yours.
 // Its tabs (docs/plans/executed/30-PLAN-ribbon-tabs.md): Home the everyday explorer work, View the panes and the
-// projects, Customize the editing of what Foldex keeps, Tools Foldex itself.
+// projects, Customize the editing of what Foldex keeps, Tools Foldex itself. Every Manage window is in Tools > Manage; a
+// group with a list of its own has it in its corners too (the left one its Manage), not as a button of its own.
 //
 // A tab: { "name", "groups" }. A group: { "name", "items", "corners" }.
 // An item: "divider", or a button {
@@ -67,18 +68,14 @@
         { "action": "layout.preset", "params": ["preview"], "label": "Preview" } ] },
       { "name": "Projects", "corners": { "left": "projects.manage", "right": "projects.menu" }, "items": [
         { "action": "projects.menu", "size": "large", "label": "Projects" },
-        { "action": "projects.manage", "label": "Manage projects" }, { "action": "project.new", "label": "New", "stack": true },
-        { "action": "project.rename", "label": "Rename", "stack": true } ] },
+        { "action": "project.new", "label": "New" }, { "action": "project.rename", "label": "Rename", "stack": true } ] },
       { "name": "Columns", "items": [
         { "action": "columns.fitName", "label": "Fit columns" },
         { "action": "columns.fit", "label": "Fit all columns", "stack": true },
         { "action": "folders.size", "label": "Folder sizes", "stack": true } ] } ] },
 
     { "name": "Customize", "groups": [
-      { "name": "Column sets", "corners": { "left": "columns.manage" }, "items": [
-        { "action": "columns.manage", "size": "large", "label": "Manage\ncolumn sets" } ] },
       { "name": "Bookmarks", "corners": { "left": "bookmarks.manage", "right": "bookmarks.menu" }, "items": [
-        { "action": "bookmarks.manage", "size": "large", "label": "Manage\nbookmarks" },
         { "action": "bookmarks.add", "label": "Add current folder" } ] },
       { "name": "Bars", "items": [
         { "action": "bars.change", "label": "Change bars" },
@@ -96,8 +93,11 @@
 
     { "name": "Tools", "groups": [
       { "name": "Macros", "corners": { "left": "macros.manage", "right": "macros.menu" }, "items": [
-        { "action": "macros.menu", "size": "large", "label": "Macros" },
-        { "action": "macros.manage", "label": "Manage macros" } ] },
+        { "action": "macros.menu", "size": "large", "label": "Macros" } ] },
+      { "name": "Manage", "items": [
+        { "action": "bookmarks.manage", "label": "Bookmarks" }, { "action": "filters.manage", "label": "Filters", "stack": true },
+        { "action": "columns.manage", "label": "Column sets", "stack": true },
+        { "action": "projects.manage", "label": "Projects" }, { "action": "macros.manage", "label": "Macros", "stack": true } ] },
       { "name": "Foldex", "items": [
         { "action": "settings.open", "size": "large", "label": "Settings" },
         { "action": "palette", "label": "All actions" },
