@@ -261,7 +261,7 @@ function columnRow(set, sort, col, k, list) {
   first.append(handle, Object.assign(document.createElement('span'), { className: 'cs-title', textContent: columnInfo(col.id).title, title: col.id }),
     shown, number(col.width ?? columnInfo(col.id).width, (c, v) => { c.width = v ?? columnInfo(col.id).width; }, `Width (${EmTip})`), sortCell);
   const fit = document.createElement('select');
-  fit.title = 'How the column fits its values: never; manual (Ctrl+R); auto: as soon as the values change';
+  fit.title = 'How the column fits its values: never: only with Ctrl+Shift+R (every column); manual: with Ctrl+R too; auto: as soon as the values change, and with either key';
   fit.append(...FitModes.map(([value, text]) => new Option(text, value)));
   fit.value = fitOf(col);
   fit.addEventListener('change', () => changeChosen(s => { s.columns[k].fit = fit.value; }));
