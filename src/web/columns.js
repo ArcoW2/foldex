@@ -543,6 +543,8 @@ function resizeColumn(view, col, e) {
 function columnHeaderMenu(view) {
   const cols = view.cols;
   const choice = setFor(columnSets.folders, view.location);
+  const folderUsable = !!view.location && /^[A-Za-z]:\\|^\\\\/.test(view.location);
+  const own = choice && choice.path.toLowerCase() === view.location.toLowerCase() ? choice : null;   // not one from above
   const useSet = (set, subfolders) => {
     const folders = columnSets.folders.filter(f => f.path.toLowerCase() !== view.location.toLowerCase());
     folders.push({ path: view.location, set: set.name, subfolders });
@@ -571,13 +573,18 @@ function columnHeaderMenu(view) {
     { label: 'Fit columns', key: 'Ctrl+R', run: () => view.fitColumns('fit') },
     { label: 'Fit all columns', key: 'Ctrl+Shift+R', run: () => view.fitColumns('all') },
     '-',
-    // The set the pane's columns came from (`from`: chosen here), else the folder's set it shows.
+    // Each set for this pane only, for this folder, or for it and its subfolders. Checked: the set the pane's columns
+    // came from (`from`: chosen here), else the folder's set it shows; in its submenu, how.
     { label: 'Column sets', items: [
-      ...columnSets.sets.map(s => ({ label: s.name, checked: (cols.from ?? cols.set) === s.name, run: () => {
-        Object.assign(cols, copyColumns(s), { from: s.name });
-        view.columnsChanged();
-        view.sortEntries();
-      } })),
+      ...columnSets.sets.map(s => ({ label: s.name, checked: (cols.from ?? cols.set) === s.name, items: [
+        { label: 'This pane only', checked: !cols.set && cols.from === s.name, run: () => {
+          Object.assign(cols, copyColumns(s), { from: s.name });
+          view.columnsChanged();
+          view.sortEntries();
+        } },
+        { label: 'This folder', enabled: folderUsable, checked: own?.set === s.name && !own.subfolders, run: () => useSet(s, false) },
+        { label: 'This folder and subfolders', enabled: folderUsable, checked: own?.set === s.name && !!own.subfolders,
+          run: () => useSet(s, true) } ] })),
       '-',
       { label: 'Save as new set...', run: async () => {
         const name = await askText('Name of the new column set', '');
@@ -586,15 +593,9 @@ function columnHeaderMenu(view) {
       } },
       { label: cols.set ? `Update set ${cols.set}` : 'Update set', enabled: !!cols.set, run: () =>
         saveMine([...columnSets.mine.filter(m => m.name.toLowerCase() !== cols.set.toLowerCase()), { name: cols.set, ...copyColumns(cols) }]) },
-      { label: 'Manage sets...', run: () => openManageSets() } ] },
-    { label: 'Use a set for this folder', enabled: !!view.location && /^[A-Za-z]:\\|^\\\\/.test(view.location), items: [
-      ...columnSets.sets.map(s => ({ label: s.name, checked: choice?.set === s.name, items: [
-        { label: 'This folder only', run: () => useSet(s, false) },
-        { label: 'With its subfolders', run: () => useSet(s, true) } ] })),
-      '-',
-      { label: 'Back to generic', enabled: !!choice, run: () =>
+      { label: 'Manage sets...', run: () => openManageSets(cols.set ? null : view.id) },
+      { label: 'Back to generic', enabled: !!choice, title: 'This folder without a set of its own', run: () =>
         post({ op: 'folderColumnsSave', folders: columnSets.folders.filter(f => f !== choice) }) } ] },
-    { label: 'Columns...', enabled: !cols.set, run: () => openManageSets(view.id) },
   ];
 }
 
@@ -661,8 +662,9 @@ async function openSortWindow(view, from) {
 
 // Its screen is its page's (columnsets.html, colsmanage.js): a pane there is one of (app.js openOnePane), docked in a
 // frame or floating, both as any pane of a page can be. This page sends it the sets with the columns there are, and
-// does for it what needs this page: saving what it changed, a name or a Yes asked, closing it. `paneId` (Columns...
-// in a pane's header, plan 28 3.8): that pane's own columns first in its list, chosen.
+// does for it what needs this page: saving what it changed, a name or a Yes asked, closing it. `paneId` (Manage
+// sets... in a pane's header while it shows its own columns, plan 28 3.8): that pane's own columns first in its list,
+// chosen.
 let managedPane = null, managedPaneFirst = false;
 function openManageSets(paneId = null) {
   managedPane = paneId;

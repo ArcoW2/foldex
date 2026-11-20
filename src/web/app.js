@@ -1525,7 +1525,7 @@ class TreeView {
     tellLayout();
   }
 
-  // Its own columns changed in Manage column sets (Columns... in its header; plan 28 3.8).
+  // Its own columns changed in Manage column sets (Manage sets... in its header; plan 28 3.8).
   setOwnColumns(columns) {
     layout.pane(this.id).columns = normalColumns(columns);
     this.cols = paneColumns(this.id);
@@ -1697,7 +1697,7 @@ class ListView {
     if (!this.cols.set) tellLayout();
   }
 
-  // Its own columns changed in Manage column sets (Columns... in its header; plan 28 3.8); shown when no folder's set
+  // Its own columns changed in Manage column sets (Manage sets... in its header; plan 28 3.8); shown when no folder's set
   // is.
   setOwnColumns(columns) {
     layout.pane(this.id).columns = normalColumns(columns);
