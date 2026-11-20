@@ -95,6 +95,9 @@
         { "action": "layout.resetDefault", "label": "Reset layout", "stack": true } ] } ] },
 
     { "name": "Tools", "groups": [
+      { "name": "Macros", "corners": { "left": "macros.manage", "right": "macros.menu" }, "items": [
+        { "action": "macros.menu", "size": "large", "label": "Macros" },
+        { "action": "macros.manage", "label": "Manage macros" } ] },
       { "name": "Foldex", "items": [
         { "action": "settings.open", "size": "large", "label": "Settings" },
         { "action": "palette", "label": "All actions" },

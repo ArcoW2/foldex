@@ -1458,6 +1458,37 @@ dialog.pick-column { width: 26em; }
 /* A field's condition and its "or ... is empty": one box under the field, so they read as the value's. */
 .fl-cond { display: flex; flex-direction: column; gap: 6px; margin-left: 1.2em; padding: 6px 8px; border-left: 2px solid var(--border); }
 .fl-setextra { display: flex; flex-direction: column; gap: 6px; }
+/* Manage macros (macros.html, macrospane.js; plan 34 3.6): laid out as Manage filters; the tree's rows as the bookmarks'
+   (one column: the name, the keys at its right); the steps in an editor of a text box over its coloured copy. */
+.macros-page .cs-sets { width: var(--cs-left, 22em); }
+.mc-tree { overflow-x: hidden; }
+.mc-tree .mc-row { grid-template-columns: minmax(0, 1fr) auto; width: auto; }
+.mc-keys { color: var(--fg-dim); font-size: 0.9em; padding: 2px 6px; white-space: nowrap; }
+.mc-icon { width: 16px; height: 16px; flex: none; vertical-align: middle; }
+.mc-macro .fl-row input:not(.key-field) { width: 20em; }
+.mc-editor { position: relative; flex: 1; min-height: 10em; border: 1px solid var(--border); border-radius: 2px; background: var(--bg); }
+.mc-shown, .mc-text-in { position: absolute; inset: 0; box-sizing: border-box; margin: 0; padding: 6px 8px; border: 0;
+  font: 13px/1.5 Consolas, 'Cascadia Mono', monospace; white-space: pre; tab-size: 2; overflow: auto; }
+.mc-shown { pointer-events: none; overflow: hidden; color: var(--fg); }
+.mc-text-in { background: transparent; color: transparent; caret-color: var(--fg); resize: none; outline: none; }
+.mc-text-in::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); color: transparent; }
+.mc-editor:focus-within { border-color: var(--accent); }
+.mc-comment { color: var(--fg-dim); font-style: italic; }
+.mc-text { color: color-mix(in srgb, #c0612b 75%, var(--fg)); }
+.mc-sys { color: color-mix(in srgb, #8b4fc6 75%, var(--fg)); }
+.mc-var { color: color-mix(in srgb, #1f8a70 75%, var(--fg)); }
+.mc-label { color: var(--accent); font-weight: 600; }
+.mc-number { color: color-mix(in srgb, #2f7fbf 75%, var(--fg)); }
+.mc-word { color: var(--accent); font-weight: 600; }
+.mc-function { color: color-mix(in srgb, #9a7b00 75%, var(--fg)); }
+.mc-field { color: color-mix(in srgb, #1f8a70 60%, var(--fg)); }
+.mc-problems { max-height: 7em; overflow: auto; font-size: 0.92em; }
+.mc-problem.error { color: var(--warning); }
+.mc-problem.warning { color: var(--fg-dim); }
+.mc-texthead { justify-content: space-between; }
+.mc-run { width: 640px; }
+.mc-run .find-row input:not([type=checkbox]) { flex: 1; }
+
 /* The temporary filter (filterspane.js): "(temp)" in italic, in the list and as its name's placeholder, until it is saved. */
 .fl-temprow .cs-name { font-style: italic; }
 .cs-setname { display: flex; align-items: center; gap: 8px; font-weight: 400; }

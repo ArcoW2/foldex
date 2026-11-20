@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Macros</title>
+  <!-- Manage macros as a pane's page (docs/plans/executed/34-PLAN-macros.md 3.6; plan 14 3.7): docked in a frame of its window's
+       page, or floating. The macros in their folders at the left, the macro chosen at the right: its name, keys, icon
+       and text. Laid out as Manage filters (filters.html). -->
+  <link rel="stylesheet" href="app.css">
+  <link rel="stylesheet" href="pane.css">
+  <script src="menu.js" defer></script>
+  <script src="pane.js" defer></script>
+  <script src="keys.js" defer></script>
+  <script src="macrolang.js" defer></script>
+  <script src="macrospane.js" defer></script>
+</head>
+<body>
+  <div id="manage" class="manage-sets cs-page macros-page">
+    <div class="cs-parts">
+      <section class="cs-sets">
+        <div class="cs-label">Macros</div>
+        <div class="bm-body">
+          <div class="bm-arrows"><button class="up" title="Up within its folder (Ctrl+Up)"><svg viewBox="0 0 10 10"><path d="M1 7l4-4 4 4"/></svg></button>
+            <button class="down" title="Down within its folder (Ctrl+Down)"><svg viewBox="0 0 10 10"><path d="M1 3l4 4 4-4"/></svg></button></div>
+          <div class="cs-list mc-tree" tabindex="0"></div>
+        </div>
+        <div class="ask-buttons mc-treebuttons"></div>
+      </section>
+      <div class="cs-split" title="Drag to give one part more room"></div>
+      <section class="cs-set mc-macro"></section>
+    </div>
+    <div class="ask-buttons mc-bottom"></div>
+  </div>
+</body>
+</html>

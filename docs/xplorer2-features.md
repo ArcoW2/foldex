@@ -135,7 +135,7 @@ updated whenever a plan is written, built or closed that touches a feature here.
 | Options window with search | P+ | built (plan 07) | 5 | -- |
 | Settings export / import | P+ | built (settings.json is a file) | 3 | -- |
 | Portable mode (settings in a file) | U | part: FOLDEX_DATA | 3 | -- |
-| UI macros, macro recorder | P+ | plan 34 (macros); recording: plan 35 | 3 | -- |
+| UI macros, macro recorder | P+ | built (plan 34: macros in a tree with keys, Manage macros, the Macros menu, F1); recording: plan 35 | 3 | -- |
 | Command line in the address bar, $-tokens | P+ | -- | 2 | Address bar; User commands (the tokens) |
-| User commands (tools with tokens) | P+ | plan 34 (run, its system variables; Run a program) | 2 | -- |
+| User commands (tools with tokens) | P+ | built (plan 34: run with the focused and selected items and their fields; Run a program) | 2 | -- |
 | Built-in console | P+ | -- | 1 | -- |

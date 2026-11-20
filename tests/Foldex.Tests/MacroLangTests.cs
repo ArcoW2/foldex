@@ -3,7 +3,7 @@ using Jint;
 
 namespace Foldex.Tests;
 
-// The macro language (docs/plans/34-PLAN-macros.md 3.1 to 3.4): web/macrolang.js run under Jint against an environment
+// The macro language (docs/plans/executed/34-PLAN-macros.md 3.1 to 3.4): web/macrolang.js run under Jint against an environment
 // made here. LexPen's tests of its language (a statement on more lines) kept, with an action in the place of LexPen's
 // `type`; then what Foldex has of its own: text with a backslash, items and their fields, lists, the functions, run,
 // for each, LexPen's editor statements refused.
@@ -177,6 +177,29 @@ public class MacroLangTests
         Assert.Equal(4, r.Log.Count(l => l.StartsWith("run")));
         Assert.Equal("a+b c", r.Vars["names"]);
         Assert.Equal(["log sub", "log plain"], r.Log[^2..]);
+    }
+
+    // The guide (src/defaults/macros/README.md, plan 34 3.9): every example in it reads without a mistake (a syntax line
+    // with <...> in it is no example).
+    [Fact]
+    public void EveryExampleInTheGuideReads()
+    {
+        var guide = File.ReadAllText(Path.Combine(AppHost.FindProjectFolder(AppContext.BaseDirectory, "defaults")!, "macros", "README.md"));
+        var blocks = System.Text.RegularExpressions.Regex.Matches(guide, "```\\r?\\n(.*?)```", System.Text.RegularExpressions.RegexOptions.Singleline)
+            .Select(m => m.Groups[1].Value).Where(b => !b.Contains('<')).ToList();
+        Assert.True(blocks.Count >= 10, $"only {blocks.Count} examples found");
+        var engine = new Jint.Engine();
+        engine.Execute(Source);
+        foreach (var block in blocks)
+        {
+            engine.SetValue("text", block);
+            var errors = engine.Evaluate("""
+                JSON.stringify(macroProgram(text, { isAction: n => n.includes('.') || ['go', 'select', 'focus', 'pane'].includes(n.toLowerCase()),
+                  systemVars: new Set(['location', 'focused', 'selected', 'count', 'other', 'pane', 'project', 'date', 'time', 'error',
+                    'errortext', 'exitcode', 'newline', 'tab']) }).problems.filter(p => p.severity === 'error'))
+                """).ToString();
+            Assert.True(errors == "[]", $"{block}\n{errors}");
+        }
     }
 
     [Fact]

@@ -1,5 +1,5 @@
 'use strict';
-// The macro language (docs/plans/34-PLAN-macros.md 3.1 to 3.4): LexPen's (..\LexPen\src\web\macrolang.js, its
+// The macro language (docs/plans/executed/34-PLAN-macros.md 3.1 to 3.4): LexPen's (..\LexPen\src\web\macrolang.js, its
 // docs/plans/executed/PLAN-macros.md), copied and Foldex's own from then on. A macro's text read into a program,
 // checked, and run. No page here: a run talks to Foldex through an environment (macros.js), so the language can be
 // tested on its own. A value is text; a text that is a number also calculates, and a result keeps the formatting of
@@ -880,8 +880,8 @@ async function runMacro(program, env, options = {}) {
         if (jumped?.to !== undefined) { pc = jumped.to; continue; }
         if (['do', 'run'].includes(step.op)) { state.error = false; state.errorText = ''; }
       } catch (e) {
+        if (e instanceof MacroError) e.line ??= step.line;   // an error of the environment: at the step's line
         if (!(e instanceof MacroError) || state.onerror === 'stop') throw e;
-        e.line ??= step.line;
         state.error = true;
         state.errorText = e.message;
       }

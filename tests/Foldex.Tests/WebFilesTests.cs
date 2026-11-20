@@ -45,6 +45,8 @@ public class WebFilesTests
     [InlineData("index.html")]
     [InlineData("settings.html")]
     [InlineData("projects.html")]
+    [InlineData("view.html")]
+    [InlineData("macros.html")]
     public void NoTopLevelNameIsDeclaredTwiceOnAPage(string page)
     {
         var web = AppHost.FindProjectFolder(AppContext.BaseDirectory, "web")!;

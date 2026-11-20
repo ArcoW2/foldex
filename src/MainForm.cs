@@ -608,6 +608,17 @@ sealed class MainForm : Form
                     Post(new JsonObject { ["event"] = "settingFailed", ["error"] = $"{FiltersFile.Name}: {ex.Message}" });
                 }
                 break;
+            case "macroHelp":
+            {
+                // The guide to the macro language (plan 34 3.9): shipped with the defaults, opened as Windows opens a .md.
+                var guide = Path.Combine(AppHost.DefaultsDir, MacrosFile.Folder, "README.md");
+                try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(guide) { UseShellExecute = true }); }
+                catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or FileNotFoundException)
+                {
+                    Post(new JsonObject { ["event"] = "settingFailed", ["error"] = $"The macros' guide ({guide}): {ex.Message}" });
+                }
+                break;
+            }
             case "macrosSave":
                 // The macros changed (plan 34 3.5): macros\macros.json, and every window gets them again.
                 try { app.SaveMacros(msg["macros"]); }

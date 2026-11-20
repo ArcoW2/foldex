@@ -488,6 +488,8 @@ paneHandlers.args = async m => {
   if (m.what === 'selectColumns') return done(await selectColumnsHere(m));
   if (m.what === 'pickColumn') return done(await pickColumnHere(m));
   if (m.what === 'sort') return done(await sortHere(m));
+  // A macro's icon (plan 34 3.6): Change Icon as a bookmark's; "file,index", or null for Cancel.
+  if (m.what === 'changeIcon') return done(await changeIconDialog(m.current ?? null));
   if (m.what === 'pickFolder') {
     // Move to folder... (bmpick.js): { folder } (null: the tab's top), or nothing for Cancel.
     bookmarks = m.bookmarks ?? [];

@@ -2,7 +2,7 @@ using System.Text.Json.Nodes;
 
 namespace Foldex.Tests;
 
-// macros\macros.json (docs/plans/34-PLAN-macros.md 3.5): the tree read, written and read back; what is kept of an entry;
+// macros\macros.json (docs/plans/executed/34-PLAN-macros.md 3.5): the tree read, written and read back; what is kept of an entry;
 // a file that cannot be read counts as empty and stays as it is.
 public class MacrosFileTests : IDisposable
 {
@@ -26,6 +26,8 @@ public class MacrosFileTests : IDisposable
             """);
         var saved = MacrosFile.Save(dir, tree);
         Assert.True(File.Exists(Path.Combine(dir, "macros", "macros.json")));
+        _ = new JsonObject { ["macros"] = saved };   // what it gives goes into a message to the windows (no parent of its own)
+        Assert.Contains("\"text\": \"run \\\"notepad.exe\\\" $$focused\"", File.ReadAllText(Path.Combine(dir, "macros", "macros.json")));
         var read = MacrosFile.Load(dir);
         Assert.Equal(saved.ToJsonString(), read.ToJsonString());
         Assert.Equal(2, read.Count);

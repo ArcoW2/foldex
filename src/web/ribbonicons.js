@@ -125,6 +125,9 @@ const RIBBON_ICONS = (() => {
     'ribbon.customize': ['Customize the ribbon', p('M2 3h7M2 6.5h7M2 10h4') + p(pencil)],
     'ribbon.reset': ['Reset the ribbon', '<rect x="1.5" y="2.5" width="13" height="5" rx="1"/>' + p('M7.5 9.5L4.5 12l3 2.5M4.5 12h6a2 2 0 0 0 0-4')],
     'ribbon.onDemand': ['Ribbon only when wanted', p('M3.5 10l4.5-4.5 4.5 4.5')],
+    // Macros (plan 34): LexPen's Play for one run; the list of steps with Play for the menu.
+    'macro.run': ['Run a macro', p('M4.5 2.5l8.5 5.5-8.5 5.5z')],
+    'macros.menu': ['Macros', p('M2 3.5h8M2 7h8M2 10.5h5M10.5 9.5l4 2.5-4 2.5z')],
     // Foldex
     about: ['About Foldex', '<circle cx="8" cy="8" r="6.5"/>' + t(5.3, 11.3, 9, '?', 700)],
   };
@@ -141,6 +144,7 @@ const RIBBON_ICONS = (() => {
     // of the font's box counted.
     commands: ['All actions and keys', t(0.44, 13.37, 15.12, 'F1', 700), t(2.58, 13.1, 10.85, 'F1', 700)],
     projects: ['Manage projects', p(projects), p('M3.2 6h3l1 1h5.3v5.8H3.2zM5 10.2h6')],
+    macros: ['Manage macros', p('M2 3.5h8M2 7h8M2 10.5h5M10.5 9.5l4 2.5-4 2.5z'), p('M3.6 6.2h5.6M3.6 9.2h5.6M3.6 12.2h3M9.4 10l3 1.6-3 1.6z')],
     filters: ['Manage filters', p('M2 3h12l-4.5 5.5V13l-3 1.5V8.5z'), p('M3.6 6h8.8l-3.3 3.6v2.6l-2.2 1V9.6z')],
   };
   return { buttons, panels };
@@ -148,7 +152,8 @@ const RIBBON_ICONS = (() => {
 
 // The actions that show a pane or open a window: its icon (plan 14 3.7's list of panes and windows).
 const RIBBON_PANEL_ACTIONS = { 'preview.toggle': 'preview', 'info.toggle': 'info', 'log.toggle': 'log', palette: 'commands',
-  'settings.open': 'settings', 'projects.manage': 'projects', 'columns.manage': 'cols', 'bookmarks.manage': 'bm', 'filters.manage': 'filters' };
+  'settings.open': 'settings', 'projects.manage': 'projects', 'columns.manage': 'cols', 'bookmarks.manage': 'bm', 'filters.manage': 'filters',
+  'macros.manage': 'macros' };
 
 function ribbonIconSvg(body, size, panel, small) {
   const px = size === 'large' ? 32 : 16, w = size === 'large' ? 1 : 1.4;

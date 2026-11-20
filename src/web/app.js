@@ -376,7 +376,7 @@ function filterSetsCame(m) {
 // float; the others are docked until they are pages (plan 14 3.0, the stages).
 const PaneCan = { tree: ['docked', 'floating'], list: ['docked', 'floating'], scrap: ['docked', 'floating'], preview: ['docked', 'floating'], log: ['docked', 'floating'],
   bookmarks: ['docked', 'floating'], columnsets: ['docked', 'floating'], filters: ['docked', 'floating'], palette: ['docked', 'floating'],
-  settings: ['docked', 'floating'], projects: ['docked', 'floating'] };
+  settings: ['docked', 'floating'], projects: ['docked', 'floating'], macros: ['docked', 'floating'] };
 const canFloat = id => (PaneCan[layout.pane(id)?.kind] ?? ['docked']).includes('floating')
   && (views.get(id) instanceof PreviewView || isPaged(views.get(id)));
 
@@ -387,6 +387,7 @@ function makeView(id) {
   if (!PanePage && PagedKinds.has(kind)) return pagedView(id);
   return kind === 'tree' ? new TreeView(id) : kind === 'log' ? new LogView(id) : kind === 'bookmarks' ? new BookmarksView(id)
     : kind === 'columnsets' ? new ColumnSetsView(id) : kind === 'filters' ? new FiltersView(id) : kind === 'palette' ? new PaletteView(id)
+    : kind === 'macros' ? new MacrosView(id)
     : kind === 'settings' ? new SettingsView(id) : kind === 'projects' ? new ProjectsView(id)
     : kind === 'preview' ? (layout.pane(id).info ? new InfoView(id) : new PreviewView(id))
     : kind === 'scrap' ? new ScrapView(id) : new ListView(id);
@@ -2419,6 +2420,44 @@ class ListView {
     this.tellSelection();
   }
 
+  // A macro's (docs/plans/executed/34-PLAN-macros.md 3.1, 3.4; macros.js), here as the pane's page has its items: the items
+  // matching wildcards (files "*.log"), as a macro's items; those selected (select "*.log": how many); one focused by
+  // its name (focus "a.txt": false when it is not here).
+  // Whether it shows `location` read whole within `ms` (a macro's go waits for it before its next step).
+  async loaded(location, ms = 30000) {
+    const want = String(location).replace(/\\+$/, '');
+    for (const t0 = Date.now(); Date.now() - t0 < ms; await new Promise(r => setTimeout(r, 50)))
+      if (same(String(this.location ?? '').replace(/\\+$/, ''), want) && !listeners.has(this.id)) return true;
+    return false;
+  }
+
+  macroFiles(pattern) {
+    const test = wildTest(pattern) ?? (() => true);
+    return this.entries.filter(x => !x.up && test(x.name)).map(macroItemOf);
+  }
+
+  selectMatching(pattern) {
+    const test = wildTest(pattern) ?? (() => true);
+    this.selected = new Set(this.entries.filter(x => !x.up && test(x.name)).map(x => x.id));
+    layout.state(this.id).selection = [...this.selected];
+    this.render();
+    this.tellSelection();
+    ribbonRefresh();
+    return this.selected.size;
+  }
+
+  focusNamed(name) {
+    const index = this.entries.findIndex(x => !x.up && x.name.toLowerCase() === String(name).toLowerCase());
+    if (index < 0) return false;
+    const x = this.entries[index];
+    layout.state(this.id).focus = x.id;
+    this.scrollTo(index);
+    this.render();
+    focusItem(this.id, { id: x.id, folder: x.folder });
+    ribbonRefresh();
+    return true;
+  }
+
   // The status line, with more than one item selected: what they take, a folder by its size (plan 37 3.4), and how many
   // selected folders have none.
   tellSelection() {
@@ -3158,6 +3197,18 @@ class ProjectsView extends HostPageView {
 
 // Manage filters (its page filters.html, filterspane.js; plan 32 3.3): the kept sets and the editor; opened by Filter...
 // for a pane, that pane's set with it.
+// Manage macros (its page macros.html, macrospane.js; plan 34 3.6): the macros sent, what it asks done here (macros.js
+// macrosPageAsks).
+class MacrosView extends PageView {
+  constructor(id) {
+    super(id, 'macros', 'macros.html', 'Macros');
+    iconUsers.add(this);   // drawn again when an icon it waits for comes
+  }
+  state() { return new Map([['macros', macrosForPage(this)]]); }
+  render() { this.send(macrosForPage(this)); }
+  receive(m) { return macrosPageAsks(this, m); }
+}
+
 class FiltersView extends PageView {
   constructor(id) { super(id, 'filters', 'filters.html', 'Filters'); }
   state() { return new Map([['filters', filtersForPage(this, true)]]); }
@@ -3169,9 +3220,9 @@ class FiltersView extends PageView {
 
 // Opened again it comes forward; opened after it was closed, where it was last (docked at its place, or floating where
 // its window was, kept with the window's layout); the first time floating beside the window.
-const OnePanes = new Set(['bookmarks', 'columnsets', 'filters', 'palette', 'settings', 'projects']);
+const OnePanes = new Set(['bookmarks', 'columnsets', 'filters', 'palette', 'settings', 'projects', 'macros']);
 // The first size of a floating one, when the default (narrow, beside the window) is too small for it: CSS px.
-const FirstSizes = { columnsets: [980, 620], filters: [1000, 640], settings: [760, 620], projects: [900, 600] };
+const FirstSizes = { columnsets: [980, 620], filters: [1000, 640], settings: [760, 620], projects: [900, 600], macros: [1000, 640] };
 const paneHomes = {};   // kind -> where it was when last closed: { floating, place, bounds }
 const paneOfKind = kind => [...views.values()].find(v => layout.pane(v.id)?.kind === kind) ?? null;
 function openOnePane(kind) {
@@ -3987,6 +4038,18 @@ function togglePane() {
   }
 }
 
+// The next other child of a pane's parent shown (of the pane itself when it is a root), in the order the children were
+// made (`target`, null without one), and all its parent's children but previews (`kids`): Ctrl+Shift+O's, a macro's
+// $$other.
+function otherChildOf(id) {
+  const pane = layout.pane(id), parent = pane.source ?? id;
+  const kids = layout.followers(parent, undefined, true).filter(f => f.kind !== 'preview');
+  const shown = kids.filter(f => !f.away && views.has(f.id));
+  const mine = pane.source !== null ? pane : shown.find(f => f.colour === layout.keyOf(id));
+  const at = shown.indexOf(mine);
+  return { kids, target: [...shown.slice(at + 1), ...shown.slice(0, Math.max(at, 0))].find(f => f !== mine)?.id ?? null };
+}
+
 // Ctrl+Shift+O: the folder the active pane focuses opened in the next other child of its parent (of the pane itself
 // when it is a root), in the order the children were made; with no other child shown, as Ctrl+O: a hidden one shown
 // again, else a new one at its right. The keyboard stays in the active pane.
@@ -3994,12 +4057,8 @@ async function openInOther() {
   const id = activePane, item = focusedItem();
   if (!layout.pane(id) || views.get(id) instanceof PreviewView) return;
   if (!item?.folder) return status('Ctrl+Shift+O: the focused item is no folder.', true);
-  const pane = layout.pane(id), parent = pane.source ?? id;
-  const kids = layout.followers(parent, undefined, true).filter(f => f.kind !== 'preview');
-  const shown = kids.filter(f => !f.away && views.has(f.id));
-  const mine = pane.source !== null ? pane : shown.find(f => f.colour === layout.keyOf(id));
-  const at = shown.indexOf(mine);
-  let target = [...shown.slice(at + 1), ...shown.slice(0, Math.max(at, 0))].find(f => f !== mine)?.id;
+  const parent = layout.pane(id).source ?? id;
+  let { kids, target } = otherChildOf(id);
   if (!target) {
     const hidden = kids.filter(f => f.away).sort((a, b) => b.away.at - a.away.at)[0];
     if (hidden) unhidePane(target = hidden.id);
@@ -4520,6 +4579,18 @@ function followNow(id, item) {
   apply(layout.focus(id, item));
 }
 
+// An entry as a macro's item (docs/plans/executed/34-PLAN-macros.md 3.2; macrolang.js): its path, name and extension and their
+// parts (a folder: its name whole, no extension), its size in bytes (a folder's when counted), the rest as the columns
+// show them.
+function macroItemOf(x) {
+  const parts = macroPathParts(x.id);
+  const size = x.folder ? folderSizeOf(x)?.size : x.size;
+  const shown = id => { try { return columnText(x, id) ?? ''; } catch { return ''; } };
+  return { pathNameExt: x.id, ...parts, ...(x.folder ? { name: parts.nameExt, ext: '' } : {}), size: Number.isFinite(size) ? String(size) : '',
+    modified: shown('modified'), created: shown('created'), accessed: shown('accessed'), attributes: shown('attributes'),
+    type: shown('type'), target: shown('target') };
+}
+
 // The folder new things go into: the list's folder, the tree's focused folder; only folders on disk.
 function currentFolder() {
   const v = activeView();
@@ -4629,6 +4700,7 @@ const events = {
     renames = m.renames ?? renames;
     filterSetsCame(m.filters);
     bookmarksCame(m.bookmarks);
+    if (typeof macrosCame === 'function') macrosCame(m.macros);   // the window's page (macros.js)
     start(m.paths, m.layout);
   },
   // Bars changed in a window (plan 10 3.3), and the drives there are now (3.2).
@@ -4768,6 +4840,8 @@ const events = {
   searches(m) { searches = m.searches; },
   // The kept filter sets changed (plan 32 3.4): panes using one follow it, its keys bound again.
   filters(m) { filterSetsCame(m.filters); },
+  // The macros changed in a window (plan 34 3.5).
+  macros(m) { macrosCame(m.macros); },
   // The bookmarks changed (in any window; plan 26 3.1); Edit asked from Windows' menu (3.8); answers to plain questions.
   bookmarks(m) { bookmarksCame(m); },
   bookmarkEdit(m) { editBookmark(m.id); },

@@ -4,7 +4,7 @@ using System.Text.Json.Nodes;
 namespace Foldex;
 
 /// <summary>
-/// The macros (docs/plans/34-PLAN-macros.md 3.5): macros\macros.json in the data folder, a folder of their own so it can
+/// The macros (docs/plans/executed/34-PLAN-macros.md 3.5): macros\macros.json in the data folder, a folder of their own so it can
 /// be copied on its own, apart from the bookmarks. A tree in your order, as the bookmarks (plan 27): a macro
 /// { id, name, icon, key, key2, text } or a folder { id, folder, items } holding macros and folders to any depth. A macro
 /// is known by its id, never by its name. Where Foldex differs from LexPen (one file per macro, by its name): a tree with
@@ -73,8 +73,12 @@ static class MacrosFile
         var clean = Clean(macros);
         var path = PathOf(dataDir);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        File.WriteAllText(path + ".tmp", "// The macros (docs/plans/34-PLAN-macros.md 3.5): a tree of folders and macros. Written by Foldex.\n" +
-            new JsonObject { ["macros"] = clean }.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        File.WriteAllText(path + ".tmp", "// The macros (docs/plans/executed/34-PLAN-macros.md 3.5): a tree of folders and macros. Written by Foldex.\n" +
+            // A macro's text as it is (its quotes, & and < not escaped), so the file reads as the macros read.
+            new JsonObject { ["macros"] = clean.DeepClone() }.ToJsonString(new JsonSerializerOptions
+            {
+                WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+            }) + "\n");
         File.Move(path + ".tmp", path, true);
         return clean;
     }

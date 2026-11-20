@@ -322,6 +322,21 @@ action('view.menu', { title: 'Views', hint: 'details, icons or thumbnails, for t
     openMenu(r.left, ctx.el ? r.bottom : r.top, viewsMenu(id));
   } });
 action('palette', { title: 'All actions and keys', group: 'app', run: () => openPalette() });
+// Macros (docs/plans/executed/34-PLAN-macros.md 3.7; macros.js): one run by its id (each macro a variant, so F1 lists them with
+// their folders and keys, and a ribbon button can be one), the Macros menu (the tree), Manage macros.
+action('macro.run', { title: 'Run a macro', group: 'app', enabled: params => typeof macroById === 'function' && !!macroById(params[0]),
+  run: params => runMacroById(params[0]) });
+Object.defineProperties(actions.get('macro.run'), {
+  variants: { get: () => typeof allMacros === 'function' ? allMacros().map(m => [m.id]) : [] },
+  variantTitles: { get: () => typeof allMacros === 'function' ? Object.fromEntries(allMacros().map(m => [m.id, `Macro: ${macroTitle(m)}`])) : {} },
+});
+action('macros.menu', { title: 'Macros', hint: 'every macro, in its folders; Manage macros', group: 'app',
+  dropDownOnly: true, dropDown: () => macrosMenu(), run: (params, ctx) => {
+    const r = (ctx.el ?? views.get(activePane)?.body ?? document.body).getBoundingClientRect();
+    openMenu(r.left, ctx.el ? r.bottom : r.top, macrosMenu());
+  } });
+action('macros.manage', { title: 'Manage macros', hint: 'the macros in their folders: new, edit, run, keys, icons', group: 'app',
+  run: () => openOnePane('macros') });
 // Projects (docs/plans/executed/15-PLAN-projects.md 3.6; projectmenu.js).
 action('projects.menu', { title: 'Projects', hint: 'every project and its windows, as at the project in the bottom bar', group: 'projects',
   dropDownOnly: true, dropDown: () => projectListItems(), run: () => projectsMenu() });

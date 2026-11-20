@@ -3,7 +3,7 @@ using Foldex.Shell;
 
 namespace Foldex.Tests;
 
-// A macro's run (docs/plans/34-PLAN-macros.md 3.3): the start each request makes; one run started and waited for.
+// A macro's run (docs/plans/executed/34-PLAN-macros.md 3.3): the start each request makes; one run started and waited for.
 public class MacroRunTests : IDisposable
 {
     readonly string dir = Path.Combine(Path.GetTempPath(), "foldex-run-" + Guid.NewGuid().ToString("N"));

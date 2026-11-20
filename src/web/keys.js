@@ -60,7 +60,9 @@ function buildKeys() {
   }
   // Then the kept filter sets' keys (plan 32 3.8), as the bookmarks'.
   const filterKeys = typeof filterSets !== 'undefined' ? filterSets.sets.filter(s => s.key).map(s => [s.key, ['filters.apply', s.name]]) : [];
-  for (const [key, call] of [...(typeof bookmarkBindings === 'function' ? bookmarkBindings() : []), ...filterKeys]) {
+  // And the macros' (plan 34 3.5), as the bookmarks'.
+  const macroKeys = typeof macroBindings === 'function' ? macroBindings() : [];
+  for (const [key, call] of [...(typeof bookmarkBindings === 'function' ? bookmarkBindings() : []), ...filterKeys, ...macroKeys]) {
     const first = key.includes(', ') ? key.split(', ')[0] : null;
     for (const k of [...keys.bindings.keys()]) if (k === key || k === first || !first && k.startsWith(key + ', ')) keys.bindings.delete(k);
     keys.bindings.set(key, call);

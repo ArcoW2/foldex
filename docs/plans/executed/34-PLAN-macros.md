@@ -1,10 +1,11 @@
 # Plan 34: Macros: run programs, act on panes and items, kept in a tree with keys
 
-Status: partly executed (see Status).
+Status: executed.
 
 - 2026-11-19: draft, at the user's request.
 - 2026-11-20: partly executed: the language (with items, lists, the functions, run and for each as statements); the
   run's start in the host; the macros' file.
+- 2026-11-20: executed.
 
 Takes over plan 01's Macros part (plan 01 3.3: LexPen's `MacroStore.cs`, its recording, `PLAN-macros.md`); recording
 is plan 35. Builds on
@@ -46,17 +47,17 @@ macro is plan 35.
 | For each | `for each $p in <list>` ... `next` over the selected items, files matching, a list made with append | 3.4; 6.1 |
 | Run, the start | the host starts it (`Shell/MacroRun.cs`): a program, document or URL with parameters, where it starts, its window, as administrator, waiting for it | 3.3; 6.2 |
 | The tree's file | `macros\macros.json` (`MacrosFile.cs`): folders to any depth, your order, a name, an icon and two keys each; every window gets it | 3.5; 6.3 |
+| System variables | the environment of a run (`macros.js`): the active pane's folder, the focused item, the selected items, the other pane, ...; `files`, `prop`; the steps go, select, focus, pane | 3.1; 3.2; 6.4 |
+| Running them | keys, the Macros menu on the ribbon, F1, a ribbon button for one macro; Esc stops one; errors on the status line and in the Log | 3.7; 6.4 |
+| Manage macros | a pane (docked or floating): the tree, New (Folder, Macro, Run a program), the name, two keys, the icon, the steps coloured with their problems, Run, Move to folder, Delete, Help | 3.6; 6.5 |
+| Run a program | the form: program, parameters (fixed text and variables), start in, window, as administrator, wait; opens again on a one-line run macro | 3.6; 6.5 |
+| The user's guide | `src/defaults/macros/README.md`: every statement, system variable, field and function, with examples; Help in Manage macros opens it | 3.9; 6.6 |
+| Tests | 3.8 | 6.1 to 6.6 |
 
 ### Not yet built
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| System variables | the active pane's folder, the focused item, the selected items, the other pane, ...: the environment that gives them | Running them | 3.2 |
-| Manage macros | a pane (docked or floating): the tree, New (Folder, Macro, Run a program), the editor, Run, Key, Icon, Move to folder | -- | 3.6 |
-| Run a program | the form: program, parameters (fixed text and variables), start in, window, as administrator | Manage macros | 3.6 |
-| Running them | keys, the Macros menu on the ribbon, F1, a ribbon button for one macro; errors on the status line and in the Log | -- | 3.7 |
-| The user's guide | `docs/macros/README.md`: every statement, system variable, field and function, with examples; Help in Manage macros opens it | Running them | 3.9 |
-| Tests | see 3.8 (the language's, the run's start and the file's: built) | -- | 3.8 |
 
 Moved out: recording macros to plan 35.
 
@@ -185,16 +186,20 @@ keep the selected and the focused items apart (the project's words):
 ### 3.6 Manage macros
 
 - A pane of its own, **docked or floating** (both), first floating, as Manage the bookmarks; plan 14 3.7's list gets
-  its row. It looks as Manage the bookmarks: the tree at the left (folders that open and close, drag onto a folder or
-  between rows, Move to folder..., Remove with the question for a folder that holds something), the chosen macro at
-  the right: its name, icon, keys, and its text in an editor with the language's colours.
+  its row. Laid out as Manage filters, its tree as Manage the bookmarks': the tree at the left (folders that open and
+  close, drag onto a folder or between rows, the arrows and Ctrl+Up / Ctrl+Down within a folder, Move to folder... (a
+  menu of the folders), Delete with the question for a folder that holds something or a macro with steps), the chosen
+  macro at the right: its name, its two keys (taken in place, as a filter set's: a key pressed in the field, refused
+  when something has it), its icon (Icon..., Default), and its steps in an editor with the language's colours, the
+  problems the language finds under it as they are typed.
 - New is a drop-down: **Folder...**, **Macro...** (an empty macro in the editor), **Run a program...**.
 - **Run a program...**: a form that writes a one-line macro, so starting an executable needs no script: Program (a
   field and Browse), Parameters (fixed text; a button inserts a variable: the focused item, the selected items, the
   first selected, the folder, the other pane's folder), Start in (the folder, or one chosen), Window (normal,
   minimized, maximized, hidden), Run as administrator, Wait until it ends. OK writes the `run` line; the macro is an
   ordinary macro from then on (its text can be changed; the form opens again on it while it is one `run` line).
-- Run (the chosen macro now, on the active pane of the window), Key..., Icon..., Rename (F2), Delete (Del).
+- Run (the chosen macro now, on the active pane of the window; Enter in the tree), F2 (to its name), Del (Delete),
+  Help (the guide, 3.9), Close.
 
 ### 3.7 Running them
 
@@ -225,7 +230,8 @@ keep the selected and the focused items apart (the project's words):
 
 ### 3.9 The user's guide
 
-- `docs/macros/README.md`, for whoever writes a macro: a user cannot guess the words. What a macro is and where it is
+- `src/defaults/macros/README.md` (shipped with the defaults, next to the exe as `defaults\macros\README.md`, so Help
+  can open it as Windows opens a .md), for whoever writes a macro: a user cannot guess the words. What a macro is and where it is
   kept; every statement with an example; text, numbers and their types, `&`, comparisons; the system variables; items,
   their fields and lists; every function; `run` with its options; `for each`; actions as steps (where to find their
   names: F1); procedures, functions and `use`; errors (`onerror`, `$$error`); a few whole macros to start from. Plain
@@ -282,3 +288,61 @@ None.
   (`macrosSave`, AppHost.SaveMacros).
 - Tested: `MacrosFileTests` (a tree two folders deep written and read back the same, in its order; what is kept of
   an entry; a file that cannot be read counts as empty and stays as it is); `dotnet test` 314 passed.
+
+### 6.4 Running them (2026-11-20)
+
+- `src/web/macros.js` (the window's page): the tree as every window has it (`macrosCame`: the first message, and
+  `macros` when a window saved it), a macro run on the active pane (`runMacroText`: read with what Foldex has as its
+  context, so an unknown action or variable is an error before anything runs; the status line says it runs, and how it
+  ended; an error with its line on the status line, a warning, so in the Log). One runs at a time.
+- The environment (`macroEnv`): the system variables from the active pane as the actions read it (`currentFolder`,
+  `focusedItem`, a list's selected entries in its order; a pane in a page of its own: the entries its page tells, the
+  focused and selected ones); `$$other` the pane Ctrl+Shift+O picks (`otherChildOf`, taken out of `openInOther` for
+  both); an item made by `macroItemOf` (app.js: its path's parts, its size in bytes, a folder's when counted, the rest
+  as the columns show them). `files`, `select` and `focus` run as methods of the list (`macroFiles`, `selectMatching`,
+  `focusNamed`), in the pane's own page when it has one. `go` waits until the list has read the folder (`loaded`), so
+  the next step sees its items. `prop` asks the host (`props`), a date as the setting dateFormat writes it.
+- Esc stops a macro: it is caught before anything else has the key; a macro that never waits gives the page its turn
+  every 50 ms (`step`), so Esc gets through a loop of its own.
+- Keys (`macroBindings`, keys.js buildKeys): as the bookmarks' and the filter sets', after them. `macro.run` with the
+  macro's id: a variant per macro, so F1 lists "Macro: Tools / Deeper / Hello" with its key and a ribbon button can be
+  one. `macros.menu` (the tree as submenus, then Manage macros...), `macros.manage`. Their icons LexPen's (Play, the
+  list of steps with Play). The shipped ribbon's Tools tab has a Macros group (corners Manage and the list, as
+  Bookmarks); a ribbon.json of your own keeps its tabs until Reset or Change the ribbon adds it.
+- Tested in the test copy (on a list pane in its own page): `go` twice, `select "*.txt;*.pdf"`, `$$count`, `for each`
+  over the selection with a `run` of cmd that wrote each item's name, size and path to a file, `focus` and the focused
+  folder's fields, `count(files "*")`, `$$exitCode` 4, an error on line 13 on the status line; a macro two folders
+  deep given Ctrl+Alt+M in Manage macros (Ctrl+C refused: "Ctrl+C is Copy: not taken."), the key pressed in the
+  window: "Macro Hello done."; F1's title; the menu's submenus; a loop of its own stopped by Esc after more than 1000
+  steps, the page answering meanwhile.
+
+### 6.5 Manage macros (2026-11-20)
+
+- `src/web/macros.html`, `macrospane.js`; `MacrosView` (app.js) and `macrosPageAsks` (macros.js). The page sends the
+  whole tree on every change (`save`); the window writes it. A key goes through the window (`setKey`), which refuses
+  one keys.json, a bookmark, a filter set or another macro has (`macroKeyClash`). Change Icon is the bookmarks' dialog
+  (`changeIconDialog`) in a modal floating window of its own (`dialogWindow` 'changeIcon'). A program or a folder for
+  the form: the host's own dialogs, asked through the window.
+- The editor: a text box over a coloured copy of its text (the language's words, functions, text, variables, system
+  variables, labels, numbers, comments); the problems as `macroProgram` finds them with the actions there are, under
+  it. A change is written 400 ms after the last key, and when the box loses the focus.
+- Run a program: a dialog inside the page. A text with system variables (`-x $$focused`) is written as the language's
+  expression, each variable quoted (`"-x " & quoted($$focused)`), the program and the folder not quoted. It opens
+  again on a macro that is one `run` line of plain text and system variables (read back from the parsed line, not its
+  text), and only then.
+- Tested in the test copy: a folder, a folder in it and a macro in that made from the page, written to macros.json
+  (readable: its quotes as they are) and back in every window; the form filled (Notepad++ with `-multiInst $$focused
+  -n10`, Start in `$$focused.path`, maximized, wait), the line it wrote read back into the same fields; a screenshot of
+  the pane (the tree, the keys, the icon, the coloured steps, a problem on line 8).
+- Not checked: Change Icon chosen through the page; Manage macros docked and floated again; a ribbon button dragged
+  from F1; Help opening the guide on a PC with a program for .md; a program that cannot start (its warning and Log
+  line) through a macro; Run as administrator.
+
+### 6.6 The user's guide (2026-11-20)
+
+- `src/defaults/macros/README.md`: where macros are, a first macro, the lines, text and numbers, variables, the system
+  variables, items and their fields, lists, every function, `run`, `for each`, `if` and `switch`, jumps, procedures
+  and functions of your own and `use`, Foldex's actions as steps, `go` / `select` / `focus` / `pane`, errors, and
+  whole examples. Help in Manage macros opens it (the host: `macroHelp`).
+- Tested: `EveryExampleInTheGuideReads` (every example in it, the syntax lines left out, reads without a mistake);
+  `NoTopLevelNameIsDeclaredTwiceOnAPage` now for view.html and macros.html too; `dotnet test` 317 passed.

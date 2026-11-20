@@ -5,7 +5,7 @@ using System.Text.Json.Nodes;
 namespace Foldex.Shell;
 
 /// <summary>
-/// A macro's `run` (docs/plans/34-PLAN-macros.md 3.3): a program, a document or a URL started as Windows' Run starts
+/// A macro's `run` (docs/plans/executed/34-PLAN-macros.md 3.3): a program, a document or a URL started as Windows' Run starts
 /// it (ShellExecute), with its parameters, in a folder, in a window as asked, as administrator (Windows asks, as for any
 /// program), and waited for when asked. The page asks with what the macro's line worked out; the host starts it.
 /// </summary>
