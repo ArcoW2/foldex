@@ -17,8 +17,10 @@ is not enough. And the helper is started for each listing now, so a series of su
 
 ## 2. The solution, in brief
 
-The elevated helper gets three more operations: take ownership, make a symbolic link or junction, and list a folder
-after taking ownership of it (for SYSTEM and TrustedInstaller folders). It stays a while after its last operation, so
+The elevated helper gets three more operations: take ownership (for the current user), make a symbolic link, and list
+a folder after taking ownership of it (for SYSTEM and TrustedInstaller folders). Create link... asks for the kind of
+link, its name and where it goes: in the other pane, next to the item, or to the clipboard, from where Paste link to
+<item name> makes it in any folder. It stays a while after its last operation, so
 a series asks UAC once; the time is a setting, and while it runs the ribbon shows a shield in a warning colour.
 
 ## Status
@@ -29,8 +31,9 @@ a series asks UAC once; the time is a setting, and while it runs the ribbon show
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| Take ownership | the helper's operation; an action for the selected items | Open question 1 | 3.1 |
-| Links without developer mode | symbolic links and junctions made through the helper | -- | 3.2 |
+| Take ownership | the helper's operation, for the current user; an action for the selected items | -- | 3.1 |
+| Create link | a dialog: kind, name, where (the other pane, next to the item, the clipboard); symbolic links through the helper without developer mode | Open question 1 | 3.2 |
+| Paste link | "Paste link to <item name>" while the clipboard holds a link source | Create link | 3.2 |
 | SYSTEM and TrustedInstaller folders | listed after taking ownership | Take ownership | 3.1 |
 | Helper lifetime | stays a while after its last operation, the time as a setting, the shield in the ribbon | -- | 3.3 |
 | Checks by hand | copying into a protected location (plan 05's `IFileOperation`) and each operation here through UAC | -- | 3.4 |
@@ -50,9 +53,23 @@ a series asks UAC once; the time is a setting, and while it runs the ribbon show
 
 ### 3.2 Links
 
-- Symbolic links (to a file or a folder) and junctions (to a folder) made through the helper when the user cannot
-  make them (no developer mode); with developer mode, Foldex makes them itself.
-- Where: [not yet decided] (open question 2).
+- **Create link...**: an action for the focused item (one link, to one item), on the item's menu and in F1: a dialog
+  (a modal floating window, plan 14 3.7) with the item it links to, the kind of link, its name, and where it goes:
+  - **In the other pane**: in the folder of the pane Ctrl+Shift+O opens into (offered only when there is one);
+  - **Next to the item**: in the folder the item is in;
+  - **To the clipboard**: nothing is made yet; the item is put on the clipboard as a link source, and Paste link makes
+    it where you want it.
+- **Paste link to <item name>**: while the clipboard holds a link source, a folder's menu (a list's empty part, a
+  tree's folder) and the Paste group offer it; it makes the link in that folder, of the kind chosen in Create link.
+  The link source is the item on Windows' clipboard as a copy is (so Paste still pastes a copy) with a mark of
+  Foldex's own that holds the kind; anything put on the clipboard after it ends it.
+- The kinds, as fit the item: a symbolic link (a file or a folder), a junction (a folder on a local drive), a hard
+  link (a file, on the same drive). The default kind and name: open question 1.
+- A symbolic link needs administrator rights without developer mode: then the helper makes it (UAC as plan 05);
+  with developer mode, and for a junction or a hard link (no rights needed), Foldex makes it itself. Refused (no
+  rights, another drive for a hard link, a share for a junction): why, in the dialog's message or on the status line.
+- As xplorer2's New link, which puts it in the other pane only; Foldex asks, as the user often does not want it
+  there.
 
 ### 3.3 The helper's lifetime
 
@@ -64,13 +81,16 @@ a series asks UAC once; the time is a setting, and while it runs the ribbon show
 
 - Unit: the helper's request parsing for the new operations, refusal of anything outside the set and of paths that
   are not full.
+- Unit: the kinds a Create link offers for a file, a folder, a folder on a share; a hard link to another drive
+  refused.
+- In the test copy: Create link to the other pane, next to the item, to the clipboard and Paste link in a third folder
+  (a junction and a hard link: no rights needed); the Paste link entry gone once something else is copied.
 - By hand (UAC cannot be clicked by the test copy): copy into Program Files with the Windows prompt; take ownership of
   a folder of another user; a symbolic link without developer mode; `WindowsApps` listed after taking ownership; the
   helper staying for its time and exiting after it; refused when the prompt is cancelled.
 
 ## 4. Open questions
 
-1. **Take ownership: for whom.** The current user, or the Administrators group (as Explorer's Advanced Security
-   does when you pick it)? The current user is what most "take ownership" tools do.
-2. **Making a link: where.** As xplorer2 does (a command "New link" with the source being the selected item and the
-   target the other pane's folder), or a dialog asking for both, or both?
+1. **Create link: its defaults.** The kind first chosen (a symbolic link for both, or a junction for a folder and a
+   symbolic link for a file), and the name (the item's own name, as a link usually has; or with " - link" after it,
+   as Windows' "- Shortcut")?
