@@ -204,6 +204,13 @@ None.
 - Looking under a tree's folders takes turns (two at a time, chosen, not measured), the deepest folder waiting first,
   and a long look hands its turn over between folders when a deeper one waits: a folder opened later does not wait for
   a whole drive above it.
+- A tree with a filter flashed (2026-11-20): every folder read let go of the answers of the folders above it, up to
+  the drive, so the whole tree went dimmed and back, with each read of the read-ahead and of the tree's own look under
+  its folders. Now only a folder read again (F5, or one the cache let go of and so did not watch) lets go of them; a
+  first read finds what was there. Windows reports a folder as changed when it is read (its entry in the folder above
+  brought up to date); a folder in a folder that changed lets go of nothing either, as its own watch tells what changes
+  under it, and a change that leaves an item as it was is not put in or told at all. In the tree, answers that went
+  are shown as they were until the new ones are there, and a new answer the same as before draws nothing.
 
 ### 6.4 Tests
 
@@ -217,3 +224,7 @@ None.
   `*.log`: the folders that lead to one shown, the others gone, after 578 ms; a .log made in a hidden folder brought it
   back in 1.2 s, deleted it went in 3.0 s; the tree's page answering in 7 ms meanwhile, with D:\temp (50178 folders)
   open in the same tree. Not tried in the app: the read-ahead with filters, a relative by the clock warning shown.
+- The flashing (2026-11-20): `AFolderReadTheFirstTimeLetsGoOfNothingAndOneReadAgainDoes` (the tree's look under every
+  folder lets go of nothing; F5 on a folder lets go of it and the folders above it). In a test copy with a tree on D:\
+  filtered on "not .bak" and a file written every 2 s under D:\temp: before, 12551 filterStale messages in 40 s;
+  after, 16 in 30 s, and no row dimmed after any redraw.

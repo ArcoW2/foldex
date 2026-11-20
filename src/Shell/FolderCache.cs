@@ -49,6 +49,8 @@ sealed class FolderCache : IDisposable
     public static long BareBytes = 600, EntryBytes = 1400, ResultBytes = 120;
 
     readonly Dictionary<string, Folder> folders = new(StringComparer.OrdinalIgnoreCase);
+    // Folders let go after they were read whole: not watched since, so read again they may hold something else (DropHolds).
+    readonly HashSet<string> letGo = new(StringComparer.OrdinalIgnoreCase);
     readonly object gate = new();
     readonly Dictionary<object, HashSet<string>> shownBy = [];
     readonly Action<string, IReadOnlyList<string>?> changed;
@@ -300,9 +302,11 @@ sealed class FolderCache : IDisposable
         var key = Key(location);
         Folder f;
         TaskCompletionSource? wait = null;
+        bool again;
         lock (gate)
         {
             if (folders.TryGetValue(key, out var known) && known.Complete && !known.Stale) return (known, true);
+            again = known is { Complete: true } | letGo.Remove(key);
             f = known ?? (folders[key] = new Folder(location) { Network = NetworkGuard.IsNetwork(location) });
             if (f.Reading is not null) wait = f.Reading;
             else
@@ -339,7 +343,10 @@ sealed class FolderCache : IDisposable
                 f.Target = target;
                 f.Entries = 0;
                 f.Results = 0;          // read anew (F5 too): its filter results go with the old items (plan 36 3.2)
-                DropHolds(f.Path);
+                // Whether something under the folders above passes: only a folder read again may have changed it. A first
+                // read (read-ahead, a tree's filter looking under a folder) finds what was there, so the trees showing a
+                // filter are not drawn again with every folder read.
+                if (again) DropHolds(f.Path);
                 f.Complete = true;
                 f.Stale = f.Watcher is null;   // not watched (Windows refused): read again whenever asked
                 foreach (var (kind, path, old) in f.Pending) Apply(f, kind, path, old);
@@ -409,9 +416,12 @@ sealed class FolderCache : IDisposable
 
     void Changed(Folder f, WatcherChangeTypes kind, string path, string? old)
     {
+        // "Changed" for an item that is as it was (a folder in it read: Windows reports that too): nothing to put in or
+        // tell, so no pane asks for it again and no tree's filter answers go with every folder read (plan 36).
+        var now = kind == WatcherChangeTypes.Changed ? Look(path) : null;
         lock (gate)
         {
-            if (!f.Complete) f.Pending.Add((kind, path, old));   // reported during the read: put in after it
+            if (now is not null && f.Complete && f.Items.TryGetValue(Path.GetFileName(path), out var had) && !Differs(had.Info, now)) return;            if (!f.Complete) f.Pending.Add((kind, path, old));   // reported during the read: put in after it
             else Apply(f, kind, path, old);
         }
         Tell(f.Path, old is null ? [Path.GetFileName(path)] : [Path.GetFileName(path), Path.GetFileName(old)]);
@@ -422,7 +432,10 @@ sealed class FolderCache : IDisposable
     void Apply(Folder f, WatcherChangeTypes kind, string path, string? old)
     {
         if (f.Watcher is null) return;
-        DropHolds(f.Path);   // an item of it changed: whether something under it passes is not known any more (plan 36)
+        // An item of it changed: whether something under it passes is not known any more (plan 36). Not for a folder in
+        // it that changed: what is under that one its own watch tells (Windows reports the folder changed when it is
+        // read, as its entry here is brought up to date: a tree's filter answers would go with every folder read).
+        if (!(kind == WatcherChangeTypes.Changed && Directory.Exists(path))) DropHolds(f.Path);
         var name = Path.GetFileName(path);
         if (old is not null) f.Items.Remove(Path.GetFileName(old));
         if (kind == WatcherChangeTypes.Deleted) f.Items.Remove(name);
@@ -549,6 +562,7 @@ sealed class FolderCache : IDisposable
         f.Watcher?.Dispose();
         f.Watcher = null;
         folders.Remove(Key(f.Path));
+        if (f.Complete) letGo.Add(Key(f.Path));
     }
 
     // A folder's read and the reads of the folders under it let go (under the gate), each told as changed as a whole.

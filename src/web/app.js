@@ -1105,10 +1105,10 @@ class TreeView {
       const folder = n.parent ? n.parent.id : this.folder ? this.root : null;
       if (!host) return test(n) !== false;
       if (!folder || !isDiskPath(folder) || n.qa || n.bm) return true;   // the tops, This PC's drives: the ways in
-      const pass = this.hostFolder(host, folder, 'results').get(n.name?.toLowerCase());
+      const pass = this.hostAnswer(host, folder, 'results', n.name);
       if (pass === true) return true;
       if (n.folder === false) return false;
-      const holds = this.hostFolder(host, folder, 'holds').get(n.name?.toLowerCase());
+      const holds = this.hostAnswer(host, folder, 'holds', n.name);
       if (holds === true) return true;
       if (pass === false && holds === false) return false;
       n.filterUnknown = true;
@@ -1145,8 +1145,23 @@ class TreeView {
     if (!set?.lines?.length || set.off || filterProblem(set)) return (this.filtering = null);
     const { filter, key } = filterKey(set);
     if (this.filtering?.want !== (key ?? filter))
-      this.filtering = { want: key ?? filter, set, filter, key, folders: new Map(), run: `${this.id}:${Date.now()}` };
+      this.filtering = { want: key ?? filter, set, filter, key, folders: new Map(), before: new Map(), run: `${this.id}:${Date.now()}` };
     return this.filtering;
+  }
+
+  // An item's answer: the one asked anew, else (while that is under way) the one it had before its answers went, so a
+  // change under a folder does not dim the rows that pass until they are worked out again.
+  hostAnswer(f, folder, what, name) {
+    const k = `${what}|${folder.toLowerCase()}`, now = this.hostFolder(f, folder, what).get(name?.toLowerCase());
+    return now ?? f.before.get(k)?.get(name?.toLowerCase());
+  }
+
+  // A folder's answers of one kind let go: kept as the answers before, until the new ones are all there.
+  dropAnswers(f, k) {
+    const had = f.folders.get(k);
+    if (!had) return false;
+    if (had.size) f.before.set(k, had);
+    return f.folders.delete(k);
   }
 
   // A folder's answers of one kind ('results' or 'holds'), asked for the first time they are needed.
@@ -1169,9 +1184,16 @@ class TreeView {
       const m = await askHost({ ...ask, now: Date.now(), from });
       from = m.next ?? 0;
       if (this.filtering !== f) return;
-      for (const [name, v] of Object.entries(m.results ?? {})) got.set(name.toLowerCase(), v);
+      // Drawn again only for an answer that is new (one as before changes nothing shown).
+      let changed = false;
+      for (const [name, v] of Object.entries(m.results ?? {})) {
+        const was = got.get(name.toLowerCase()) ?? f.before.get(`${what}|${folder.toLowerCase()}`)?.get(name.toLowerCase());
+        got.set(name.toLowerCase(), v);
+        if (was !== v) changed = true;
+      }
       done = !!m.done;
-      if (!this.flattening) this.flattening = requestAnimationFrame(() => { this.flattening = 0; this.flatten(); });
+      if (done && f.folders.get(`${what}|${folder.toLowerCase()}`) === got) f.before.delete(`${what}|${folder.toLowerCase()}`);
+      if (changed && !this.flattening) this.flattening = requestAnimationFrame(() => { this.flattening = 0; this.flatten(); });
     }
   }
 
@@ -1181,7 +1203,7 @@ class TreeView {
     if (!f) return;
     let any = false;
     for (const folder of folders)
-      for (const what of ['results', 'holds']) any = f.folders.delete(`${what}|${folder.toLowerCase()}`) || any;
+      for (const what of ['results', 'holds']) any = this.dropAnswers(f, `${what}|${folder.toLowerCase()}`) || any;
     if (any && !this.flattening) this.flattening = requestAnimationFrame(() => { this.flattening = 0; this.flatten(); });
   }
 
@@ -1190,9 +1212,9 @@ class TreeView {
   filterStale(folder) {
     const f = this.filtering;
     if (!f || !folder) return;
-    f.folders.delete(`results|${folder.toLowerCase()}`);
+    this.dropAnswers(f, `results|${folder.toLowerCase()}`);
     for (let at = parentOf(folder); at && at !== ThisPC; at = parentOf(at) === at ? null : parentOf(at))
-      f.folders.delete(`holds|${at.toLowerCase()}`);
+      this.dropAnswers(f, `holds|${at.toLowerCase()}`);
   }
 
   // Whether a node gets an expander: a folder with something to show (plan 16; plan 18 3.4): its items once read, else

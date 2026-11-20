@@ -117,6 +117,26 @@ public class FilterResultsTests : IDisposable
     }
 
     [Fact]
+    public async Task AFolderReadTheFirstTimeLetsGoOfNothingAndOneReadAgainDoes()
+    {
+        using var cache = new FolderCache((_, _) => { });
+        var jobs = new FilterJobs(cache);
+        var stale = new List<IReadOnlyList<string>>();
+        jobs.Stale = chain => { lock (stale) stale.Add(chain); };
+        // The tree's look reads every folder under dir for the first time (as read-ahead does; Windows reports a folder
+        // read as changed): no answers go, so the trees showing the filter are not drawn again for it.
+        await All(w => jobs.Holds(Ask(dir), w));
+        await Task.Delay(500);
+        lock (stale) Assert.Empty(stale);
+        // F5 on a folder: read again, its answers and the ones above it go.
+        var deep = Path.Combine(dir, "docs", "deep");
+        cache.Invalidate(deep);
+        cache.ForFilter(deep, null);
+        for (var i = 0; i < 50 && stale.Count == 0; i++) await Task.Delay(50);
+        lock (stale) Assert.Contains(stale, c => c[0].Equals(deep, StringComparison.OrdinalIgnoreCase) && c.Contains(dir, StringComparer.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public async Task AFilterWithoutAKeyKeepsNothing()
     {
         using var cache = new FolderCache((_, _) => { });
