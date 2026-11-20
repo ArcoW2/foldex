@@ -381,7 +381,9 @@ function fitViewColumns(view, items, marks, which) {
   const measure = document.createElement('canvas').getContext('2d');
   const style = getComputedStyle(view.body);
   measure.font = `${style.fontSize} ${style.fontFamily}`;
-  const fontPx = view.fontPx(), pad = 14;
+  // A cell's padding (app.css .row .cell: 8px each side), and 2px for where the canvas measures a text a little narrower
+  // than the cell lays it out.
+  const fontPx = view.fontPx(), pad = 16 + 2;
   const cols = shownColumns(view.cols);
   const needs = cols.map((col, k) => {
     let widest = measure.measureText(columnInfo(col.id).title).width + 16;
