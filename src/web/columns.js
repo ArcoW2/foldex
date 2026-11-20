@@ -161,7 +161,8 @@ const fitOf = col => FitModes.includes(col.fit) ? col.fit : col.id === 'name' ? 
 
 // A set's or a pane's columns as plan 28 keeps them (3.9): { columns: [{ id, width, hidden, fit, min, max }], sort:
 // [{ id, desc }] }. Written before: a sort { id, desc } is a list of one, "fit": true (every column fitted after every
-// listing) makes every column fit both ways.
+// listing) makes every column fit both ways. A pane's own also `from`: the set they were taken from (its header's
+// Column sets), so that one is checked there.
 function normalColumns(c) {
   const sort = Array.isArray(c?.sort) ? c.sort : c?.sort?.id ? [c.sort] : [];
   const columns = (c?.columns ?? []).map(col => {
@@ -169,7 +170,7 @@ function normalColumns(c) {
     if (!FitModes.includes(n.fit) && c.fit === true) n.fit = 'both';
     return n;
   });
-  return { columns, sort: sort.filter(s => s?.id).map(s => ({ id: s.id, desc: !!s.desc })) };
+  return { columns, sort: sort.filter(s => s?.id).map(s => ({ id: s.id, desc: !!s.desc })), ...(c?.from ? { from: c.from } : {}) };
 }
 
 // A column's width in em kept inside its minimum and maximum (plan 28 3.6).
@@ -570,9 +571,10 @@ function columnHeaderMenu(view) {
     { label: 'Fit columns', key: 'Ctrl+R', run: () => view.fitColumns('fit') },
     { label: 'Fit all columns', key: 'Ctrl+Shift+R', run: () => view.fitColumns('all') },
     '-',
+    // The set the pane's columns came from (`from`: chosen here), else the folder's set it shows.
     { label: 'Column sets', items: [
-      ...columnSets.sets.map(s => ({ label: s.name, checked: cols.set === s.name, run: () => {
-        Object.assign(cols, copyColumns(s));
+      ...columnSets.sets.map(s => ({ label: s.name, checked: (cols.from ?? cols.set) === s.name, run: () => {
+        Object.assign(cols, copyColumns(s), { from: s.name });
         view.columnsChanged();
         view.sortEntries();
       } })),
@@ -596,8 +598,9 @@ function columnHeaderMenu(view) {
   ];
 }
 
+// A set saved: without a pane's `from` (where its columns came from).
 function saveMine(mine) {
-  post({ op: 'columnSetsSave', mine });
+  post({ op: 'columnSetsSave', mine: mine.map(({ from, ...m }) => m) });
 }
 
 // ---------- Select columns (plan 28 3.7) and the Sort window (3.5) ----------
