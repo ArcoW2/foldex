@@ -89,7 +89,7 @@ updated whenever a plan is written, built or closed that touches a feature here.
 | Comments and descdriptions | P+ | -- | 4 | Columns (to see them) |
 | Paths over 260 characters | P+ | [not yet checked] | 4 | -- |
 | CSV export, copy path | P+ | part: copy path built | 4 | Columns |
-| Hard links, junctions, symbolic links | P+ | part: shown and followed; making them (Create link..., Paste link): plan 31 | 3 | the elevated helper (plans 05, 31), for symbolic links |
+| Hard links, junctions, symbolic links | P+ | part: shown and followed; making them (Create link, Paste symbolic link / junction / hard link): plan 31 | 3 | the elevated helper (plans 05, 31), for symbolic links |
 | Attributes and timestamps (touch, shift) | P+ | -- | 3 | -- |
 | Ttags, bulk properties | P+ | -- | 3 | Columns (to see them) |
 | Robust delete, shred | P+ | -- | 2 | Robust copy (the same engine) |
