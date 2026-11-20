@@ -93,9 +93,15 @@ asks UAC once; the time is a setting, and while it runs the ribbon shows a shiel
 - **Paste <kind> to <item name>**: while the clipboard holds a link source, the Foldex submenu of a folder (a list's
   empty part, a tree's folder) and the Paste group offer it, its text always naming the kind on the clipboard:
   "Paste symbolic link to <item name>", "Paste junction to <item name>", "Paste hard link to <item name>" or "Paste
-  shortcut (.lnk) to <item name>"; it makes that one in that folder. The link source is the item on Windows' clipboard as a copy is (so
-  Paste still pastes a copy) with a mark of Foldex's own that holds the kind; anything put on the clipboard after it
-  ends it.
+  shortcut (.lnk) to <item name>"; it makes that one in that folder.
+- **How Foldex knows what is on the clipboard**: the clipboard never holds a link, only the item; "... to clipboard"
+  puts two formats on it at once: the item as a copy of a file is (the file list Explorer uses, so Paste still pastes
+  a copy, in Foldex and in Explorer), and a format Foldex registers for itself (`RegisterClipboardFormat`, "Foldex
+  link source") holding the kind and the item's path. A folder's menu and the Paste group look for that format; its
+  path must be the file on the clipboard, else it is not offered. Whatever is put on the clipboard after it replaces
+  both, so the Paste entry goes by itself. On Windows' clipboard, not in Foldex's memory: every Foldex window sees it.
+  (Explorer's own "Paste shortcut", in its part of the menu, is offered for any item copied and makes a .lnk; it stays
+  as it is.)
 - No dialog: a link's name is the item's own (a link stands for the item; not Windows' "- Shortcut"); a name that is
   there in the folder asks for another (askText, the name offered with " (2)"), Cancel makes nothing.
 - A shortcut: a .lnk made by Windows' own shell link (`IShellLink`, saved through `IPersistFile`), to the item, its
