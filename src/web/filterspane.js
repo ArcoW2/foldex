@@ -252,8 +252,15 @@ function drawLines() {
     if (k === wantClose) { close.classList.add('fl-wrong'); close.title = `${opened - closed} more opening than closing: a closing bracket is missing here or below`; }
     const indent = el('span', { className: 'fl-indent' });
     indent.style.width = `${depth[k] * 1.6}em`;
-    const not = check('Not', !!line.not, on => change(s => { s.lines[k].not = on; }), 'An exception: an item passes when it does not pass this line');
-    const text = el('span', { className: 'fl-text', textContent: filterLineText(line, titleOf), title: filterLineText(line, titleOf) });
+    // Not: a toggle of its own in a column of its own (as And / Or and the brackets), not a check that reads as part of
+    // the line's text.
+    const not = el('button', { className: 'fl-not' + (line.not ? ' on' : ''), textContent: 'Not', type: 'button',
+      title: line.not ? 'An exception: an item passes when it does not pass this line. A click: no exception'
+        : 'A click makes it an exception: an item passes when it does not pass this line' });
+    not.setAttribute('aria-pressed', String(!!line.not));
+    not.addEventListener('click', () => change(s => { s.lines[k].not = !s.lines[k].not; }));
+    // Its Not is the toggle before it: not again in the text (the hint has the whole line).
+    const text = el('span', { className: 'fl-text', textContent: filterLineText({ ...line, not: false }, titleOf), title: filterLineText(line, titleOf) });
     if (fieldOf(line.field).slow) text.prepend(tortoise());
     row.append(join, indent, open, not, text, close);
     return row;
@@ -376,7 +383,7 @@ function conditionRows(kind, c, line) {
   };
   switch (kind) {
     case 'text': {
-      const rows = [op([['wild', 'matches wildcards'], ['regex', 'matches a regex'], ['contains', 'contains'], ['is', 'is'], ...HasNone])];
+      const rows = [op([['wild', 'matches wildcards'], ['regex', 'matches a regex'], ['contains', 'contains'], ['starts', 'starts with'], ['is', 'is'], ...HasNone])];
       if (!['has', 'none'].includes(c.op)) rows.push(el('div', { className: 'fl-row' }, el('span', { className: 'cs-caption', textContent: 'Text' }),
         text(c.text, v => setCond(x => { x.text = v; }), c.op === 'wild' ? '*.cs;*.md' : c.op === 'regex' ? '^report.*\\.pdf$' : '')));
       return rows;

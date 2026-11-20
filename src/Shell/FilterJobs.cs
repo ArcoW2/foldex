@@ -228,6 +228,8 @@ sealed class FilterJobs
     async Task<bool> HoldsUnder(Request r, string folder, int depth, int turn)
     {
         if (r.Key is not null && cache.Holds(folder, r.Key) is bool known) return known;
+        // Nothing under it can pass, by its path alone (a Full path line): not looked through.
+        if (!FilterEngine.CanHold(r.Set, folder)) return false;
         await looking.Yield(turn);
         var results = await Test(r, folder);
         var holds = results is not null && results.Values.Any(p => p);

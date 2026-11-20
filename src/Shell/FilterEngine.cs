@@ -90,6 +90,14 @@ static class FilterEngine
         }
     }
 
+    /// <summary>Whether anything under `folder` can pass `set`, from the folder's path alone (filters.js filterCanHold):
+    /// false only when nothing can.</summary>
+    public static bool CanHold(JsonNode set, string folder)
+    {
+        var call = $"filterCanHold({set.ToJsonString()}, {JsonValue.Create(folder).ToJsonString()})";
+        lock (gate) return Engine().Evaluate(call).AsBoolean();
+    }
+
     /// <summary>Each item tested with `set` (`kinds`: the filter kind of each field it reads; `now`: ms since 1970, for
     /// dates relative to now): true, false, or null when a value it needs is not in the item.</summary>
     public static bool?[] Test(JsonNode set, JsonObject kinds, long now, IReadOnlyList<JsonObject> items)

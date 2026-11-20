@@ -10,7 +10,7 @@
 //   holds, as deep as it goes: an item passes the line when a folder it is in passes; only for the fields a folder
 //   above an item is known by from the item's path, InsideFields) }.
 // A cond by the field's kind (filterKind):
-//   text:  { op: 'wild' | 'regex' | 'contains' | 'is' | 'has' | 'none', text }
+//   text:  { op: 'wild' | 'regex' | 'contains' | 'starts' | 'is' | 'has' | 'none', text }
 //   size, number: { op: 'range' | 'is' | 'has' | 'none', from, to, value }
 //          (numbers; a size in bytes; from or to null: no limit at that end)
 //   date:  { op: 'range' | 'on' | 'has' | 'none', from, to, day }
@@ -192,6 +192,7 @@ function filterCond(kind, c, v, now) {
       if (c.op === 'wild') return wildTest(t)?.(s) ?? true;
       if (c.op === 'regex') return t ? new RegExp(t, 'i').test(s) : true;
       if (c.op === 'contains') return s.toLowerCase().includes(t.toLowerCase());
+      if (c.op === 'starts') return s.toLowerCase().startsWith(t.toLowerCase());
       if (c.op === 'is') return s.toLowerCase() === t.toLowerCase();
       return true;
     }
@@ -232,6 +233,91 @@ function filterProblem(set) {
   return depth ? `${depth} bracket${depth > 1 ? 's are' : ' is'} not closed.` : null;
 }
 
+// Lines' values worked out as a set does: Not already in them, And before Or, brackets first. `both(a, b, op)`
+// combines two.
+function filterEval(lines, values, both) {
+  const tokens = [];
+  lines.forEach((line, k) => {
+    if (k) tokens.push(line.join === 'or' ? 'or' : 'and');
+    for (let i = 0; i < (line.open || 0); i++) tokens.push('(');
+    tokens.push({ v: values[k] });
+    for (let i = 0; i < (line.close || 0); i++) tokens.push(')');
+  });
+  let at = 0;
+  const primary = () => {
+    const t = tokens[at++];
+    if (t === '(') { const v = orExpr(); at++; return v; }
+    return t?.v ?? null;
+  };
+  const andExpr = () => { let v = primary(); while (tokens[at] === 'and') { at++; v = both(v, primary(), 'and'); } return v; };
+  const orExpr = () => { let v = andExpr(); while (tokens[at] === 'or') { at++; v = both(v, andExpr(), 'or'); } return v; };
+  return orExpr();
+}
+
+// Whether anything under a folder can pass a set, from the folder's path alone (a tree's look under its folders,
+// plan 36 3.7: a folder nothing under can pass is not looked through). False only when no item under it can: a line
+// whose value the path does not give counts as either.
+function filterCanHold(set, folder) {
+  const lines = set?.lines ?? [];
+  if (!lines.length || set.off || filterProblem(set)) return true;
+  const under = (folder.endsWith('\\') ? folder : folder + '\\').toLowerCase();
+  const values = lines.map(line => filterUnderLine(line, folder, under));
+  const both = (a, b, op) => op === 'and' ? (a === false || b === false ? false : a === true && b === true ? true : 'u')
+    : (a === true || b === true ? true : a === false && b === false ? false : 'u');
+  return filterEval(lines, values, both) !== false;
+}
+
+// What a line gives every item under a folder (`under`: its path with a backslash, in lower case): true, false, or 'u'
+// (not known from the path).
+function filterUnderLine(line, folder, under) {
+  if (!line.folders && !line.files) return !!line.not;
+  // With what they hold: the folder, or one it is in, passes: so does everything under it.
+  if (filterInside(line)) {
+    const plain = { ...line, inside: false, not: false };
+    const name = folder.replace(/\\+$/, '').split('\\').pop();
+    if ([{ folder: true, name, id: folder }, ...filterAncestors(folder + '\\x')].some(up => filterLine(plain, up, () => 'text', 0) === true))
+      return !line.not;
+  }
+  let v = 'u';
+  if (line.field === 'fullPath') {
+    const c = line.cond ?? {}, t = String(c.text ?? '').toLowerCase();
+    if (c.op === 'has') v = true;
+    else if (c.op === 'none') v = false;
+    else if (c.op === 'contains') v = t ? pathContainsUnder(t, under) : true;
+    else if (c.op === 'starts') v = under.startsWith(t) ? true : t.startsWith(under) ? 'u' : false;
+    else if (c.op === 'is') v = t.startsWith(under) && t.length > under.length ? 'u' : false;
+    else if (c.op === 'wild') v = pathWildUnder(t, under);
+  }
+  if (v === true && !(line.folders && line.files)) v = 'u';   // the other kind does not pass it
+  return v === 'u' ? v : line.not ? !v : v;
+}
+
+// A text in every path under a folder (true), in none (false), or in some (u). Only a drive's colon fixes where a text
+// is: it is the second character of a path, and in no name.
+function pathContainsUnder(t, under) {
+  if (under.includes(t)) return true;
+  const colon = t.indexOf(':');
+  if (colon < 0) return 'u';
+  const start = 1 - colon;
+  if (t.lastIndexOf(':') !== colon || start < 0 || under[1] !== ':') return false;
+  if (start + t.length <= under.length) return false;   // all of it in the folder's path, and not there
+  return t.startsWith(under.slice(start)) ? 'u' : false;
+}
+
+// Wildcards (wildTest) against every path under a folder: a part's start before its first wildcard must fit the
+// folder's path; `<start>*` with the folder's path starting so: every path.
+function pathWildUnder(t, under) {
+  const parts = t.split(/[;,]/).map(p => p.trim()).filter(Boolean);
+  if (!parts.length) return true;
+  const each = parts.map(p => {
+    const w = p.search(/[*?]/), lit = w < 0 ? p : p.slice(0, w);
+    if (w < 0) return p.startsWith(under) && p.length > under.length ? 'u' : false;
+    if (!lit.startsWith(under) && !under.startsWith(lit)) return false;
+    return p === lit + '*' && under.startsWith(lit) ? true : 'u';
+  });
+  return each.includes(true) ? true : each.every(v => v === false) ? false : 'u';
+}
+
 // A set as a test of items: x => true (shown), false (not), or 'wait' (a value not read yet: not shown until it is).
 // No lines, switched off, or a problem: every item. Worked out as usual: Not on its line, And before Or, brackets
 // first; a line left out for an item (null) as if it were not there.
@@ -241,25 +327,9 @@ function filterTestOf(set, kindOf, now = Date.now()) {
   return x => {
     const values = lines.map(line => filterLine(line, x, kindOf, now));
     if (values.includes('wait')) return 'wait';
-    // Tokens: brackets, values, and / or; parsed as or of ands.
-    const tokens = [];
-    lines.forEach((line, k) => {
-      if (k) tokens.push(line.join === 'or' ? 'or' : 'and');
-      for (let i = 0; i < (line.open || 0); i++) tokens.push('(');
-      tokens.push({ v: values[k] });
-      for (let i = 0; i < (line.close || 0); i++) tokens.push(')');
-    });
-    let at = 0;
     // A value: true, false or null (left out); and / or with a left-out side give the other side.
     const both = (a, b, op) => a === null ? b : b === null ? a : op === 'and' ? a && b : a || b;
-    const primary = () => {
-      const t = tokens[at++];
-      if (t === '(') { const v = orExpr(); at++; return v; }
-      return t?.v ?? null;
-    };
-    const andExpr = () => { let v = primary(); while (tokens[at] === 'and') { at++; v = both(v, primary(), 'and'); } return v; };
-    const orExpr = () => { let v = andExpr(); while (tokens[at] === 'or') { at++; v = both(v, andExpr(), 'or'); } return v; };
-    const v = orExpr();
+    const v = filterEval(lines, values, both);
     return v === null ? true : v;
   };
 }
@@ -334,7 +404,7 @@ function filterLineText(line, titleOf) {
       + `${c.encoding ? `, ${c.encoding}` : ''}${c.allFiles ? ', all files' : ''}`;
   const what = c.op === 'has' ? `${f} has a value` : c.op === 'none' ? `${f} has no value`
     : c.op === 'wild' ? `${f} matches ${c.text || '*'}` : c.op === 'regex' ? `${f} matches /${c.text ?? ''}/`
-    : c.op === 'contains' ? `${f} contains ${c.text ?? ''}` : c.op === 'is' && c.value == null ? `${f} is ${c.text ?? ''}`
+    : c.op === 'contains' ? `${f} contains ${c.text ?? ''}` : c.op === 'starts' ? `${f} starts with ${c.text ?? ''}` : c.op === 'is' && c.value == null ? `${f} is ${c.text ?? ''}`
     : c.op === 'true' ? `${f} is yes` : c.op === 'false' ? `${f} is no`
     : c.op === 'in' ? `${f} is ${(c.values ?? []).join(' or ') || 'any'}`
     : c.op === 'attrs' ? `${f}: ${Object.entries(c.attrs ?? {}).filter(([, w]) => w !== 'either').map(([a, w]) => (w === 'not' ? 'not ' : '') + (FilterAttributes.find(x => x[0] === a)?.[1] ?? a)).join(', ') || 'any'}`

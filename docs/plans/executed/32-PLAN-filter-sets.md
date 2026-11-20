@@ -277,3 +277,15 @@ None.
     (src, doc), king_569, other\deep\KING_570 and other\plain, filtered on `king_*.*` with what they hold: the list on
     the folder shows KING_568 and king_569, in KING_568 everything; the tree shows KING_568 with src and doc, king_569,
     and other > deep > KING_570, not other\plain. The filter window lists Full path, and a Name line has the option.
+  - **Starts with**: a condition of every text field.
+  - **What can pass under a folder** (`filterCanHold`): a tree does not look through a folder nothing under which can
+    pass, by the folder's path alone, so it is gone at once instead of dimmed while the host looks. Each line gives
+    every item under the folder true, false or "not known from the path" (a line of Full path: contains a text with a
+    drive's colon, which fixes where it is; starts with; is; wildcards by their start; has a value or none; a line
+    with what they hold whose folder or a folder above passes); Not, And, Or and brackets as for an item; only a
+    certain false skips the folder. `filterEval` works out the lines for both.
+  - **Not in the list of lines**: a toggle of its own in a column of its own (dimmed off, the accent on), and no
+    longer again at the start of the line's text.
+  - Tested: `StartsWithAndWhatCanPassUnderAFolder`; `dotnet test` 301 passed. In the test copy, D: under This PC with
+    "Full path contains d:\king_, with what they hold": only the King_ folders, none dimmed, after 218 ms (before:
+    every other folder dimmed while the host looked through it). The list of lines looked at in a screenshot.

@@ -201,4 +201,31 @@ public class FiltersTests
             + """["KING_568","src","a.pas","other","c.pas"],["other","king_9.pas"],["KING_568","src","other"],"""
             + "\"Folders, Name matches king_*, with what they hold\"," + """["\\\\nas\\share\\a\\b","\\\\nas\\share\\a"]]""", r.GetRawText());
     }
+
+    // Starts with; whether anything under a folder can pass, from its path alone (a tree does not look through one that
+    // cannot): Full path contains a drive's text, starts with, wildcards; Not; And / Or with a line the path does not
+    // give; a folder with what it holds.
+    [Fact]
+    public void StartsWithAndWhatCanPassUnderAFolder()
+    {
+        var r = Run("""
+            (() => {
+              const P = (op, text, o) => L({ field: 'fullPath', cond: { op, text }, ...o });
+              const can = (lines, ...folders) => folders.map(f => filterCanHold({ lines }, f));
+              return [
+                shown({ lines: [L({ cond: { op: 'starts', text: 'NO' } })] }),
+                can([P('contains', 'd:\\king_', { inside: true })], 'D:\\', 'D:\\Projects', 'D:\\King_568', 'D:\\King_568\\src', 'C:\\', '\\\\nas\\share'),
+                can([P('contains', 'king_')], 'D:\\Projects'),
+                can([P('starts', 'D:\\king_')], 'D:\\', 'D:\\kin', 'D:\\Projects', 'D:\\king_1\\x'),
+                can([P('wild', 'd:\\king_*\\*.pas')], 'D:\\', 'D:\\Projects', 'D:\\king_1'),
+                can([P('starts', 'D:\\king_', { not: true })], 'D:\\Projects', 'D:\\king_1'),
+                can([P('starts', 'D:\\king_'), L({ field: 'ext', cond: { op: 'is', text: 'pas' } })], 'D:\\Projects', 'D:\\king_1'),
+                can([P('starts', 'D:\\king_'), L({ field: 'ext', cond: { op: 'is', text: 'pas' } }, 'or')], 'D:\\Projects'),
+                can([L({ files: false, cond: { op: 'wild', text: 'king_*' }, inside: true }), L({ field: 'ext', folders: false, cond: { op: 'is', text: 'x' } })], 'D:\\King_9\\a'),
+              ];
+            })()
+            """);
+        Assert.Equal("[[\"notes.txt\"],[true,false,true,true,false,false],[true],[true,false,false,true],[true,false,true],"
+            + "[true,false],[false,true],[true],[true]]", r.GetRawText());
+    }
 }
