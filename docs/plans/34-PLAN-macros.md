@@ -23,7 +23,9 @@ plan 01 meant to bring them over.
 A macro is a script in LexPen's macro language: a step per line, each step a Foldex action by name or a statement
 (variables, if, switch, goto, gosub), plus a statement that runs a program, document or URL with parameters, and a
 loop over a list of items. System variables say where Foldex is: the active pane's folder, the focused item, the
-selected items, the first selected, the other pane's folder. Macros are arranged as the bookmarks are, but kept apart
+selected items, the other pane's folder; an item reads its fields as the columns name them (`$$focused.size`, in
+bytes), a list is indexed from 1, and functions take paths and sizes apart (name, extension, quoted, unquoted, a size
+in KB to GB with its decimals). Macros are arranged as the bookmarks are, but kept apart
 from them, in a folder of their own that can be copied on its own: a tree with folders to any depth in your order,
 each macro with a name, an icon and keys. Manage macros (a pane, docked or floating) holds the tree and the editor;
 New offers a folder, a macro, and Run a program (a form that writes the one-line macro). They run from their key,
@@ -41,7 +43,8 @@ Nothing yet.
 | Part | What | Waits for | Reference |
 |---|---|---|---|
 | The language | LexPen's macro language (`macrolang.js`) copied: statements, variables, conditions, labels; Foldex actions as steps | -- | 3.1 |
-| System variables | the active pane's folder, the focused item, the selected items, the first selected, the other pane, ... | -- | 3.2 |
+| System variables | the active pane's folder, the focused item, the selected items, the other pane, ... | -- | 3.2 |
+| Items and functions | an item's fields (`$$focused.size`), a list's index from 1, `prop`; the functions on a path (with `unquoted`), `convert`, `round`, `padleft`, `padright` | The language | 3.2 |
 | Run | `run`: a program, document or URL with parameters, where it starts, its window, as administrator, waiting for it | -- | 3.3 |
 | For each | a loop over a list of items (the selected ones) | -- | 3.4 |
 | The tree | macros in folders to any depth, your order, a name, an icon and keys each; `macros\` in the data folder, apart from the bookmarks | -- | 3.5 |
@@ -78,9 +81,8 @@ keep the selected and the focused items apart (the project's words):
 | Variable | What |
 |---|---|
 | `$$location` | the active pane's folder (empty for a scrap) |
-| `$$focused` | the path of the item the active pane focuses |
-| `$$selected` | the paths of the selected items, a list (3.4), in the pane's order |
-| `$$first` | the path of the first selected item |
+| `$$focused` | the item the active pane focuses (an item, below) |
+| `$$selected` | the selected items, a list (3.4), in the pane's order; `$$selected[1]` the first |
 | `$$count` | how many items are selected |
 | `$$other` | the folder of the other pane: the next other child of the parent, as Ctrl+Shift+O picks it; empty when there is none |
 | `$$pane` | the active pane's name (plan 25) |
@@ -89,8 +91,29 @@ keep the selected and the focused items apart (the project's words):
 | `$$error`, `$$errorText` | the last step failed, and why (as LexPen's) |
 | `$$exitCode` | the exit code of the last `run ... wait` |
 
-- Functions on a path, for parameters: `name($p)` (without its folder), `base($p)` (without its extension too),
-  `ext($p)`, `folder($p)`, `quoted($p)` (between double quotes when it holds a space; on a list: each item).
+- **An item** (`$$focused`, an item of `$$selected`, the variable of `for each` over items) is a text, its full path,
+  so `run $$focused` and `"x " & quoted($$focused)` use it as it is; a dot reads one of its fields. Where Foldex
+  differs from LexPen: LexPen's values are text only, without fields or lists; an item is more than its path.
+  - The fields are the ids of the columns and of the filter's fields: `name`, `ext`, `size`, `modified`, `created`,
+    `accessed`, `attributes`, `type`, `target`, `fullPath`, and `folder` (the folder it is in) and `base` (its name
+    without the extension): `$$focused.size`, `$$selected[2].modified`, `$f.fullPath`.
+  - `size` is in bytes, always, a number (so it calculates and compares: `if $f.size > 1000000 then`); `convert`
+    below gives another unit. Dates as the setting dateFormat writes them; attributes as the Attributes column's
+    letters. A field the item has no value for (a folder's size not counted, a link target of a file that is none):
+    empty text.
+  - Windows' properties, whose names have dots of their own: `prop($$focused, "System.Photo.DateTaken")`, read only
+    when a macro asks (they are slow to read).
+- **A list** is indexed from 1, as LexPen counts (`mid`, `pos`): `$$selected[1]`, `$$selected[$i].name`; past its end:
+  empty text. `count(<list>)` its length.
+- **Functions on a path**, for any text that is one (an item, a line read from a file, full or relative): `name($p)`
+  (without its folder), `base($p)` (without its extension too), `ext($p)`, `folder($p)`, `quoted($p)` (between double
+  quotes when it holds a space; on a list: each item), `unquoted($p)` (the double quotes round it taken off, when
+  there are). On an item they give what its fields give.
+- **Numbers and sizes**: `convert(<bytes>, <unit>, <decimals>)` a number of bytes in `"kb"`, `"mb"`, `"gb"` or `"tb"`
+  (1024 each, as Foldex's sizes show them) with that many decimals (`convert($f.size, "mb", 2)`: `4.53`);
+  `round(<number>, <decimals>)` any number to that many decimals; `padleft(<text>, <length>)` and `padright(<text>,
+  <length>)` a text made that long with spaces before or after it (a longer one as it is), for columns in a text
+  written out. A number's decimal separator as LexPen's numbers keep it (its plan 3.2).
 
 ### 3.3 Run
 
@@ -107,9 +130,10 @@ keep the selected and the focused items apart (the project's words):
 ### 3.4 For each
 
 - New to the language: `for each $p in <list>` ... `next`. A list is `$$selected`, a variable made with `append`, or
-  `files "<pattern>"` (the active pane's items matching). `$p` is each item in turn.
-- So: `for each $f in $$selected` / `run "C:\Tools\conv.exe" quoted($f) wait` / `next`: the program once per selected
-  file, one after the other.
+  `files "<pattern>"` (the active pane's items matching). `$p` is each item in turn, with its fields (3.2) when the
+  list holds items.
+- So: `for each $f in $$selected` / `run "C:\Tools\conv.exe" quoted($f) & " " & $f.size wait` / `next`: the program
+  once per selected file, one after the other, with its size in bytes.
 
 ### 3.5 The tree
 
@@ -150,8 +174,11 @@ keep the selected and the focused items apart (the project's words):
 
 ### 3.8 Tests
 
-- Unit (Jint, as the other page tests): every statement copied keeps LexPen's tests' results; `for each`; the
-  functions on a path; the system variables from a pane state made for it; a left-out statement refused when read.
+- Unit (Jint, as the other page tests): every statement copied keeps LexPen's tests' results; `for each`; an item's
+  fields and its text, a list's index (1, its last, past its end), `count`, `prop`; the functions on a path (on an
+  item and on a relative path read as text), `quoted` and `unquoted` both ways; `convert` in each unit with 0 and 3
+  decimals, `round`, `padleft`, `padright`; the system variables from a pane state made for it; a left-out statement
+  refused when read.
 - Unit (host): `run` with each option builds the start it should (program, arguments, folder, window, verb); the
   tree's file read, written and read back; a broken file counts as empty and stays as it is.
 - In the test copy: Run a program with `notepad.exe` and the focused file: Notepad opens it; a key given and pressed;
