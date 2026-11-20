@@ -201,6 +201,41 @@ function selectColumnsHere(a) {
   return new Promise(resolve => dialog.addEventListener('close', () => resolve(null), { once: true }));
 }
 
+// Add a column (colsmanage.js, a set's columns): Find, and under it the columns not in the set that have every word
+// typed in their title or name; a double click, Enter or Select takes the one chosen, Cancel none. Its id, or null.
+function pickColumnHere(a) {
+  const dialog = document.createElement('dialog');
+  dialog.className = 'ask pick-column resizable';
+  dialog.innerHTML = '<label class="pc-find">Find <input class="sc-search" spellcheck="false" placeholder="Type to find a column"></label>' +
+    '<div class="pc-list"></div>' +
+    '<div class="ask-buttons"><button class="ok">Select</button><button class="cancel">Cancel</button></div>';
+  const search = dialog.querySelector('.sc-search'), select = dialog.querySelector('.ok');
+  let picked = null;
+  const take = () => {
+    picked = list.chosen()[0] ?? null;
+    if (picked) dialog.close();
+  };
+  const list = pickList(dialog.querySelector('.pc-list'), take);
+  const fill = () => {
+    const words = search.value.toLowerCase().split(/\s+/).filter(Boolean);
+    list.set(a.columns.filter(c => words.every(w => `${c.title} ${c.id}`.toLowerCase().includes(w))).slice(0, 400)
+      .map(c => ({ id: c.id, text: c.title, title: c.id, slow: slowField(c.id) })));
+    select.disabled = !list.chosen().length;
+  };
+  search.addEventListener('input', fill);
+  search.addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); list.el.focus(); }
+    else if (e.key === 'Enter') { e.preventDefault(); take(); }
+  });
+  select.addEventListener('click', take);
+  dialog.querySelector('.cancel').addEventListener('click', () => dialog.close());
+  document.body.append(dialog);
+  fill();
+  dialog.showModal();
+  search.focus();
+  return new Promise(resolve => dialog.addEventListener('close', () => resolve(picked), { once: true }));
+}
+
 // A list of lines to choose from, as a <select multiple> does, that can hold a drawing: a click chooses one, Ctrl+click
 // adds or takes one away, Shift+click the lines from the last one clicked; Up, Down, Home, End move (with Shift:
 // choosing as they go), Ctrl+A chooses all; a double click or Enter runs `act` on what is chosen. A line: { id, text,
@@ -448,6 +483,7 @@ paneHandlers.args = async m => {
   if (m.what === 'barSize') return done(await sizeHere(m));
   if (m.what === 'rename') return done(await renameHere(m));
   if (m.what === 'selectColumns') return done(await selectColumnsHere(m));
+  if (m.what === 'pickColumn') return done(await pickColumnHere(m));
   if (m.what === 'sort') return done(await sortHere(m));
   if (m.what === 'pickFolder') {
     // Move to folder... (bmpick.js): { folder } (null: the tab's top), or nothing for Cancel.

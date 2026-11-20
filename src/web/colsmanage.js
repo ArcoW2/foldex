@@ -190,14 +190,16 @@ function drawChosen() {
   manageEl.querySelector('.cs-set .down').disabled = chosenColumn >= set.columns.length - 1;
   // Remove the column chosen (not the name); a column added, from Foldex's own and Windows' properties.
   const chosen = set.columns[chosenColumn];
-  const add = document.createElement('select');
-  const choices = [...ownColumns.map(c => [c.id, c.title]), ...propList.map(p => [p.name, `${p.title} (${p.name})`])]
-    .filter(([id]) => !set.columns.some(c => c.id === id));
-  add.append(new Option('Add a column...', ''), ...choices.map(([id, t]) => new Option(t, id)));
-  add.addEventListener('change', () => add.value && changeChosen(s => {
-    s.columns.push({ id: add.value, width: columnInfo(add.value).width });
-    chosenColumn = s.columns.length - 1;
-  }));
+  // The column to add chosen in a window of its own (dialogpage.js pickColumnHere): found by typing, or in the list.
+  const choices = [...ownColumns.map(c => ({ id: c.id, title: c.title })), ...propList.map(p => ({ id: p.name, title: `${p.title} (${p.name})` }))]
+    .filter(({ id }) => !set.columns.some(c => c.id === id));
+  const add = button('Add a column...', async () => {
+    const id = await askWindowPage({ what: 'column', columns: choices });
+    if (id) changeChosen(s => {
+      s.columns.push({ id, width: columnInfo(id).width });
+      chosenColumn = s.columns.length - 1;
+    });
+  }, choices.length > 0, 'A column added to the set: Foldex\'s own or one of Windows\' properties');
   manageEl.querySelector('.cs-columnbuttons').replaceChildren(
     button('Remove', () => changeChosen(s => s.columns.splice(chosenColumn, 1)), !!chosen && chosen.id !== 'name',
       'The column chosen out of the set (the name column stays)'), add);

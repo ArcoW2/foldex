@@ -1365,7 +1365,12 @@ body[data-focus-away] :is(.row, .tile).selected.focused {
   border: 1px solid transparent; border-radius: 3px; }
 .sc-order button:hover { border-color: var(--accent); background: var(--hover); }
 .sc-order svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-dialog.select-columns .ask-buttons, dialog.sort-window .ask-buttons { margin-top: 10px; }
+dialog.select-columns .ask-buttons, dialog.sort-window .ask-buttons, dialog.pick-column .ask-buttons { margin-top: 10px; }
+/* Add a column (dialogpage.js pickColumnHere): Find, the list under it. */
+dialog.pick-column { width: 26em; }
+.pc-find { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.pc-find input { flex: 1; }
+.pc-list { height: 26em; }
 
 /* The Sort window (dialogpage.js sortHere; plan 28 3.5): a line per column of the sort. */
 .sort-lines { display: grid; gap: 4px; margin: 6px 0; min-width: 22em; }

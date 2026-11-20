@@ -696,7 +696,9 @@ async function columnSetsPageAsks(view, m) {
       return tellLayout();
     case 'close': return closePane(view.id);
     case 'ask': {
-      const value = m.what === 'yes' ? await askYes(m.title) : await askText(m.title, m.value ?? '');
+      const value = m.what === 'yes' ? await askYes(m.title)
+        : m.what === 'column' ? await dialogWindow('Add a column', { what: 'pickColumn', columns: m.columns })
+        : await askText(m.title, m.value ?? '');
       return view.send({ kind: 'answer', key: `answer:${m.req}`, req: m.req, value });
     }
   }
