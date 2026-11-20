@@ -218,7 +218,7 @@ None.
 
 ### 6.10 A folder of tens of thousands of folders (2026-11-20, a hang the user found)
 
-- The user's D:	emp holds 50338 folders and 1622 files (counted then); going to another folder and back hung the pane
+- The user's D:\temp holds 50338 folders and 1622 files (counted then); going to another folder and back hung the pane
   for minutes. Profiled in a test copy (the pane sorted on size, sizes counted by themselves): going away took 271 s,
   214 s of them in `askFolderSizes`, which searched the host's answer through again for every folder (quadratic). The
   host did the same: `Known` and `Count` searched the queue per folder, and `Listed` (6.8) went through all of the
