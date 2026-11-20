@@ -420,7 +420,7 @@ const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'bas
 // Folders first, then by name; drives (in This PC) by their letter and before the rest, as Explorer has them.
 const isDrive = x => /^[A-Za-z]:\\$/.test(x.id);
 const byName = (a, b) => (b.folder - a.folder) || byNameMixed(a, b);
-// The same with the folders among the files (a pane's or the setting foldersFirst: mixed).
+// The same with the folders among the files (a pane's or the setting foldersFirstByName: mixed).
 const byNameMixed = (a, b) => (isDrive(b) - isDrive(a))
   || (isDrive(a) && isDrive(b) ? collator.compare(a.id, b.id) : collator.compare(a.name, b.name));
 const nameComparer = id => foldersFirstIn(id) ? byName : byNameMixed;
@@ -1535,7 +1535,7 @@ class TreeView {
 
   // By the sort's columns in turn (plan 28 3.4); without a sort as always (drives first).
   comparer() {
-    return this.cols.sort.length ? sortComparer(this.cols.sort, foldersFirstIn(this.id)) : nameComparer(this.id);
+    return this.cols.sort.length ? sortComparer(this.cols.sort, foldersFirstIn(this.id, this.cols.sort)) : nameComparer(this.id);
   }
 
   // Sorted again: every level read so far; Windows' properties sorted by are read first.
@@ -1709,7 +1709,7 @@ class ListView {
 
   // By the sort's columns in turn (plan 28 3.4); the ".." row (plan 26 3.11) first whatever the sort.
   comparer() {
-    const by = this.cols.sort.length ? sortComparer(this.cols.sort, foldersFirstIn(this.id)) : nameComparer(this.id);
+    const by = this.cols.sort.length ? sortComparer(this.cols.sort, foldersFirstIn(this.id, this.cols.sort)) : nameComparer(this.id);
     return (a, b) => (isUpRow(b) - isUpRow(a)) || by(a, b);
   }
 
@@ -4499,7 +4499,7 @@ function settingsChanged(before) {
     || before.sizeFormat !== settings.sizeFormat) {
     for (const v of views.values()) if ((v instanceof TreeView || v instanceof ListView) && !isPaged(v)) v.render();
   }
-  if (before.foldersFirst !== settings.foldersFirst)
+  if (before.foldersFirst !== settings.foldersFirst || before.foldersFirstByName !== settings.foldersFirstByName)
     for (const v of views.values()) if ((v instanceof TreeView || v instanceof ListView) && !isPaged(v)) v.sortEntries();
   // Folder sizes counted by themselves switched on (plan 37 3.2): the lists here count theirs now.
   if (settings.folderSizesAuto && !before.folderSizesAuto)

@@ -41,7 +41,8 @@
   "findSortWhenDone": true,        // Find's Sort when done as it starts: the scrap sorted by its sort when the search ends
   "sortColumnIntensity": 200,     // the text of the columns the pane is sorted on, 0 to 200 %: 100 the theme's dim text, 200 the full text
   "otherColumnsIntensity": 160,   // the text of every other column, the name too, the same way
-  "foldersFirst": "first",        // folders before the files whatever the sort (first), or mixed with them (mixed); a pane can choose its own (its header's menu)
+  "foldersFirstByName": "first",  // sorted on name: folders before the files (first), or mixed with them (mixed); a pane can choose its own (its header's menu)
+  "foldersFirst": "first",        // the same when sorted on any other column first
   "sizeFormat": "short",          // the Size columns: short (1.9 MB) or bytes (1,966,080); sorted by the bytes either way
   "folderSizesAuto": false,       // every folder a pane shows counted for its size by itself, as Ctrl+D (shares only when cacheNetwork)
   "ribbonRememberTab": false,       // a window opens on the ribbon tab it showed when it closed; false: always on Home
