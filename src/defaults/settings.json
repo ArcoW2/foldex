@@ -43,7 +43,8 @@
   "otherColumnsIntensity": 160,   // the text of every other column, the name too, the same way
   "foldersFirstByName": "first",  // sorted on name: folders before the files (first), or mixed with them (mixed); a pane can choose its own (its header's menu)
   "foldersFirst": "first",        // the same when sorted on any other column first
-  "sizeFormat": "short",          // the Size columns: short (1.9 MB) or bytes (1,966,080); sorted by the bytes either way
+  "dateFormat": "",               // every date column: "" Windows' short date and time, else a pattern (yyyy MM dd HH mm ss, ...; dates.js)
+  "sizeFormat": "short",         // the Size columns: short (1.9 MB) or bytes (1,966,080); sorted by the bytes either way
   "folderSizesAuto": false,       // every folder a pane shows counted for its size by itself, as Ctrl+D (shares only when cacheNetwork)
   "ribbonRememberTab": false,       // a window opens on the ribbon tab it showed when it closed; false: always on Home
   "ribbonGroupNames": true,        // the ribbon's group names under their buttons; false: a group's name is its tooltip

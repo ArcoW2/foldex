@@ -78,6 +78,10 @@
 
 /* A colour of your own or the default (settings.js, kind 'colour'). */
 .st-colour { display: inline-flex; align-items: center; gap: 8px; }
+/* The dates' format: the list, your own format beside it, how a date looks in it. */
+.st-date { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.st-date input[type=text] { width: 14em; }
+.st-date .st-hint { margin: 0; }
 .st-colour input[type=color] { width: 3em; height: 1.6em; padding: 0; border: 1px solid var(--border); background: none; }
 
 .st-range {

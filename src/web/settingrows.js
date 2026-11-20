@@ -102,6 +102,8 @@ const SETTING_ROWS = [
   { tab: 'Contents', group: 'Columns', name: 'foldersFirst', kind: 'choice', title: 'Grouping folders, when sorted on other columns',
     options: [['first', 'Folders first'], ['mixed', 'Mixed with the files']],
     hint: 'When the pane is sorted on any other column than Name first. Folders first: the folders before the files. Mixed: folders and files sorted together, so a folder with a size sorts among the files by Size. A pane can choose its own: Grouping folders in the right-click menu of its column header.' },
+  { tab: 'Contents', group: 'Columns', name: 'dateFormat', kind: 'dateFormat', title: 'Dates',
+    hint: "Every date column (Foldex's own and Windows' properties, as Date taken): Windows' short date and time (System), one of the formats in the list, or your own. A format: yyyy or yy the year, MMMM, MMM, MM or M the month, dddd, ddd, dd or d the day, HH or H the hour (hh or h with tt: AM/PM), mm the minutes, ss the seconds; 'text' in quotes as it is." },
   { tab: 'Contents', group: 'Columns', name: 'sizeFormat', kind: 'choice', title: 'Sizes',
     options: [['short', 'Short (1.9 MB)'], ['bytes', 'In bytes (1,966,080)']],
     hint: 'How the Size columns show a size. Either way they sort by the number of bytes, and the tooltip of a size gives it in bytes, KB, MB, GB and TB as far as it reaches.' },

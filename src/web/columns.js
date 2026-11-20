@@ -246,8 +246,13 @@ function sizeLines(n) {
   return lines.join('\n');
 }
 
+// A column's value as its cell shows it; every date (Foldex's own and Windows' properties) as the setting dateFormat
+// says (dates.js).
 function columnText(x, id) {
-  if (id.includes('.')) return x.props?.[id]?.[0] ?? '';
+  if (id.includes('.')) {
+    const p = x.props?.[id];
+    return p?.[2] === true && p[1] != null ? shownDate(p[1]) : p?.[0] ?? '';   // a date (ShellProps.Values)
+  }
   const c = columnInfo(id);
   if (id === 'git') return x.git ? GitWords[x.git] ?? x.git : '';
   if (id === 'gps') return hasGps(x) ? 'GPS' : '';
@@ -259,7 +264,7 @@ function columnText(x, id) {
   const v = x[id];
   if (v == null || v === '') return '';
   if (c.kind === 'size') return shownSize(v);
-  if (c.kind === 'date') return dateFormat.format(v);
+  if (c.kind === 'date') return shownDate(v);
   return String(v);
 }
 

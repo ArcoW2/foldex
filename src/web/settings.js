@@ -64,6 +64,33 @@ function control(def) {
     input.addEventListener('change', () => set(def.name, input.value.trim()));
     return { el: input, show: v => input.value = v ?? '' };
   }
+  // The dates' format (dates.js): System (Windows' short date and time), one of DatePresets, or your own, typed in the
+  // box beside the list (written when it is left or Enter); each with how a date now looks.
+  if (def.kind === 'dateFormat') {
+    const box = Object.assign(document.createElement('span'), { className: 'st-date' });
+    const select = document.createElement('select');
+    const input = Object.assign(document.createElement('input'), { type: 'text', spellcheck: false, placeholder: 'Your own format' });
+    const example = Object.assign(document.createElement('span'), { className: 'st-hint' });
+    const now = Date.now();
+    const fill = v => {
+      const own = v && !DatePresets.includes(v);
+      select.replaceChildren(new Option(`System (${systemDate}): ${formatDateTime(now, systemDate || 'yyyy-MM-dd HH:mm')}`, ''),
+        ...DatePresets.map(p => new Option(`${p}: ${formatDateTime(now, p)}`, p)), new Option('Your own...', 'own'));
+      select.value = own ? 'own' : v ?? '';
+      input.value = v ?? '';
+      input.hidden = !own;
+      example.textContent = own ? formatDateTime(now, v) : '';
+    };
+    select.addEventListener('change', () => {
+      if (select.value !== 'own') return set(def.name, select.value);
+      input.hidden = false;
+      input.focus();
+    });
+    input.addEventListener('input', () => { example.textContent = input.value.trim() ? formatDateTime(now, input.value) : ''; });
+    input.addEventListener('change', () => set(def.name, input.value.trim()));
+    box.append(select, input, example);
+    return { el: box, show: fill };
+  }
   // A colour of your own or the default (docs/plans/executed/28-PLAN-column-sets-window.md 3.4): '' the default (the hint says
   // which), else #rrggbb; Use this colour on takes the colour box's.
   if (def.kind === 'colour') {
@@ -219,6 +246,7 @@ host.addEventListener('message', e => {
   }
   if (e.data.event !== 'settings') return;
   look = e.data;
+  systemDate = look.settings.systemDate ?? '';
   if (!rows.length) build();
   show();
 });

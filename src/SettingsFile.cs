@@ -124,6 +124,9 @@ static class SettingsFile
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
         var merged = Merge(File.ReadAllText(DefaultsPath), user, userPath);
         merged["userFile"] = userPath;
+        // Windows' short date and short time, as the regional settings have them: the dates as System (dates.js).
+        var format = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat;
+        merged["systemDate"] = $"{format.ShortDatePattern} {format.ShortTimePattern}";
         return merged;
     }
 

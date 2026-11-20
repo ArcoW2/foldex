@@ -434,7 +434,6 @@ function formatSize(n) {
   return `${v.toFixed(v < 10 ? 1 : 0)} ${units[u]}`;
 }
 
-const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'short', timeStyle: 'short' });
 
 // ---------- The panes ----------
 
@@ -4508,7 +4507,7 @@ function settingsChanged(before) {
   if (before.showHidden !== settings.showHidden) {
     for (const v of views.values()) if (layout.pane(v.id)?.hidden === undefined && !isPaged(v)) if (v instanceof TreeView) v.flatten(); else v.refresh();
   } else if (before.treeExpanders !== settings.treeExpanders || before.showExtensions !== settings.showExtensions
-    || before.sizeFormat !== settings.sizeFormat) {
+    || before.sizeFormat !== settings.sizeFormat || before.dateFormat !== settings.dateFormat) {
     for (const v of views.values()) if ((v instanceof TreeView || v instanceof ListView) && !isPaged(v)) v.render();
   }
   if (before.foldersFirst !== settings.foldersFirst || before.foldersFirstByName !== settings.foldersFirstByName)
@@ -4566,6 +4565,7 @@ function reloadLists(op = null) {
 const events = {
   hello(m) {
     settings = m.settings.values;
+    systemDate = m.settings.systemDate ?? '';
     themes = m.themes.themes;
     applyTheme();
     setPaneInert();
@@ -4627,6 +4627,7 @@ const events = {
   settings(m) {
     const before = settings;
     settings = m.settings.values;
+    systemDate = m.settings.systemDate ?? '';
     themes = m.themes.themes;
     settingsChanged(before);
     setPaneInert();

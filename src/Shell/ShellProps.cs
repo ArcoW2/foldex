@@ -43,7 +43,8 @@ static class ShellProps
     }
 
     /// <summary>The values of `names` for each of `ids`: { id: { name: [shown, raw] } }; raw a number (dates in ms
-    /// since 1970) or null, for sorting. An item without a value for a property has none for it.</summary>
+    /// since 1970) or null, for sorting; a date [shown, ms, true]. An item without a value for a property has none for
+    /// it.</summary>
     public static JsonObject Values(IEnumerable<string> ids, IReadOnlyList<string> names)
     {
         var keys = new List<(string Name, PropertyKey Key)>();
@@ -71,7 +72,8 @@ static class ShellProps
                         double? raw = value.vt == VtFiletime ? DateTimeOffset.FromFileTime(value.l).ToUnixTimeMilliseconds()
                             : value.vt == VtBool ? ((short)value.l != 0 ? 1 : 0)
                             : NumberTypes.Contains(value.vt) && PropVariantToDouble(ref value, out var d) >= 0 ? d : null;
-                        values[name] = new JsonArray(shown, raw);
+                        // A date marked (third): its column shows it as the setting dateFormat says (dates.js).
+                        values[name] = value.vt == VtFiletime ? new JsonArray(shown, raw, true) : new JsonArray(shown, raw);
                     }
                     finally { PropVariantClear(ref value); }
                 }
