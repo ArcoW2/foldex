@@ -19,7 +19,8 @@ is not enough. And the helper is started for each listing now, so a series of su
 
 The elevated helper gets three more operations: take ownership (for the current user), make a symbolic link, and list
 a folder after taking ownership of it (for SYSTEM and TrustedInstaller folders). A submenu Create link holds, per
-kind that fits the item (a symbolic link; a junction for a folder; a hard link for a file), "in other pane" (with more
+kind that fits the item (a symbolic link; a junction for a folder; a hard link for a file; a shortcut, which is no
+link but is looked for there), "in other pane" (with more
 than one other pane, a list of them to choose from) and "to clipboard"; from the clipboard, "Paste symbolic link (junction, hard link) to <item name>" makes it in any folder. No dialog: a link is named as the
 item, and only a name that is there asks for another. A link is not a shortcut: it is the file system's own. Create
 link is in a Foldex submenu at the top of Explorer's right-click menu, as xplorer2 adds its own. The helper stays a while after its last operation, so a series
@@ -34,8 +35,8 @@ asks UAC once; the time is a setting, and while it runs the ribbon shows a shiel
 | Part | What | Waits for | Reference |
 |---|---|---|---|
 | Take ownership | the helper's operation, for the current user; an action for the selected items | -- | 3.1 |
-| Create link | a submenu: symbolic link, junction (a folder), hard link (a file), each in other pane or to clipboard; a symbolic link through the helper without developer mode | -- | 3.2 |
-| Paste link | "Paste symbolic link / junction / hard link to <item name>" while the clipboard holds a link source | Create link | 3.2 |
+| Create link | a submenu: symbolic link, junction (a folder), hard link (a file), shortcut (.lnk), each in other pane or to clipboard; a symbolic link through the helper without developer mode | -- | 3.2 |
+| Paste link | "Paste symbolic link / junction / hard link / shortcut (.lnk) to <item name>" while the clipboard holds a link source | Create link | 3.2 |
 | The Foldex submenu | Foldex's own items for an item in a submenu at the top of Explorer's right-click menu | -- | 3.5 |
 | SYSTEM and TrustedInstaller folders | listed after taking ownership | Take ownership | 3.1 |
 | Helper lifetime | stays a while after its last operation, the time as a setting, the shield in the ribbon | -- | 3.3 |
@@ -58,10 +59,11 @@ asks UAC once; the time is a setting, and while it runs the ribbon shows a shiel
 
 - **A link is not a shortcut.** A shortcut (.lnk) is a small file of its own that Explorer follows when it is opened;
   a program reading it reads the shortcut. A link is the file system's own: the item seen at another place, so every
-  program reading it reads the item itself. Foldex makes links, and its menu says "link", never "shortcut". (A
-  shortcut Explorer's own New > Shortcut makes, in its menu.)
+  program reading it reads the item itself. Foldex's menu never calls one the other: a link is a "link", a shortcut a
+  "Shortcut (.lnk)".
 - **Create link**: a submenu in the Foldex submenu (3.5), for the focused item (one link, to one item); its entries
-  are actions too (F1, keys, the ribbon). Per kind that fits the item, two entries, the kinds apart by a line:
+  are actions too (F1, keys, the ribbon). Per kind that fits the item, two entries, the kinds apart by a line; the
+  shortcut last, for every item, so whoever looks for one finds it beside the links, not elsewhere in the menu:
 
   ```
   Symbolic link in other pane
@@ -72,6 +74,9 @@ asks UAC once; the time is a setting, and while it runs the ribbon shows a shiel
   ----
   Hard link in other pane       (a file)
   Hard link to clipboard
+  ----
+  Shortcut (.lnk) in other pane
+  Shortcut (.lnk) to clipboard
   ```
 
   - **in other pane**: the other panes are the window's panes showing a folder on disk (a list's folder, a tree's
@@ -87,12 +92,16 @@ asks UAC once; the time is a setting, and while it runs the ribbon shows a shiel
     when wanted (pasted in the item's folder, it asks for the name).
 - **Paste <kind> to <item name>**: while the clipboard holds a link source, the Foldex submenu of a folder (a list's
   empty part, a tree's folder) and the Paste group offer it, its text always naming the kind on the clipboard:
-  "Paste symbolic link to <item name>", "Paste junction to <item name>" or "Paste hard link to <item name>"; it makes
-  that one in that folder. The link source is the item on Windows' clipboard as a copy is (so
+  "Paste symbolic link to <item name>", "Paste junction to <item name>", "Paste hard link to <item name>" or "Paste
+  shortcut (.lnk) to <item name>"; it makes that one in that folder. The link source is the item on Windows' clipboard as a copy is (so
   Paste still pastes a copy) with a mark of Foldex's own that holds the kind; anything put on the clipboard after it
   ends it.
-- No dialog: its name is the item's own (a link stands for the item; not Windows' "- Shortcut"); a name that is there
-  in the folder asks for another (askText, the name offered with " (2)"), Cancel makes nothing.
+- No dialog: a link's name is the item's own (a link stands for the item; not Windows' "- Shortcut"); a name that is
+  there in the folder asks for another (askText, the name offered with " (2)"), Cancel makes nothing.
+- A shortcut: a .lnk made by Windows' own shell link (`IShellLink`, saved through `IPersistFile`), to the item, its
+  working folder the item's folder; named as Windows names one, "<item name> - Shortcut.lnk", so it never takes the
+  item's name and can be pasted in the item's own folder without a question. No rights needed (a protected folder:
+  Windows' question per operation, as any new file).
 - A symbolic link needs administrator rights without developer mode: then the helper makes it (UAC as plan 05);
   with developer mode, and for a junction or a hard link (no rights needed), Foldex makes it itself. Refused (no
   rights, another drive for a hard link, a share for a junction): why, on the status line.
@@ -109,9 +118,9 @@ asks UAC once; the time is a setting, and while it runs the ribbon shows a shiel
 
 - Unit: the helper's request parsing for the new operations, refusal of anything outside the set and of paths that
   are not full.
-- Unit: what Create link offers for a file (symbolic link, hard link) and a folder (symbolic link, junction on a local
-  drive only); a hard link to another drive refused; a name that is there asked with " (2)" offered.
-- In the test copy: a junction and a hard link (no rights needed) in other pane (one other pane: at once; three: the
+- Unit: what Create link offers for a file (symbolic link, hard link, shortcut) and a folder (symbolic link, junction
+  on a local drive only, shortcut); a hard link to another drive refused; a name that is there asked with " (2)" offered.
+- In the test copy: a junction, a hard link and a shortcut (no rights needed) in other pane (one other pane: at once; three: the
   list, each pane by its name and folder), and to clipboard pasted in a
   third folder and in the item's own folder (the name asked); the Paste entry naming its kind, gone once something else is copied; the Foldex
   submenu in the right-click menu, Explorer's own items and extensions under it as before.

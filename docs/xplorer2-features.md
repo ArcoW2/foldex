@@ -92,7 +92,7 @@ updated whenever a plan is written, built or closed that touches a feature here.
 | Symbolic link: the file system's own pointer from a name to a file or folder anywhere (another drive, a share, a relative path); every program reading it reads the item; it breaks when the item moves | P+ | part: shown and followed; making one (Create link, Paste symbolic link): plan 31 | 3 | the elevated helper without developer mode (plans 05, 31) |
 | Junction: the older folder link, to a folder on a local drive only; works as a symbolic link to a folder, but needs no rights to make | P+ | part: shown and followed; making one (Create link, Paste junction): plan 31 | 3 | -- |
 | Hard link: a second name for the same file on the same drive; both names are the file itself, equal, and the file stays until the last one is deleted | P+ | part: shown; making one (Create link, Paste hard link): plan 31 | 3 | -- |
-| Shortcut (.lnk): a small file of its own pointing to an item, which Explorer follows when it is opened; a program reading it reads the shortcut, not the item | [not yet checked] | part: shown and opened; made with Explorer's New > Shortcut in the right-click menu | 3 | -- |
+| Shortcut (.lnk): a small file of its own pointing to an item, which Explorer follows when it is opened; a program reading it reads the shortcut, not the item | [not yet checked] | part: shown and opened; made with Explorer's New > Shortcut in the right-click menu; in Create link beside the links (Shortcut (.lnk) in other pane, to clipboard): plan 31 | 3 | -- |
 | Attributes and timestamps (touch, shift) | P+ | -- | 3 | -- |
 | Ttags, bulk properties | P+ | -- | 3 | Columns (to see them) |
 | Robust delete, shred | P+ | -- | 2 | Robust copy (the same engine) |
