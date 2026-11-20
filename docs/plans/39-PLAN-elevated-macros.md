@@ -41,7 +41,7 @@ one with `replace` or `noreplace`.
 | The setting | per macro: at the step elevate (a new macro's), at the start, never; in macros.json and Manage macros | -- | 3.1 |
 | Asking | `elevate`; at the start; UAC once; refused or cancelled: the macro stops (or `$$error`); `$$elevated` | -- | 3.2 |
 | Programs | every `run` of a macro with the rights started by the helper, as administrator, waited for when asked | -- | 3.3 |
-| Never | programs started with `__COMPAT_LAYER=RunAsInvoker`; file actions without Windows' question; `elevate` and `admin` errors | Check 3.4 | 3.3; 3.4 |
+| Never | programs started with `__COMPAT_LAYER=RunAsInvoker`; file actions with `FOF_NOERRORUI`; `elevate` and `admin` errors | -- | 3.3; 3.4 |
 | admin_forced | `run ... admin_forced`: one program as administrator whatever the setting | -- | 3.3 |
 | File actions | the macro's file actions done by the helper (`IFileOperation` in it), no question per operation | -- | 3.4 |
 | Copy and move | new steps: `copy <items> to <folder>`, `move <items> to <folder>`; a name that is there asked, or `replace`, `noreplace` | -- | 3.4 |
@@ -81,12 +81,18 @@ one with `replace` or `noreplace`.
   and window; `wait` waits for it there and gives its exit code. No UAC question per program.
 - Without them (`step` before its `elevate`, or after a refusal): `run` is as now, started as the user; a program that
   asks for administrator itself, and `run ... admin`, get Windows' question for that one program.
-- `never`: every `run` is started with `__COMPAT_LAYER=RunAsInvoker` in its environment, so a program that asks for
-  administrator by its manifest starts as the user, without Windows' question (and fails itself where it needs the
-  rights); `run ... admin` is an error at its line. As the user put it: `cmd /c "set __COMPAT_LAYER=RunAsInvoker &&
-  start "" <what> <parameters>"`, which takes a program, a document and a URL alike (start as Windows' Run); or, for a
-  program, the variable in the environment of the process Foldex starts itself. Which one, and how `wait` and the exit
-  code and the window go through cmd's `start` (`/wait`, `/min`, `/max`; hidden: cmd's own window): [not yet checked].
+- `never`: every `run` is started with `__COMPAT_LAYER=RunAsInvoker` in the environment of the process started, so a
+  program that asks for administrator by its manifest starts as the user, without Windows' question (and fails itself
+  where it needs the rights); `run ... admin` is an error at its line. The variable works only for a process started
+  after it is set (the user's point), so Foldex sets it on what it starts, never on itself:
+  - a program: started directly (not through ShellExecute) with the variable in its environment; `wait` and the exit
+    code as for any program;
+  - a document or a URL (which needs ShellExecute): through `cmd /c "set __COMPAT_LAYER=RunAsInvoker&& start "" <what>
+    <parameters>"`; cmd's `start /wait` does not give the program's exit code (checked: 0 for an exit code of 7), so
+    for a document `$$exitCode` stays empty.
+  - Checked 2026-11-20 on the user's PC: `cliconfg.exe` (its manifest: requireAdministrator) started directly without
+    the variable: Windows refused it (740, "requires elevation"); with it: started, not elevated, nothing asked; the
+    same through cmd's `start`; `cmd /c exit 7` started directly with the variable: exit code 7.
 - `run ... admin_forced`: a new option, that one program as administrator whatever the setting: in a macro with the
   rights started by the helper; without them (also under `never`) Windows asks for that program alone (`runas`, as
   plan 34's `admin`). The macro's rights stay as they were. `admin` and `admin_forced` together: an error when the
@@ -100,9 +106,15 @@ one with `replace` or `noreplace`.
   asks nothing per operation; their progress and result come back as from the host's own (`fileOp`), so the panes
   follow as now.
 - Without them: as now, Windows asks per operation in a protected place (plan 05).
-- `never`: a file action is started so that Windows does not ask for elevation; refused, it fails at its line (with
-  `onerror continue`: `$$error`). How `IFileOperation` is kept from asking (its flags; or the operation done without
-  it, so access denied is the end) is [not yet checked]: checked first when this is built.
+- `never`: a file action is done by `IFileOperation` with `FOF_NOERRORUI` (0x400) besides its usual flags, so Windows
+  does not show its question ("You'll need to provide administrator permission"); the operation is aborted, and the
+  step fails at its line (with `onerror continue`: `$$error`). Not `FOF_NO_UI`: it answers yes to every question of a
+  name that is there (it holds `FOF_NOCONFIRMATION`), which would replace without `replace`. Whether the question of a
+  name that is there still shows with `FOF_NOERRORUI`: [not yet checked].
+  - Checked 2026-11-20 on the user's PC (an administrator; `ConsentPromptBehaviorAdmin` 0, so UAC itself never asks
+    there): a copy into `C:\Program Files` with Foldex's usual flags (0x240) showed Windows' question for
+    administrator permission (seen by the user); with 0x400 (and with 0x604, 0x614) nothing was shown, the copy was
+    aborted (`GetAnyOperationsAborted`: true) and the file was not there.
 - **New steps** (also for plan 35's recording): `copy <items> to <folder>` and `move <items> to <folder>`; the items a
   list or one item or path (`$$selected`, `$f`, `files "*.log"`, a text), the folder a path. As the panes' copy and
   move: `IFileOperation`, its progress in the operations' list. `copy` stops being one of LexPen's left-out words
@@ -141,7 +153,8 @@ one with `replace` or `noreplace`.
   folder, with `replace`, `noreplace`, both an error) and LexPen's `copy $var` still refused.
 - Unit (host): the helper's request parsing for `start` and the file operations, refusal of anything outside the set
   and of paths that are not full; macros.json keeps `elevation`; a `never` run's start has `__COMPAT_LAYER` set.
-- By hand (UAC cannot be clicked by the test copy): a macro with `elevate` asks once and starts two programs as
+- By hand (UAC cannot be clicked by the test copy; on the user's PC an administrator is elevated without UAC asking,
+  so UAC's own question is seen only on a PC set to ask, or as a standard user): a macro with `elevate` asks once and starts two programs as
   administrator without asking again; "at the start" asks before anything; a copy into Program Files in a macro with
   the rights asks nothing; Cancel at the question stops the macro at its line; under `never` a program whose manifest
   asks for administrator starts without a question, and a copy into Program Files fails without one; after the macro
