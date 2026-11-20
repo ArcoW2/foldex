@@ -64,6 +64,38 @@ public class ScrapTests : IDisposable
         Assert.True(breadth.IndexOf("brown.txt") < breadth.IndexOf("bru.txt"));  // c's files before b\sub's
     }
 
+    // Follow links: into a junction to a folder elsewhere (its items under the link's path), not into one back up (a
+    // loop) or to a folder searched already; without it, only the links themselves.
+    [Fact]
+    public void TheWalkFollowsLinksWithoutLooping()
+    {
+        var root = Path.Combine(dir, "b");
+        var elsewhere = Path.Combine(dir, "c");
+        Assert.Null(Links.Make(Links.Junction, dir, Path.Combine(root, "up")));            // back above the search
+        Assert.Null(Links.Make(Links.Junction, root, Path.Combine(root, "sub", "self")));   // the search's own folder
+        Assert.Null(Links.Make(Links.Junction, Path.Combine(root, "sub"), Path.Combine(root, "twice")));   // searched already
+        Assert.Null(Links.Make(Links.Junction, elsewhere, Path.Combine(root, "other")));   // elsewhere
+        try
+        {
+            var found = new List<string>();
+            FileSearch.Walk(root, true, true, i => found.Add(Path.GetRelativePath(root, i.FullName)), default, followLinks: true);
+            Assert.Contains(@"other\brown.txt", found);
+            Assert.Single(found, f => f.EndsWith("bru.txt"));
+            Assert.DoesNotContain(found, f => f.StartsWith(@"up\") || f.StartsWith(@"sub\self\"));
+            Assert.Contains("up", found);   // the link itself is found
+            Assert.Equal(dir.TrimEnd('\\'), ShellListing.RealPath(Path.Combine(root, "up")), ignoreCase: true);
+            Assert.Equal(Path.Combine(elsewhere, "brown.txt"), ShellListing.RealPath(Path.Combine(root, "other", "brown.txt")), ignoreCase: true);
+            var without = new List<string>();
+            FileSearch.Walk(root, true, true, i => without.Add(Path.GetRelativePath(root, i.FullName)), default);
+            Assert.DoesNotContain(@"other\brown.txt", without);
+            Assert.Contains("other", without);
+        }
+        finally
+        {
+            foreach (var link in new[] { @"up", @"sub\self", @"twice", @"other" }) Directory.Delete(Path.Combine(root, link));
+        }
+    }
+
     [Fact]
     public async Task ASearchFindsFilesAndFoldersAsAskedAndOnlyInTheScrapWhenGivenOne()
     {

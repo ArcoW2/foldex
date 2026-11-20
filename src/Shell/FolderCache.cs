@@ -694,11 +694,17 @@ sealed class FolderCache : IDisposable
     /// <summary>The folders in a cached folder (for read-ahead a level deeper); empty when it is not cached.</summary>
     public List<string> FoldersIn(string location)
     {
+        List<FileSystemInfo> subs;
         lock (gate)
-            return folders.TryGetValue(Key(location), out var f) && f.Complete
-                ? f.Items.Values.Where(i => i.Folder && (i.Info.Attributes & (FileAttributes.Hidden | FileAttributes.System)) == 0)
-                    .Select(i => i.Info.FullName).ToList()
+            subs = folders.TryGetValue(Key(location), out var f) && f.Complete
+                ? [.. f.Items.Values.Where(i => i.Folder && (i.Info.Attributes & (FileAttributes.Hidden | FileAttributes.System)) == 0).Select(i => i.Info)]
                 : [];
+        // A link to this folder or one above it is no folder of its own: read ahead it is a loop
+        // (D:\king_trunk\king_trunk to D:\king_trunk).
+        string? real = null;
+        return [.. subs.Where(i => (i.Attributes & FileAttributes.ReparsePoint) == 0
+                || ShellListing.LinkTarget(i.FullName) is { } to && !ShellListing.InOrSame(real ??= ShellListing.RealPath(location), ShellListing.RealPath(to)))
+            .Select(i => i.FullName)];
     }
 
     /// <summary>For the tests: the managed memory now (after a full collection), then again after letting go of every

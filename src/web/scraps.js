@@ -68,7 +68,7 @@ function scrapsAfterRestart(panes, areaOf) {
 
 // The Find dialog's fields as they start (3.3); Containing text and Sort when done: plan 20 3.1, 3.6 (startKB and
 // sortWhenDone start from the settings, find.js).
-const SearchDefaults = { lookIn: '', subfolders: true, depthFirst: true, useIndex: true, files: true, folders: true,
+const SearchDefaults = { lookIn: '', subfolders: true, followLinks: true, depthFirst: true, useIndex: true, files: true, folders: true,
   regex: false, fuzzy: 100, named: '', text: '', textCase: false, textWord: false, textMode: 'normal', allFiles: false,
   startOnly: true, startKB: 2048, sortWhenDone: true };
 

@@ -64,6 +64,8 @@ function findHere(a) {
   const [subfolders, subfoldersLabel] = check('Search subfolders', start.subfolders);
   const depth = el('input', { type: 'radio', name: 'order', checked: start.depthFirst });
   const breadth = el('input', { type: 'radio', name: 'order', checked: !start.depthFirst });
+  const [followLinks, followLinksLabel] = check('Follow links', start.followLinks);
+  followLinksLabel.title = 'Into junctions and symbolic links too (what is in them found under the link); a link back up, or to a folder searched already, is not followed';
   const [useIndex, useIndexLabel] = check('Use search index', start.useIndex);
   useIndexLabel.title = 'Everything or the Windows Search index where they have the folder; off: Foldex walks the folders';
   const [files, filesLabel] = check('Files', start.files);
@@ -131,6 +133,7 @@ function findHere(a) {
   lookIn.addEventListener('input', () => { if (lookScrap && lookIn.value !== scrapLabel(lookScrap)) lookScrap = null; });
   const fill = o => {
     subfolders.checked = o.subfolders;
+    followLinks.checked = o.followLinks ?? true;
     depth.checked = o.depthFirst;
     breadth.checked = !o.depthFirst;
     useIndex.checked = o.useIndex;
@@ -166,7 +169,7 @@ function findHere(a) {
   });
   const options = () => ({
     lookIn: lookScrap ? null : lookIn.value.trim(), lookInScrap: lookScrap?.id ?? null,
-    subfolders: subfolders.checked, depthFirst: depth.checked, useIndex: useIndex.checked, files: files.checked,
+    subfolders: subfolders.checked, followLinks: followLinks.checked, depthFirst: depth.checked, useIndex: useIndex.checked, files: files.checked,
     folders: folders.checked, regex: regex.checked, fuzzy: Math.min(100, Math.max(0, Number(fuzzy.value) || 0)), named: named.value.trim(),
     text: text.value, textCase: textCase.checked, textWord: textWord.checked,
     textMode: modeRegex.checked ? 'regex' : modeVerbatim.checked ? 'verbatim' : 'normal', allFiles: allFiles.checked,
@@ -194,7 +197,7 @@ function findHere(a) {
   form.append(
     el('div', { className: 'find-row' }, el('span', { className: 'find-label', textContent: 'Look in' }), lookIn),
     el('div', { className: 'find-row find-checks' }, subfoldersLabel, el('label', {}, depth, ' Go depth first'),
-      el('label', {}, breadth, ' Breadth first'), useIndexLabel),
+      el('label', {}, breadth, ' Breadth first'), followLinksLabel, useIndexLabel),
     el('div', { className: 'find-row find-checks' }, filesLabel, foldersLabel, regexLabel,
       el('label', { className: 'find-fuzzy-label' }, 'Fuzzy ', fuzzy)),
     el('div', { className: 'find-row' }, el('span', { className: 'find-label', textContent: 'Named' }), named),

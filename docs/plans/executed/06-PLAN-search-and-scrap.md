@@ -276,3 +276,14 @@ than one folder: the host's drag reads the physical mouse button, which the debu
 itself was tested with the browser's own drag events). Copying scrap items into one folder with Windows' conflict
 dialog. Clicking the head's Delete button (it runs the action Alt+Del runs). Whether Alt+Del and Alt+Shift+Del are
 taken by PowerToys or the like on this PC [not yet checked].
+
+**Links (2026-11-20, at the user's request).** Find has "Follow links" (on by default, beside the order): Foldex's own
+walk goes into junctions and symbolic links, and what is in them is found under the link's path. A link to the
+search's own folder, to a folder above it or above the link, or to a folder searched already is found but not gone
+into, so a loop (D:\king_trunk\king_trunk, a link to D:\king_trunk) ends there and nothing is found twice
+(`FileSearch.Walk`, real paths by `ShellListing.RealPath`). An index (Everything, Windows Search) has a link but not
+what is behind it: with the option each folder link it found is walked as well, not into what the index searched.
+Off: links are found and not gone into, as before. Folder sizes still count no link (a link counts nothing). Read-ahead
+of the cache (plan 24) no longer goes into a link to its own folder or one above it. Tested: `ScrapTests`
+TheWalkFollowsLinksWithoutLooping (junctions back up, to the search's folder, to a folder searched already, elsewhere).
+Not checked in the app.

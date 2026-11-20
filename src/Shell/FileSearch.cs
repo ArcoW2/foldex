@@ -17,7 +17,7 @@ static class FileSearch
     public sealed record Options(string? LookIn, IReadOnlyList<string>? Within, bool Subfolders, bool DepthFirst,
         bool UseIndex, bool Files, bool Folders, bool Regex, int Fuzzy, string Named,
         string? TextPattern = null, bool TextCase = false, bool AllFiles = false, long StartBytes = 0,
-        JsonNode? Rules = null, JsonObject? RulesKinds = null, IReadOnlyList<string>? RulesProps = null, bool RulesGit = false)
+        JsonNode? Rules = null, JsonObject? RulesKinds = null, IReadOnlyList<string>? RulesProps = null, bool RulesGit = false, bool FollowLinks = true)
     {
         public static Options From(JsonObject m) => new(
             m["lookIn"]?.GetValue<string>(),
@@ -37,7 +37,8 @@ static class FileSearch
             m["rules"] is JsonObject { } rules && rules["lines"] is JsonArray { Count: > 0 } ? rules.DeepClone() : null,
             m["rulesKinds"] as JsonObject is { } kinds ? (JsonObject)kinds.DeepClone() : null,
             m["rulesProps"] is JsonArray props ? [.. props.Select(n => n!.GetValue<string>())] : null,
-            m["rulesGit"]?.GetValue<bool>() == true);
+            m["rulesGit"]?.GetValue<bool>() == true,
+            m["followLinks"]?.GetValue<bool>() ?? true);
     }
 
     /// <summary>The engine used (walk, everything, windows, scrap) and how many were found; throws ArgumentException for
@@ -103,13 +104,28 @@ static class FileSearch
             if (indexed is not null)
             {
                 engine = indexed.Value.Engine;
+                var links = new List<string>();
                 foreach (var path in indexed.Value.Paths)
                 {
                     if (cancel.IsCancellationRequested) break;
-                    if (Info(path) is { } info) Found(info);
+                    if (Info(path) is not { } info) continue;
+                    Found(info);
+                    if ((info.Attributes & (FileAttributes.Directory | FileAttributes.ReparsePoint)) == (FileAttributes.Directory | FileAttributes.ReparsePoint))
+                        links.Add(info.FullName);
+                }
+                // An index has a link but not what is behind it: with Follow links, each walked (once, no loops; not
+                // into what the index searched already).
+                if (o.FollowLinks && o.Subfolders)
+                {
+                    var covered = ShellListing.RealPath(root);
+                    var walked = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    foreach (var link in links)
+                        if (!cancel.IsCancellationRequested && ShellListing.LinkTarget(link) is { } to && Directory.Exists(to)
+                            && ShellListing.RealPath(to) is var target && !ShellListing.InOrSame(covered, target) && !ShellListing.InOrSame(target, covered))
+                            Walk(link, true, o.DepthFirst, Found, cancel, true, walked, covered);
                 }
             }
-            else Walk(root, o.Subfolders, o.DepthFirst, Found, cancel);
+            else Walk(root, o.Subfolders, o.DepthFirst, Found, cancel, o.FollowLinks);
         }
         batch(pending);
         return (engine, found);
@@ -196,23 +212,39 @@ static class FileSearch
     };
 
     /// <summary>Every item below a folder: depth first (a folder's subfolders before the next folder at its level) or
-    /// breadth first (level by level). A junction or symbolic link is found but not gone into (it may point up).</summary>
-    internal static void Walk(string root, bool subfolders, bool depthFirst, Action<FileSystemInfo> found, CancellationToken cancel)
+    /// breadth first (level by level). A junction or symbolic link is always found; with `followLinks` it is gone into
+    /// too, unless it points to the search's own folder, a folder above it or above the link, or a folder searched
+    /// already (a loop, or the same items twice); what is in it is found under the link's path. `walked`: the real
+    /// paths searched (ShellListing.RealPath), shared by the walks of one search; `covered`: a folder an index searched
+    /// already, not gone into again.</summary>
+    internal static void Walk(string root, bool subfolders, bool depthFirst, Action<FileSystemInfo> found, CancellationToken cancel,
+        bool followLinks = false, HashSet<string>? walked = null, string? covered = null)
     {
-        var pending = new LinkedList<string>();
-        pending.AddFirst(root);
+        walked ??= new(StringComparer.OrdinalIgnoreCase);
+        var pending = new LinkedList<(string Path, string Real)>();
+        pending.AddFirst((root, ShellListing.RealPath(root)));
+        var rootReal = pending.First!.Value.Real;
         while (pending.First is { } next && !cancel.IsCancellationRequested)
         {
             pending.RemoveFirst();
-            var subs = new List<string>();
+            var (path, real) = next.Value;
+            if (!walked.Add(real)) continue;
+            var subs = new List<(string, string)>();
             try
             {
-                foreach (var info in new DirectoryInfo(next.Value).EnumerateFileSystemInfos("*", Listing))
+                foreach (var info in new DirectoryInfo(path).EnumerateFileSystemInfos("*", Listing))
                 {
                     if (cancel.IsCancellationRequested) return;
                     found(info);
-                    if (subfolders && (info.Attributes & FileAttributes.Directory) != 0 && (info.Attributes & FileAttributes.ReparsePoint) == 0)
-                        subs.Add(info.FullName);
+                    if (!subfolders || (info.Attributes & FileAttributes.Directory) == 0) continue;
+                    if ((info.Attributes & FileAttributes.ReparsePoint) == 0) subs.Add((info.FullName, real + "\\" + info.Name));
+                    else if (followLinks && ShellListing.LinkTarget(info.FullName) is { } to && Directory.Exists(to))
+                    {
+                        var target = ShellListing.RealPath(to);
+                        if (!ShellListing.InOrSame(rootReal, target) && !ShellListing.InOrSame(real, target) && !walked.Contains(target)
+                            && (covered is null || !ShellListing.InOrSame(target, covered) && !ShellListing.InOrSame(covered, target)))
+                            subs.Add((info.FullName, target));
+                    }
                 }
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException) { }

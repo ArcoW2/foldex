@@ -86,6 +86,25 @@ static class ShellListing
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return null; }
     }
 
+    /// <summary>Where a folder really is: each link on its way replaced by the folder it points to
+    /// (D:\king_trunk\king_trunk\Databases, king_trunk a link to D:\king_trunk: D:\king_trunk\Databases).</summary>
+    internal static string RealPath(string path)
+    {
+        var full = Path.GetFullPath(path).TrimEnd('\\');
+        var root = Path.GetPathRoot(full) ?? "";
+        var real = root.TrimEnd('\\');
+        foreach (var part in full[root.Length..].Split('\\', StringSplitOptions.RemoveEmptyEntries))
+        {
+            real = real + "\\" + part;
+            if (LinkTarget(real) is { } to) real = to.TrimEnd('\\');
+        }
+        return real.Length == 0 ? full : real;
+    }
+
+    /// <summary>Whether `folder` is `above` itself or a folder in it (paths as RealPath gives them).</summary>
+    internal static bool InOrSame(string folder, string above) =>
+        folder.Equals(above, StringComparison.OrdinalIgnoreCase) || folder.StartsWith(above + "\\", StringComparison.OrdinalIgnoreCase);
+
     static readonly EnumerationOptions All = new()
     {
         IgnoreInaccessible = false, AttributesToSkip = 0, RecurseSubdirectories = false, ReturnSpecialDirectories = false,
