@@ -3548,10 +3548,11 @@ function setPaneQuickAccess(id, on) {
 }
 
 // The view of a one-folder pane (plan 03 3.1): details (its columns) or icons.
+const paneViewOf = view => view === 'icons' || view === 'thumbs' ? view : undefined;
 function setPaneView(id, view) {
   const pane = layout.pane(id), v = views.get(id);
   if (!pane || !(v instanceof ListView)) return;
-  pane.view = view === 'icons' || view === 'thumbs' ? view : undefined;
+  pane.view = paneViewOf(view);
   v.colhead.hidden = v.iconsView() || v.thumbsView();
   v.body.scrollTop = 0;
   v.render();
@@ -3970,6 +3971,12 @@ function hidePane(id) {
     const pane = layout.pane(p), view = views.get(p);
     if (pane.away || !view) continue;
     pane.away = { place: docks.placeOf(p) ?? { area: 'center' }, at, title: view.tabTitle() };
+    // A pane of a page of its own: its window when it floats, and its channel (its frame goes; one is made when shown
+    // again), as when it closes.
+    if (view instanceof PreviewView || isPaged(view)) {
+      if (view !== preview) view.close();
+      paneChannels.delete(p);
+    }
     if (view === preview) {
       preview.close();
       preview = null;

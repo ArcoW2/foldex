@@ -176,16 +176,23 @@ if (!PanePage) {
 }
 
 // Functions of this page that work on a view's rows themselves (its header, its scroll position): for such a pane, run
-// in its page, on the pane as this page has it.
-const PageFunctions = ['setPaneView', 'thumbZoom'];
+// in its page, on the pane as this page has it. What they change of the pane is changed here too at once (PageRecord),
+// else a method or the layout sent before its page tells it back would take the pane back to what it was (Views >
+// River drawn as details).
+const PageRecord = {
+  setPaneView: (pane, view) => { pane.view = paneViewOf(view); },
+  thumbZoom: (pane, step) => { pane.thumbSize = zoomedThumbSize(pane, step); },
+};
 if (!PanePage) {
   let runs = 0;
-  for (const name of PageFunctions) {
+  for (const name of Object.keys(PageRecord)) {
     const here = globalThis[name];
     globalThis[name] = (id, ...args) => {
       const v = views.get(id);
       if (!isPaged(v)) return here(id, ...args);
-      v.channel.send({ kind: 'run', key: `run:${++runs}`, fn: name, args, record: layout.pane(id) });
+      // The pane as it was (a copy: a message kept until the page is ready must not get the change made here).
+      v.channel.send({ kind: 'run', key: `run:${++runs}`, fn: name, args, record: structuredClone(layout.pane(id)) });
+      PageRecord[name](layout.pane(id), ...args);
     };
   }
 }

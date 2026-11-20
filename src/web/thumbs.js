@@ -105,10 +105,11 @@ function thumbsCame(m) {
 }
 
 // Ctrl+wheel and Larger / Smaller: the pane's thumbnail size a step up (1) or down (-1).
+const zoomedThumbSize = (pane, step) => Math.round(Math.min(ThumbSizes.max, Math.max(ThumbSizes.min, (pane.thumbSize ?? 160) * ThumbSizes.step ** step)));
 function thumbZoom(id, step) {
   const pane = layout.pane(id), v = views.get(id);
   if (!pane || !v) return;
-  const size = Math.round(Math.min(ThumbSizes.max, Math.max(ThumbSizes.min, (pane.thumbSize ?? 160) * ThumbSizes.step ** step)));
+  const size = zoomedThumbSize(pane, step);
   if (size === pane.thumbSize) return;
   const focus = v.entries.findIndex(x => same(x.id, layout.state(id).focus));
   pane.thumbSize = size;

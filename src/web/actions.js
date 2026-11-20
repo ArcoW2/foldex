@@ -316,7 +316,7 @@ const isFolderList = id => views.get(id) instanceof ListView && !(views.get(id) 
 const viewsPane = () => !activePane ? null : isFolderList(activePane) ? activePane
   : layout.followers(activePane, layout.keyOf(activePane)).map(f => f.id).find(isFolderList) ?? null;
 action('view.menu', { title: 'Views', hint: 'details, icons or thumbnails, for the active pane (a tree: the pane following it)', group: 'panes',
-  enabled: () => !!viewsPane(), dropDownOnly: true, dropDown: () => viewsMenu(viewsPane()), run: (params, ctx) => {
+  enabled: () => !!viewsPane(), dropDownOnly: true, dropDown: () => viewsPane() ? viewsMenu(viewsPane()) : [], run: (params, ctx) => {
     const id = viewsPane();
     const r = (ctx.el ?? views.get(id).body).getBoundingClientRect();
     openMenu(r.left, ctx.el ? r.bottom : r.top, viewsMenu(id));
