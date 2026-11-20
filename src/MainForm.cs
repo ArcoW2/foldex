@@ -471,7 +471,8 @@ sealed class MainForm : Form
             case "menuTexts":
             {
                 var (menu, error) = ShellMenu.Create(ids, false);
-                if (menu is not null && msg["own"]?.GetValue<bool>() == true && ids.Count == 1) menu.AddOwn(OwnMenu(ids[0], msg["item"]?.GetValue<bool>() == true, msg["bookmark"]?.GetValue<string>()).Select(o => o.Text).ToList());
+                if (menu is not null && msg["own"]?.GetValue<bool>() == true && ids.Count == 1) menu.AddOwn([new ShellMenu.OwnItem("Foldex", true,
+                    [.. OwnMenu(ids[0], msg["item"]?.GetValue<bool>() == true, msg["bookmark"]?.GetValue<string>()).Select(o => new ShellMenu.OwnItem(o.Text))])]);
                 using (menu)
                     Post(new JsonObject
                     {
@@ -1186,26 +1187,31 @@ sealed class MainForm : Form
         }
         using (menu)
         {
-            // One folder or file: Foldex's own items at the top (plan 23 3.2; plan 26 3.0), quick access and bookmarks;
-            // then the Foldex submenu (plan 31 3.5) for items on disk. Their actions in the order the menu numbers them.
+            // Every item of Foldex's own in one submenu Foldex at the top (plan 31 3.5): for one folder or file quick
+            // access and bookmarks (plan 23 3.2; plan 26 3.0), then for items on disk Create link and the others.
+            // Their actions in the order the menu numbers them.
             var mine = own && ids.Count == 1 ? OwnMenu(ids[0], item, bookmark) : [];
             var items = mine.Select(o => new ShellMenu.OwnItem(o.Text)).ToList();
             var runs = mine.Select(o => o.Run).ToList();
-            if (foldex is not null && FoldexSubmenu(ids, foldex, runs) is { } sub) items.Add(sub);
-            menu.AddOwn(items);
+            if (foldex is not null && FoldexItems(ids, foldex, runs) is { Count: > 0 } more)
+            {
+                if (items.Count > 0) items.Add(new ShellMenu.OwnItem("-"));
+                items.AddRange(more);
+            }
+            if (items.Count > 0) menu.AddOwn([new ShellMenu.OwnItem("Foldex", true, items)]);
             var verb = menu.Show(this, screen, out var chosen);
             if (chosen is { } k && k < runs.Count) runs[k]();
             Post(new JsonObject { ["event"] = "menuDone", ["verb"] = verb });
         }
     }
 
-    // The Foldex submenu (plan 31 3.2, 3.5): Create link (per kind that fits: in other pane, one of them or a list, and
-    // to clipboard), Take ownership, and on a folder Paste <kind> to <item> while the clipboard holds a link source.
-    // Each runs an action of the page that asked (`runAction`); `runs` gets them in the menu's order. `foldex`: what the
-    // window knows: the other panes ({ id, title, folder }).
-    ShellMenu.OwnItem? FoldexSubmenu(List<string> ids, JsonObject foldex, List<Action> runs)
+    // In the Foldex submenu (plan 31 3.2, 3.5), for items on disk: Create link (per kind that fits: in other pane, one of
+    // them or a list, and to clipboard), Take ownership, and on a folder Paste <kind> to <item> while the clipboard holds
+    // a link source. Each runs an action of the page that asked (`runAction`); `runs` gets them in the menu's order.
+    // `foldex`: what the window knows: the other panes ({ id, title, folder }).
+    List<ShellMenu.OwnItem> FoldexItems(List<string> ids, JsonObject foldex, List<Action> runs)
     {
-        if (ids.Count == 0 || !ids.All(IsDiskPath)) return null;
+        if (ids.Count == 0 || !ids.All(IsDiskPath)) return [];
         ShellMenu.OwnItem Leaf(string text, string action, params string[] parameters)
         {
             runs.Add(() => Post(new JsonObject { ["event"] = "runAction", ["name"] = action,
@@ -1236,7 +1242,7 @@ sealed class MainForm : Form
         items.Add(Leaf("Take ownership...", "item.takeOwnership"));
         if (ids.Count == 1 && Directory.Exists(ids[0]) && ShellClipboard.LinkSource() is { } source)
             items.Add(Leaf($"Paste {Links.Words(source.Kind)} to {Path.GetFileName(source.Path.TrimEnd('\\')).Replace("&", "&&")}", "link.paste", ids[0]));
-        return new ShellMenu.OwnItem("Foldex", true, items);
+        return items;
     }
 
     // Foldex's own items in Windows' menu for one folder or file (plan 26 3.0, 3.8), per tab: Add to quick access, or

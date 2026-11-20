@@ -195,6 +195,9 @@ None.
 - The menu for items is asked by the window's page (`itemMenu`), which knows the other panes; a pane's own page sends
   its request there (viewpage.js), with its point on the screen. Explorer's Rename chosen from it renames in the pane's
   own page (`renameFocusedHere`).
+- At the user's request, every item of Foldex's own is in the Foldex submenu: Add to (Remove from) quick access and
+  bookmarks (plan 26) first, a line, then Create link and the others; the menu's top has only Foldex above Windows'
+  items. Not yet seen in the app.
 
 ### 6.4 The helper's lifetime (2026-11-20)
 
