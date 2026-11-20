@@ -24,8 +24,8 @@ A macro is a script in LexPen's macro language: a step per line, each step a Fol
 (variables, if, switch, goto, gosub), plus a statement that runs a program, document or URL with parameters, and a
 loop over a list of items. System variables say where Foldex is: the active pane's folder, the focused item, the
 selected items, the other pane's folder; an item reads its fields as the columns name them (`$$focused.size`, in
-bytes), a list is indexed from 1, and functions take paths and sizes apart (name, extension, quoted, unquoted, a size
-in KB to GB with its decimals). Macros are arranged as the bookmarks are, but kept apart
+bytes), a list is indexed from 1, and functions take paths apart (name, extension, quoted, unquoted) and round a number,
+so a size divided to KB or MB gets its decimals. Macros are arranged as the bookmarks are, but kept apart
 from them, in a folder of their own that can be copied on its own: a tree with folders to any depth in your order,
 each macro with a name, an icon and keys. Manage macros (a pane, docked or floating) holds the tree and the editor;
 New offers a folder, a macro, and Run a program (a form that writes the one-line macro). They run from their key,
@@ -44,7 +44,7 @@ Nothing yet.
 |---|---|---|---|
 | The language | LexPen's macro language (`macrolang.js`) copied: statements, variables, conditions, labels; Foldex actions as steps | -- | 3.1 |
 | System variables | the active pane's folder, the focused item, the selected items, the other pane, ... | -- | 3.2 |
-| Items and functions | an item's fields (`$$focused.size`), a list's index from 1, `prop`; the functions on a path (with `unquoted`), `convert`, `round`, `padleft`, `padright` | The language | 3.2 |
+| Items and functions | an item's fields (`$$focused.size`), a list's index from 1, `prop`; the functions on a path (with `unquoted`), `round`, `padleft`, `padright` | The language | 3.2 |
 | Run | `run`: a program, document or URL with parameters, where it starts, its window, as administrator, waiting for it | -- | 3.3 |
 | For each | a loop over a list of items (the selected ones) | -- | 3.4 |
 | The tree | macros in folders to any depth, your order, a name, an icon and keys each; `macros\` in the data folder, apart from the bookmarks | -- | 3.5 |
@@ -97,8 +97,8 @@ keep the selected and the focused items apart (the project's words):
   - The fields are the ids of the columns and of the filter's fields: `name`, `ext`, `size`, `modified`, `created`,
     `accessed`, `attributes`, `type`, `target`, `fullPath`, and `folder` (the folder it is in) and `base` (its name
     without the extension): `$$focused.size`, `$$selected[2].modified`, `$f.fullPath`.
-  - `size` is in bytes, always, a number (so it calculates and compares: `if $f.size > 1000000 then`); `convert`
-    below gives another unit. Dates as the setting dateFormat writes them; attributes as the Attributes column's
+  - `size` is in bytes, always, a number (so it calculates and compares: `if $f.size > 1000000 then`); another unit
+    is a division (below). Dates as the setting dateFormat writes them; attributes as the Attributes column's
     letters. A field the item has no value for (a folder's size not counted, a link target of a file that is none):
     empty text.
   - Windows' properties, whose names have dots of their own: `prop($$focused, "System.Photo.DateTaken")`, read only
@@ -109,11 +109,11 @@ keep the selected and the focused items apart (the project's words):
   (without its folder), `base($p)` (without its extension too), `ext($p)`, `folder($p)`, `quoted($p)` (between double
   quotes when it holds a space; on a list: each item), `unquoted($p)` (the double quotes round it taken off, when
   there are). On an item they give what its fields give.
-- **Numbers and sizes**: `convert(<bytes>, <unit>, <decimals>)` a number of bytes in `"kb"`, `"mb"`, `"gb"` or `"tb"`
-  (1024 each, as Foldex's sizes show them) with that many decimals (`convert($f.size, "mb", 2)`: `4.53`);
-  `round(<number>, <decimals>)` any number to that many decimals; `padleft(<text>, <length>)` and `padright(<text>,
-  <length>)` a text made that long with spaces before or after it (a longer one as it is), for columns in a text
-  written out. A number's decimal separator as LexPen's numbers keep it (its plan 3.2).
+- **Numbers and sizes**: LexPen's arithmetic divides already (`/`, up to 6 decimals when it does not come out), so a
+  size in another unit is a division, its decimals `round(<number>, <decimals>)`: `round($f.size / 1024, 3) & " kb"`,
+  `round($f.size / 1048576, 2) & " MB"`. `padleft(<text>, <length>)` and `padright(<text>, <length>)` a text made that
+  long with spaces before or after it (a longer one as it is), for columns in a text written out. A number's decimal
+  separator as LexPen's numbers keep it (its plan 3.2).
 
 ### 3.3 Run
 
@@ -176,8 +176,8 @@ keep the selected and the focused items apart (the project's words):
 
 - Unit (Jint, as the other page tests): every statement copied keeps LexPen's tests' results; `for each`; an item's
   fields and its text, a list's index (1, its last, past its end), `count`, `prop`; the functions on a path (on an
-  item and on a relative path read as text), `quoted` and `unquoted` both ways; `convert` in each unit with 0 and 3
-  decimals, `round`, `padleft`, `padright`; the system variables from a pane state made for it; a left-out statement
+  item and on a relative path read as text), `quoted` and `unquoted` both ways; a size divided to KB and MB with `round`
+  to 0 and 3 decimals, `padleft`, `padright`; the system variables from a pane state made for it; a left-out statement
   refused when read.
 - Unit (host): `run` with each option builds the start it should (program, arguments, folder, window, verb); the
   tree's file read, written and read back; a broken file counts as empty and stays as it is.
