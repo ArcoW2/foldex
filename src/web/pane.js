@@ -26,7 +26,11 @@ addEventListener('message', e => { if (e.origin === APP_ORIGIN && e.data?.toPane
 if (floating) chrome.webview.addEventListener('message', e => { if (e.data?.toPane) fromWindow(e.data.toPane); });
 
 // The window's look: its root's own values (the theme's colours, the fonts) and its marks (data-theme, ...).
-function applyPaneLook({ css, data }) {
+function applyPaneLook({ css, data, dates }) {
+  if (dates && typeof systemDate !== 'undefined') {   // a page with dates.js: the window's format of the dates
+    systemDate = dates.system;
+    dateSetting = dates.format;
+  }
   const root = document.documentElement;
   root.style.cssText = css ?? '';
   for (const name of Object.keys(root.dataset)) delete root.dataset[name];

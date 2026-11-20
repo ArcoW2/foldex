@@ -2,19 +2,21 @@
 // Dates as every date column shows them (the setting dateFormat): Windows' short date and short time (`systemDate`,
 // the host's pattern with the settings), or a pattern of your own, one of DatePresets or typed. A pattern as .NET's and
 // Windows': yyyy yy, MMMM MMM MM M, dddd ddd dd d, HH H hh h, mm m, ss s, tt; 'text' in quotes and \x as they are;
-// anything else as it is. Loaded by the window's page, a pane's page and the settings window.
+// anything else as it is. Loaded by the window's page, a pane's page, the preview's and the settings window.
 
 let systemDate = '';   // Windows' short date and short time pattern (SettingsFile.Load)
+let dateSetting = '';  // the setting, in a page without the settings (the preview's: its window sends both, pane.js)
 
 // The patterns offered in the settings window, beside System.
 const DatePresets = ['dd-MM-yyyy HH:mm', 'dd/MM/yyyy HH:mm', 'dd.MM.yyyy HH:mm', 'd-M-yyyy H:mm', 'yyyy-MM-dd HH:mm',
   'yyyy-MM-dd HH:mm:ss', 'MM/dd/yyyy h:mm tt', 'd MMM yyyy HH:mm', 'ddd d MMM yyyy HH:mm'];
 
 const DateTokens = /'[^']*'|"[^"]*"|\\.|yyyy|yy|MMMM|MMM|MM|M|dddd|ddd|dd|d|HH|H|hh|h|mm|m|ss|s|tt/g;
-// The names of months and days in the language of Windows, made when first needed.
+// The names of months and days in English, as the rest of Foldex is (a language of its own: docs/plans/38-PLAN-languages.md),
+// made when first needed.
 const DateNameOptions = { MMMM: { month: 'long' }, MMM: { month: 'short' }, dddd: { weekday: 'long' }, ddd: { weekday: 'short' } };
 const dateNames = {};
-const dateName = (t, d) => (dateNames[t] ??= new Intl.DateTimeFormat(undefined, DateNameOptions[t])).format(d);
+const dateName = (t, d) => (dateNames[t] ??= new Intl.DateTimeFormat('en', DateNameOptions[t])).format(d);
 
 // A date (ms since 1970) in local time as `pattern` says.
 function formatDateTime(ms, pattern) {
@@ -48,4 +50,4 @@ function formatDateTime(ms, pattern) {
 const datePattern = values => values?.dateFormat || systemDate || 'yyyy-MM-dd HH:mm';
 
 // A date as the date columns show it.
-const shownDate = ms => formatDateTime(ms, datePattern(typeof settings === 'undefined' ? null : settings));
+const shownDate = ms => formatDateTime(ms, datePattern(typeof settings === 'undefined' ? { dateFormat: dateSetting } : settings));

@@ -142,7 +142,10 @@ async function dialogWindow(title, args, calls = null, modal = true, opened = nu
 // The look of this window for every pane's page (applyTheme, app.js): its root's own values and marks.
 function paneLook() {
   const root = document.documentElement;
-  return { kind: 'look', css: root.style.cssText, data: { ...root.dataset } };
+  // The dates' format too (dates.js), for a page without the settings (the preview's).
+  return { kind: 'look', css: root.style.cssText, data: { ...root.dataset },
+    dates: typeof systemDate === 'undefined' || typeof settings === 'undefined' ? undefined
+      : { format: settings?.dateFormat ?? '', system: systemDate } };
 }
 function sendPaneLooks() {
   for (const ch of paneChannels.values()) ch.send(paneLook());

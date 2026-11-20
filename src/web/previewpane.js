@@ -31,7 +31,7 @@ function fmtSize(n) {
   do { v /= 1024; u++; } while (v >= 1024 && u < units.length - 1);
   return `${v.toFixed(v < 10 ? 1 : 0)} ${units[u]}`;
 }
-const fmtDate = ms => ms == null ? '' : new Date(ms).toLocaleString();
+const fmtDate = ms => ms == null ? '' : shownDate(ms);   // as the date columns (dates.js, the format from the window)
 
 // ---------- The bar above an own preview (3.4) ----------
 

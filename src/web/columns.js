@@ -10,9 +10,9 @@ const OwnColumns = [
   { id: 'name', title: 'Name', kind: 'text', width: 22 },
   { id: 'size', title: 'Size', kind: 'size', width: 7 },
   { id: 'type', title: 'Type', kind: 'text', width: 12 },
-  { id: 'modified', title: 'Date modified', kind: 'date', width: 11 },
-  { id: 'created', title: 'Date created', kind: 'date', width: 11 },
-  { id: 'accessed', title: 'Date accessed', kind: 'date', width: 11 },
+  { id: 'modified', title: 'Date modified', kind: 'date', width: 12 },
+  { id: 'created', title: 'Date created', kind: 'date', width: 12 },
+  { id: 'accessed', title: 'Date accessed', kind: 'date', width: 12 },
   { id: 'attributes', title: 'Attributes', kind: 'text', width: 6 },
   { id: 'ext', title: 'Extension', kind: 'text', width: 6 },
   { id: 'target', title: 'Link target', kind: 'text', width: 16 },
@@ -225,7 +225,7 @@ const propListWaiters = [];
 
 function propListCame(list) {
   propList = list;
-  for (const p of list) propInfo.set(p.name, { id: p.name, title: p.title, kind: p.kind, width: 10 });
+  for (const p of list) propInfo.set(p.name, { id: p.name, title: p.title, kind: p.kind, width: p.kind === 'date' ? 12 : 10 });
   for (const done of propListWaiters.splice(0)) done(list);
   for (const v of views.values()) if (v instanceof ListView && !isPaged(v)) v.drawHeader();
 }

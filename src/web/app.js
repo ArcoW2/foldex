@@ -1671,13 +1671,21 @@ class ListView {
   fontPx() { return parseFloat(getComputedStyle(this.body).fontSize) || 13; }
 
   // The columns for where it is (3.2): a folder's set when it (or a folder above it, with its subfolders) has one,
-  // else the pane's own generic columns. `again`: the sets changed; a set shown is taken fresh.
+  // else the pane's own generic columns. `again`: the sets changed; a set shown is taken fresh (the sort chosen in the
+  // pane kept). Another folder with the same set keeps the columns and the sort as they are.
   chooseColumns(again = false) {
     const choice = setFor(columnSets.folders, this.location);
     const set = choice && setNamed(choice.set);
     const before = this.cols;
     if (set) {
-      if (again || before.set !== set.name) this.cols = { ...copyColumns(set), set: set.name };
+      // The sort chosen here stays while the folders have the same set, the sets changed too, unless the set's own sort
+      // did (`setSort`: the set's when it was taken).
+      if (again || before.set !== set.name) {
+        const setSort = JSON.stringify(copyColumns(set).sort);
+        const kept = before.set === set.name && before.setSort === setSort ? before.sort : null;
+        this.cols = { ...copyColumns(set), set: set.name, setSort };
+        if (kept) this.cols.sort = kept;
+      }
     } else this.cols = paneColumns(this.id);
     if (this.cols !== before) {
       this.drawHeader();
@@ -4510,6 +4518,8 @@ function settingsChanged(before) {
     || before.sizeFormat !== settings.sizeFormat || before.dateFormat !== settings.dateFormat) {
     for (const v of views.values()) if ((v instanceof TreeView || v instanceof ListView) && !isPaged(v)) v.render();
   }
+  // The previews show their dates so too (they got the format with the look, applyTheme).
+  if (before.dateFormat !== settings.dateFormat) for (const v of views.values()) if (v instanceof PreviewView && !(v instanceof PageView)) v.refresh();
   if (before.foldersFirst !== settings.foldersFirst || before.foldersFirstByName !== settings.foldersFirstByName)
     for (const v of views.values()) if ((v instanceof TreeView || v instanceof ListView) && !isPaged(v)) v.sortEntries();
   // Folder sizes counted by themselves switched on (plan 37 3.2): the lists here count theirs now.

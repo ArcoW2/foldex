@@ -10,11 +10,11 @@
 {
   "sets": [
     { "name": "Generic", "columns": [
-      { "id": "name", "width": 22 }, { "id": "size", "width": 7 }, { "id": "type", "width": 12 }, { "id": "modified", "width": 11 } ] },
+      { "id": "name", "width": 22 }, { "id": "size", "width": 7 }, { "id": "type", "width": 12 }, { "id": "modified", "width": 12 } ] },
     { "name": "Dates", "columns": [
-      { "id": "name", "width": 22 }, { "id": "modified", "width": 11 }, { "id": "created", "width": 11 }, { "id": "accessed", "width": 11 } ] },
+      { "id": "name", "width": 22 }, { "id": "modified", "width": 12 }, { "id": "created", "width": 12 }, { "id": "accessed", "width": 12 } ] },
     { "name": "Pictures", "columns": [
-      { "id": "name", "width": 22 }, { "id": "System.Image.Dimensions", "width": 9 }, { "id": "System.Photo.DateTaken", "width": 11 },
+      { "id": "name", "width": 22 }, { "id": "System.Image.Dimensions", "width": 9 }, { "id": "System.Photo.DateTaken", "width": 12 },
       { "id": "size", "width": 7 } ] },
     { "name": "Music", "columns": [
       { "id": "name", "width": 22 }, { "id": "System.Media.Duration", "width": 6 }, { "id": "System.Music.Artist", "width": 12 },
@@ -24,8 +24,8 @@
       { "id": "System.Video.FrameHeight", "width": 6 }, { "id": "size", "width": 7 } ] },
     { "name": "Documents", "columns": [
       { "id": "name", "width": 22 }, { "id": "System.Author", "width": 12 }, { "id": "System.Title", "width": 14 },
-      { "id": "System.Document.PageCount", "width": 5 }, { "id": "modified", "width": 11 } ] },
+      { "id": "System.Document.PageCount", "width": 5 }, { "id": "modified", "width": 12 } ] },
     { "name": "Git", "columns": [
-      { "id": "name", "width": 22 }, { "id": "git", "width": 8 }, { "id": "modified", "width": 11 } ] }
+      { "id": "name", "width": 22 }, { "id": "git", "width": 8 }, { "id": "modified", "width": 12 } ] }
   ]
 }
