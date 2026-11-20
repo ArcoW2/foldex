@@ -143,13 +143,11 @@ function sortComparer(sort, foldersFirst = true) {
   };
 }
 
-// Whether a pane sorts its folders before its files: its own choice in the header's menu, else the setting; one for
-// a sort on name (no sort, or the name its first column: foldersFirstByName), one for a sort on any other column.
+// Whether a pane sorts its folders before its files: its own choice in the header's menu (`grouping`, whatever the
+// sort), else the setting for its sort: one for a sort on name (no sort, or the name its first column:
+// foldersFirstByName), one for a sort on any other column (foldersFirst).
 const groupingKey = sort => !sort?.length || sort[0].id === 'name' ? 'foldersFirstByName' : 'foldersFirst';
-const foldersFirstIn = (id, sort) => {
-  const key = groupingKey(sort);
-  return (layout.pane(id)?.[key] ?? settings[key]) !== 'mixed';
-};
+const foldersFirstIn = (id, sort) => (layout.pane(id)?.grouping ?? settings[groupingKey(sort)]) !== 'mixed';
 
 // Sorting by one column (3.1).
 const columnComparer = (id, kind, desc) => sortComparer([{ id, desc }]);
@@ -550,24 +548,22 @@ function columnHeaderMenu(view) {
     folders.push({ path: view.location, set: set.name, subfolders });
     post({ op: 'folderColumnsSave', folders });
   };
-  // Folders first or mixed with the files, for this pane (its own choice, or the settings foldersFirstByName and
-  // foldersFirst): sorted on name, and sorted on another column.
-  const pane = layout.pane(view.id), mixed = { first: 'Folders first', mixed: 'Mixed with the files' };
-  const placeFolders = (key, v) => {
-    if (v) pane[key] = v;
-    else delete pane[key];
+  // Folders first or mixed with the files, for this pane: as the settings (the one for its sort now), or its own
+  // choice whatever the sort.
+  const pane = layout.pane(view.id), mixed = { first: 'Folders first', mixed: 'Mixed with files' };
+  const placeFolders = v => {
+    if (v) pane.grouping = v;
+    else delete pane.grouping;
     tellLayout();
     view.sortEntries();
   };
-  const grouping = key => [
-    { label: `As the setting (${mixed[settings[key] === 'mixed' ? 'mixed' : 'first']})`, checked: !pane[key], run: () => placeFolders(key, null) },
-    '-',
-    { label: mixed.first, checked: pane[key] === 'first', run: () => placeFolders(key, 'first') },
-    { label: mixed.mixed, checked: pane[key] === 'mixed', run: () => placeFolders(key, 'mixed') } ];
+  const now = settings[groupingKey(cols.sort)] === 'mixed' ? 'mixed' : 'first';
   return [
     { label: 'Grouping folders', items: [
-      { label: 'Sorted on name', items: grouping('foldersFirstByName') },
-      { label: 'Sorted on other columns', items: grouping('foldersFirst') } ] },
+      { label: `As settings (${mixed[now]})`, checked: !pane.grouping, run: () => placeFolders(null) },
+      '-',
+      { label: mixed.first, checked: pane.grouping === 'first', run: () => placeFolders('first') },
+      { label: mixed.mixed, checked: pane.grouping === 'mixed', run: () => placeFolders('mixed') } ] },
     '-',
     { label: 'Select columns...', run: () => selectColumns(view) },
     { label: 'Fit columns', key: 'Ctrl+R', run: () => view.fitColumns('fit') },

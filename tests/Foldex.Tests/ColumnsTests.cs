@@ -189,21 +189,21 @@ public class ColumnsTests : IDisposable
     }
 
     // Grouping folders: one choice sorted on name (no sort, or name first: foldersFirstByName), one sorted on another
-    // column (foldersFirst); a pane's own choice over the setting.
+    // column (foldersFirst); a pane's own choice (grouping) over them, whatever the sort.
     [Fact]
     public void GroupingFoldersSortedOnNameAndOnOtherColumns()
     {
         var r = Run("""
             (() => {
               globalThis.settings = { foldersFirstByName: 'first', foldersFirst: 'mixed' };
-              const panes = { p: {}, q: { foldersFirstByName: 'mixed', foldersFirst: 'first' } };
+              const panes = { p: {}, q: { grouping: 'mixed' } };
               globalThis.layout = { pane: id => panes[id] };
               const size = [{ id: 'size', desc: true }], name = [{ id: 'name', desc: false }, { id: 'size', desc: false }];
               return [foldersFirstIn('p', []), foldersFirstIn('p', name), foldersFirstIn('p', size),
                 foldersFirstIn('q', []), foldersFirstIn('q', name), foldersFirstIn('q', size)];
             })()
             """);
-        Assert.Equal([true, true, false, false, false, true], r.EnumerateArray().Select(x => x.GetBoolean()));
+        Assert.Equal([true, true, false, false, false, false], r.EnumerateArray().Select(x => x.GetBoolean()));
     }
 
     // A click on a title (3.4): one column (or none) sorts by it, again the other way; several: only that one turned,
