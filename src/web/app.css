@@ -2375,8 +2375,13 @@ dialog.bm-icons { width: min(520px, calc(100vw - 32px)); }
 .pv-content { flex: 1; min-height: 0; overflow: auto; }
 .pv-content:focus { outline: none; }   /* focused for its keys (previewpane.js own), not to be seen */
 .pv-content.pv-video, .pv-content.pv-image:not(:has(.pv-zoomed)) { overflow: hidden; }
-.pv-bar { flex: none; display: flex; align-items: center; gap: 2px; padding: 2px 4px; border-bottom: 1px solid var(--border);
-  background: var(--bg-bar); white-space: nowrap; overflow: hidden; }
+/* The bar's height is fixed: a native viewer (Windows', LexPen's, a plugin's) lies under it (app.js PreviewView.rect). */
+:root { --pv-bar-h: 26px; }
+.pv-bar { flex: none; display: flex; align-items: center; gap: 2px; padding: 0 4px; border-bottom: 1px solid var(--border);
+  background: var(--bg-bar); white-space: nowrap; overflow: hidden; height: var(--pv-bar-h); box-sizing: border-box; }
+.pv-viewer::after { content: ''; display: inline-block; margin-left: 6px; vertical-align: middle;
+  border: 4px solid transparent; border-top-color: currentColor; border-bottom-width: 0; }
+.pv-viewer-name { padding: 0 8px; color: var(--fg-dim); }
 .pv-button { padding: 2px 8px; border: 1px solid transparent; border-radius: 3px; background: none; color: var(--fg); font: inherit; cursor: pointer; }
 .pv-button:hover { background: var(--hover); border-color: var(--border); }
 .pv-gap { flex: 1; }
@@ -2463,7 +2468,7 @@ body[data-pane-inert-child] .pane:is(.tree, .list).child:not(.active) > .body * 
 .own-note + .own-image { flex: 1; min-height: 0; }
 .own-video.own-sound { flex: none; height: 40px; }
 /* Windows' preview as a picture of itself while a dialog or menu is over it (app.js previewCoverCheck). */
-.preview-cover { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+.preview-cover { position: absolute; left: 0; top: var(--pv-bar-h); width: 100%; height: calc(100% - var(--pv-bar-h)); pointer-events: none; }
 
 /* A tree's folder while the host does not yet know whether something under it passes the filter (plan 36 3.7). */
 .row.filter-unknown { opacity: .5; }

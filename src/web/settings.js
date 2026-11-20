@@ -14,6 +14,7 @@ let look = null;   // { settings: { values, user, defaults, problems }, themes: 
 const rows = [];   // { def, el, show }
 const SliderDelay = 200;   // ms a slider rests before the host gets its value
 let fonts = [];    // the installed font families (Fonts.cs), asked once
+let listersShown = () => { };   // the lister plugins' row: draws what the host tells of them (event listers)
 
 const post = msg => host.postMessage(msg);
 
@@ -58,7 +59,50 @@ function control(def) {
     box.append(input, value);
     return { el: box, show: v => { input.value = v; value.textContent = input.value + def.unit; } };
   }
-  // A text (previewWindowsTypes): written when the box is left or Enter.
+  // The viewer kept per type (previewViewers; docs/plans/33-PLAN-preview-plugins.md 3.1): each with Remove (back to the
+  // first viewer the type has).
+  if (def.kind === 'viewers') {
+    const box = Object.assign(document.createElement('div'), { className: 'st-list-box' });
+    const name = id => ({ foldex: 'Foldex', windows: 'Windows', lexpen: 'LexPen' })[id] ?? String(id).replace(/^lister:/, '');
+    const fill = v => {
+      const kept = Object.entries(v ?? {}).sort(([a], [b]) => a.localeCompare(b));
+      box.replaceChildren(...kept.map(([ext, id]) => {
+        const row = Object.assign(document.createElement('div'), { className: 'st-list-row' });
+        const remove = Object.assign(document.createElement('button'), { textContent: 'Remove', title: 'Back to the first viewer this type has' });
+        remove.addEventListener('click', () => { const next = { ...v }; delete next[ext]; set(def.name, next); });
+        row.append(Object.assign(document.createElement('span'), { textContent: `${ext}: ${name(id)}` }), remove);
+        return row;
+      }));
+      if (!kept.length) box.append(Object.assign(document.createElement('span'), { className: 'st-hint', textContent: 'None chosen.' }));
+    };
+    return { el: box, show: fill };
+  }
+  // The lister plugins (previewListers; plan 33 3.2): the plugins folder's and the ones added by path, each with its
+  // name and what it takes (its detect string), or why it cannot be used; Add... picks a file (the host), Remove takes
+  // one added by path away.
+  if (def.kind === 'listers') {
+    const box = Object.assign(document.createElement('div'), { className: 'st-list-box' });
+    const list = Object.assign(document.createElement('div'));
+    const add = Object.assign(document.createElement('button'), { textContent: 'Add...', title: 'Add a lister plugin (.wlx64) by its file' });
+    add.addEventListener('click', () => post({ op: 'pickLister' }));
+    box.append(list, add);
+    let paths = [];
+    listersShown = info => list.replaceChildren(...info.map(p => {
+      const row = Object.assign(document.createElement('div'), { className: 'st-list-row' });
+      const text = Object.assign(document.createElement('span'), { textContent: p.name, title: p.path });
+      const what = Object.assign(document.createElement('span'), { className: 'st-hint',
+        textContent: p.error ? `: ${p.error}` : `: ${p.detect || 'every file'}${p.inFolder ? ' (in the plugins folder)' : ''}` });
+      row.append(text, what);
+      if (!p.inFolder) {
+        const remove = Object.assign(document.createElement('button'), { textContent: 'Remove' });
+        remove.addEventListener('click', () => set(def.name, paths.filter(x => x.toLowerCase() !== p.path.toLowerCase())));
+        row.append(remove);
+      }
+      return row;
+    }));
+    return { el: box, show: v => { paths = v ?? []; post({ op: 'listers' }); } };
+  }
+  // A text: written when the box is left or Enter.
   if (def.kind === 'text') {
     const input = Object.assign(document.createElement('input'), { type: 'text', spellcheck: false });
     input.addEventListener('change', () => set(def.name, input.value.trim()));
@@ -239,6 +283,7 @@ host.addEventListener('message', e => {
     now.textContent = `In use now: ${(e.data.bytes / 1048576).toFixed(1)} MB, ${e.data.folders} folder(s); read ahead so far: ${e.data.readAhead}.`;
     return;
   }
+  if (e.data.event === 'listers') return listersShown(e.data.list ?? []);
   if (e.data.event === 'fonts') {
     fonts = e.data.fonts;
     if (look) show();

@@ -7,13 +7,20 @@ namespace Foldex.Shell;
 /// A Windows preview handler (Office and the like, docs/plans/executed/04-PLAN-preview.md 3.2) in a native window of its own,
 /// laid over the page where the page says its preview area is. A native window covers the page's popups
 /// (docs/plans/02-PLAN-ui-technology.md 3.3): while one is open, the page asks for a snapshot, shows that in the
-/// area, and the native window is hidden until the popup closes. On the UI thread.
+/// area, and the native window is hidden until the popup closes. A lister plugin's window (docs/plans/33-PLAN-preview-plugins.md
+/// 3.2) lies in the same panel, made by the plugin helper in its own process. On the UI thread.
 /// </summary>
 sealed class PreviewHost : IDisposable
 {
     readonly Panel panel;
     IPreviewHandler? handler;
     string? shownPath;
+    // A lister plugin's view: the helper's window in the panel, the plugin, and this preview's key with the helper.
+    readonly string key = Guid.NewGuid().ToString("N");
+    Listers? listers;
+    Lister? lister;
+    IntPtr listerWindow;
+    int shows;   // each show and unload: a plugin's answer for an earlier one is not shown
 
     public PreviewHost(Control parent)
     {
@@ -36,12 +43,12 @@ sealed class PreviewHost : IDisposable
         return Guid.TryParse(new string(buffer, 0, (int)size - 1), out var clsid) ? clsid : null;
     }
 
-    /// <summary>Shows a file in its preview handler over `bounds` (in the parent's client pixels). The handler and how
-    /// it was started, or an error.</summary>
-    public (string? Handler, string? Error) Show(string path, Rectangle bounds)
+    /// <summary>Shows a file in its preview handler over `bounds` (in the parent's client pixels); `given`: that handler
+    /// (LexPen's, plan 33 3.3) instead of the type's. The handler and how it was started, or an error.</summary>
+    public (string? Handler, string? Error) Show(string path, Rectangle bounds, Guid? given = null)
     {
         Unload();
-        if (HandlerFor(path) is not Guid clsid) return (null, "no preview handler for this type");
+        if ((given ?? HandlerFor(path)) is not Guid clsid) return (null, "no preview handler for this type");
         // Out of process first (most handlers run in the shell's surrogate, prevhost.exe), else in process.
         var hr = Native.CoCreateInstance(clsid, IntPtr.Zero, Native.ClsctxLocalServer, typeof(IPreviewHandler).GUID, out var ptr);
         var how = "local server";
@@ -97,9 +104,47 @@ sealed class PreviewHost : IDisposable
         throw new InvalidCastException("the handler takes no stream, file or item");
     }
 
+    /// <summary>Shows a file in a lister plugin over `bounds`: the plugin's window, made by the helper in this panel (the
+    /// same plugin again: the next file in its window, ListLoadNextW). The plugin, or an error. `stopped`: the helper
+    /// went while it showed (the panel is hidden then); `escape`: Esc in the plugin's window.</summary>
+    public async Task<(string? Handler, string? Error)> ShowLister(Listers with, Lister plugin, string path, Rectangle bounds, Action stopped, Action escape)
+    {
+        var same = listers == with && lister?.Path == plugin.Path && listerWindow != IntPtr.Zero;
+        if (same) UnloadHandler();
+        else Unload();
+        var show = ++shows;
+        listers = with;
+        lister = plugin;
+        panel.Bounds = bounds;
+        panel.Visible = true;
+        panel.BringToFront();
+        var (window, error) = await with.Show(key, panel.Handle, bounds.Size, plugin, path, () =>
+        {
+            if (lister is null) return;
+            listerWindow = IntPtr.Zero;
+            lister = null;
+            shownPath = null;
+            panel.Visible = false;
+            stopped();
+        }, escape);
+        if (show != shows) return (plugin.Name, "another file was asked for");
+        if (error is not null)
+        {
+            lister = null;
+            listerWindow = IntPtr.Zero;
+            panel.Visible = false;
+            return (plugin.Name, error);
+        }
+        listerWindow = window;
+        shownPath = path;
+        return ($"{plugin.Name} (lister plugin)", null);
+    }
+
     public void Move(Rectangle bounds)
     {
         panel.Bounds = bounds;
+        if (listerWindow != IntPtr.Zero)
+            SetWindowPos(listerWindow, IntPtr.Zero, 0, 0, bounds.Width, bounds.Height, 0x4014 /* SWP_ASYNCWINDOWPOS | SWP_NOACTIVATE | SWP_NOZORDER */);
         if (handler is null) return;
         var rect = new Rect(new Rectangle(Point.Empty, bounds.Size));
         handler.SetRect(ref rect);
@@ -124,10 +169,13 @@ sealed class PreviewHost : IDisposable
         return "data:image/png;base64," + Convert.ToBase64String(stream.ToArray());
     }
 
+    /// <summary>The native window hidden while a menu of the preview's own page lies over it (plan 33 3.1).</summary>
+    public void Hide() => panel.Visible = false;
+
     /// <summary>The native window shown again after a snapshot.</summary>
     public void Restore()
     {
-        if (handler is null) return;
+        if (handler is null && listerWindow == IntPtr.Zero) return;
         panel.Visible = true;
         panel.BringToFront();
     }
@@ -137,7 +185,22 @@ sealed class PreviewHost : IDisposable
     [DllImport("user32.dll")]
     static extern bool PrintWindow(IntPtr hwnd, IntPtr hdc, uint flags);
 
+    [DllImport("user32.dll")]
+    static extern bool SetWindowPos(IntPtr hwnd, IntPtr after, int x, int y, int w, int h, uint flags);
+
     public void Unload()
+    {
+        shows++;
+        if (lister is not null)
+        {
+            listers!.Close(key);
+            lister = null;
+            listerWindow = IntPtr.Zero;
+        }
+        UnloadHandler();
+    }
+
+    void UnloadHandler()
     {
         if (handler is not null)
         {

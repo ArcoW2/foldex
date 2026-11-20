@@ -69,17 +69,6 @@ public class OwnPreviewTests
      InlineData("a.docx", null), InlineData("a", null)]
     public void KindByExtension(string name, string? kind) => Assert.Equal(kind, OwnPreview.KindOf(name));
 
-    // The setting previewWindowsTypes: extensions with or without a dot or star, separated by ; , or spaces.
-    [Fact]
-    public void WindowsFirstByTheSetting()
-    {
-        Assert.True(OwnPreview.WindowsFirst(@"C:\x\a.PDF", ".pdf; .svg"));
-        Assert.True(OwnPreview.WindowsFirst(@"C:\x\a.svg", "pdf,*.svg"));
-        Assert.False(OwnPreview.WindowsFirst(@"C:\x\a.md", ".pdf .svg"));
-        Assert.False(OwnPreview.WindowsFirst(@"C:\x\a.pdf", ""));
-        Assert.False(OwnPreview.WindowsFirst(@"C:\x\a.pdf", null));
-    }
-
     // Large files: only the start is read (said to be cut); Show all reads it all. A zip's listing; code's language; a
     // file's properties; a folder's summary.
     [Fact]

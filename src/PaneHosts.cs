@@ -43,8 +43,30 @@ static class PaneHosts
             case "openSettingsFile":
                 OpenSettingsFile(app, window);
                 break;
+            // The lister plugins' row (docs/plans/33-PLAN-preview-plugins.md 3.2): each one's name and detect string, read
+            // by the plugin helper the first time; Add... picks a file and adds it to previewListers.
+            case "listers":
+                reply(new JsonObject { ["event"] = "listers", ["list"] = await app.Listers.Info(Added()) });
+                break;
+            case "pickLister":
+            {
+                using var dialog = new OpenFileDialog { Title = "Add a lister plugin", Filter = "Lister plugins (*.wlx64)|*.wlx64|All files|*.*" };
+                if (dialog.ShowDialog(window) != DialogResult.OK) break;
+                var paths = Added();
+                if (!paths.Contains(dialog.FileName, StringComparer.OrdinalIgnoreCase)) paths.Add(dialog.FileName);
+                try { app.SetSetting("previewListers", new JsonArray([.. paths.Select(p => (JsonNode)p)])); }
+                catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException)
+                {
+                    AskForm.Tell(app, window, AskForm.Sign.Warning, ex.Message);
+                }
+                break;
+            }
         }
     }
+
+    // The lister plugins added by path (the setting previewListers).
+    static List<string> Added() =>
+        SettingsFile.Load(AppHost.DataDir)["values"]?["previewListers"] is JsonArray a ? [.. a.Select(n => n?.GetValue<string>() ?? "").Where(p => p.Length > 0)] : [];
 
     // Your settings.json in the program Windows has for it (made first when there is none); else Notepad.
     static void OpenSettingsFile(AppHost app, MainForm window)

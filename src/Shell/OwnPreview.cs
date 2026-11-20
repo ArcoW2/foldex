@@ -76,12 +76,6 @@ static class OwnPreview
             ?? (ext.Equals(".pdf", StringComparison.OrdinalIgnoreCase) ? "application/pdf" : "application/octet-stream");
     }
 
-    /// <summary>A file of its own preview's kind that Windows is asked first for (the setting previewWindowsTypes:
-    /// extensions such as ".docx;.pdf").</summary>
-    public static bool WindowsFirst(string path, string? types) =>
-        !string.IsNullOrWhiteSpace(types) && types.Split([';', ',', ' '], StringSplitOptions.RemoveEmptyEntries)
-            .Any(t => ("." + t.TrimStart('*', '.')).Equals(Path.GetExtension(path), StringComparison.OrdinalIgnoreCase));
-
     /// <summary>The most of a text file shown by default (the setting previewTextKB), and of a binary one as hex.</summary>
     public const int TextBytes = 256 * 1024, HexBytes = 64 * 1024;
 

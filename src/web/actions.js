@@ -225,7 +225,9 @@ action('info.toggle', { title: 'Info', hint: 'a pane with everything known of th
 action('preview.float', { title: 'Preview in a window', hint: 'the focused item in a new floating preview window that keeps it; F3 again opens another, to compare; Esc there closes it',
   group: 'view', enabled: () => !!activePane && !(views.get(activePane) instanceof PreviewView) && !!layout.state(activePane).focus,
   run: () => floatPreview() });
-const ownPreview = info => layout.followers(activePane ?? '').some(f => f.kind === 'preview' && !!f.info === info);
+action('preview.nextViewer', { title: 'Next viewer', hint: "the preview's file in the next viewer it has (Foldex, Windows, LexPen, a lister plugin), kept for its type as the bar's drop-down keeps it",
+  group: 'view', enabled: () => (previewTarget()?.viewers?.length ?? 0) > 1, run: () => previewTarget().nextViewer() });
+const ownPreview = info =>layout.followers(activePane ?? '').some(f => f.kind === 'preview' && !!f.info === info);
 action('preview.pane', { title: 'Pane preview', hint: 'a preview of the active pane only: its child, following its focused item', group: 'view',
   enabled: () => !!activeView() && !(activeView() instanceof PreviewView), checked: () => ownPreview(false), run: () => togglePanePreview(activePane, false) });
 action('info.pane', { title: 'Pane info', hint: 'an Info pane of the active pane only: its child, following its focused item', group: 'view',

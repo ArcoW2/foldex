@@ -76,6 +76,10 @@
   max-width: 340px;
 }
 
+/* A list in a row (settings.js, kinds 'viewers' and 'listers'): an entry per line, its button after it. */
+.st-list-box { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; max-width: 420px; }
+.st-list-row { display: flex; align-items: baseline; gap: 8px; }
+
 /* A colour of your own or the default (settings.js, kind 'colour'). */
 .st-colour { display: inline-flex; align-items: center; gap: 8px; }
 /* The dates' format: the list, your own format beside it, how a date looks in it. */

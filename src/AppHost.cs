@@ -136,6 +136,10 @@ sealed class AppHost : ApplicationContext
     });
     ElevatedHelper.Session? elevated;
 
+    /// <summary>The lister plugins and their helper process, for every window (docs/plans/33-PLAN-preview-plugins.md 3.2).</summary>
+    public Shell.Listers Listers => listers ??= new Shell.Listers(DataDir);
+    Shell.Listers? listers;
+
     /// <summary>What the cache holds now (the settings window shows it by its slider).</summary>
     public JsonObject CacheInfo()
     {
@@ -577,7 +581,11 @@ sealed class AppHost : ApplicationContext
         });
         SaveProjects();
         ProjectsChanged();
-        if (windows.Count == 0) ExitThread();
+        if (windows.Count == 0)
+        {
+            listers?.Dispose();   // the plugin helper goes too
+            ExitThread();
+        }
     }
 
     // ---------- Projects (ProjectStore; docs/plans/executed/15-PLAN-projects.md) ----------

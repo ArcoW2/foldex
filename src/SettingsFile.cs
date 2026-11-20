@@ -24,6 +24,15 @@ static class SettingsFile
         ["ignorePaneActivationClick"] = ["ignoreRootPaneActivationClick", "ignoreChildPaneActivationClick"],
     };
 
+    /// <summary>A setting that became another of another kind: its value in your file turned into the new one's, unless
+    /// your file sets that itself; written back as the new one, as a renamed one is (null: nothing to keep).</summary>
+    static readonly Dictionary<string, (string Name, Func<JsonNode?, JsonNode?> Convert)> Converted = new()
+    {
+        // docs/plans/33-PLAN-preview-plugins.md 3.1: the types for Windows' handler, now the viewer kept per type.
+        ["previewWindowsTypes"] = ("previewViewers", v =>
+            Shell.Viewers.FromWindowsTypes(v?.GetValueKind() == JsonValueKind.String ? v.GetValue<string>() : null) is { Count: > 0 } o ? o : null),
+    };
+
     // Your settings with an old name given to its new names (those your file does not set).
     static JsonObject Renaming(JsonObject own)
     {
@@ -32,6 +41,12 @@ static class SettingsFile
             if (!own.TryGetPropertyValue(old, out var value)) continue;
             own.Remove(old);
             foreach (var name in names) if (!own.ContainsKey(name)) own[name] = value?.DeepClone();
+        }
+        foreach (var (old, (name, convert)) in Converted)
+        {
+            if (!own.TryGetPropertyValue(old, out var value)) continue;
+            own.Remove(old);
+            if (!own.ContainsKey(name) && convert(value) is JsonNode now) own[name] = now;
         }
         return own;
     }

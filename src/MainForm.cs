@@ -903,38 +903,70 @@ sealed class MainForm : Form
             {
                 var path = msg["path"]!.GetValue<string>();
                 var pane = msg["pane"]?.GetValue<string>() ?? "";
-                // The order (docs/plans/executed/04-PLAN-preview.md 3.1): Foldex's own viewer for a type it knows (unless
-                // previewWindowsTypes names it and Windows has a handler), else Windows' preview handler, else text when
-                // the file looks like text, the picture Windows makes of it (its thumbnail handler: a PSD, ...), hex,
-                // and the properties last. A folder: its summary. `all`: Show all (the whole text); `download`: a cloud
-                // placeholder read all the same.
+                // The viewers of the file (docs/plans/33-PLAN-preview-plugins.md 3.1): Foldex's own, Windows' preview
+                // handler, LexPen's, the lister plugins that take it; the one asked for (`viewer`: the bar's drop-down),
+                // else the one kept for its type (`kept`: the setting previewViewers), else the first. Without one, or
+                // when a native viewer fails (docs/plans/executed/04-PLAN-preview.md 3.1): text when the file looks like
+                // text, the picture Windows makes of it (its thumbnail handler: a PSD, ...), hex, and the properties
+                // last. A folder: its summary. `all`: Show all (the whole text); `download`: a cloud placeholder read all
+                // the same. `top`: the bar's height, above a native viewer.
                 var textBytes = msg["all"]?.GetValue<bool>() == true ? Shell.OwnPreview.AllBytes
                     : Math.Max(1, msg["textKB"]?.GetValue<int>() ?? Shell.OwnPreview.TextBytes / 1024) * 1024;
                 var download = msg["download"]?.GetValue<bool>() == true;
-                var types = msg["windowsTypes"]?.GetValue<string>();
-                string? handler = null, error = "no preview";
+                var ask = previewAsks[pane] = previewAsks.GetValueOrDefault(pane) + 1;
+                string? handler = null, error = "no preview", viewer = null;
+                var plugged = false;
                 JsonObject? own = null;
+                var offered = new JsonArray();
                 static JsonObject? Safely(Func<JsonObject?> read)
                 {
                     try { return read(); }
                     catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException) { return null; }
                 }
                 var reachable = await NetworkGuard.Reachable(path);
+                var viewers = new List<Shell.Viewers.Viewer>();
+                List<Shell.Lister> listers = [];
+                Shell.LexPenHandler? lexPen = null;
+                if (reachable && File.Exists(path))
+                {
+                    lexPen = Shell.LexPenHandler.Find();
+                    listers = await app.Listers.Known(msg["listers"]?.AsArray().Select(n => n?.GetValue<string>() ?? "") ?? []);
+                    var windows = Shell.PreviewHost.HandlerFor(path);
+                    viewers = await Task.Run(() => Shell.Viewers.For(path, windows, lexPen, listers));
+                    viewer = Shell.Viewers.Pick(viewers, msg["viewer"]?.GetValue<string>(), msg["kept"] as JsonObject, path);
+                    foreach (var v in viewers) offered.Add(new JsonObject { ["id"] = v.Id, ["name"] = v.Name });
+                }
+                if (previewAsks.GetValueOrDefault(pane) != ask) break;   // another file asked for meanwhile
                 if (Directory.Exists(path))
                 {
                     PreviewOf(pane).Unload();
                     if (reachable) own = await Task.Run(() => Shell.OwnPreview.Folder(path));
                 }
-                else if (Shell.OwnPreview.KindOf(path) is not null
-                    && !(Shell.OwnPreview.WindowsFirst(path, types) && Shell.PreviewHost.HandlerFor(path) is not null))
+                else if (!reachable || viewer == Shell.Viewers.Foldex)
                 {
                     PreviewOf(pane).Unload();
                     if (reachable) own = await Task.Run(() => Safely(() => Shell.OwnPreview.Read(path, textBytes, download)));
                 }
                 else
                 {
-                    (handler, error) = PreviewOf(pane).Show(path, PreviewArea(pane, msg["rect"]));
-                    if (error is not null && reachable && File.Exists(path))
+                    var area = PreviewArea(pane, msg["rect"], msg["top"]?.GetValue<double>() ?? 0);
+                    if (viewer?.StartsWith(Shell.Viewers.ListerPrefix) == true
+                        && listers.FirstOrDefault(l => Shell.Viewers.ListerPrefix + l.Name == viewer) is { } lister)
+                    {
+                        void Stopped() => Post(new JsonObject { ["event"] = "previewStopped", ["pane"] = pane, ["path"] = path,
+                            ["text"] = $"The plugin {lister.Name} stopped (it crashed or did not answer)." });
+                        void Escape()
+                        {
+                            web.Focus();
+                            Post(new JsonObject { ["event"] = "previewEscape", ["pane"] = pane });
+                        }
+                        (handler, error) = await PreviewOf(pane).ShowLister(app.Listers, lister, path, area, Stopped, Escape);
+                        if (previewAsks.GetValueOrDefault(pane) != ask) break;
+                    }
+                    else (handler, error) = PreviewOf(pane).Show(path, area, viewer == Shell.Viewers.LexPen ? lexPen?.Clsid : null);
+                    // LexPen or a plugin that fails says why under the bar (another viewer one click away); Windows' as before.
+                    plugged = viewer is Shell.Viewers.LexPen || viewer?.StartsWith(Shell.Viewers.ListerPrefix) == true;
+                    if (error is not null && reachable && File.Exists(path) && !plugged)
                     {
                         own = await Task.Run(() => Safely(() => Shell.OwnPreview.Read(path, textBytes, download, hex: false)));
                         if (own is null && !Shell.OwnPreview.Placeholder(path)
@@ -943,9 +975,10 @@ sealed class MainForm : Form
                         own ??= await Task.Run(() => Safely(() => Shell.OwnPreview.Read(path, textBytes, download)));
                     }
                 }
-                if (own is null && error is not null && reachable && File.Exists(path)) own = await Task.Run(() => Safely(() => Shell.OwnPreview.Properties(path)));
+                if (own is null && error is not null && reachable && File.Exists(path) && !plugged) own = await Task.Run(() => Safely(() => Shell.OwnPreview.Properties(path)));
                 if (own is not null) own["lexPen"] = LexPenExe() is not null;   // the bar's Open in LexPen only when it is installed
-                Post(new JsonObject { ["event"] = "previewShown", ["pane"] = pane, ["path"] = path, ["handler"] = handler, ["error"] = error, ["own"] = own });
+                Post(new JsonObject { ["event"] = "previewShown", ["pane"] = pane, ["path"] = path, ["handler"] = handler, ["error"] = error, ["own"] = own,
+                    ["viewers"] = offered, ["viewer"] = viewer });
                 break;
             }
             case "previewPicture":
@@ -969,18 +1002,28 @@ sealed class MainForm : Form
             case "previewMove":
             {
                 var pane = msg["pane"]?.GetValue<string>() ?? "";
-                PreviewOf(pane).Move(PreviewArea(pane, msg["rect"]));
+                PreviewOf(pane).Move(PreviewArea(pane, msg["rect"], msg["top"]?.GetValue<double>() ?? 0));
                 break;
             }
             // The docked previews of this window as pictures while a dialog or menu of the page lies over them, and
             // back after (the page's previewCoverCheck).
             case "previewSnapshot":
+                previewCovered = true;
                 foreach (var (pane, host) in previews)
                     if (host.Visible) Post(new JsonObject { ["event"] = "previewSnapshot", ["pane"] = pane, ["url"] = host.Snapshot() });
                 break;
             case "previewRestore":
+                previewCovered = false;
                 foreach (var host in previews.Values) host.Restore();
                 break;
+            // A preview's viewers' drop-down open over its native viewer (plan 33 3.1): hidden meanwhile.
+            case "previewHide":
+            {
+                var host = PreviewOf(msg["pane"]?.GetValue<string>() ?? "");
+                if (msg["hidden"]?.GetValue<bool>() == true) host.Hide();
+                else if (!previewCovered) host.Restore();
+                break;
+            }
             // The preview's Open in LexPen (plan 04 3.4): LexPen started with the file, as a later launch of it would
             // (LexPen hands it to its running window); found by its registration (Applications\LexPen.exe).
             case "openLexPen":
@@ -1324,8 +1367,16 @@ sealed class MainForm : Form
         if (!previews.TryGetValue(pane, out var host)) previews[pane] = host = new PreviewHost(this);
         return host;
     }
-    Rectangle PreviewArea(string pane, JsonNode? rect) =>
-        floating.TryGetValue(pane, out var f) ? f.ClientRectangle : rect is null ? Rectangle.Empty : AreaOf(rect);
+    // The area of a native viewer: the pane's (docked) or its window's (floating), less the page's bar at its top (`top`,
+    // device pixels; plan 33 3.1).
+    Rectangle PreviewArea(string pane, JsonNode? rect, double top)
+    {
+        var area = floating.TryGetValue(pane, out var f) ? f.ClientRectangle : rect is null ? Rectangle.Empty : AreaOf(rect);
+        var bar = Math.Min(area.Height, (int)Math.Round(top));
+        return new Rectangle(area.X, area.Y + bar, area.Width, area.Height - bar);
+    }
+    readonly Dictionary<string, int> previewAsks = [];
+    bool previewCovered;   // a dialog or menu of the page over the docked previews (previewSnapshot until previewRestore)   // per pane: the preview asked for last (an earlier one's answer is not shown)
 
     /// <summary>A point of the screen as a point of this window's page (CSS px; outside it when outside the page).</summary>
     public (double X, double Y) PagePoint(Point screen)

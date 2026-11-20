@@ -36,11 +36,12 @@ const fmtDate = ms => ms == null ? '' : shownDate(ms);   // as the date columns 
 // ---------- The bar above an own preview (3.4) ----------
 
 // What the bar has for a kind: Open in LexPen (when it is installed: o.lexPen) and Copy for text the preview reads, zoom for
-// what has a size.
+// what has a size. At its left the viewer shown (docs/plans/33-PLAN-preview-plugins.md 3.1): with more than one for the
+// file, a drop-down of them all; choosing one shows the file in it and keeps it for the type.
 const TEXT_KINDS = new Set(['text', 'code', 'markdown', 'html', 'csv']);
 const ZOOM_KINDS = new Set(['text', 'code', 'markdown', 'html', 'csv', 'zip', 'hex', 'pdf', 'image']);
 
-function bar(o) {
+function bar(o, v) {
   const b = el('div', 'pv-bar');
   const button = (label, title, run) => {
     const x = el('button', 'pv-button', label);
@@ -49,6 +50,7 @@ function bar(o) {
     b.append(x);
     return x;
   };
+  viewerChoice(b, v);
   if (TEXT_KINDS.has(o.kind) && o.lexPen) button('Open in LexPen', 'Open this file in LexPen', () => toWindow({ kind: 'openLexPen' }));
   button('Open', 'Open this file with its program, as a double-click does', () => toWindow({ kind: 'openDefault' }));
   if (TEXT_KINDS.has(o.kind)) button('Copy text', 'Copy the text of this file (as far as it is read) to the clipboard', () => toWindow({ kind: 'copy', text: o.text }));
@@ -63,6 +65,29 @@ function bar(o) {
   }
   return b;
 }
+
+// The viewer shown, and with others for the file a drop-down of them (a menu of menu.js: a second click closes it).
+function viewerChoice(b, v) {
+  const list = v?.viewers ?? [];
+  const now = list.find(x => x.id === v.viewer);
+  if (!now) return;
+  if (list.length === 1) return b.append(el('span', 'pv-viewer-name', now.name));
+  const x = el('button', 'pv-button pv-viewer', now.name);
+  x.title = 'The viewer this file is shown in; choose another for this type';
+  x.addEventListener('click', () => {
+    const r = x.getBoundingClientRect();
+    openMenu(r.left, r.bottom, list.map(w => ({ label: w.name, checked: w.id === v.viewer, run: () => toWindow({ kind: 'viewer', id: w.id }) })));
+  });
+  b.append(x);
+}
+
+// A menu of this page (the viewers' drop-down) opens over the area a native viewer covers: the window is told while
+// one is open, so the native window is a picture of itself (docked) or hidden (floating) meanwhile.
+let menuOver = false;
+new MutationObserver(() => {
+  const now = !!document.querySelector('.menu');
+  if (now !== menuOver) toWindow({ kind: 'menuOver', on: menuOver = now });
+}).observe(document.body, { childList: true });
 
 function setZoom(z) {
   zoom = Math.min(5, Math.max(0.25, Math.round(z * 100) / 100));
@@ -89,7 +114,7 @@ addEventListener('wheel', e => {
 
 // ---------- Foldex's own preview ----------
 
-function own(o, remoteImages = true) {
+function own(o, remoteImages = true, v = null) {
   player = null;
   pdfDone();
   shown = o;
@@ -98,8 +123,8 @@ function own(o, remoteImages = true) {
   const viewer = VIEWERS[kind] ?? (() => el('div', 'message', 'This item cannot be previewed.'));
   const body = viewer(o, content, remoteImages);
   if (body) content.append(body);
-  const noBar = kind === 'video' || kind === 'audio';
-  rows.replaceChildren(...(noBar ? [] : [bar(o)]), content);
+  const noBar = (kind === 'video' || kind === 'audio') && !(v?.viewers?.length > 1);
+  rows.replaceChildren(...(noBar ? [] : [bar(o, v)]), content);
   rows.classList.toggle('pv-with-bar', !noBar);
   setZoom(zoom);
   // It scrolls by the keys (Page Down, the arrows) when it has the focus: in a window of its own (F3) at once; docked,
@@ -514,6 +539,20 @@ function properties(o, note, download) {
   return list;
 }
 
+// ---------- A native viewer (Windows', LexPen's, a lister plugin's) ----------
+
+// The host's window lies under the bar (its height --pv-bar-h, app.css); `text`: why it shows nothing (a plugin stopped).
+function native(m) {
+  player = null;
+  shown = null;
+  pdfDone();
+  const o = { kind: 'native' };
+  const content = el('div', 'pv-content pv-native');
+  if (m.text) content.append(el('div', 'message', m.text));
+  rows.replaceChildren(bar(o, m), content);
+  rows.classList.add('pv-with-bar');
+}
+
 // ---------- A still, Info ----------
 
 // A video or sound the player cannot play: the picture Windows makes of it, said to be a still (with the player kept
@@ -564,7 +603,8 @@ addEventListener('keydown', e => {
 
 paneHandlers.show = m => {
   if (m.what !== 'own') rows.classList.remove('pv-with-bar');
-  if (m.what === 'own') own(m.own, m.remoteImages !== false);
+  if (m.what === 'own') own(m.own, m.remoteImages !== false, m);
+  else if (m.what === 'native') native(m);
   else if (m.what === 'still') still(m);
   else if (m.what === 'info') info(m.groups ?? []);
   else message(m.text ?? '');

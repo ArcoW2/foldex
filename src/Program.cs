@@ -18,6 +18,12 @@ static class Program
             ElevatedHelper.Run(args[1], parent);
             return;
         }
+        // The plugin helper (docs/plans/33-PLAN-preview-plugins.md 3.2): the lister plugins' windows, unelevated.
+        if (args.Length == 3 && args[0] == ListerHelper.Switch && int.TryParse(args[2], out var foldex))
+        {
+            ListerHelper.Run(args[1], foldex);
+            return;
+        }
         ApplicationConfiguration.Initialize();
         var (newWindow, rest) = ParseArgs(args);
         var shift = newWindow || (Control.ModifierKeys & Keys.Shift) != 0;

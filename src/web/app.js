@@ -2868,7 +2868,7 @@ class PreviewView {
       } else if (this.away) {
         this.away = false;
         this.ask();
-      } else post({ op: 'previewMove', pane: this.id, rect: this.rect() });
+      } else post({ op: 'previewMove', pane: this.id, rect: this.rect(), top: previewBarTop() });
     }).observe(this.body);
     this.message('Select a file to preview it.');
   }
@@ -2899,6 +2899,27 @@ class PreviewView {
     if (m.kind === 'download' && this.path) this.ask({ download: true });
     if (m.kind === 'close' && layout.pane(this.id)?.fixed) closePane(this.id);   // Esc in F3's preview
     if (m.kind === 'status') status(m.text, m.warn);   // its find bar's word (previewfind.js)
+    if (m.kind === 'viewer') this.choose(m.id);   // the bar's drop-down (plan 33 3.1)
+    // That drop-down open over a native viewer: the native window hidden meanwhile (a picture of it, as for the
+    // window's own menus, would lie over the pane's page and so over the drop-down too).
+    if (m.kind === 'menuOver' && this.native) post({ op: 'previewHide', pane: this.id, hidden: m.on });
+  }
+
+  // A viewer chosen for the file shown (docs/plans/33-PLAN-preview-plugins.md 3.1): shown at once, and kept for its
+  // extension (the setting previewViewers).
+  choose(id) {
+    if (!this.path || !this.viewers?.some(v => v.id === id)) return;
+    const ext = (this.path.match(/\.[^.\\/]+$/)?.[0] ?? '').toLowerCase();
+    if (ext) setSetting('previewViewers', { ...(settings.previewViewers ?? {}), [ext]: id });
+    this.ask({ viewer: id });
+  }
+
+  // preview.nextViewer: the next viewer of the file's list, kept as the drop-down keeps it.
+  nextViewer() {
+    const list = this.viewers ?? [];
+    if (list.length < 2) return;
+    const at = list.findIndex(v => v.id === this.viewer);
+    this.choose(list[(at + 1) % list.length].id);
   }
 
   // Floated or docked again (app.js floatPane, dockPane): Windows' preview where the pane is now.
@@ -2911,12 +2932,14 @@ class PreviewView {
   // The host asked for the preview of the file: its own viewer, Windows' or the properties (plan 04 3.1), with the
   // preview settings; xtra: Show all, Download and preview.
   ask(extra = {}) {
-    post({ op: 'preview', pane: this.id, path: this.path, rect: this.rect(), textKB: this.textKB ?? settings.previewTextKB ?? 256,
-      windowsTypes: settings.previewWindowsTypes ?? '', ...extra });
+    post({ op: 'preview', pane: this.id, path: this.path, rect: this.rect(), top: previewBarTop(), textKB: this.textKB ?? settings.previewTextKB ?? 256,
+      kept: settings.previewViewers ?? {}, listers: settings.previewListers ?? [], ...extra });
   }
 
   show(path) {
     this.native = false;   // until the host says Windows shows it (previewShown)
+    this.viewers = [];
+    this.viewer = null;
     const x = path && itemShown(path, views.get(layout.pane(this.id).source));
     // A folder on disk: its summary (plan 04 3.1); a place that is no folder on disk (This PC): nothing.
     if (!path || !isDiskPath(path)) {
@@ -2935,7 +2958,11 @@ class PreviewView {
 
   // Foldex's own preview, when Windows has none for the file (Shell/OwnPreview.cs): drawn by its page.
   // `find`: F3 from a scrap searched for a text (plan 20 3.5): the page opens its find bar on it.
-  showOwn(own) { this.showing({ what: 'own', own, remoteImages: settings.previewRemoteImages !== false, find: this.find ?? null }); }
+  showOwn(own) {
+    this.showing({ what: 'own', own, remoteImages: settings.previewRemoteImages !== false, find: this.find ?? null, viewers: this.viewers, viewer: this.viewer });
+  }
+  // A native viewer over the pane under the bar (Windows', LexPen's, a plugin's); `text`: why it shows nothing.
+  showNative(text = '') { this.showing({ what: 'native', viewers: this.viewers, viewer: this.viewer, text }); }
 
   // A video or sound its page's player cannot play (a codec it lacks): the picture Windows makes of it (a frame of a
   // video), said to be a still, else that it cannot be previewed.
@@ -2963,6 +2990,18 @@ class PreviewView {
     if (this.channel.floating) post({ op: 'paneDock', pane: this.id });
   }
 }
+// The preview's bar above a native viewer, in device pixels (its height is fixed: --pv-bar-h, app.css).
+const previewBarTop = () => (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--pv-bar-h')) || 0) * devicePixelRatio;
+
+// The preview that preview.nextViewer works on: the active pane when it is one, else the active pane's own, else the
+// global preview.
+function previewTarget() {
+  const v = activeView();
+  if (v instanceof PreviewView && !(v instanceof InfoView) && !(v instanceof PageView)) return v;
+  const child = layout.followers(activePane ?? '').find(f => f.kind === 'preview' && !f.info);
+  return (child && views.get(child.id)) || preview;
+}
+
 // Windows' preview is a window of its own lying over the page, so a dialog or a menu of the page would be hidden behind
 // it. While a dialog is open, or a menu lies over the preview, the preview is a picture of itself (the host's
 // snapshot, the window hidden); when they are gone the window is shown again.
@@ -4973,12 +5012,31 @@ const events = {
     const v = views.get(m.pane);
     if (v instanceof PreviewView && !(v instanceof InfoView) && same(m.path, v.path)) {
       v.native = !!m.handler && !m.error;   // Windows' own window over the pane (previewCoverCheck)
+      v.viewers = m.viewers ?? [];
+      v.viewer = m.viewer ?? null;
       if (m.own) v.showOwn(m.own);
+      else if (m.error && v.viewers.length) v.showNative(`${v.viewers.find(x => x.id === v.viewer)?.name ?? 'The viewer'} cannot show this file: ${m.error}.`);
       else if (m.error) v.message('This item cannot be previewed.');
+      else v.showNative();
+      ribbonRefresh();
     }
     // Another file shown while covered: its window came up over the dialog; a picture of it instead.
     if (previewCover.on && m.handler && !m.error) post({ op: 'previewSnapshot' });
     previewCoverCheck();
+  },
+  // A lister plugin's helper went while it showed the file (plan 33 3.2): said so, under the bar to choose another.
+  previewStopped(m) {
+    const v = views.get(m.pane);
+    if (!(v instanceof PreviewView) || !same(m.path, v.path)) return;
+    v.native = false;
+    v.showNative(m.text);
+    previewCoverCheck();
+  },
+  // Esc in a plugin's window: as Esc in the preview (F3's window closes).
+  previewEscape(m) {
+    window.__spike.events.push({ previewEscape: m.pane });
+    const v = views.get(m.pane);
+    if (v instanceof PreviewView) v.receive({ kind: 'close' });
   },
   // The picture of Windows' preview while a dialog or menu is over it (previewCoverCheck).
   previewSnapshot(m) {
