@@ -1660,8 +1660,8 @@ dialog.ask form {
 @keyframes disk-led { 0%, 30%, 55%, 80% { opacity: 1; } 15%, 45%, 70%, 90% { opacity: .2; } }
 
 /* The status line in blocks, each of its own size, a thin line between them: the message takes the room there is
-   (cut off with "..."), the reading bar lies over its right end; the drive's light and its free space keep their
-   places at the right. */
+   (cut off with "..."), the reading bar lies over its right end; the drive's free space and its light keep their
+   places at the right, the light in the corner. */
 #statusline { gap: 0; align-items: center; }
 #statusline > * + * { border-left: 1px solid var(--border); }
 #project, #hidden-panes, #log-button { margin: 0 6px; }
