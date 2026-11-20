@@ -81,7 +81,7 @@ new MutationObserver(() => requestAnimationFrame(fitWindow)).observe(document.bo
 const done = value => toWindow({ kind: 'done', value: value ?? null });
 
 // A name asked (projectmenu.js askText in the window's page): its title, a text box, OK and Cancel. The text, or null.
-function askTextHere(title, value = '', placeholder = '') {
+function askTextHere(title, value = '', placeholder = '', select = null) {
   const dialog = document.createElement('dialog');
   dialog.className = 'ask';
   const form = document.createElement('form');
@@ -95,7 +95,10 @@ function askTextHere(title, value = '', placeholder = '') {
   dialog.append(form);
   document.body.append(dialog);
   dialog.showModal();
-  box.select();
+  if (select) {
+    box.focus();
+    box.setSelectionRange(...select);
+  } else box.select();
   return new Promise(resolve => dialog.addEventListener('close', () => resolve(dialog.returnValue === 'ok' ? box.value.trim() : null), { once: true }));
 }
 const askText = askTextHere;   // a name asked over a dialog here (Find's Save, ...)
@@ -478,7 +481,7 @@ function customizeHere(a) {
 paneHandlers.args = async m => {
   if (m.what === 'customize') return done(await customizeHere(m));
   if (m.what === 'about') return done(await aboutHere(m.info ?? {}));
-  if (m.what === 'askText') return done(await askTextHere(m.title, m.value, m.placeholder));
+  if (m.what === 'askText') return done(await askTextHere(m.title, m.value, m.placeholder, m.select));
   if (m.what === 'find') return done(await findHere(m));
   if (m.what === 'barSize') return done(await sizeHere(m));
   if (m.what === 'rename') return done(await renameHere(m));

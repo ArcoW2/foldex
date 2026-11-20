@@ -24,6 +24,7 @@ function startRename(view, id, own = null) {
   const item = items[i];
   if (!item) return;
   if (!own && (!diskId(item.id) || isDrive(item))) return status('Only files and folders on disk can be renamed.', true);
+  if (!own && (view.iconsView?.() || view.thumbsView?.())) return renameInWindow(view, item);
   endRename();
   if (view.scrollTo) view.scrollTo(i);
   else scrollIntoView(view.body, i);
@@ -64,6 +65,20 @@ function startRename(view, id, own = null) {
     renaming.shift = false;   // left with the mouse: as the setting says
     commitRename();
   });
+}
+
+// Icons and thumbnails: the name asked in a small window of its own (a box over a tile or an image looked out of
+// place), its name without the extension selected as in the box; what it gives renamed as the box's would be: the same
+// checks, its companions along. A name that cannot be used is said in the status line.
+async function renameInWindow(view, item) {
+  endRename();
+  const dot = item.folder || settings.renameSelect === 'all' ? -1 : item.name.lastIndexOf('.');
+  const name = await askText(`Rename ${item.name}`, item.name, '', [0, dot > 0 ? dot : item.name.length]);
+  if (name === null) return;
+  const input = Object.assign(document.createElement('input'), { value: name });
+  renaming = { view, item, input, asking: false, companions: companionsOf(view, item), shift: false, own: null, watch: { disconnect() {} } };
+  await commitRename();
+  if (renaming?.input === input) endRename();   // not renamed (a name not allowed, the extension kept): nothing left open
 }
 
 // The rename box over its item's name, where that row is drawn now. False (and the box gone) when the item is no

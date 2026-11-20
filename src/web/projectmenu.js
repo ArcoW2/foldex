@@ -93,8 +93,9 @@ function projectListCame(list) {
 // ---------- A small dialog of the page: a text, or yes / no ----------
 
 // A text, or null for Cancel / Esc. Asked in a modal floating window of its own (plan 14 3.7), so it can be moved.
-function askText(title, value = '', placeholder = '') {
-  return dialogWindow(title, { what: 'askText', title, value, placeholder });
+// `select`: [start, end] of the text selected at first (a name without its extension), else all of it.
+function askText(title, value = '', placeholder = '', select = null) {
+  return dialogWindow(title, { what: 'askText', title, value, placeholder, select });
 }
 
 // True for Yes. `lines`: shown under the question (the folders of a delete, plan 06 3.5). Asked in Foldex's own window
