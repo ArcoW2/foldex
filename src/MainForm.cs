@@ -608,6 +608,14 @@ sealed class MainForm : Form
                     Post(new JsonObject { ["event"] = "settingFailed", ["error"] = $"{FiltersFile.Name}: {ex.Message}" });
                 }
                 break;
+            case "macrosSave":
+                // The macros changed (plan 34 3.5): macros\macros.json, and every window gets them again.
+                try { app.SaveMacros(msg["macros"]); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    Post(new JsonObject { ["event"] = "settingFailed", ["error"] = $"{MacrosFile.Name}: {ex.Message}" });
+                }
+                break;
             case "paste":
             {
                 var (onClipboard, move) = ShellClipboard.Take();
@@ -660,6 +668,15 @@ sealed class MainForm : Form
                 var owner = Handle;
                 var ok = await Task.Run(() => NetLogon.LogOn(owner, path));
                 Post(new JsonObject { ["event"] = "answer", ["req"] = msg["req"]?.DeepClone(), ["ok"] = ok });
+                break;
+            }
+            case "macroRun":
+            {
+                // A macro's run (plan 34 3.3): started here; the answer once it ended when it waits.
+                var answer = await MacroRun.Run(MacroRun.Request.Of(msg));
+                answer["event"] = "answer";
+                answer["req"] = msg["req"]?.DeepClone();
+                Post(answer);
                 break;
             }
             case "changedEntries":
@@ -1128,6 +1145,7 @@ sealed class MainForm : Form
             ["ops"] = new JsonArray(app.FileOps.All.Select(o => (JsonNode)o.ToJson()).ToArray()),
             ["searches"] = SearchesFile.Load(AppHost.DataDir),
             ["filters"] = FiltersFile.Load(AppHost.DataDir),
+            ["macros"] = MacrosFile.Load(AppHost.DataDir),
             ["renames"] = RenamesFile.Load(AppHost.DataDir),
             ["bookmarks"] = app.BookmarksJson(),
             ["run"] = AppHost.RunId,

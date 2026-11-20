@@ -3,7 +3,8 @@
 Status: partly executed (see Status).
 
 - 2026-11-19: draft, at the user's request.
-- 2026-11-20: partly executed: the language (with items, lists, the functions, run and for each as statements).
+- 2026-11-20: partly executed: the language (with items, lists, the functions, run and for each as statements); the
+  run's start in the host; the macros' file.
 
 Takes over plan 01's Macros part (plan 01 3.3: LexPen's `MacroStore.cs`, its recording, `PLAN-macros.md`); recording
 is plan 35. Builds on
@@ -43,19 +44,19 @@ macro is plan 35.
 | Items and functions | an item's fields (`$$focused.size`), a list's index from 1, `count`, `prop`; the functions on a path (with `unquoted`), `round`, `padleft`, `padright`; `$$newline`, `$$tab`, `$$exitCode` | 3.2; 6.1 |
 | Run, in the language | `run` with its options anywhere, in any order; the environment starts it | 3.3; 6.1 |
 | For each | `for each $p in <list>` ... `next` over the selected items, files matching, a list made with append | 3.4; 6.1 |
+| Run, the start | the host starts it (`Shell/MacroRun.cs`): a program, document or URL with parameters, where it starts, its window, as administrator, waiting for it | 3.3; 6.2 |
+| The tree's file | `macros\macros.json` (`MacrosFile.cs`): folders to any depth, your order, a name, an icon and two keys each; every window gets it | 3.5; 6.3 |
 
 ### Not yet built
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
 | System variables | the active pane's folder, the focused item, the selected items, the other pane, ...: the environment that gives them | Running them | 3.2 |
-| Run, the start | the host starts it: a program, document or URL with parameters, where it starts, its window, as administrator, waiting for it | -- | 3.3 |
-| The tree | macros in folders to any depth, your order, a name, an icon and keys each; `macros\` in the data folder, apart from the bookmarks | -- | 3.5 |
-| Manage macros | a pane (docked or floating): the tree, New (Folder, Macro, Run a program), the editor, Run, Key, Icon, Move to folder | The tree | 3.6 |
-| Run a program | the form: program, parameters (fixed text and variables), start in, window, as administrator | Run | 3.6 |
+| Manage macros | a pane (docked or floating): the tree, New (Folder, Macro, Run a program), the editor, Run, Key, Icon, Move to folder | -- | 3.6 |
+| Run a program | the form: program, parameters (fixed text and variables), start in, window, as administrator | Manage macros | 3.6 |
 | Running them | keys, the Macros menu on the ribbon, F1, a ribbon button for one macro; errors on the status line and in the Log | -- | 3.7 |
 | The user's guide | `docs/macros/README.md`: every statement, system variable, field and function, with examples; Help in Manage macros opens it | Running them | 3.9 |
-| Tests | see 3.8 (the language's: built) | -- | 3.8 |
+| Tests | see 3.8 (the language's, the run's start and the file's: built) | -- | 3.8 |
 
 Moved out: recording macros to plan 35.
 
@@ -259,3 +260,25 @@ None.
   `count`; the functions on paths, numbers and texts, `quoted` on a list, `prop`; `run` with its options on lines of
   their own and in a `for each`, `$$exitCode`; `for each` over files matching and over a list made with `append`;
   what is told when a macro is read); `dotnet test` 310 passed.
+
+### 6.2 The run's start (2026-11-20)
+
+- `src/Shell/MacroRun.cs`: `StartOf` builds the start from what the macro's line worked out (ShellExecute, so a
+  document or a URL opens as Windows' Run opens it; `Arguments` the parameters; `WorkingDirectory` the folder with `..`
+  worked out by `Path.GetFullPath`, refused when it is not there; the window style; `runas` for admin); `Run` starts
+  it and, with wait, waits for it off the window's thread and gives the exit code. Without a process (a document
+  opened in a program already running) there is no exit code. Admin refused in Windows' question: "cancelled (not as
+  administrator)". The page asks with `macroRun` (MainForm), answered when it ended when it waits; other messages
+  are not held up meanwhile (each is handled on its own).
+- Tested: `MacroRunTests` (each option's start; a folder with `..`; a folder not there; nothing to run; `cmd /c`
+  started in its folder and waited for: its exit code; a program not there: why).
+
+### 6.3 The macros' file (2026-11-20)
+
+- `src/MacrosFile.cs`: `macros\macros.json` as `{ "macros": [...] }`, a macro `{ id, name, icon, key, key2, text }`, a
+  folder `{ id, folder, items }`. Cleaned when read and written: an id once (a new one for a missing or doubled id),
+  no name: "Macro", keys as keys.json writes them (one that is no key left out), an entry that is neither a folder nor
+  a macro left out. Every window gets the tree with its first message (`macros`) and again when one window saves it
+  (`macrosSave`, AppHost.SaveMacros).
+- Tested: `MacrosFileTests` (a tree two folders deep written and read back the same, in its order; what is kept of
+  an entry; a file that cannot be read counts as empty and stays as it is); `dotnet test` 314 passed.

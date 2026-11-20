@@ -325,6 +325,13 @@ sealed class AppHost : ApplicationContext
         foreach (var w in windows) w.Tell((JsonObject)message.DeepClone());
     }
 
+    /// <summary>The macros' macros\macros.json written (docs/plans/34-PLAN-macros.md 3.5); every window gets them again.</summary>
+    public void SaveMacros(JsonNode? macros)
+    {
+        var message = new JsonObject { ["event"] = "macros", ["macros"] = MacrosFile.Save(DataDir, macros) };
+        foreach (var w in windows) w.Tell((JsonObject)message.DeepClone());
+    }
+
     /// <summary>The Rename dialog's renames.json written (docs/plans/executed/21-PLAN-multi-rename.md 3.3); every window gets it
     /// again.</summary>
     public void SaveRenames(JsonNode renames)
