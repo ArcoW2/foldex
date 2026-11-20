@@ -75,17 +75,49 @@ sealed class ShellMenu : IDisposable
         return texts;
     }
 
+    /// <summary>One of Foldex's own items: a text that runs something (its number among them all, in their order, is what
+    /// Show gives), off when not Enabled, or a submenu of more (plan 31 3.5: the Foldex submenu); "-" a line.</summary>
+    public sealed record OwnItem(string Text, bool Enabled = true, IReadOnlyList<OwnItem>? Items = null);
+
     /// <summary>Foldex's own items at the top of the menu, then a line (plan 23 3.2); Show tells which was chosen.</summary>
-    public void AddOwn(IReadOnlyList<string> texts)
+    public void AddOwn(IReadOnlyList<string> texts) => AddOwn(texts.Select(t => new OwnItem(t)).ToList());
+
+    public void AddOwn(IReadOnlyList<OwnItem> items)
     {
+        if (items.Count == 0) return;
+        var next = 0u;
+        var built = Build(items, ref next);
         InsertMenu(hmenu, 0, MfByPosition | MfSeparator, UIntPtr.Zero, null);
-        for (var k = texts.Count - 1; k >= 0; k--) InsertMenu(hmenu, 0, MfByPosition | MfString, (UIntPtr)(OwnId + (uint)k), texts[k]);
+        for (var k = built.Count - 1; k >= 0; k--) InsertMenu(hmenu, 0, MfByPosition | built[k].Flags, built[k].Id, built[k].Text);
     }
 
-    const uint MfString = 0, MfSeparator = 0x800;
+    // The items as InsertMenu takes them: a submenu made as a popup of its own, a leaf numbered past the shell's range.
+    static List<(uint Flags, UIntPtr Id, string? Text)> Build(IReadOnlyList<OwnItem> items, ref uint next)
+    {
+        var built = new List<(uint, UIntPtr, string?)>();
+        foreach (var item in items)
+        {
+            if (item.Text == "-") { built.Add((MfSeparator, UIntPtr.Zero, null)); continue; }
+            if (item.Items is { } children)
+            {
+                var popup = Native.CreatePopupMenu();
+                var inner = Build(children, ref next);
+                foreach (var (flags, id, text) in inner) AppendMenu(popup, flags, id, text);
+                built.Add((MfPopup | (item.Enabled && children.Count > 0 ? 0 : MfGrayed), (UIntPtr)(ulong)popup, item.Text));
+                continue;
+            }
+            built.Add((MfString | (item.Enabled ? 0 : MfGrayed), (UIntPtr)(OwnId + next++), item.Text));
+        }
+        return built;
+    }
+
+    const uint MfString = 0, MfSeparator = 0x800, MfPopup = 0x10, MfGrayed = 0x1;
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     static extern bool InsertMenu(IntPtr hMenu, uint uPosition, uint uFlags, UIntPtr uIDNewItem, string? lpNewItem);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    static extern bool AppendMenu(IntPtr hMenu, uint uFlags, UIntPtr uIDNewItem, string? lpNewItem);
 
     /// <summary>Shows the menu at a screen point and runs the chosen command; the command's verb ("delete", "properties",
     /// or "" when it has none), or null when nothing was chosen.</summary>

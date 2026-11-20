@@ -30,6 +30,7 @@
   "treeLines": "dotted",          // a tree's lines: "dotted", "solid" or "none"
   "folderCacheMB": 256,            // MB the folder cache may keep (16 to 4096): folders read once, and read ahead
   "cacheNetwork": true,            // folders on network shares kept after shown and read ahead (off: only while shown)
+  "helperMinutes": 5,              // minutes the elevated helper stays after its last task (0 to 120; 0: ended after each)
   "ignoreActivationClick": true,   // a click on a window that is not in front only brings it to the front
   "ignoreRootPaneActivationClick": false,  // a click in a root pane (normally a tree) that is not active only makes it the active pane
   "ignoreChildPaneActivationClick": false, // a click in a child pane (normally a list) that is not active only makes it the active pane

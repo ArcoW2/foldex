@@ -15,6 +15,14 @@ function toWindow(msg) {
   else parent.postMessage({ fromPane: msg }, WindowOrigin);
 }
 
+// Ctrl+F4 or Alt+F4 in a window of its own: that window closed, its pane with it (panechannel.js closeFloating).
+if (pageFloating) addEventListener('keydown', e => {
+  if (e.key !== 'F4' || !(e.ctrlKey || e.altKey) || e.shiftKey) return;
+  e.preventDefault();
+  e.stopPropagation();
+  toWindow({ kind: 'closeFloating' });
+}, true);
+
 // ---------- The layout: its window's ----------
 
 // The window's layout; of this pane only what the window decides (WindowFields), the rest this page keeps.
@@ -114,8 +122,14 @@ let screenAt = { x: 0, y: 0 };   // the screen's place of this page's top left (
 for (const type of ['pointerdown', 'pointermove', 'contextmenu'])
   addEventListener(type, e => { screenAt = { x: e.screenX - e.clientX, y: e.screenY - e.clientY }; }, true);
 // A place for the host (Windows' menu): on the screen, as the host does not know where this page is.
-post = msg => postHere(msg.op === 'menu' && Number.isFinite(msg.x)
-  ? { ...msg, x: Math.round(msg.x + screenAt.x * devicePixelRatio), y: Math.round(msg.y + screenAt.y * devicePixelRatio), screen: true } : msg);
+const onScreen = msg => Number.isFinite(msg.x)
+  ? { ...msg, x: Math.round(msg.x + screenAt.x * devicePixelRatio), y: Math.round(msg.y + screenAt.y * devicePixelRatio), screen: true } : msg;
+post = msg => postHere(msg.op === 'menu' ? onScreen(msg) : msg);
+// Windows' menu for items: asked by the window, which knows the other panes (plan 31 3.5; app.js itemMenu).
+itemMenu = msg => {
+  flush();
+  toWindow({ kind: 'windowFn', fn: 'itemMenu', args: [{ ...onScreen(msg), pane: PanePage }] });
+};
 start = () => {};   // the layout is the window's (init)
 // The ribbon, the bars, the drives and the project are the window's: not drawn here.
 setRibbon = () => {};

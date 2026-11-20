@@ -729,7 +729,7 @@ class TreeView {
       if (n?.bmGroup) return openMenu(e.clientX, e.clientY, bookmarkGroupMenu(n.bmGroup));
       // A folder or file: Windows' menu with Foldex's own items at its top (quick access, bookmarks; plan 26 3.0).
       // A quick access shortcut: its entry too, so the menu's Remove and Edit... are about that one.
-      if (n) post({ op: 'menu', ids: [n.id], own: true, item: n.folder === false, bookmark: n.bm,
+      if (n) itemMenu({ op: 'menu', ids: [n.id], own: true, item: n.folder === false, bookmark: n.bm,
         x: e.clientX * devicePixelRatio, y: e.clientY * devicePixelRatio, extended: e.shiftKey });
       else openMenu(e.clientX, e.clientY, emptyMenu());   // its empty space: a new folder or file (rename.js)
     });
@@ -1671,7 +1671,7 @@ class ListView {
       if (this.ownMenu?.(e)) return;
       // One folder or file: Windows' menu with Foldex's own items at its top (quick access, bookmarks; plan 26 3.0).
       const one = this.ids().length === 1 ? this.entries.find(y => y.id === this.ids()[0]) : null;
-      post({ op: 'menu', ids: this.ids(), own: !!one, item: !!one && !one.folder, x: e.clientX * devicePixelRatio, y: e.clientY * devicePixelRatio, extended: e.shiftKey });
+      itemMenu({ op: 'menu', ids: this.ids(), own: !!one, item: !!one && !one.folder, x: e.clientX * devicePixelRatio, y: e.clientY * devicePixelRatio, extended: e.shiftKey });
     });
     // Dragging out: the host starts the shell's own drag (plan 02 3.6).
     this.body.addEventListener('dragstart', e => {
@@ -4050,6 +4050,100 @@ function otherChildOf(id) {
   return { kids, target: [...shown.slice(at + 1), ...shown.slice(0, Math.max(at, 0))].find(f => f !== mine)?.id ?? null };
 }
 
+// ---------- Links and the elevated helper (docs/plans/executed/31-PLAN-elevated-helper-tasks.md) ----------
+
+let clipboardLink = null;   // the clipboard's link source: { kind, path }, or null (the host tells it as it changes)
+let helperRunning = false;  // whether the elevated helper runs (the shield on the ribbon)
+
+// Windows' menu for items, asked here (a pane's page sends its request: viewpage.js), as only this page knows the
+// other panes for Create link (3.2, 3.5).
+function itemMenu(msg) {
+  post({ ...msg, foldex: { others: linkPanes(msg.pane ?? activePane) } });
+}
+
+// The panes a link can go to from a pane: every pane showing a folder on disk (a list's folder, a tree's focused one)
+// but itself and the panes above it; the one Ctrl+Shift+O opens into first.
+function linkPanes(id) {
+  const above = new Set();
+  for (let p = layout.pane(id)?.source; p != null && !above.has(p); p = layout.pane(p)?.source) above.add(p);
+  const first = layout.pane(id) ? otherChildOf(id).target : null;
+  const out = [];
+  for (const [pid, v] of views) {
+    if (pid === id || above.has(pid) || !layout.pane(pid) || layout.pane(pid).away) continue;
+    const folder = v instanceof ScrapView ? null : v instanceof ListView ? v.location : v instanceof TreeView ? layout.state(pid).focus : null;
+    if (!folder || !/^[A-Za-z]:\\|^\\\\/.test(folder)) continue;
+    out.push({ id: pid, folder, title: layout.paneTitle(pid, folder) });
+  }
+  return out.sort((a, b) => (b.id === first) - (a.id === first));
+}
+
+// Create link (3.2): a link of a kind to the focused item, to the clipboard, or into another pane (`paneId`; without:
+// the one there is, or a menu of them to choose from).
+async function createLink(kind, where, paneId, ctx = {}) {
+  const item = focusedItem();
+  if (!item) return;
+  if (where === 'clipboard') {
+    const m = await askHost({ op: 'linkSource', set: { kind, path: item.id } });
+    if (m.error) return status(m.error, true);
+    clipboardLink = m.kind ? { kind: m.kind, path: m.path } : null;
+    return statusAction(`${LinkKinds[kind]} to ${nameOfPath(item.id)} on the clipboard: Paste it in a folder.`);
+  }
+  const panes = linkPanes(activePane);
+  const to = paneId ? panes.find(p => p.id === paneId) : panes.length === 1 ? panes[0] : null;
+  if (to) return makeLinkTo(kind, item.id, to.folder);
+  if (!panes.length) return status('Create link: there is no other pane showing a folder.', true);
+  const r = (ctx.el ?? views.get(activePane)?.body ?? document.body).getBoundingClientRect();
+  openMenu(r.left, ctx.el ? r.bottom : r.top, panes.map(p => ({ label: p.title, run: () => makeLinkTo(kind, item.id, p.folder) })));
+}
+
+const nameOfPath = p => p.replace(/\\+$/, '').split('\\').pop() || p;
+
+// A link made in a folder; a name that is there: another asked ("name (2)" offered), Cancel makes nothing.
+async function makeLinkTo(kind, target, folder, name = null) {
+  const m = await askHost({ op: 'makeLink', kind, target, folder, name });
+  if (m.exists) {
+    const other = await askText(`${nameOfPath(m.name.replace(/ \(\d+\)/, ''))} is in ${folder} already: name of the ${LinkKinds[kind].toLowerCase()}`, m.name);
+    return other ? makeLinkTo(kind, target, folder, other) : null;
+  }
+  if (m.error) return status(`${LinkKinds[kind]}: ${m.error}`, true);
+  statusAction(`${LinkKinds[kind]} made: ${m.made}`);
+}
+
+// Paste <kind> to <item> (3.2): the clipboard's link source made in a folder.
+function pasteLinkTitle() {
+  return clipboardLink ? `Paste ${LinkKinds[clipboardLink.kind]?.toLowerCase() ?? 'link'} to ${nameOfPath(clipboardLink.path)}` : 'Paste link';
+}
+async function pasteLink(folder) {
+  const m = await askHost({ op: 'linkSource' });
+  clipboardLink = m.kind ? { kind: m.kind, path: m.path } : null;
+  if (!clipboardLink) return status('Paste link: no link on the clipboard (Create link ... to clipboard puts one there).', true);
+  if (!folder) return status('Paste link: no folder to put it in.', true);
+  return makeLinkTo(clipboardLink.kind, clipboardLink.path, folder);
+}
+
+// Take ownership (3.1): the selected items, everything in the folders too when you say so; the helper does it.
+async function takeOwnership() {
+  const ids = selectedIds().filter(id => /^[A-Za-z]:\\|^\\\\/.test(id));
+  if (!ids.length) return;
+  const what = ids.length === 1 ? nameOfPath(ids[0]) : `${ids.length} items`;
+  if (!await askYes(`Take ownership of ${what}? You become their owner (Windows asks for administrator rights the first time).`)) return;
+  const folders = ids.filter(id => views.get(activePane)?.entries?.find(x => same(x.id, id))?.folder);
+  const recursive = folders.length > 0 && await askYes('Also of everything in the folders?');
+  status(`Taking ownership of ${what}...`);
+  const m = await askHost({ op: 'takeOwnership', ids, recursive });
+  if (m.error) return status(`Take ownership: ${m.error}`, true);
+  const failed = m.failed ?? [];
+  if (failed.length) status(`Take ownership: ${m.done} done, ${failed.length} not: ${failed[0].path}: ${failed[0].error}`, true);
+  else statusAction(`Take ownership: ${m.done} done.`);
+}
+
+// The shield on the ribbon (3.3): shown while the helper runs; a click ends it.
+function showHelper(running) {
+  helperRunning = !!running;
+  if (typeof drawHelperShield === 'function') drawHelperShield(helperRunning);
+  ribbonRefresh();
+}
+
 // Ctrl+Shift+O: the folder the active pane focuses opened in the next other child of its parent (of the pane itself
 // when it is a root), in the order the children were made; with no other child shown, as Ctrl+O: a hidden one shown
 // again, else a new one at its right. The keyboard stays in the active pane.
@@ -4598,6 +4692,9 @@ function currentFolder() {
   return folder && /^[A-Za-z]:\\|^\\\\/.test(folder) ? folder : null;
 }
 
+// Explorer's Rename chosen in its menu: the focused item renamed in place (menuDone).
+function renameFocusedHere() { startRename(activeView(), layout.state(activePane).focus); }
+
 function nameOf(id) {
   for (const v of views.values()) {
     const x = v.entries?.find(e => e.id === id) ?? v.node?.(id);
@@ -4701,6 +4798,8 @@ const events = {
     filterSetsCame(m.filters);
     bookmarksCame(m.bookmarks);
     if (typeof macrosCame === 'function') macrosCame(m.macros);   // the window's page (macros.js)
+    clipboardLink = m.linkSource ?? null;   // plan 31
+    showHelper(m.helper);
     start(m.paths, m.layout);
   },
   // Bars changed in a window (plan 10 3.3), and the drives there are now (3.2).
@@ -4796,12 +4895,17 @@ const events = {
   menuDone(m) {
     window.__spike.events.push({ menuDone: m.verb ?? null, error: m.error ?? null });
     if (m.error) status(m.error, true);
-    else if (m.verb === 'rename') startRename(activeView(), layout.state(activePane).focus);   // Explorer's Rename: in place
+    // Explorer's Rename: in place, in the pane's own page when it has one (the window asks the menu: itemMenu).
+    else if (m.verb === 'rename') isPaged(activeView()) ? activeView().channel.send({ kind: 'global', key: 'renameFocused', fn: 'renameFocusedHere', args: [] }) : renameFocusedHere()
     else if (m.verb) setTimeout(() => {
       reloadLists();
       for (const v of scrapViews()) v.verify(v.ids());   // a scrap's own items, deleted from Explorer's menu
     }, 300);
   },
+  // Plan 31: an action of the Foldex submenu chosen; the clipboard's link source; whether the elevated helper runs.
+  runAction(m) { runAction(m.name, m.params ?? []); },
+  linkSource(m) { clipboardLink = m.kind ? { kind: m.kind, path: m.path } : null; ribbonRefresh(); },
+  helper(m) { showHelper(m.running); },
   menuTexts(m) { window.__spike.events.push({ menuTexts: m.texts, error: m.error }); },
   verbDone(m) { window.__spike.events.push({ verbDone: m.ok, error: m.error }); setTimeout(reloadLists, 300); },
   executeFailed(m) { status(m.error, true); },

@@ -8,7 +8,7 @@
 // The tabs of the settings window, each with its groups in order: the app itself, the panes, what is in them, and
 // searching and scraps.
 const SETTING_TABS = [
-  ['App', ['Theme', 'Fonts', 'Mouse', 'Ribbon', 'Status line', 'Memory']],
+  ['App', ['Theme', 'Fonts', 'Mouse', 'Ribbon', 'Status line', 'Memory', 'Administrator rights']],
   ['Panes', ['Colours', 'Behaviour', 'Scrollbars']],
   ['Contents', ['Rows', 'Columns', 'Highlights', 'Trees', 'Items', 'Thumbnails', 'Preview']],
   ['Search and scrap', ['Search bar', 'Find']],
@@ -36,6 +36,8 @@ const SETTING_ROWS = [
     hint: 'What the Log pane shows. Errors and the messages Foldex gives are always in it; the status line shows everything as before.' },
   { tab: 'App', group: 'Memory', name: 'folderCacheMB', kind: 'range', range: [16, 4096, 16], unit: ' MB', title: 'Folder cache',
     hint: 'How much memory the folders read may keep, for all windows: a folder read once is shown again at once, and folders you use often are read ahead. When Windows runs short of memory, the cache lets go anyway.' },
+  { tab: 'App', group: 'Administrator rights', name: 'helperMinutes', kind: 'range', range: [0, 120, 1], unit: ' min', title: 'Keep the elevated helper',
+    hint: 'After its last task (List as administrator, Take ownership, a symbolic link without developer mode) the helper stays this long, so the next task does not ask Windows again; 0: ended after each task. While it runs, a shield shows at the right of the tabs of the ribbon; a click on it ends it at once.' },
   { tab: 'App', group: 'Memory', name: 'cacheNetwork', kind: 'toggle', title: 'Cache network shares',
     hint: 'On: folders on network shares are kept after they are shown, read ahead, and checked again when shown again. Off: they are kept only while shown, and read anew when opened again. Either way their changes come in item by item, as on a local drive.' },
   { tab: 'App', group: 'Fonts', name: 'appFont', kind: 'font', title: 'Window font',

@@ -1,8 +1,9 @@
 # Plan 31: The elevated helper's further tasks: ownership, links, its lifetime
 
-Status: not started; see Status.
+Status: executed; see Status and 6.
 
 - 2026-11-17: draft, at the user's request: the parts of plan 05 that are not about elevating file operations.
+- 2026-11-20: executed.
 
 Builds on plan 05 (executed): Foldex never runs elevated; file operations go through `IFileOperation`, which asks
 for administrator permission per operation; a small elevated helper (the same exe, started through UAC, a private pipe
@@ -17,8 +18,9 @@ is not enough. And the helper is started for each listing now, so a series of su
 
 ## 2. The solution, in brief
 
-The elevated helper gets three more operations: take ownership (for the current user), make a symbolic link, and list
-a folder after taking ownership of it (for SYSTEM and TrustedInstaller folders). A submenu Create link holds, per
+The elevated helper gets two more operations, take ownership (for the current user) and make a symbolic link, and lists
+with the backup privilege, so a folder only SYSTEM may read is listed too, without changing its owner or permissions.
+A submenu Create link holds, per
 kind that fits the item (a symbolic link; a junction for a folder; a hard link for a file; a shortcut, which is no
 link but is looked for there), "in other pane" (with more
 than one other pane, a list of them to choose from) and "to clipboard"; from the clipboard, "Paste symbolic link (junction, hard link) to <item name>" makes it in any folder. No dialog: a link is named as the
@@ -30,17 +32,20 @@ asks UAC once; the time is a setting, and while it runs the ribbon shows a shiel
 
 ### Built
 
+| Part | What | Reference |
+|---|---|---|
+| Take ownership | the helper's operation, for the current user, with everything in folders when asked; an action for the selected items | 3.1; 6.1 |
+| SYSTEM and TrustedInstaller folders | listed by the helper with the backup privilege (nothing changed on them) | 3.1; 6.1 |
+| Create link | a submenu: symbolic link, junction (a folder), hard link (a file), shortcut (.lnk), each in other pane (one, or a list) or to clipboard; a symbolic link through the helper without developer mode | 3.2; 6.2 |
+| Paste link | "Paste symbolic link / junction / hard link / shortcut (.lnk) to <item name>" while the clipboard holds a link source | 3.2; 6.2 |
+| The Foldex submenu | Foldex's own items for an item in a submenu at the top of Explorer's right-click menu | 3.5; 6.3 |
+| Helper lifetime | a session: stays after its last operation for the setting helperMinutes, the shield on the ribbon ends it | 3.3; 6.4 |
+| Checks | in the test copy on a PC that elevates without asking, so the helper's operations really ran (6.5) | 3.4; 6.5 |
+
 ### Not yet built
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| Take ownership | the helper's operation, for the current user; an action for the selected items | -- | 3.1 |
-| Create link | a submenu: symbolic link, junction (a folder), hard link (a file), shortcut (.lnk), each in other pane or to clipboard; a symbolic link through the helper without developer mode | -- | 3.2 |
-| Paste link | "Paste symbolic link / junction / hard link / shortcut (.lnk) to <item name>" while the clipboard holds a link source | Create link | 3.2 |
-| The Foldex submenu | Foldex's own items for an item in a submenu at the top of Explorer's right-click menu | -- | 3.5 |
-| SYSTEM and TrustedInstaller folders | listed after taking ownership | Take ownership | 3.1 |
-| Helper lifetime | stays a while after its last operation, the time as a setting, the shield in the ribbon | -- | 3.3 |
-| Checks by hand | copying into a protected location (plan 05's `IFileOperation`) and each operation here through UAC | -- | 3.4 |
 
 ## 3. Details
 
@@ -50,8 +55,9 @@ asks UAC once; the time is a setting, and while it runs the ribbon shows a shiel
   for the current user; with Recursive, of everything under a folder. Its result per path: done, or why not.
 - An action, Take ownership, for the selected items (`selected`, not the focused one: it works on several), on the
   item's menu and in F1; plan 01 lists it among the actions.
-- A folder owned by SYSTEM or TrustedInstaller that the helper cannot list: "Take ownership and list" in its message,
-  which does both through the helper.
+- A folder only SYSTEM or TrustedInstaller may read (`System Volume Information`): the helper lists it with the backup
+  privilege, which reads past a folder's permissions without changing them; owning it would not help (that one is
+  owned by Administrators already). Take ownership stays an action of its own, for when you want to own something.
 - Changing permissions beyond ownership (an ACL editor) is not part of this: Windows' Security tab in Properties does
   that.
 
@@ -116,7 +122,7 @@ asks UAC once; the time is a setting, and while it runs the ribbon shows a shiel
 
 ### 3.3 The helper's lifetime
 
-- It stays after its last operation for the time of a setting [default not yet decided], so a series asks UAC once;
+- It stays after its last operation for the time of a setting (helperMinutes, 5 minutes, 0 to 120), so a series asks UAC once;
   then it exits. It still exits at once when Foldex goes.
 - While it runs, the ribbon shows a shield in the theme's warning colour; a click on it ends the helper.
 
@@ -148,3 +154,67 @@ asks UAC once; the time is a setting, and while it runs the ribbon shows a shiel
 ## 4. Open questions
 
 None.
+
+## 6. As built
+
+### 6.1 The helper's operations (2026-11-20)
+
+- `ElevatedHelper.Run` switches on three privileges an administrator holds, once: SeBackupPrivilege (reading any folder:
+  .NET's listing opens folders with backup semantics, so `ShellListing.List` in the helper lists a folder only SYSTEM
+  may read), SeRestorePrivilege and SeTakeOwnershipPrivilege (setting an owner). New operations, checked as `list`:
+  `takeOwnership` { paths (full), recursive, sid } (`SetNamedSecurityInfo` with the owner only; recursive: a walk that
+  sets a link's own owner and does not go through it; per path done, or why) and `symlink` { link, target }.
+- Changed from the plan: "take ownership and list" for SYSTEM folders. Checked first on the user's PC: elevated,
+  `WindowsApps` (owned by TrustedInstaller) lists as it is; `System Volume Information` (owned by Administrators
+  already, only SYSTEM may read it) is denied even elevated, and with the backup privilege listed (nothing changed). So
+  the backup privilege, and Take ownership stays an action of its own.
+- Take ownership (`item.takeOwnership`): asks first; with folders among the selected, whether also everything in them.
+
+### 6.2 Links (2026-11-20)
+
+- `src/Shell/Links.cs`: the kinds that fit an item, their names (the item's own; a shortcut "<name> - Shortcut.lnk";
+  `FreeName` offers "name (2)"), making each: a symbolic link by .NET (with developer mode; else "elevate", and the
+  host asks the helper), a junction (a folder with a mount point reparse point, written with `FSCTL_SET_REPARSE_POINT`),
+  a hard link (`CreateHardLink`; on another drive refused), a shortcut (`IShellLink`, saved by `IPersistFile`).
+- The host: `makeLink` (a name that is there: { exists, name } and the page asks for another), `linkSource` (put, read).
+  The clipboard: the item as a copy is, and the format "Foldex link source" with "kind|path"; the windows listen to
+  the clipboard (`AddClipboardFormatListener`) and are told what link source it holds (`linkSource`), so the menus and
+  the ribbon know it at once.
+- The page: `link.create` (a variant per kind and place, so F1 and keys have them), `link.paste` (its title names the
+  kind and the item), `createLink`, `makeLinkTo`, `pasteLink`; the other panes (`linkPanes`): every pane showing a
+  folder on disk but the pane itself and those above it, the one Ctrl+Shift+O opens into first. Foldex's own menu of
+  a pane's empty part has "Paste <kind> to <item>" while there is a link source; the ribbon's Clipboard group a Paste
+  link button (its text fixed, as the ribbon does not change texts; its tooltip names the kind and item).
+
+### 6.3 The Foldex submenu (2026-11-20)
+
+- `ShellMenu.OwnItem`: Foldex's own items as a tree, a submenu a popup of its own (`MF_POPUP`), the items numbered past
+  the shell's range in their order. `MainForm.FoldexSubmenu`: Create link (per kind: in other pane, one or a list of
+  them, to clipboard), Take ownership..., and on a folder Paste <kind> to <item>; each runs an action of the page that
+  asked (`runAction`).
+- The menu for items is asked by the window's page (`itemMenu`), which knows the other panes; a pane's own page sends
+  its request there (viewpage.js), with its point on the screen. Explorer's Rename chosen from it renames in the pane's
+  own page (`renameFocusedHere`).
+
+### 6.4 The helper's lifetime (2026-11-20)
+
+- `ElevatedHelper.Session` (AppHost.Elevated): started through UAC at the first operation; kept after each for the
+  setting helperMinutes (5 minutes by default, chosen: not measured; 0 to 120; 0 ends it after each); `End` (the shield,
+  `helper.end`) closes the pipe, and the helper exits. Every window is told whether it runs (`helper`): the shield at
+  the right of the ribbon's tabs, in the warning colour. List as administrator goes through the session too.
+
+### 6.5 Tests
+
+- `LinksTests`: what fits a file and a folder, the names and a free name; a junction (the folder's items through it),
+  a hard link (changed through either name), a shortcut made; a symbolic link made or needing the helper; a hard link
+  to another drive refused; the link source's bytes; what the helper refuses, and take ownership's answer per path.
+  `dotnet test` 322 passed.
+- In the test copy, on a PC that elevates an administrator without asking (`ConsentPromptBehaviorAdmin` 0), so the
+  helper really ran: a hard link into the one other pane; the name taken: asked, "file (2).txt" offered and made; a
+  symbolic link (no developer mode) made by the helper, the shield shown; a junction to the clipboard ("Paste junction
+  to data") pasted in a third folder; Take ownership of a folder with everything in it (4 done, none failed);
+  `C:\System Volume Information` listed through the helper (22 entries); the shield clicked: the helper gone, the
+  shield hidden. The right-click menu photographed: Foldex > Create link > the kinds of a folder, Take ownership...,
+  Paste junction to data; Windows' own items and the extensions' under it as before.
+- Not checked: UAC's question itself (this PC does not ask), a cancelled question, the helper ending after its minutes,
+  a symbolic link with developer mode, a share.

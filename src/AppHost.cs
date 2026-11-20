@@ -121,7 +121,20 @@ sealed class AppHost : ApplicationContext
         Cache.BudgetBytes = (long)(Math.Clamp(mb, 16, 4096) * 1024 * 1024);
         Cache.CacheNetwork = values?["cacheNetwork"]?.GetValue<bool>() != false;
         Cache.Trim(false);
+        helperMinutes = (int)Math.Clamp(values?["helperMinutes"]?.GetValue<double>() ?? 5, 0, 120);
     }
+
+    int helperMinutes = 5;
+
+    /// <summary>The elevated helper as every window uses it (docs/plans/executed/31-PLAN-elevated-helper-tasks.md 3.3): one UAC
+    /// start, kept for the minutes of the setting helperMinutes after its last operation; every window is told whether
+    /// it runs (`helper`: the shield on the ribbon).</summary>
+    public ElevatedHelper.Session Elevated => elevated ??= new ElevatedHelper.Session(() => helperMinutes, running =>
+    {
+        foreach (var w in windows.ToList())
+            if (w.IsHandleCreated) w.BeginInvoke(() => w.Tell(new JsonObject { ["event"] = "helper", ["running"] = running }));
+    });
+    ElevatedHelper.Session? elevated;
 
     /// <summary>What the cache holds now (the settings window shows it by its slider).</summary>
     public JsonObject CacheInfo()

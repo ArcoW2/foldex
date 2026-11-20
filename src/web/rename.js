@@ -276,5 +276,7 @@ function emptyMenu() {
   return [
     { label: withKey('New folder', 'folder.new'), enabled: can, run: () => newItem('folder') },
     { label: withKey('New file', 'file.new'), enabled: can, run: () => newItem('file') },
+    // The clipboard's link source pasted here (plan 31 3.2): its kind and item in the text.
+    ...(clipboardLink ? ['-', { label: withKey(pasteLinkTitle(), 'link.paste'), enabled: can, run: () => runAction('link.paste') }] : []),
   ];
 }

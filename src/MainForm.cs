@@ -416,7 +416,57 @@ sealed class MainForm : Form
                     break;
                 }
                 ShowMenu(ids, ToScreen(msg), msg["extended"]?.GetValue<bool>() == true, msg["own"]?.GetValue<bool>() == true, msg["item"]?.GetValue<bool>() == true,
-                    msg["bookmark"]?.GetValue<string>());
+                    msg["bookmark"]?.GetValue<string>(), msg["foldex"] as JsonObject);
+                break;
+            case "makeLink":
+            {
+                // A link of a kind to `target` in `folder` (plan 31 3.2): named as the item unless a name is given; a name
+                // that is there: { exists, name } (the page asks for another); a symbolic link without developer mode:
+                // made by the elevated helper.
+                var kind = msg["kind"]!.GetValue<string>();
+                var linkTarget = msg["target"]!.GetValue<string>();
+                var folder = msg["folder"]!.GetValue<string>();
+                var name = msg["name"]?.GetValue<string>() is { Length: > 0 } given ? given : Links.NameFor(kind, linkTarget);
+                var link = Path.Combine(folder, name);
+                if (File.Exists(link) || Directory.Exists(link))
+                {
+                    Post(new JsonObject { ["event"] = "answer", ["req"] = msg["req"]?.DeepClone(), ["exists"] = true, ["name"] = Links.FreeName(folder, name) });
+                    break;
+                }
+                var error = await Task.Run(() => Links.Make(kind, linkTarget, link));
+                if (error == "elevate")
+                {
+                    var r = await app.Elevated.Ask(new JsonObject { ["op"] = "symlink", ["link"] = link, ["target"] = linkTarget });
+                    error = r["error"]?.GetValue<string>();
+                }
+                Post(new JsonObject { ["event"] = "answer", ["req"] = msg["req"]?.DeepClone(), ["error"] = error, ["made"] = error is null ? link : null });
+                break;
+            }
+            case "linkSource":
+            {
+                // Put (`set`: { kind, path }) or read the link source on the clipboard (plan 31 3.2).
+                string? error = null;
+                if (msg["set"] is JsonObject set) error = ShellClipboard.PutLinkSource(set["path"]!.GetValue<string>(), set["kind"]!.GetValue<string>());
+                var source = ShellClipboard.LinkSource();
+                Post(new JsonObject { ["event"] = "answer", ["req"] = msg["req"]?.DeepClone(), ["error"] = error,
+                    ["kind"] = source?.Kind, ["path"] = source?.Path });
+                break;
+            }
+            case "takeOwnership":
+            {
+                // The selected items' owner the user (plan 31 3.1), by the elevated helper.
+                var r = await app.Elevated.Ask(new JsonObject { ["op"] = "takeOwnership", ["paths"] = new JsonArray([.. ids.Select(i => (JsonNode)JsonValue.Create(i)!)]),
+                    ["recursive"] = msg["recursive"]?.GetValue<bool>() == true, ["sid"] = System.Security.Principal.WindowsIdentity.GetCurrent().User!.Value });
+                r["event"] = "answer";
+                r["req"] = msg["req"]?.DeepClone();
+                Post(r);
+                break;
+            }
+            case "helperEnd":
+                app.Elevated.End();
+                break;
+            case "helperState":
+                Post(new JsonObject { ["event"] = "helper", ["running"] = app.Elevated.Running });
                 break;
             case "menuTexts":
             {
@@ -1072,10 +1122,11 @@ sealed class MainForm : Form
         }));
     }
 
-    // A folder the user cannot read, listed by the elevated helper (UAC asks); its icons are this process's own.
+    // A folder the user cannot read, listed by the elevated helper (UAC asks when it does not run yet); its icons are
+    // this process's own.
     async Task ListElevated(string location, int req, string channel, bool foldersOnly)
     {
-        var r = await ElevatedHelper.List(location);
+        var r = await app.Elevated.Ask(new JsonObject { ["op"] = "list", ["path"] = location });
         if (foldersOnly && r["entries"] is JsonArray all)
             r["entries"] = new JsonArray(all.Where(e => e!["folder"]!.GetValue<bool>()).Select(e => e!.DeepClone()).ToArray());
         if (r["entries"] is JsonArray entries)
@@ -1094,7 +1145,7 @@ sealed class MainForm : Form
         Post(r);
     }
 
-    void ShowMenu(List<string> ids, Point screen, bool extended, bool own, bool item, string? bookmark)
+    void ShowMenu(List<string> ids, Point screen, bool extended, bool own, bool item, string? bookmark, JsonObject? foldex = null)
     {
         var (menu, error) = ShellMenu.Create(ids, extended);
         if (menu is null)
@@ -1104,13 +1155,57 @@ sealed class MainForm : Form
         }
         using (menu)
         {
-            // One folder or file: Foldex's own items at the top (plan 23 3.2; plan 26 3.0), quick access and bookmarks.
+            // One folder or file: Foldex's own items at the top (plan 23 3.2; plan 26 3.0), quick access and bookmarks;
+            // then the Foldex submenu (plan 31 3.5) for items on disk. Their actions in the order the menu numbers them.
             var mine = own && ids.Count == 1 ? OwnMenu(ids[0], item, bookmark) : [];
-            if (mine.Count > 0) menu.AddOwn(mine.Select(o => o.Text).ToList());
+            var items = mine.Select(o => new ShellMenu.OwnItem(o.Text)).ToList();
+            var runs = mine.Select(o => o.Run).ToList();
+            if (foldex is not null && FoldexSubmenu(ids, foldex, runs) is { } sub) items.Add(sub);
+            menu.AddOwn(items);
             var verb = menu.Show(this, screen, out var chosen);
-            if (chosen is { } k) mine[k].Run();
+            if (chosen is { } k && k < runs.Count) runs[k]();
             Post(new JsonObject { ["event"] = "menuDone", ["verb"] = verb });
         }
+    }
+
+    // The Foldex submenu (plan 31 3.2, 3.5): Create link (per kind that fits: in other pane, one of them or a list, and
+    // to clipboard), Take ownership, and on a folder Paste <kind> to <item> while the clipboard holds a link source.
+    // Each runs an action of the page that asked (`runAction`); `runs` gets them in the menu's order. `foldex`: what the
+    // window knows: the other panes ({ id, title, folder }).
+    ShellMenu.OwnItem? FoldexSubmenu(List<string> ids, JsonObject foldex, List<Action> runs)
+    {
+        if (ids.Count == 0 || !ids.All(IsDiskPath)) return null;
+        ShellMenu.OwnItem Leaf(string text, string action, params string[] parameters)
+        {
+            runs.Add(() => Post(new JsonObject { ["event"] = "runAction", ["name"] = action,
+                ["params"] = new JsonArray([.. parameters.Select(p => (JsonNode)JsonValue.Create(p)!)]) }));
+            return new ShellMenu.OwnItem(text);
+        }
+        var others = (foldex["others"] as JsonArray ?? []).OfType<JsonObject>().ToList();
+        var items = new List<ShellMenu.OwnItem>();
+        if (ids.Count == 1)
+        {
+            var link = new List<ShellMenu.OwnItem>();
+            foreach (var kind in Links.KindsFor(ids[0]))
+            {
+                if (link.Count > 0) link.Add(new ShellMenu.OwnItem("-"));
+                var words = Links.Words(kind);
+                var title = char.ToUpperInvariant(words[0]) + words[1..];
+                link.Add(others.Count switch
+                {
+                    0 => new ShellMenu.OwnItem($"{title} in other pane", false),
+                    1 => Leaf($"{title} in other pane", "link.create", kind, "pane", others[0]["id"]!.GetValue<string>()),
+                    _ => new ShellMenu.OwnItem($"{title} in pane", true,
+                        [.. others.Select(o => Leaf(o["title"]!.GetValue<string>().Replace("&", "&&"), "link.create", kind, "pane", o["id"]!.GetValue<string>()))]),
+                });
+                link.Add(Leaf($"{title} to clipboard", "link.create", kind, "clipboard"));
+            }
+            items.Add(new ShellMenu.OwnItem("Create link", true, link));
+        }
+        items.Add(Leaf("Take ownership...", "item.takeOwnership"));
+        if (ids.Count == 1 && Directory.Exists(ids[0]) && ShellClipboard.LinkSource() is { } source)
+            items.Add(Leaf($"Paste {Links.Words(source.Kind)} to {Path.GetFileName(source.Path.TrimEnd('\\')).Replace("&", "&&")}", "link.paste", ids[0]));
+        return new ShellMenu.OwnItem("Foldex", true, items);
     }
 
     // Foldex's own items in Windows' menu for one folder or file (plan 26 3.0, 3.8), per tab: Add to quick access, or
@@ -1160,6 +1255,9 @@ sealed class MainForm : Form
             ["renames"] = RenamesFile.Load(AppHost.DataDir),
             ["bookmarks"] = app.BookmarksJson(),
             ["run"] = AppHost.RunId,
+            // Plan 31: the clipboard's link source and whether the elevated helper runs, from the start.
+            ["linkSource"] = ShellClipboard.LinkSource() is { } source ? new JsonObject { ["kind"] = source.Kind, ["path"] = source.Path } : null,
+            ["helper"] = app.Elevated.Running,
         };
     }
 
@@ -1229,9 +1327,27 @@ sealed class MainForm : Form
         return new JsonObject { ["event"] = "nativeListed", ["count"] = entries.Count, ["listedMs"] = listed, ["shownMs"] = shown };
     }
 
+    // The clipboard changed (plan 31 3.2): the page told what link source it holds now, for Paste <kind> to <item>.
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        AddClipboardFormatListener(Handle);
+    }
+
+    [DllImport("user32.dll", SetLastError = true)]
+    static extern bool AddClipboardFormatListener(IntPtr hwnd);
+
+    void TellLinkSource()
+    {
+        var source = ShellClipboard.LinkSource();
+        Tell(new JsonObject { ["event"] = "linkSource", ["kind"] = source?.Kind, ["path"] = source?.Path });
+    }
+
     protected override void WndProc(ref Message m)
     {
         if (ShellMenu.HandleMessage(ref m)) return;
+        const int WmClipboardUpdate = 0x031D;
+        if (m.Msg == WmClipboardUpdate) BeginInvoke(TellLinkSource);
         // In front or not (WM_ACTIVATE), told to the page, which decides by it whether a press only brings the window back
         // (web/app.js, the setting ignoreActivationClick): how (a click, or the keys / the start), and whether the window
         // it went to or came from is one of Foldex's own (a floating pane, a dialog's window): then it was not away.

@@ -94,6 +94,13 @@ function rbElements() {
 }
 
 // ---------- Drawing ----------
+// The shield of the elevated helper (plan 31 3.3; app.js showHelper): shown while it runs.
+const helperShown = () => typeof helperRunning !== 'undefined' && helperRunning;
+function drawHelperShield(on) {
+  const b = document.querySelector('#ribbon .rb-shield');
+  if (b) b.hidden = !on;
+}
+
 function renderRibbon() {
   if (rbInPane) return;
   const box = document.getElementById('ribbon');
@@ -109,7 +116,10 @@ function renderRibbon() {
   const tabs = rb.model.tabs;
   if (!tabs.some(t => t.name === rb.tab)) rb.tab = tabs.some(t => t.name === rbWin.tab) ? rbWin.tab : tabs[0]?.name ?? null;
   row.innerHTML = tabs.map((t, ti) => `<button class="rb-tab${t.name === rb.tab ? ' on' : ''}" data-tab="${ti}"${rb.changing ? ' draggable="true"' : ''} tabindex="-1">${rbEsc(t.name)}</button>`).join('') +
-    (rb.changing ? '<button class="rb-tab rb-new" data-new-tab tabindex="-1">New...</button>' : '');
+    (rb.changing ? '<button class="rb-tab rb-new" data-new-tab tabindex="-1">New...</button>' : '') +
+    // The elevated helper runs (plan 31 3.3): a shield in the warning colour; a click ends it.
+    `<button class="rb-shield" tabindex="-1"${helperShown() ? '' : ' hidden'} title="Administrator rights: the elevated helper runs (Windows asked once). A click ends it; the next task that needs it asks again.">` +
+    '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M8 1.5l5.5 2v4c0 3.5-2.4 6-5.5 7-3.1-1-5.5-3.5-5.5-7v-4z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M8 4.5v4.5M8 11.3h0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>';
   // Every tab's groups (one shown): a tab name dragged over shows its tab without taking away the dragged button.
   bodies.innerHTML = tabs.map((t, ti) => `<div class="rb-body" data-body="${ti}"${t.name === rb.tab ? '' : ' hidden'}>` +
     t.groups.map((g, gi) => rbGroupHtml(ti, gi, g)).join('') +
@@ -368,6 +378,7 @@ async function rbClick(e) {
     return rbSlide(true);
   }
   if (el.matches('.rb-collapse')) return runAction('ribbon.onDemand', [], { from: 'ribbon' });
+  if (el.matches('.rb-shield')) return runAction('helper.end', [], { from: 'ribbon' });
   if (el.matches('[data-new-tab]')) return rbNewTab();
   if (el.matches('.rb-done')) return rbChangeMode(false);
   if (el.matches('.rb-more')) { const r = el.getBoundingClientRect(); return openMenu(r.left, r.bottom, rbOverflowItems()); }

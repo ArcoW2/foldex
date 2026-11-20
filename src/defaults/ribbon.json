@@ -25,7 +25,8 @@
       { "name": "Clipboard", "items": [
         { "action": "item.paste", "size": "large", "label": "Paste" },
         { "action": "item.copy", "label": "Copy" }, { "action": "item.cut", "label": "Cut", "stack": true },
-        { "action": "item.copyPath", "label": "Copy path", "stack": true } ] },
+        { "action": "item.copyPath", "label": "Copy path", "stack": true },
+        { "action": "link.paste", "label": "Paste link" } ] },
       { "name": "Organize", "items": [
         { "action": "item.delete", "size": "large", "label": "Delete" },
         { "action": "file.new" }, { "action": "folder.new", "label": "New\nfolder", "stack": true },

@@ -125,6 +125,11 @@ const RIBBON_ICONS = (() => {
     'ribbon.customize': ['Customize the ribbon', p('M2 3h7M2 6.5h7M2 10h4') + p(pencil)],
     'ribbon.reset': ['Reset the ribbon', '<rect x="1.5" y="2.5" width="13" height="5" rx="1"/>' + p('M7.5 9.5L4.5 12l3 2.5M4.5 12h6a2 2 0 0 0 0-4')],
     'ribbon.onDemand': ['Ribbon only when wanted', p('M3.5 10l4.5-4.5 4.5 4.5')],
+    // Links and ownership (plan 31): two chain links; them over a clipboard; a key over a page; a shield.
+    'link.create': ['Create link', p('M6.5 9.5l3-3M7 4.5l1.5-1.5a2.5 2.5 0 0 1 3.5 3.5L10.5 8M9 11.5L7.5 13a2.5 2.5 0 0 1-3.5-3.5L5.5 8')],
+    'link.paste': ['Paste link', p(clip) + p('M7 10.5l2-2M7.3 8.3l.7-.7a1.3 1.3 0 0 1 1.8 1.8l-.7.7M8.7 10.7l-.7.7a1.3 1.3 0 0 1-1.8-1.8l.7-.7')],
+    'item.takeOwnership': ['Take ownership', p(page) + '<circle cx="11.5" cy="10.5" r="1.8"/>' + p('M11.5 12.3v2.2M11.5 13.5h1.2')],
+    'helper.end': ['End administrator rights', p('M8 1.5l5.5 2v4c0 3.5-2.4 6-5.5 7-3.1-1-5.5-3.5-5.5-7v-4zM5.5 6l5 5M10.5 6l-5 5')],
     // Macros (plan 34): LexPen's Play for one run; the list of steps with Play for the menu.
     'macro.run': ['Run a macro', p('M4.5 2.5l8.5 5.5-8.5 5.5z')],
     'macros.menu': ['Macros', p('M2 3.5h8M2 7h8M2 10.5h5M10.5 9.5l4 2.5-4 2.5z')],

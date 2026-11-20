@@ -322,6 +322,23 @@ action('view.menu', { title: 'Views', hint: 'details, icons or thumbnails, for t
     openMenu(r.left, ctx.el ? r.bottom : r.top, viewsMenu(id));
   } });
 action('palette', { title: 'All actions and keys', group: 'app', run: () => openPalette() });
+// Links and ownership (docs/plans/executed/31-PLAN-elevated-helper-tasks.md 3.1, 3.2; app.js makeLinkTo): a link of a kind to the
+// focused item in another pane or on the clipboard; the clipboard's link source pasted; the selected items' owner the
+// user. A link is the file system's own; a shortcut (.lnk) is a file of its own: never called one the other.
+const LinkKinds = { symlink: 'Symbolic link', junction: 'Junction', hardlink: 'Hard link', shortcut: 'Shortcut (.lnk)' };
+action('link.create', { title: 'Create link', hint: 'a link to the focused item: in another pane (several: you choose), or on the clipboard for Paste link',
+  group: 'items', enabled: params => !!focusedItem() && /^[A-Za-z]:\\|^\\\\/.test(focusedItem().id) && !focusedItem().up && !!LinkKinds[params[0]],
+  variants: Object.keys(LinkKinds).flatMap(k => [[k, 'pane'], [k, 'clipboard']]),
+  variantTitles: Object.fromEntries(Object.entries(LinkKinds).flatMap(([k, t]) => [[`${k} pane`, `${t} in other pane`], [`${k} clipboard`, `${t} to clipboard`]])),
+  run: (params, ctx) => createLink(params[0], params[1], params[2], ctx) });
+action('link.paste', { title: 'Paste link', hint: 'the link on the clipboard (Create link ... to clipboard) made in the folder: its kind and item in its title',
+  group: 'items', enabled: () => !!clipboardLink && !!(currentFolder()),
+  get variantTitles() { return { '': typeof pasteLinkTitle === 'function' ? pasteLinkTitle() : 'Paste link' }; },
+  run: params => pasteLink(params[0] ?? currentFolder()) });
+action('item.takeOwnership', { title: 'Take ownership', hint: 'the selected items owned by you (the elevated helper; Windows asks the first time)',
+  group: 'items', enabled: () => selectedIds().some(id => /^[A-Za-z]:\\|^\\\\/.test(id)), run: () => takeOwnership() });
+action('helper.end', { title: 'End administrator rights', hint: 'the elevated helper ended now: the next task that needs it asks Windows again',
+  group: 'app', enabled: () => helperRunning, run: () => post({ op: 'helperEnd' }) });
 // Macros (docs/plans/executed/34-PLAN-macros.md 3.7; macros.js): one run by its id (each macro a variant, so F1 lists them with
 // their folders and keys, and a ribbon button can be one), the Macros menu (the tree), Manage macros.
 action('macro.run', { title: 'Run a macro', group: 'app', enabled: params => typeof macroById === 'function' && !!macroById(params[0]),

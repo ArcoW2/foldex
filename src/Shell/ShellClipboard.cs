@@ -1,4 +1,5 @@
 using System.Collections.Specialized;
+using System.Runtime.InteropServices;
 
 namespace Foldex.Shell;
 
@@ -23,6 +24,33 @@ static class ShellClipboard
         data.SetData(DropEffect, new MemoryStream(BitConverter.GetBytes(cut ? 2 : 1)));
         Clipboard.SetDataObject(data, true);
         return null;
+    }
+
+    /// <summary>A link source (docs/plans/executed/31-PLAN-elevated-helper-tasks.md 3.2): the item as a copy is (so Paste pastes a
+    /// copy, in Foldex and in Explorer) and Foldex's own format with the kind and the path. Null, or why not.</summary>
+    public static string? PutLinkSource(string path, string kind)
+    {
+        if (!Path.IsPathFullyQualified(path)) return "only a file or folder on disk can be linked to";
+        var data = new DataObject();
+        data.SetFileDropList(new StringCollection { path });
+        data.SetData(DropEffect, new MemoryStream(BitConverter.GetBytes(1)));
+        data.SetData(Links.ClipboardFormat, new MemoryStream(Links.SourceBytes(kind, path)));
+        Clipboard.SetDataObject(data, true);
+        return null;
+    }
+
+    /// <summary>The link source on the clipboard: its kind and path, when Foldex's format is there and its path is the
+    /// file on the clipboard; else null.</summary>
+    public static (string Kind, string Path)? LinkSource()
+    {
+        try
+        {
+            if (Clipboard.GetDataObject() is not { } data || !data.GetDataPresent(Links.ClipboardFormat)) return null;
+            var source = Links.SourceOf((data.GetData(Links.ClipboardFormat) as MemoryStream)?.ToArray());
+            var files = Clipboard.ContainsFileDropList() ? Clipboard.GetFileDropList().Cast<string>().ToList() : [];
+            return source is { } s && files.Count == 1 && string.Equals(files[0], s.Path, StringComparison.OrdinalIgnoreCase) ? s : null;
+        }
+        catch (ExternalException) { return null; }   // the clipboard held by another program a moment
     }
 
     /// <summary>The files on the clipboard, and whether they were cut.</summary>
