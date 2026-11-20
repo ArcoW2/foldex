@@ -1909,6 +1909,8 @@ class ListView {
     const focus = layout.state(this.id).focus, bucket = thumbBucket(size, devicePixelRatio);
     const icons = thumbIcons(), missing = [], nodes = [], noProps = [], shown = [];
     const wanted = [...new Set([...info.flatMap(propsFor), ...(icons.includes('gps') ? propsFor('gps') : [])])];
+    // The images' elements kept between drawings (thumbs.js thumbImg); the ones not drawn now let go.
+    const imgs = this.thumbImgs ??= new Map(), used = new Set();
     boxes.forEach((b, i) => {
       if (b.y + b.h < top || b.y > bottom) return;
       const x = this.entries[i];
@@ -1925,7 +1927,7 @@ class ListView {
       const pic = document.createElement('div');
       pic.className = 'thumb-pic';
       Object.assign(pic.style, { left: `${b.ix}px`, top: `${b.iy}px`, width: `${b.iw}px`, height: `${b.ih}px` });
-      if (t?.url) pic.append(Object.assign(document.createElement('img'), { src: t.url, className: 'thumb-img', draggable: false }));
+      if (t?.url) pic.append(thumbImg(imgs, x.id, t.url, used));
       else pic.append(Object.assign(iconImage(x, missing, 48), { className: 'thumb-icon', draggable: false }));
       // Its icons (3.5): a map pin for a GPS location, RAW.
       const marks = [];
@@ -1953,6 +1955,7 @@ class ListView {
       nodes.push(el);
     });
     this.rows.replaceChildren(...nodes);
+    for (const key of imgs.keys()) if (!used.has(key)) imgs.delete(key);
     askIcons(missing, [], 48);
     if (noProps.length) this.askProps(noProps, wanted);
     this.askThumbs(shown, bucket);

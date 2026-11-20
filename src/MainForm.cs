@@ -850,7 +850,8 @@ sealed class MainForm : Form
             {
                 // Everything Windows knows of an item, for the Info pane (Shell/FileDetails.cs), off this thread.
                 var path = msg["path"]!.GetValue<string>();
-                var groups = await NetworkGuard.Reachable(path) ? await StaWorker.Once("fileInfo", () => Shell.FileDetails.Groups(path)) : null;
+                var counted = app.Sizes.Of(path);   // a folder's size when counted (plan 37)
+                var groups = await NetworkGuard.Reachable(path) ? await StaWorker.Once("fileInfo", () => Shell.FileDetails.Groups(path, counted)) : null;
                 Post(new JsonObject { ["event"] = "answer", ["req"] = msg["req"]?.DeepClone(), ["groups"] = groups,
                     ["error"] = groups is null ? $"{NetworkGuard.Server(path)} is not reachable" : null });
                 break;

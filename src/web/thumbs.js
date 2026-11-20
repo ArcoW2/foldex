@@ -94,14 +94,32 @@ const isRaw = name => RawExtensions.has(name.slice(name.lastIndexOf('.') + 1).to
 const thumbStore = new Map();    // "size:id" -> { url } (url null: Windows has none, the icon is shown)
 const thumbRatios = new Map();   // id -> width / height of its image
 
-// Thumbnails came from the host: kept, and the pane drawn again (placed again when an image's proportions changed it).
+// Thumbnails came from the host: kept, and the pane drawn again (placed again when an image's proportions changed it),
+// once a frame however many batches came in it.
+const thumbsDrawing = new Set();
 function thumbsCame(m) {
   for (const t of m.items) {
     const id = t.id.toLowerCase();
     thumbStore.set(`${m.size}:${id}`, { url: t.url });
     if (t.url && t.width > 0 && t.height > 0) thumbRatios.set(id, t.width / t.height);
   }
-  views.get(m.channel)?.render();
+  if (thumbsDrawing.has(m.channel)) return;
+  thumbsDrawing.add(m.channel);
+  requestAnimationFrame(() => {
+    thumbsDrawing.delete(m.channel);
+    views.get(m.channel)?.render();
+  });
+}
+
+// An image of a thumbnail drawn again: the element it had (decoded already), not a new one that is blank until its
+// image is decoded, so the images do not blink each time the pane is drawn. `imgs`: the view's, "id|url" -> element
+// (two items with the same image each their own).
+function thumbImg(imgs, id, url, used) {
+  const key = `${id}|${url}`;
+  let img = imgs.get(key);
+  if (!img) imgs.set(key, img = Object.assign(document.createElement('img'), { src: url, className: 'thumb-img', draggable: false }));
+  used.add(key);
+  return img;
 }
 
 // Ctrl+wheel and Larger / Smaller: the pane's thumbnail size a step up (1) or down (-1).

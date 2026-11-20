@@ -27,8 +27,9 @@ static class FileDetails
         "System.ItemFolderPathDisplay",
     ];
 
-    /// <summary>[{ title, rows: [[name, value]] }], the groups that have something.</summary>
-    public static JsonArray Groups(string path)
+    /// <summary>[{ title, rows: [[name, value]] }], the groups that have something. `folderSize`: a folder's size when
+    /// it is known (FolderSizes), with what it holds.</summary>
+    public static JsonArray Groups(string path, (long Size, int Files, int Folders)? folderSize = null)
     {
         // Values that are only an ID (a GUID: an audio format, a media class) say nothing to a reader: left out. A GPS
         // position in degrees, minutes and seconds with its N/S or E/W, and in decimal degrees.
@@ -58,11 +59,11 @@ static class FileDetails
         Add("Image", Rows(props.Where(p => Of(p.Name, Image))));
         Add("Video and sound", Rows(props.Where(p => Of(p.Name, Media))));
         Add("Details", Rows(props.Where(p => !Of(p.Name, Image) && !Of(p.Name, Media) && !Of(p.Name, NotDetails))));
-        Add("File", FileRows(path, props.FirstOrDefault(p => p.Name == "System.ItemTypeText").Value));
+        Add("File", FileRows(path, props.FirstOrDefault(p => p.Name == "System.ItemTypeText").Value, folderSize));
         return groups;
     }
 
-    static IEnumerable<(string, string, long?)> FileRows(string path, string? type)
+    static IEnumerable<(string, string, long?)> FileRows(string path, string? type, (long Size, int Files, int Folders)? folderSize)
     {
         FileSystemInfo info = Directory.Exists(path) ? new DirectoryInfo(path) : new FileInfo(path);
         if (!info.Exists) yield break;
@@ -71,6 +72,12 @@ static class FileDetails
         yield return ("Folder", Path.GetDirectoryName(info.FullName.TrimEnd('\\')) ?? "", null);
         if (!string.IsNullOrEmpty(type)) yield return ("Type", type, null);
         if (info is FileInfo file) yield return ("Size", $"{Size(file.Length)} ({file.Length.ToString("N0", CultureInfo.CurrentCulture)} bytes)", null);
+        if (info is DirectoryInfo && folderSize is { } s)
+        {
+            yield return ("Size", $"{Size(s.Size)} ({s.Size.ToString("N0", CultureInfo.CurrentCulture)} bytes)", null);
+            yield return ("Contains", $"{s.Files.ToString("N0", CultureInfo.CurrentCulture)} {(s.Files == 1 ? "file" : "files")}, "
+                + $"{s.Folders.ToString("N0", CultureInfo.CurrentCulture)} {(s.Folders == 1 ? "folder" : "folders")}", null);
+        }
         yield return ("Created", "", Ms(info.CreationTimeUtc));
         yield return ("Modified", "", Ms(info.LastWriteTimeUtc));
         yield return ("Accessed", "", Ms(info.LastAccessTimeUtc));

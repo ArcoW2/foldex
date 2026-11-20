@@ -342,6 +342,9 @@ function folderSizesCame(m) {
   }
   for (const p of m.skipped ?? []) if (folderSizes.get(sizeKey(p)) === 'counting') folderSizes.delete(sizeKey(p));
   sizesShown();
+  // An Info pane showing a folder whose size came: shown again, with it.
+  const came = new Set(Object.keys(m.sizes ?? {}).map(sizeKey));
+  for (const v of views.values()) if (v instanceof InfoView && v.path && came.has(sizeKey(v.path))) v.refresh();
 }
 
 // The folders a tree asked about (it asks for the rows it draws, once each).
