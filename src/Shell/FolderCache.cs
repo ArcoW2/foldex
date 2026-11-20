@@ -322,6 +322,11 @@ sealed class FolderCache : IDisposable
                 target = to;   // a compatibility link that denies its own listing: its target (plan 05 3.1)
                 items = ReadingDisk(() => Read(to));
             }
+            if (target is null && ReadWhole is { } whole)
+            {
+                var infos = items.Values.Select(i => i.Info).ToList();
+                ThreadPool.QueueUserWorkItem(_ => whole(location, infos));
+            }
             lock (gate)
             {
                 f.Items = items;
@@ -496,6 +501,10 @@ sealed class FolderCache : IDisposable
 
     /// <summary>What else counts toward the budget: the folder sizes' records (plan 37 3.5).</summary>
     public Func<long>? ExtraBytes;
+
+    /// <summary>A folder read from disk whole, with what is in it (plan 37: its size from it, FolderSizes.Listed); told
+    /// on the thread pool, not in the listing's way.</summary>
+    public Action<string, IReadOnlyList<FileSystemInfo>>? ReadWhole;
 
     // Over the budget: the folders used longest ago let go (under the gate), never one a window shows or one being read.
     void Trim()

@@ -46,6 +46,7 @@ sealed class FolderSizes : IDisposable
         this.cache = cache;
         this.tell = tell;
         cache.ExtraBytes = () => Bytes;
+        cache.ReadWhole = Listed;
         quiet = new System.Threading.Timer(_ => Process());
         worker = new Thread(Work) { IsBackground = true, Name = "folder sizes", Priority = ThreadPriority.BelowNormal };
         worker.Start();
@@ -183,6 +184,39 @@ sealed class FolderSizes : IDisposable
         {
             foreach (var (k, r) in found) recs[k] = r;
             count = recs.Count;
+        }
+        tell(new JsonObject { ["sizes"] = new JsonObject { [folder] = Json(rec) } });
+        Trim();
+    }
+
+    /// <summary>A folder the cache read whole (a pane opened it): its size known from what it read, without a walk, when
+    /// every folder in it has a record (none in it: its files are all). Kept current as a counted one.</summary>
+    public void Listed(string location, IReadOnlyList<FileSystemInfo> items)
+    {
+        var folder = Key(location);
+        if (disposed || !Path.IsPathFullyQualified(folder) || folder.StartsWith(@"\\?\")) return;
+        var subs = items.OfType<DirectoryInfo>().Where(d => (d.Attributes & FileAttributes.ReparsePoint) == 0).Select(d => Key(d.FullName)).ToList();
+        lock (gate)
+            if (recs.ContainsKey(folder) || walking.Contains(folder) || subs.Any(s => !recs.ContainsKey(s))) return;
+        if (!Watch(Parent(folder) ?? folder)) return;
+        var files = items.OfType<FileInfo>().ToList();
+        long own;
+        try { own = files.Sum(i => i.Length); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return; }
+        Rec rec;
+        lock (gate)
+        {
+            if (recs.ContainsKey(folder) || subs.Any(s => !recs.ContainsKey(s))) return;
+            rec = new Rec { Own = own, OwnFiles = files.Count, Size = own, Files = files.Count, Folders = subs.Count };
+            foreach (var s in subs.Select(s => recs[s]))
+            {
+                rec.Size += s.Size;
+                rec.Files += s.Files;
+                rec.Folders += s.Folders;
+            }
+            recs[folder] = rec;
+            count = recs.Count;
+            if (queue.Find(folder) is { } queued) queue.Remove(queued);
         }
         tell(new JsonObject { ["sizes"] = new JsonObject { [folder] = Json(rec) } });
         Trim();

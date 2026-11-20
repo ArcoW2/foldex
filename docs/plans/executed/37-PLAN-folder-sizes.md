@@ -201,7 +201,19 @@ None.
 - A size cell's tooltip: the bytes, then KB, MB, GB and TB as far as the size reaches (MB too, between KB and GB); a
   folder's adds its files and folders.
 
-### 6.8 Tests
+### 6.8 A folder read whole (asked after the build)
+
+- A folder the cache reads from disk whole (a pane opens it) gets its size from that read, without a walk and whatever
+  the setting, when every folder in it (links not counted) has a record; one with no folders in it always does. So
+  going up from a folder just opened shows its size, and going up again from a folder whose folders all have one.
+  FolderCache `ReadWhole` tells FolderSizes `Listed` on the thread pool; the record is kept current as a counted one
+  (the same watch on the folder it is in).
+- A change made between the cache's read and the watch starting is not seen; F5 counts the folder again.
+- Tests: FolderSizesTests.AFolderReadWholeGetsItsSizeWhenEveryFolderInItHasOne (a folder with an unknown folder in it
+  stays without; three read up from the deepest, no walk; a change added up). In a test copy, the setting off: a folder
+  with two files opened, then its parent: the folder's size shown there (3.9 KB). All tests: 296 passed.
+
+### 6.9 Tests
 
 - Unit (FolderSizesTests): a tree counted with a record per folder and no read of the cache; a junction not followed;
   a file grown three folders down, a file made, a folder deleted and a folder made, each added up by its difference;
