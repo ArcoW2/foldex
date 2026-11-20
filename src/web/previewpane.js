@@ -539,7 +539,7 @@ function info(groups) {
       const row = el('div', 'info-row');
       const n = el('span', 'info-name', name);
       n.title = name;
-      row.append(n, el('span', 'info-value', value));
+      row.append(n, el('span', 'info-value', typeof value === 'number' ? fmtDate(value) : value));   // a date: as the columns
       list.append(row);
     }
   });

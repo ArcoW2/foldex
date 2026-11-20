@@ -12,7 +12,8 @@ namespace Foldex.Shell;
 static class FileDetails
 {
     static readonly string[] Image = ["System.Photo.", "System.Image.", "System.GPS."];
-    static readonly string[] Media = ["System.Video.", "System.Audio.", "System.Media.", "System.Music."];
+    static readonly string[] Gps = ["System.GPS.Latitude", "System.GPS.Longitude", "System.GPS.Altitude"];
+    static readonly string[] Media =["System.Video.", "System.Audio.", "System.Media.", "System.Music."];
 
     // Shown with the file itself, or Windows' own bookkeeping: not among the details.
     static readonly string[] NotDetails =
@@ -32,23 +33,28 @@ static class FileDetails
         // Values that are only an ID (a GUID: an audio format, a media class) say nothing to a reader: left out. A GPS
         // position in degrees, minutes and seconds with its N/S or E/W, and in decimal degrees.
         var all = ShellProps.All(path);
+        // A video's GPS location (an iPhone's .MOV) Windows has, but does not list with the rest: asked by name.
+        var gps = Gps.Where(n => !all.Any(p => p.Name == n)).ToList();
+        if (gps.Count > 0) all.AddRange(ShellProps.Named(path, gps));
         // N/S and E/W have no display name of their own: asked by name.
         var refs = ShellProps.Values([path], ["System.GPS.LatitudeRef", "System.GPS.LongitudeRef"])[path] as JsonObject;
         string Ref(string name) => refs?[name + "Ref"]?[0]?.GetValue<string>() ?? "";
         var props = all.Where(p => !Guid.TryParse(p.Value, out _))
-            .Select(p => p.Name is "System.GPS.Latitude" or "System.GPS.Longitude" ? (p.Name, p.Title, Value: Position(p.Value, Ref(p.Name))) : p)
+            .Select(p => p.Name is "System.GPS.Latitude" or "System.GPS.Longitude" ? (p.Name, p.Title, Value: Position(p.Value, Ref(p.Name)), p.Ms) : p)
             .ToList();
         bool Of(string name, string[] prefixes) => prefixes.Any(p => name.StartsWith(p, StringComparison.Ordinal));
         var groups = new JsonArray();
-        void Add(string title, IEnumerable<(string Title, string Value)> rows)
+        // A row: [title, text], a date [title, ms] (the page shows it as the setting dateFormat says).
+        void Add(string title, IEnumerable<(string Title, string Value, long? Ms)> rows)
         {
             var list = rows.ToList();
             if (list.Count == 0) return;
-            groups.Add(new JsonObject { ["title"] = title, ["rows"] = new JsonArray([.. list.Select(r => (JsonNode)new JsonArray(r.Title, r.Value))]) });
+            groups.Add(new JsonObject { ["title"] = title, ["rows"] = new JsonArray([.. list.Select(r =>
+                (JsonNode)new JsonArray(r.Title, r.Ms is { } ms ? JsonValue.Create(ms) : JsonValue.Create(r.Value)))]) });
         }
         // A property Windows has under two names (an alias) once.
-        IEnumerable<(string, string)> Rows(IEnumerable<(string Name, string Title, string Value)> of) =>
-            of.GroupBy(p => (p.Title, p.Value)).Select(g => g.First()).OrderBy(p => p.Title, StringComparer.CurrentCultureIgnoreCase).Select(p => (p.Title, p.Value));
+        IEnumerable<(string, string, long?)> Rows(IEnumerable<(string Name, string Title, string Value, long? Ms)> of) =>
+            of.GroupBy(p => (p.Title, p.Value)).Select(g => g.First()).OrderBy(p => p.Title, StringComparer.CurrentCultureIgnoreCase).Select(p => (p.Title, p.Value, p.Ms));
         Add("Image", Rows(props.Where(p => Of(p.Name, Image))));
         Add("Video and sound", Rows(props.Where(p => Of(p.Name, Media))));
         Add("Details", Rows(props.Where(p => !Of(p.Name, Image) && !Of(p.Name, Media) && !Of(p.Name, NotDetails))));
@@ -56,17 +62,18 @@ static class FileDetails
         return groups;
     }
 
-    static IEnumerable<(string, string)> FileRows(string path, string? type)
+    static IEnumerable<(string, string, long?)> FileRows(string path, string? type)
     {
         FileSystemInfo info = Directory.Exists(path) ? new DirectoryInfo(path) : new FileInfo(path);
         if (!info.Exists) yield break;
-        yield return ("Name", info.Name);
-        yield return ("Folder", Path.GetDirectoryName(info.FullName.TrimEnd('\\')) ?? "");
-        if (!string.IsNullOrEmpty(type)) yield return ("Type", type);
-        if (info is FileInfo file) yield return ("Size", $"{Size(file.Length)} ({file.Length.ToString("N0", CultureInfo.CurrentCulture)} bytes)");
-        yield return ("Created", info.CreationTime.ToString("G", CultureInfo.CurrentCulture));
-        yield return ("Modified", info.LastWriteTime.ToString("G", CultureInfo.CurrentCulture));
-        yield return ("Accessed", info.LastAccessTime.ToString("G", CultureInfo.CurrentCulture));
+        static long Ms(DateTime utc) => new DateTimeOffset(utc, TimeSpan.Zero).ToUnixTimeMilliseconds();
+        yield return ("Name", info.Name, null);
+        yield return ("Folder", Path.GetDirectoryName(info.FullName.TrimEnd('\\')) ?? "", null);
+        if (!string.IsNullOrEmpty(type)) yield return ("Type", type, null);
+        if (info is FileInfo file) yield return ("Size", $"{Size(file.Length)} ({file.Length.ToString("N0", CultureInfo.CurrentCulture)} bytes)", null);
+        yield return ("Created", "", Ms(info.CreationTimeUtc));
+        yield return ("Modified", "", Ms(info.LastWriteTimeUtc));
+        yield return ("Accessed", "", Ms(info.LastAccessTimeUtc));
         var words = Enum.GetValues<FileAttributes>().Where(a => a != 0 && a != FileAttributes.Normal && a != FileAttributes.Directory && info.Attributes.HasFlag(a))
             .Select(a => a switch
             {
@@ -76,7 +83,7 @@ static class FileDetails
                 FileAttributes.Temporary => "temporary", FileAttributes.NotContentIndexed => "not indexed",
                 _ => a.ToString().ToLowerInvariant(),
             }).Distinct().ToList();
-        if (words.Count > 0) yield return ("Attributes", string.Join(", ", words));
+        if (words.Count > 0) yield return ("Attributes", string.Join(", ", words), null);
     }
 
     // "52; 1; 33.1199999" (as Windows gives degrees, minutes, seconds) and "N": 52 1' 33.12" N (52.02587).

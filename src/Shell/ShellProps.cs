@@ -84,10 +84,11 @@ static class ShellProps
     }
 
     /// <summary>Every property an item has a value for, with its display name and its value as Explorer shows it:
-    /// [(canonical name, title, value)]; properties without a display name and empty values left out.</summary>
-    public static List<(string Name, string Title, string Value)> All(string path)
+    /// [(canonical name, title, value, a date's ms since 1970 or null)]; properties without a display name and empty
+    /// values left out.</summary>
+    public static List<(string Name, string Title, string Value, long? Ms)> All(string path)
     {
-        var list = new List<(string, string, string)>();
+        var list = new List<(string, string, string, long?)>();
         var iid = typeof(IPropertyStore).GUID;
         if (SHGetPropertyStoreFromParsingName(path, IntPtr.Zero, GpsBestEffort, ref iid, out var store) < 0) return list;
         try
@@ -109,7 +110,40 @@ static class ShellProps
                 {
                     if (value.vt == 0 || PSFormatForDisplayAlloc(ref key, ref value, 0, out var text) < 0) continue;
                     text = DirectionMarks.Replace(text, "").Trim();
-                    if (text.Length > 0) list.Add((name, title, text));
+                    if (text.Length > 0) list.Add((name, title, text, MsOf(value)));
+                }
+                finally { PropVariantClear(ref value); }
+            }
+        }
+        finally { Marshal.ReleaseComObject(store); }
+        return list;
+    }
+
+    // A date's ms since 1970 (a page shows it as the setting dateFormat says), else null.
+    static long? MsOf(PropVariant value) => value.vt == VtFiletime ? DateTimeOffset.FromFileTime(value.l).ToUnixTimeMilliseconds() : null;
+
+    /// <summary>Some properties asked by name, as All gives them (ones without a value left out): for those a store has
+    /// without listing them (a video's GPS location).</summary>
+    public static List<(string Name, string Title, string Value, long? Ms)> Named(string path, IEnumerable<string> names)
+    {
+        var list = new List<(string, string, string, long?)>();
+        var iid = typeof(IPropertyStore).GUID;
+        if (SHGetPropertyStoreFromParsingName(path, IntPtr.Zero, GpsBestEffort, ref iid, out var store) < 0) return list;
+        try
+        {
+            var descIid = typeof(IPropertyDescription).GUID;
+            foreach (var name in names)
+            {
+                if (PSGetPropertyKeyFromName(name, out var key) < 0 || PSGetPropertyDescription(ref key, ref descIid, out var description) < 0) continue;
+                string? title = null;
+                try { if (description.GetDisplayName(out title) < 0) continue; }
+                finally { Marshal.ReleaseComObject(description); }
+                if (string.IsNullOrWhiteSpace(title) || store.GetValue(ref key, out var value) < 0) continue;
+                try
+                {
+                    if (value.vt == 0 || PSFormatForDisplayAlloc(ref key, ref value, 0, out var text) < 0) continue;
+                    text = DirectionMarks.Replace(text, "").Trim();
+                    if (text.Length > 0) list.Add((name, title, text, MsOf(value)));
                 }
                 finally { PropVariantClear(ref value); }
             }
