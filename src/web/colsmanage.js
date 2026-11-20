@@ -16,10 +16,14 @@ let ownColumns = [], propList = [];
 let managed = null;      // the set chosen by its name; PaneEntry: the pane's own columns
 let paneCols = null;     // { id, title, columns, sort }: the pane the window was opened from (Columns...)
 let chosenColumn = 0;    // the column chosen in the right part (its index)
+let paneShown = null;    // { set, columns: id -> width }: how that pane shows its columns now (set: a folder's, null: its own)
 
 const PaneEntry = ':pane';
 const manageEl = document.getElementById('manage');
 const columnInfo = id => columnTitles[id] ?? { title: id.split('.').pop().replace(/([a-z])([A-Z])/g, '$1 $2'), width: 10 };
+// The width the pane shows a column at now, when the right part shows what that pane shows (its own, or its folder's set).
+const shownWidth = id => paneShown && (managed === PaneEntry ? !paneShown.set : !!paneShown.set && managed === paneShown.set)
+  ? paneShown.columns[id] ?? null : null;
 const copyColumns = c => JSON.parse(JSON.stringify({ columns: c.columns, sort: Array.isArray(c.sort) ? c.sort : c.sort?.id ? [c.sort] : [] }));
 const setNamed = name => columnSets.sets.find(s => s.name.toLowerCase() === name.toLowerCase());
 const saveMine = mine => toWindow({ kind: 'saveMine', mine });
@@ -34,7 +38,9 @@ paneHandlers.sets = m => {
   ownColumns = m.own ?? [];
   propList = m.props ?? [];
   paneCols = m.pane ?? null;
+  paneShown = m.shown ?? null;
   if (m.pane && m.paneFirst) managed = PaneEntry;
+  if (m.choose) managed = m.choose;
   if (managed === PaneEntry && !paneCols || managed !== PaneEntry && (managed === null || !setNamed(managed))) managed = columnSets.sets[0]?.name ?? null;
   if (m.split) manageEl.style.setProperty('--cs-left', `${m.split}px`);
   drawManage();
@@ -243,11 +249,11 @@ function columnRow(set, sort, col, k, list) {
     wrap.append(box, unit);
     return wrap;
   };
-  const shown = Object.assign(document.createElement('label'), { className: 'cs-shown', title: col.id === 'name'
-    ? 'The name column is always shown' : 'Off: kept in the set, not shown; Select columns... in a pane shows it' });
-  const box = Object.assign(document.createElement('input'), { type: 'checkbox', checked: !col.hidden, disabled: col.id === 'name' });
+  const box = Object.assign(document.createElement('input'), { type: 'checkbox', className: 'cs-shown', checked: !col.hidden, disabled: col.id === 'name',
+    title: col.id === 'name' ? 'Shown: the name column always is' : 'Shown; off: kept in the set, not shown (Select columns... in a pane shows it)' });
   box.addEventListener('change', () => changeChosen(s => { if (box.checked) delete s.columns[k].hidden; else s.columns[k].hidden = true; }));
-  shown.append(box, ' Shown');
+  // How wide the pane it was opened from shows it now (an auto column fitted), when that pane shows these columns.
+  const now = shownWidth(col.id);
   // The sort cell: none, ascending, descending, none again; its place in the sort when more than one column sorts.
   const at = sort.findIndex(s => s.id === col.id);
   const sortCell = button(at < 0 ? '-' : `${sort[at].desc ? 'v' : '^'}${sort.length > 1 ? at + 1 : ''}`, () => changeChosen(s => {
@@ -258,8 +264,9 @@ function columnRow(set, sort, col, k, list) {
   }), true, at < 0 ? 'Not sorted by; a click: ascending' : sort[at].desc ? 'Descending; a click: not sorted by' : 'Ascending; a click: descending');
   sortCell.className = 'cs-sort';
   const first = Object.assign(document.createElement('div'), { className: 'cs-line' });
-  first.append(handle, Object.assign(document.createElement('span'), { className: 'cs-title', textContent: columnInfo(col.id).title, title: col.id }),
-    shown, number(col.width ?? columnInfo(col.id).width, (c, v) => { c.width = v ?? columnInfo(col.id).width; }, `Width (${EmTip})`), sortCell);
+  first.append(handle, box, Object.assign(document.createElement('span'), { className: 'cs-title', textContent: columnInfo(col.id).title, title: col.id }));
+  if (now != null && !col.hidden) first.append(Object.assign(document.createElement('span'), { className: 'cs-now',
+    textContent: `shown ${Math.round(now * 10) / 10} em`, title: `How wide the pane shows it now (${EmTip})` }));
   const fit = document.createElement('select');
   fit.title = 'How the column fits its values: never: only with Ctrl+Shift+R (every column); manual: with Ctrl+R too; auto: as soon as the values change, and with either key';
   fit.append(...FitModes.map(([value, text]) => new Option(text, value)));
@@ -267,8 +274,10 @@ function columnRow(set, sort, col, k, list) {
   fit.addEventListener('change', () => changeChosen(s => { s.columns[k].fit = fit.value; }));
   const second = Object.assign(document.createElement('div'), { className: 'cs-line cs-fitline' });
   second.append(Object.assign(document.createElement('span'), { className: 'cs-caption', textContent: 'Fit' }), fit,
+    number(col.width ?? columnInfo(col.id).width, (c, v) => { c.width = v ?? columnInfo(col.id).width; },
+      `Width asked for; an auto column fits from it (${EmTip})`, false, 'width'),
     number(col.min, (c, v) => { if (v) c.min = v; else delete c.min; }, `Minimum width (${EmTip})`, false, 'min'),
-    number(col.max, (c, v) => { if (v) c.max = v; else delete c.max; }, `Maximum width, empty: none (${EmTip})`, true, 'max'));
+    number(col.max, (c, v) => { if (v) c.max = v; else delete c.max; }, `Maximum width, empty: none (${EmTip})`, true, 'max'), sortCell);
   row.append(first, second);
   return row;
 }

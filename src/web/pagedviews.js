@@ -110,6 +110,11 @@ function pagedReceive(v, m) {
       headTitle(v.el, m.title, m.crumbs);
       if (v.stopButton) v.stopButton.hidden = !m.searching;
       if (m.tree) Object.assign(v, { folder: m.tree.folder, root: m.tree.root, focusNode: m.tree.focus, open: new Set(m.tree.open), qa: m.tree.qa });
+      // The widths it shows its columns at: Manage column sets opened from it shows them.
+      if (JSON.stringify(m.widths ?? null) !== JSON.stringify(v.widths ?? null)) {
+        v.widths = m.widths ?? null;
+        columnsFitted(v);
+      }
       if (m.tell) tellLayout();
       if (m.tabs) drawTabs();
       if (m.ribbon) ribbonRefresh();

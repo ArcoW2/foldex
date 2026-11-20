@@ -1578,6 +1578,7 @@ class TreeView {
     this.drawHeader();
     this.render();
     tellLayout();
+    columnsFitted(this);
   }
 
   // The columns whose Fit is auto, fitted once the rows changed (rows shown, values read, the pane resized).
@@ -1781,6 +1782,7 @@ class ListView {
     this.drawHeader();
     this.render();
     if (!this.cols.set) tellLayout();
+    columnsFitted(this);
   }
 
   // The columns whose Fit is auto, fitted once the rows changed (a listing, values read, the pane resized).

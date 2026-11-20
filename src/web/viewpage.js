@@ -84,7 +84,7 @@ function flush() {
   const msg = { kind: 'sync', fields, location: v.location ?? null, name: v.name ?? null, title: v.el.querySelector('.title').textContent, crumbs: v.el.querySelector('.title').dataset.path || null,
     text: v.locationText(), message: v.message ?? null, count: v.itemCount?.() ?? 0, entries: shown, selected: [...(v.selected ?? [])],
     all: v.all?.length ?? 0, allIds: scrap ? v.all.map(x => x.id) : undefined, searching: !!v.searching, watch: watchedHere(v),
-    tree: v instanceof TreeView ? treeHere(v) : undefined };
+    tree: v instanceof TreeView ? treeHere(v) : undefined, widths: v.cols ? columnWidthsOf(v.cols) : undefined };
   const text = JSON.stringify(msg);
   if (text === lastSync && !Object.keys(flags).length) return;
   lastSync = text;
@@ -130,6 +130,7 @@ drawHeads = () => {
   drawHead(pageView, activePane !== null && layout.pane(activePane) ? branchChain(activePane).chain : []);
 };
 tellLayout = () => syncSoon({ tell: true });
+columnsFitted = () => syncSoon();   // the widths with the sync (the window's Manage column sets shows them)
 drawTabs = () => syncSoon({ tabs: true });
 ribbonRefresh = () => syncSoon({ ribbon: true });
 showLocation = () => syncSoon();

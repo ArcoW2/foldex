@@ -594,7 +594,7 @@ function columnHeaderMenu(view) {
       } },
       { label: cols.set ? `Update set ${cols.set}` : 'Update set', enabled: !!cols.set, run: () =>
         saveMine([...columnSets.mine.filter(m => m.name.toLowerCase() !== cols.set.toLowerCase()), { name: cols.set, ...copyColumns(cols) }]) },
-      { label: 'Manage sets...', run: () => openManageSets(cols.set ? null : view.id) } ] },
+      { label: 'Manage sets...', run: () => openManageSets(view.id) } ] },
   ];
 }
 
@@ -662,8 +662,8 @@ async function openSortWindow(view, from) {
 // Its screen is its page's (columnsets.html, colsmanage.js): a pane there is one of (app.js openOnePane), docked in a
 // frame or floating, both as any pane of a page can be. This page sends it the sets with the columns there are, and
 // does for it what needs this page: saving what it changed, a name or a Yes asked, closing it. `paneId` (Manage
-// sets... in a pane's header while it shows its own columns, plan 28 3.8): that pane's own columns first in its list,
-// chosen.
+// sets... in a pane's header, plan 28 3.8): that pane's own columns first in its list; chosen, what it shows (its own
+// columns or its folder's set), with the widths it shows them at.
 let managedPane = null, managedPaneFirst = false;
 function openManageSets(paneId = null) {
   managedPane = paneId;
@@ -681,12 +681,22 @@ function columnSetsForPage(viewId = null) {
   const pane = managedPane && layout.pane(managedPane) ? {
     id: managedPane, title: views.get(managedPane)?.el.querySelector('.title')?.textContent || layout.pane(managedPane).kind,
     ...normalColumns(layout.pane(managedPane).columns ?? genericColumns()) } : null;
+  // How that pane shows its columns now (an auto column fitted): its page tells it (sync), else its own view; first
+  // chosen, the folder's set it shows, or else its own columns.
+  const v = managedPane ? views.get(managedPane) : null;
+  const shown = v ? isPaged(v) ? v.widths ?? null : v.cols ? columnWidthsOf(v.cols) : null : null;
   const first = managedPaneFirst;
   managedPaneFirst = false;
   return { kind: 'sets', columnSets, titles, own: OwnColumns.map(c => ({ id: c.id, title: c.title })),
-    props: (propList ?? []).map(p => ({ name: p.name, title: p.title })), pane, paneFirst: first,
-    split: viewId ? layout.pane(viewId)?.split ?? null : null };
+    props: (propList ?? []).map(p => ({ name: p.name, title: p.title })), pane, paneFirst: first && !shown?.set,
+    choose: first && shown?.set ? shown.set : null, shown, split: viewId ? layout.pane(viewId)?.split ?? null : null };
 }
+
+// A view's columns as wide as it shows them: { set (a folder's set shown, else null), columns: id -> width }.
+const columnWidthsOf = cols => ({ set: cols.set ?? null, columns: Object.fromEntries(cols.columns.map(c => [c.id, c.width])) });
+
+// A view's columns fitted (fitColumns): the Manage page, when it was opened from that pane, shows the widths now.
+let columnsFitted = view => { if (managedPane === view.id) paneOfKind('columnsets')?.render(); };
 
 // What the Manage page asks of this page.
 async function columnSetsPageAsks(view, m) {
