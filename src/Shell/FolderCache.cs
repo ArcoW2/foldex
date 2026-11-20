@@ -225,6 +225,12 @@ sealed class FolderCache : IDisposable
                 batcher.Add(EntryOf(f, item, foldersOnly, tree, icons));
             }
             if (fromCache) _ = Task.Run(() => Check(location));   // shown from the cache: checked against the disk behind it
+            if (fromCache && f.Target is null && ReadWhole is { } whole)
+            {
+                List<FileSystemInfo> infos;
+                lock (gate) infos = f.Items.Values.Select(i => i.Info).ToList();
+                ThreadPool.QueueUserWorkItem(_ => whole(location, infos));
+            }
             return new ShellListing.Result(batcher.Rest, null, false, clock.ElapsedMilliseconds, "disk", icons.ElapsedMilliseconds,
                 cancel.IsCancellationRequested, f.Target);
         }
@@ -502,9 +508,18 @@ sealed class FolderCache : IDisposable
     /// <summary>What else counts toward the budget: the folder sizes' records (plan 37 3.5).</summary>
     public Func<long>? ExtraBytes;
 
-    /// <summary>A folder read from disk whole, with what is in it (plan 37: its size from it, FolderSizes.Listed); told
-    /// on the thread pool, not in the listing's way.</summary>
+    /// <summary>A folder listed whole, read from disk or from the cache, with what is in it (plan 37: its size from it,
+    /// FolderSizes.Listed); told on the thread pool, not in the listing's way.</summary>
     public Action<string, IReadOnlyList<FileSystemInfo>>? ReadWhole;
+
+    /// <summary>What a folder in the cache read whole holds (plan 37: the size of a folder above one whose size became
+    /// known); null when it is not there so.</summary>
+    public IReadOnlyList<FileSystemInfo>? ItemsOf(string location)
+    {
+        lock (gate)
+            return folders.TryGetValue(Key(location), out var f) && f.Complete && !f.Stale && f.Target is null
+                ? f.Items.Values.Select(i => i.Info).ToList() : null;
+    }
 
     // Over the budget: the folders used longest ago let go (under the gate), never one a window shows or one being read.
     void Trim()

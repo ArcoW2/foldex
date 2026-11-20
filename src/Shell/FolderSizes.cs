@@ -187,10 +187,12 @@ sealed class FolderSizes : IDisposable
         }
         tell(new JsonObject { ["sizes"] = new JsonObject { [folder] = Json(rec) } });
         Trim();
+        if (Parent(folder) is { } up && cache.ItemsOf(up) is { } above) Listed(up, above);
     }
 
-    /// <summary>A folder the cache read whole (a pane opened it): its size known from what it read, without a walk, when
-    /// every folder in it has a record (none in it: its files are all). Kept current as a counted one.</summary>
+    /// <summary>A folder the cache listed whole (a pane opened it): its size known from what it holds, without a walk,
+    /// when every folder in it has a record (none in it: its files are all). Kept current as a counted one. Then the
+    /// folder above it the same way when the cache holds that one whole, and so on up.</summary>
     public void Listed(string location, IReadOnlyList<FileSystemInfo> items)
     {
         var folder = Key(location);
@@ -220,6 +222,7 @@ sealed class FolderSizes : IDisposable
         }
         tell(new JsonObject { ["sizes"] = new JsonObject { [folder] = Json(rec) } });
         Trim();
+        if (Parent(folder) is { } up && cache.ItemsOf(up) is { } above) Listed(up, above);
     }
 
     const int Deepest = 256;   // folders deep a walk goes

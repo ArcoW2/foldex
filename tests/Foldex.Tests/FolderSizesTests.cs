@@ -63,8 +63,9 @@ public class FolderSizesTests : IDisposable
         Assert.Equal(["a", "b"], known.Select(p => Path.GetFileName(p.Key)).Order());
     }
 
-    // A folder read whole by the cache (a pane opened it): its size from that read when every folder in it has one, so
-    // going up from a folder with none in it finds its size there; a folder with one not known stays without.
+    // A folder listed whole by the cache (a pane opened it): its size from that when every folder in it has one, so
+    // going up from a folder with none in it finds its size there; a folder with one not known stays without; a size
+    // made passes up through the folders the cache holds whole.
     [Fact]
     public async Task AFolderReadWholeGetsItsSizeWhenEveryFolderInItHasOne()
     {
@@ -76,17 +77,25 @@ public class FolderSizesTests : IDisposable
         cache.List(P("top", "a", "deep", "deeper"), null, CancellationToken.None, false, false);
         await Until(() => sizes.Of(P("top", "a", "deep", "deeper")) is not null);
         Assert.Equal((3L, 1, 0), sizes.Of(P("top", "a", "deep", "deeper")));
+        // Read last of the ones under top\a: top\a (in the cache, read before) gets its size too, and on up; top (in the
+        // cache too) not: b in it has none.
+        cache.List(P("top"), null, CancellationToken.None, false, false);
         cache.List(P("top", "a", "deep"), null, CancellationToken.None, false, false);
-        await Until(() => sizes.Of(P("top", "a", "deep")) is not null);
-        Assert.Equal((3L, 1, 1), sizes.Of(P("top", "a", "deep")));
-        cache.Invalidate(P("top", "a"));
-        cache.List(P("top", "a"), null, CancellationToken.None, false, false);
         await Until(() => sizes.Of(P("top", "a")) is not null);
+        Assert.Equal((3L, 1, 1), sizes.Of(P("top", "a", "deep")));
         Assert.Equal((23L, 2, 2), sizes.Of(P("top", "a")));
-        Assert.Equal(3, sizes.Bytes / FolderSizes.RecordBytes);   // only the three read, nothing walked
+        Assert.Null(sizes.Of(P("top")));
+        // b read: top has its size, from the cache, without being read again.
+        var reads = cache.Reads;
+        cache.List(P("top", "b"), null, CancellationToken.None, false, false);
+        await Until(() => sizes.Of(P("top")) is not null);
+        Assert.Equal((4123L, 4, 4), sizes.Of(P("top")));
+        Assert.Equal(reads + 1, cache.Reads);
+        Assert.Equal(5, sizes.Bytes / FolderSizes.RecordBytes);   // only the ones listed, nothing walked
         // Kept current as a counted one.
         File.WriteAllBytes(P("top", "a", "deep", "deeper", "three.bin"), new byte[10]);
         await Until(() => sizes.Of(P("top", "a"))?.Size == 30);
+        await Until(() => sizes.Of(P("top"))?.Size == 4130);
     }
 
     [Fact]
