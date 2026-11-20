@@ -29,6 +29,8 @@ sealed class FileOps
         public List<string> Made { get; } = [];
         /// <summary>A new folder or file: its parsing name, so the page can rename it at once.</summary>
         public string? Created { get; set; }
+        /// <summary>Done once it is finished (a macro's copy or move waits for it, plan 39 3.4).</summary>
+        public TaskCompletionSource Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public JsonObject ToJson() => new()
         {
@@ -55,66 +57,109 @@ sealed class FileOps
 
     public IReadOnlyList<Operation> All => operations;
 
+    /// <summary>The rights of the macro running (docs/plans/executed/39-PLAN-elevated-macros.md 3.4): "elevated" (the helper does
+    /// every operation, so Windows asks nothing), "never" (Windows' question for administrator permission not shown:
+    /// the operation is aborted), or "" (as always). One macro runs at a time.</summary>
+    public string Rights { get; set; } = "";
+
+    /// <summary>The elevated helper (AppHost.Elevated.Ask), for operations while a macro has the rights.</summary>
+    public Func<JsonObject, Task<JsonObject>>? Helper { get; set; }
+
     /// <summary>Starts a copy or move of items (parsing names) into a folder, a delete (to the Recycle Bin; `confirmed`:
     /// Foldex asked already, Windows does not ask again), a permanent delete (deletePermanent), a rename of one item (rename: `target` is its new name), or a
-    /// new folder or file in `target` ("New folder", "New file.txt"; numbered by Windows when the name is taken). Returns at once.</summary>
-    public Operation Start(string kind, IReadOnlyList<string> ids, string? target, IntPtr owner, bool confirmed, string? name = null)
+    /// new folder or file in `target` ("New folder", "New file.txt"; numbered by Windows when the name is taken). Returns at once.
+    /// `conflict` (a macro's copy or move, plan 39 3.4): "replace" replaces a name that is there without asking,
+    /// "noreplace" leaves it (that item is not copied or moved), null: Windows asks.</summary>
+    public Operation Start(string kind, IReadOnlyList<string> ids, string? target, IntPtr owner, bool confirmed, string? name = null,
+        string? conflict = null)
     {
+        if (conflict == "noreplace" && kind is "copy" or "move" && target is not null)
+            ids = [.. ids.Where(id => !Exists(Path.Combine(target, Path.GetFileName(id.TrimEnd('\\')))))];
         var op = new Operation { Id = ++lastId, Kind = kind, Items = ids.Count, Ids = [.. ids] };
         operations.Add(op);
         changed(op);
-        var thread = new Thread(() => Run(op, ids, target, owner, confirmed, name)) { IsBackground = true, Name = $"file operation {op.Id}" };
+        var flags = FlagsFor(kind, confirmed) | (conflict == "replace" ? Native.FofNoConfirmation : 0) | (Rights == "never" ? Native.FofNoErrorUi : 0);
+        if (Rights == "elevated" && Helper is { } helper)
+        {
+            // By the helper (plan 39 3.6): its answer once done; no progress on the way.
+            _ = Task.Run(async () =>
+            {
+                var a = await helper(new JsonObject
+                {
+                    ["op"] = "fileOp", ["kind"] = kind, ["ids"] = new JsonArray([.. ids.Select(i => JsonValue.Create(i))]),
+                    ["target"] = target, ["name"] = name, ["flags"] = flags,
+                });
+                op.Error = a["error"]?.GetValue<string>();
+                op.Aborted = a["aborted"]?.GetValue<bool>() == true;
+                op.Finished = true;
+                Report(op);
+            });
+            return op;
+        }
+        var thread = new Thread(() => Run(op, ids, target, owner, flags, name)) { IsBackground = true, Name = $"file operation {op.Id}" };
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
         return op;
     }
 
-    void Run(Operation op, IReadOnlyList<string> ids, string? target, IntPtr owner, bool confirmed, string? name)
+    static bool Exists(string path) => File.Exists(path) || Directory.Exists(path);
+
+    static uint FlagsFor(string kind, bool confirmed)
     {
-        try
-        {
-            var hr = Native.CoCreateInstance(Native.ClsidFileOperation, IntPtr.Zero, Native.ClsctxInprocServer,
-                typeof(IFileOperation).GUID, out var ptr);
-            if (hr < 0) Marshal.ThrowExceptionForHR(hr);
-            var fo = (IFileOperation)Marshal.GetObjectForIUnknown(ptr);
-            Marshal.Release(ptr);
-            var flags = Native.FofNoConfirmMkDir | Native.FofAllowUndo;
-            if (op.Kind == "delete") flags |= Native.FofxRecycleOnDelete | (confirmed ? Native.FofNoConfirmation : 0);
-            if (op.Kind == "deletePermanent") flags = (flags & ~Native.FofAllowUndo) | (confirmed ? Native.FofNoConfirmation : 0);
-            if (op.Kind is "newFolder" or "newFile") flags |= Native.FofRenameOnCollision;
-            fo.SetOperationFlags(flags);
-            if (owner != IntPtr.Zero) fo.SetOwnerWindow(owner);
-            var sink = new Sink(this, op);
-            fo.Advise(sink, out var cookie);
-            var dest = target is null || op.Kind == "rename" ? null : Native.Item(target);
-            // A new folder or file by the name given in its row (rename.js newItem); numbered when it is taken meanwhile.
-            if (op.Kind == "newFolder") fo.NewItem(dest!, Native.FileAttributeDirectory, name ?? "New folder", null, IntPtr.Zero);
-            if (op.Kind == "newFile") fo.NewItem(dest!, Native.FileAttributeNormal, name ?? "New file.txt", null, IntPtr.Zero);
-            foreach (var id in ids)
-            {
-                var item = Native.Item(id);
-                switch (op.Kind)
-                {
-                    case "copy": fo.CopyItem(item, dest!, null, IntPtr.Zero); break;
-                    case "move": fo.MoveItem(item, dest!, null, IntPtr.Zero); break;
-                    case "delete" or "deletePermanent": fo.DeleteItem(item, IntPtr.Zero); break;
-                    case "rename": fo.RenameItem(item, target!, IntPtr.Zero); break;
-                    default: throw new ArgumentException($"no file operation {op.Kind}");
-                }
-            }
-            try { fo.PerformOperations(); }
-            catch (COMException ex) when (ex.HResult == unchecked((int)0x80270000)) { }   // COPYENGINE_E_USER_CANCELLED
-            fo.GetAnyOperationsAborted(out var aborted);
-            fo.Unadvise(cookie);
-            Marshal.ReleaseComObject(fo);
-            op.Aborted = aborted;
-        }
+        var flags = Native.FofNoConfirmMkDir | Native.FofAllowUndo;
+        if (kind == "delete") flags |= Native.FofxRecycleOnDelete | (confirmed ? Native.FofNoConfirmation : 0);
+        if (kind == "deletePermanent") flags = (flags & ~Native.FofAllowUndo) | (confirmed ? Native.FofNoConfirmation : 0);
+        if (kind is "newFolder" or "newFile") flags |= Native.FofRenameOnCollision;
+        return flags;
+    }
+
+    void Run(Operation op, IReadOnlyList<string> ids, string? target, IntPtr owner, uint flags, string? name)
+    {
+        try { op.Aborted = Perform(op.Kind, ids, target, owner, flags, name, new Sink(this, op)); }
         catch (Exception ex) when (ex is COMException or ArgumentException or IOException or UnauthorizedAccessException)
         {
             op.Error = ex.Message;
         }
         op.Finished = true;
         Report(op);
+    }
+
+    /// <summary>One operation, on this (STA) thread; true when some of it was aborted. The elevated helper runs it so
+    /// too (plan 39 3.6), without a sink.</summary>
+    internal static bool Perform(string kind, IReadOnlyList<string> ids, string? target, IntPtr owner, uint flags, string? name,
+        IFileOperationProgressSink? sink)
+    {
+        var hr = Native.CoCreateInstance(Native.ClsidFileOperation, IntPtr.Zero, Native.ClsctxInprocServer,
+            typeof(IFileOperation).GUID, out var ptr);
+        if (hr < 0) Marshal.ThrowExceptionForHR(hr);
+        var fo = (IFileOperation)Marshal.GetObjectForIUnknown(ptr);
+        Marshal.Release(ptr);
+        fo.SetOperationFlags(flags);
+        if (owner != IntPtr.Zero) fo.SetOwnerWindow(owner);
+        uint cookie = 0;
+        if (sink is not null) fo.Advise(sink, out cookie);
+        var dest = target is null || kind == "rename" ? null : Native.Item(target);
+        // A new folder or file by the name given in its row (rename.js newItem); numbered when it is taken meanwhile.
+        if (kind == "newFolder") fo.NewItem(dest!, Native.FileAttributeDirectory, name ?? "New folder", null, IntPtr.Zero);
+        if (kind == "newFile") fo.NewItem(dest!, Native.FileAttributeNormal, name ?? "New file.txt", null, IntPtr.Zero);
+        foreach (var id in ids)
+        {
+            var item = Native.Item(id);
+            switch (kind)
+            {
+                case "copy": fo.CopyItem(item, dest!, null, IntPtr.Zero); break;
+                case "move": fo.MoveItem(item, dest!, null, IntPtr.Zero); break;
+                case "delete" or "deletePermanent": fo.DeleteItem(item, IntPtr.Zero); break;
+                case "rename": fo.RenameItem(item, target!, IntPtr.Zero); break;
+                default: throw new ArgumentException($"no file operation {kind}");
+            }
+        }
+        try { fo.PerformOperations(); }
+        catch (COMException ex) when (ex.HResult == unchecked((int)0x80270000)) { }   // COPYENGINE_E_USER_CANCELLED
+        fo.GetAnyOperationsAborted(out var aborted);
+        if (sink is not null) fo.Unadvise(cookie);
+        Marshal.ReleaseComObject(fo);
+        return aborted;
     }
 
     /// <summary>Renames items, each to its own new name in its own folder, as one operation (renameMany,
@@ -185,7 +230,11 @@ sealed class FileOps
         op.Aborted |= aborted;
     }
 
-    void Report(Operation op) => ui.Post(_ => changed(op), null);
+    void Report(Operation op)
+    {
+        ui.Post(_ => changed(op), null);
+        if (op.Finished) op.Completion.TrySetResult();
+    }
 
     // Windows' progress, passed on to the page.
     [ComVisible(true)]

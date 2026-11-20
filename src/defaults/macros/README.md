@@ -105,6 +105,7 @@ They start with `$$`, are read-only and tell where Foldex is now:
 | `$$date`, `$$time` | now: `2026-11-20`, `14:05:09` |
 | `$$error`, `$$errorText` | whether the last step failed, and why (with `onerror continue`) |
 | `$$exitCode` | the exit code of the last `run ... wait` |
+| `$$elevated` | whether the macro has administrator rights now (see Administrator rights) |
 | `$$newline`, `$$tab` | a line break and a tab |
 
 *Focused* and *selected* are not the same: the focused item is the one the cursor is on (one item); the selected items
@@ -177,7 +178,7 @@ On items and lists:
 ## Running a program: run
 
 ```
-run <what> [<parameters>] [in <folder>] [minimized | maximized | hidden] [admin] [wait]
+run <what> [<parameters>] [in <folder>] [minimized | maximized | hidden] [admin | admin_forced] [wait]
 ```
 
 - `<what>`: a program, a document (opened with its program) or a URL; started as Windows' Run starts it. `run
@@ -186,7 +187,10 @@ run <what> [<parameters>] [in <folder>] [minimized | maximized | hidden] [admin]
 - `in <folder>`: where it starts; without, the active pane's folder. `..` is worked out: `in $$focused.path & "\.."` is
   the folder above the focused item's.
 - `minimized`, `maximized`, `hidden`: its window.
-- `admin`: as administrator (Windows asks).
+- `admin`: as administrator (Windows asks). With the macro's administrator rights it runs so anyway; under the setting
+  Never it is an error.
+- `admin_forced`: this one program as administrator, whatever the macro's setting (also Never): Windows asks for it
+  alone, unless the macro has the rights. `admin` and `admin_forced` together: a mistake.
 - `wait`: the macro goes on when the program has ended; `$$exitCode` then has its exit code.
 - The options can stand anywhere and in any order, also before what it runs and on lines of their own (with ` \`).
 
@@ -277,6 +281,60 @@ the active pane, as its key would.
 | `select "*.log"` | the items matching are the selection (several: `*.log;*.txt`) |
 | `focus "a.txt"` | the cursor to that item |
 | `pane "Left"` | the pane of that name becomes the active one |
+
+## Copying and moving: copy, move
+
+```
+copy <items> to <folder> [replace | noreplace]
+move <items> to <folder> [replace | noreplace]
+```
+
+- `<items>`: a list (`$$selected`, `files "*.log"`, a list made with `append`), one item (`$$focused`, `$f`) or a path.
+- `<folder>`: where they go, a full path.
+- A name that is there already: without an option Windows asks, as for a copy in a pane (the macro waits);
+  `replace` replaces every one without asking; `noreplace` leaves every one as it is (that item is not copied or
+  moved, the others are).
+- As a copy in a pane: Windows' own copy, its progress in the operations' list, undo as usual.
+
+```
+copy $$selected to "D:\Backup" replace
+move files "*.log" to $$location & "\old" noreplace
+```
+
+## Administrator rights
+
+A macro runs as you. Some things need administrator rights: a program that asks for them, a copy into
+`C:\Program Files`, a delete in a protected folder. Normally Windows asks for each of them on its own. A macro can ask
+once instead, and then everything it starts or copies runs as administrator without another question.
+
+When it asks is the macro's setting, in Manage macros under Administrator rights:
+
+| Setting | What |
+|---|---|
+| At the step elevate | the default: the macro asks where it says `elevate`; until then it runs as you |
+| At the start | the macro asks before its first step |
+| Never | the macro never has them: `elevate` and `run ... admin` are errors, and a program or copy that needs them fails instead of asking |
+
+- `elevate` (a line of its own): asks for the rights here, unless the macro has them; Windows' administrator question
+  shows (on a PC where it asks). Refused: the macro stops at that line, or with `onerror continue` goes on without
+  them (`$$error` set); a later `elevate` asks again.
+- With the rights, every `run` starts its program as administrator, and every file step (copy, move, and actions such
+  as delete or rename) is done as administrator: no question per program or per copy.
+- They last until the macro ends (done, stopped with Esc, or an error), for every macro it `use`s too. While they
+  last the status line says so and the ribbon shows the shield. The helper that does the work stays for the minutes
+  of the setting helperMinutes after its last task, so a second macro shortly after asks nothing.
+- `$$elevated`: whether the macro has them now.
+- Never: a program that asks for administrator by itself is started as you without Windows' question (and fails
+  where it needs the rights); a copy into a protected folder is not done and the step fails.
+
+```
+elevate
+copy $$selected to "C:\Program Files\Tool" replace
+run "C:\Program Files\Tool\setup.exe" "/quiet" wait
+if $$exitCode <> 0 then
+  log "setup failed: " & $$exitCode
+endif
+```
 
 ## When something goes wrong
 

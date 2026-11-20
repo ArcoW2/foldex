@@ -152,6 +152,7 @@ sealed class AppHost : ApplicationContext
         {
             foreach (var w in windows) w.Tell(new JsonObject { ["event"] = "fileOp", ["op"] = op.ToJson() });
         });
+        FileOps.Helper = r => Elevated.Ask(r);
         // A cached folder changed: every window showing it asks for the items that changed (names), or reads it again
         // whole (no names).
         // A cached folder or place changed: every window showing it asks for the items that changed (ids), or reads it

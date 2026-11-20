@@ -16,7 +16,8 @@ namespace Foldex;
 /// Foldex.exe --elevated-helper &lt;pipe&gt; &lt;parent id&gt;, started through UAC. No window, no WebView2, no shell
 /// extensions; it serves a fixed set of operations over a pipe only its parent may use, and exits when the pipe closes
 /// (its session ends, or Foldex goes). Its operations: listing a folder (with the backup privilege, so a folder only
-/// SYSTEM may read is listed too, nothing on it changed), taking ownership for the user, making a symbolic link.
+/// SYSTEM may read is listed too, nothing on it changed), taking ownership for the user, making a symbolic link; for a
+/// macro with administrator rights (docs/plans/executed/39-PLAN-elevated-macros.md 3.6) its file operations and programs.
 /// </summary>
 static class ElevatedHelper
 {
@@ -86,6 +87,41 @@ static class ElevatedHelper
             }
             case "symlink":
                 return new JsonObject { ["error"] = "symlink needs a full path for the link and its target" };
+            // A macro's (docs/plans/executed/39-PLAN-elevated-macros.md 3.6): started, so the macro has the rights; a file operation
+            // through IFileOperation, elevated (a rename's target is the new name, a new item's the folder); a program.
+            case "hello":
+                return [];
+            case "fileOp" when msg["kind"]?.GetValue<string>() is "copy" or "move" or "delete" or "deletePermanent" or "rename" or "newFolder" or "newFile"
+                && msg["ids"] is JsonArray ids && ids.All(Full) && msg["flags"]?.GetValueKind() == JsonValueKind.Number
+                && (msg["kind"]!.GetValue<string>() is "delete" or "deletePermanent" or "rename" || Full(msg["target"])):
+            {
+                var kind = msg["kind"]!.GetValue<string>();
+                (bool Aborted, string? Error) result = (false, null);
+                // IFileOperation on a thread of its own (STA), as the host runs it.
+                var thread = new Thread(() =>
+                {
+                    try
+                    {
+                        result = (Shell.FileOps.Perform(kind, [.. ids.Select(i => i!.GetValue<string>())], msg["target"]?.GetValue<string>(),
+                            IntPtr.Zero, msg["flags"]!.GetValue<uint>(), msg["name"]?.GetValue<string>(), null), null);
+                    }
+                    catch (Exception ex) when (ex is COMException or ArgumentException or IOException or UnauthorizedAccessException)
+                    {
+                        result = (false, ex.Message);
+                    }
+                });
+                thread.SetApartmentState(ApartmentState.STA);
+                thread.Start();
+                thread.Join();
+                return new JsonObject { ["aborted"] = result.Aborted, ["error"] = result.Error };
+            }
+            case "fileOp":
+                return new JsonObject { ["error"] = "fileOp needs a file operation, full paths and its flags" };
+            case "start" when msg["what"]?.GetValueKind() == JsonValueKind.String:
+                return Shell.MacroRun.Run(Shell.MacroRun.Request.Of(msg.AsObject()) with { Admin = false, AdminForced = false, Rights = "" })
+                    .GetAwaiter().GetResult();
+            case "start":
+                return new JsonObject { ["error"] = "start needs what it starts" };
             default:
                 return new JsonObject { ["error"] = "not an operation of the helper" };
         }

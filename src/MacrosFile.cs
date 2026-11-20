@@ -56,6 +56,8 @@ static class MacrosFile
                 if (Text(o, "icon") is { } icon) m["icon"] = icon;
                 foreach (var k in new[] { "key", "key2" })
                     if (Text(o, k) is { } key && KeysFile.Normalize(key) is string normal) m[k] = normal;
+                // Administrator rights (docs/plans/executed/39-PLAN-elevated-macros.md 3.1); anything else counts as step.
+                if (Text(o, "elevation") is "step" or "start" or "never") m["elevation"] = o["elevation"]!.GetValue<string>();
                 m["text"] = o["text"]?.GetValueKind() == JsonValueKind.String ? o["text"]!.GetValue<string>() : "";
                 kept.Add(m);
             }

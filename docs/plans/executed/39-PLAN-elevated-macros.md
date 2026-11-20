@@ -1,12 +1,13 @@
 # Plan 39: Elevated macros: a macro with administrator rights for its programs and file actions
 
-Status: not started; see Status.
+Status: executed; see Status and 6.
 
 - 2026-11-20: draft, at the user's request.
+- 2026-11-20: executed.
 
 Builds on plan 34 (macros, executed: the language, `run`, Manage macros), plan 05 (executed: Foldex never runs
 elevated; file operations through `IFileOperation`; the elevated helper, started through UAC, a private pipe only its
-parent may use) and plan 31 (the helper's further tasks and its lifetime, not started). LexPen has no elevated macros;
+parent may use) and plan 31 (executed: the helper's further tasks and its lifetime). LexPen has no elevated macros;
 this is Foldex's own.
 
 ## 1. What this is about
@@ -34,21 +35,24 @@ one with `replace` or `noreplace`.
 
 ### Built
 
+| Part | What | Reference |
+|---|---|---|
+| The setting | per macro: at the step elevate (a new macro's), at the start, never; in macros.json and Manage macros | 3.1; 6.1 |
+| Asking | `elevate`; at the start; UAC once; refused or cancelled: the macro stops (or `$$error`); `$$elevated` | 3.2; 6.1 |
+| Programs | every `run` of a macro with the rights started by the helper, as administrator, waited for when asked | 3.3; 6.2 |
+| Never | programs started with `__COMPAT_LAYER=RunAsInvoker`; file actions with `FOF_NOERRORUI`; `elevate` and `admin` errors | 3.3; 3.4; 6.2; 6.3 |
+| admin_forced | `run ... admin_forced`: one program as administrator whatever the setting | 3.3; 6.2 |
+| File actions | the macro's file actions done by the helper (`IFileOperation` in it), no question per operation | 3.4; 6.3 |
+| Copy and move | new steps: `copy <items> to <folder>`, `move <items> to <folder>`; a name that is there asked, or `replace`, `noreplace` | 3.4; 6.3 |
+| Kept until done | the rights for the whole run, then gone; shown while they last | 3.5; 6.1 |
+| The helper | new operations: start a program, file operations | 3.6; 6.2; 6.3 |
+| The guide | the setting, `elevate`, `$$elevated`, `admin_forced`, copy and move in the macros' README | 3.7 |
+| Tests | unit and in the test copy | 3.8; 6.4 |
+
 ### Not yet built
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| The setting | per macro: at the step elevate (a new macro's), at the start, never; in macros.json and Manage macros | -- | 3.1 |
-| Asking | `elevate`; at the start; UAC once; refused or cancelled: the macro stops (or `$$error`); `$$elevated` | -- | 3.2 |
-| Programs | every `run` of a macro with the rights started by the helper, as administrator, waited for when asked | -- | 3.3 |
-| Never | programs started with `__COMPAT_LAYER=RunAsInvoker`; file actions with `FOF_NOERRORUI`; `elevate` and `admin` errors | -- | 3.3; 3.4 |
-| admin_forced | `run ... admin_forced`: one program as administrator whatever the setting | -- | 3.3 |
-| File actions | the macro's file actions done by the helper (`IFileOperation` in it), no question per operation | -- | 3.4 |
-| Copy and move | new steps: `copy <items> to <folder>`, `move <items> to <folder>`; a name that is there asked, or `replace`, `noreplace` | -- | 3.4 |
-| Kept until done | the rights for the whole run, then gone; shown while they last | Plan 31 3.3 (the shield) | 3.5 |
-| The helper | new operations: start a program, file operations; refused outside a macro with the rights | -- | 3.6 |
-| The guide | the setting, `elevate`, `$$elevated`, `admin_forced`, copy and move in the macros' README | -- | 3.7 |
-| Tests | 3.8 | -- | 3.8 |
 
 ## 3. Details
 
@@ -163,3 +167,69 @@ one with `replace` or `noreplace`.
 ## 4. Open questions
 
 None.
+
+## 6. As built
+
+### 6.1 The setting, asking, the run (2026-11-20)
+
+- macros.json keeps `elevation` (`step`, `start`, `never`; anything else left out, so it counts as `step`;
+  `MacrosFile`); a new macro gets `step`. Manage macros: a row "Administrator rights" under Icon, a list of the three
+  with the hint of the one chosen beside it.
+- The page (macros.js): `runMacroText(name, text, elevation)`; the run keeps `elevation` and `elevated`. `start` asks
+  before the first step (refused: the macro stops at line 1); `elevate` (macrolang.js, a statement) asks the
+  environment, which asks the host (`macroElevate`: the helper's `hello`, which starts it through UAC, or uses the one
+  running). With the rights the status line says "Macro X runs as administrator... (Esc stops it)"; the shield is
+  plan 31's. `$$elevated` is a system variable.
+- The host follows the run's rights for file operations (`FileOps.Rights`: set by `macroElevate`, by `macroRights`
+  for never, cleared by `macroRights` at the end of the run, however it ends). The helper itself stays for plan 31's
+  minutes.
+- One thing to know: while a macro has the rights, a file operation started by hand in another window during the run
+  goes through the helper too (one `FileOps` for all windows). One macro runs at a time and runs are short, so it is
+  left so.
+
+### 6.2 Programs (2026-11-20)
+
+- `MacroRun.Request` has `AdminForced` and `Rights`. Rights `elevated`: the helper's `start` (MacroRun in the helper,
+  ShellExecute, as administrator since the helper is), waited for there with its exit code. While it waits the helper
+  answers nothing else (one pipe).
+- Never: a program (`.exe`, `.com`, no extension) started directly with `__COMPAT_LAYER=RunAsInvoker` in its own
+  environment; anything else through `cmd /c start "" [/wait] <what> <parameters>` with the variable in cmd's
+  environment; never on Foldex itself (a test checks). A program by a name only Windows' App Paths know (no path, not
+  on PATH) does not start this way: [not yet checked].
+- `admin_forced`: `runas` (Windows asks for that program) without the rights, also under never; with them the helper.
+  `admin` with `admin_forced`: a mistake when read. `run ... admin` under never: the step's error.
+
+### 6.3 File actions, copy and move (2026-11-20)
+
+- `FileOps.Start` takes `conflict`: `replace` adds `FOF_NOCONFIRMATION`; `noreplace` leaves out, before the operation,
+  each item whose name is in the folder. Rights `never` adds `FOF_NOERRORUI`; rights `elevated` sends the operation to
+  the helper (`fileOp`: kind, full paths, target, name, flags), which runs `IFileOperation` on an STA thread of its
+  own; the host reports it as its own once done (no progress on the way). `FileOps.Perform` is the one operation both
+  run. An operation has a completion a macro waits for.
+- Steps `copy` and `move` (macrolang.js; `copy` no longer one of LexPen's left-out words, LexPen's `copy $var` still
+  refused with its own message); the host's `macroFileOp` waits for the operation: aborted gives "not done (cancelled,
+  or refused)", a failure its message.
+- Whether Windows' question for a name that is there still shows with `FOF_NOERRORUI` under never: [not yet checked].
+- Seen in the test copy, not looked into: a move with `replace` onto a name that is a symbolic link left the link as it
+  was (the item moved went; Windows' copy engine seems to write through the link).
+
+### 6.4 Tests
+
+- `MacroLangTests`: `elevate` asked once; refused: the error at its line; with `onerror continue` `$$error` and a later
+  `elevate` asks again; under never the error; `admin_forced` passed on, with `admin` a mistake; `copy` and `move` (a
+  list, an item, a text; `replace`, `noreplace`, both a mistake; `to` missing; LexPen's `copy $var`). The guide's
+  examples read. `MacroRunTests`: the start under never (directly, through cmd with `/wait`, the variable not on
+  Foldex), `admin_forced` under every setting, a program's exit code under never, the helper asked to start with the
+  rights; the helper's `hello`, refusals of `fileOp` and `start`, and a copy as the helper does it.
+  `MacrosFileTests`: `elevation` kept, a wrong one left out. `dotnet test` 327 passed.
+- In the test copy (this PC elevates an administrator without asking, so the helper really ran):
+  - `step`: `$$elevated` false before `elevate`, true after; `net session` from the macro exit code 0 (administrator);
+    a copy into `C:\Program Files` with `replace` and a move out of it again: done, nothing asked.
+  - `step` without `elevate`: `$$elevated` false, `net session` exit code 5.
+  - `start`: `$$elevated` true at the first step.
+  - `never`: a copy into `C:\Program Files`: the step's error "copy: not done (cancelled, or refused)", nothing shown,
+    nothing copied; `elevate` and `run ... admin` the errors (with `onerror continue`: `$$errorText`); `net session`
+    exit code 5.
+  - Manage macros: the row shown, changed to Never, saved in macros.json and sent to the window.
+- Not checked: UAC's own question and cancelling it (this PC does not ask); a program whose manifest asks for
+  administrator under never through Foldex (checked by hand before the build, 3.3).

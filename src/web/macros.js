@@ -4,7 +4,7 @@
 // macros is macrospane.js. Loaded after app.js.
 
 let macros = [];          // the tree: macros { id, name, icon, key, key2, text } and folders { id, folder, items }
-let macroRunning = null;  // the macro running: { name, stop } (Esc stops it)
+let macroRunning = null;  // the macro running: { name, stop, elevation, elevated } (Esc stops it)
 
 // The tree came (the first message, or a window saved it).
 function macrosCame(list) {
@@ -40,7 +40,7 @@ function macrosMenu() {
 // The steps of panes and items (3.1) beside the actions, with the values each takes.
 const MacroSteps = { go: [1], select: [1], focus: [1], pane: [1] };
 const MacroSystemVars = new Set(['location', 'focused', 'selected', 'count', 'other', 'pane', 'project', 'date', 'time',
-  'error', 'errortext', 'exitcode', 'newline', 'tab']);
+  'error', 'errortext', 'exitcode', 'newline', 'tab', 'elevated']);
 const macroContext = () => ({
   isAction: name => !!MacroSteps[name.toLowerCase()] || isAction(name),
   arities: name => MacroSteps[name.toLowerCase()] ?? null,
@@ -51,17 +51,26 @@ const macroContext = () => ({
 async function runMacroById(id) {
   const m = macroById(id);
   if (!m) return status('That macro is not there any more.', true);
-  return runMacroText(m.name, m.text);
+  return runMacroText(m.name, m.text, m.elevation);
 }
 
-async function runMacroText(name, text) {
+// Its administrator rights (plan 39 3.1): `elevation` step (asked at the step elevate; also without the setting), start
+// (asked before the first step), never (refused, and nothing it starts asks).
+async function runMacroText(name, text, elevation = 'step') {
   if (macroRunning) return status(`Macro ${macroRunning.name} is still running (Esc stops it).`, true);
   const program = macroProgram(text, macroContext());
-  macroRunning = { name, stop: false };
+  macroRunning = { name, stop: false, elevation, elevated: false };
   status(`Macro ${name} runs... (Esc stops it)`);
   let r;
-  try { r = await runMacro(program, macroEnv(), { everyStep: true }); }
-  finally { macroRunning = null; }
+  try {
+    if (elevation === 'never') post({ op: 'macroRights', rights: 'never' });
+    const refused = elevation === 'start' ? await macroElevate() : null;
+    r = refused ? { ok: false, error: { line: 1, message: refused } } : await runMacro(program, macroEnv(), { everyStep: true });
+  } finally {
+    // The rights go with the macro (3.5); the helper stays for its minutes (plan 31).
+    if (macroRunning.elevation === 'never' || macroRunning.elevated) post({ op: 'macroRights', rights: '' });
+    macroRunning = null;
+  }
   if (!r.ok) status(`Macro ${name}, line ${r.error?.line ?? '?'}: ${r.error?.message ?? 'it stopped'}`, true);
   else if (r.reason === 'stopped') status(`Macro ${name} stopped.`, true);
   else status(`Macro ${name} done.`);
@@ -78,6 +87,18 @@ document.addEventListener('keydown', e => {
 }, true);
 
 let lastTurn = 0;   // when a running macro last gave the page its turn (macroEnv step)
+
+// The running macro asks for administrator rights (plan 39 3.2): null when it has them, else why not.
+async function macroElevate() {
+  const m = macroRunning;
+  if (m.elevation === 'never') return 'elevate: this macro may not have administrator rights (Manage macros: Administrator rights)';
+  if (m.elevated) return null;
+  const a = await askHost({ op: 'macroElevate' });
+  if (a.error) return `Administrator rights refused (${a.error})`;
+  m.elevated = true;
+  status(`Macro ${m.name} runs as administrator... (Esc stops it)`);
+  return null;
+}
 
 // What a macro reads and does: the active pane at each step (3.2).
 function macroEnv() {
@@ -109,6 +130,7 @@ function macroEnv() {
         case 'project': return project?.display ?? '';
         case 'date': { const d = now(); return `${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())}`; }
         case 'time': { const d = now(); return `${two(d.getHours())}:${two(d.getMinutes())}:${two(d.getSeconds())}`; }
+        case 'elevated': return !!macroRunning?.elevated;
       }
       return undefined;
     },
@@ -118,7 +140,13 @@ function macroEnv() {
       const v = m.values?.[path]?.[name];
       return Array.isArray(v) ? (v[2] === true ? shownDate(v[1]) : v[0] ?? '') : v ?? '';
     },
-    run: async o => askHost({ op: 'macroRun', ...o, folder: o.folder || currentFolder() || '' }),
+    run: async o => {
+      const rights = macroRunning?.elevated ? 'elevated' : macroRunning?.elevation === 'never' ? 'never' : '';
+      if (rights === 'never' && o.admin) return { error: 'run ... admin: this macro may not have administrator rights (Manage macros: Administrator rights)' };
+      return askHost({ op: 'macroRun', ...o, rights, folder: o.folder || currentFolder() || '' });
+    },
+    elevate: async () => { const why = await macroElevate(); return why ? { error: why } : {}; },
+    fileCopy: async o => askHost({ op: 'macroFileOp', ...o }),
     action: async (name, args) => {
       switch (name.toLowerCase()) {
         case 'go': {
@@ -196,7 +224,7 @@ function macroKeyClash(key, id) {
 async function macrosPageAsks(view, m) {
   switch (m.kind) {
     case 'save': return post({ op: 'macrosSave', macros: m.macros });
-    case 'run': return runMacroText(m.name, m.text);
+    case 'run': return runMacroText(m.name, m.text, m.elevation);
     case 'setKey': {
       const clash = m.key && macroKeyClash(m.key, m.id);
       view.send({ kind: 'keyRefused', key: 'keyRefused', text: clash || '' });

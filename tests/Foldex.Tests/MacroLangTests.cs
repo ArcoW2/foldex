@@ -24,7 +24,18 @@ public class MacroLangTests
           prop: (path, name) => name === 'System.Photo.DateTaken' ? '1-3-2025' : '',
           run: o => { log.push('run ' + JSON.stringify(o)); return { exitCode: 3 }; },
           loadMacro: () => null,
+          // Administrator rights (plan 39): `rights` 'refuse' refuses the question, 'never' the setting; asked once.
+          elevate: () => {
+            if (rights === 'never') return { error: 'elevate: this macro may not have administrator rights (Manage macros: Administrator rights)' };
+            if (elevated) return {};
+            log.push('asked');
+            if (rights === 'refuse') return { error: 'Administrator rights refused' };
+            elevated = true;
+            return {};
+          },
+          fileCopy: o => { log.push('fileCopy ' + JSON.stringify(o)); return {}; },
         };
+        let rights = '', elevated = false;
         """;
 
     // The macro's problems as "line:col message" and its steps as "op@line".
@@ -41,11 +52,12 @@ public class MacroLangTests
     }
 
     // Runs a macro; what it did (the log), its variables, and an error.
-    static (string[] Log, Dictionary<string, string> Vars, string? Error) Run(string text)
+    static (string[] Log, Dictionary<string, string> Vars, string? Error) Run(string text, string rights = "")
     {
         var engine = new Jint.Engine();
         engine.Execute(Source);
         engine.Execute(Env);
+        engine.Execute($"rights = '{rights}';");
         engine.SetValue("text", text);
         var json = engine.Evaluate("""
             runMacro(macroProgram(text, {}), env).then(r => JSON.stringify({ log,
@@ -171,12 +183,55 @@ public class MacroLangTests
             next
             """);
         Assert.Null(r.Error);
-        Assert.Equal("""run {"what":"dotnet","params":"build -c Release","folder":"D:\\abc","window":"minimized","admin":false,"wait":true}""", r.Log[0]);
+        Assert.Equal("""run {"what":"dotnet","params":"build -c Release","folder":"D:\\abc","window":"minimized","admin":false,"adminForced":false,"wait":true}""", r.Log[0]);
         Assert.Equal("3", r.Vars["x"]);
-        Assert.Equal("""run {"what":"conv.exe","params":"\"D:\\abc\\b c.txt\" 2048","folder":"D:\\abc","window":"normal","admin":true,"wait":false}""", r.Log[2]);
+        Assert.Equal("""run {"what":"conv.exe","params":"\"D:\\abc\\b c.txt\" 2048","folder":"D:\\abc","window":"normal","admin":true,"adminForced":false,"wait":false}""", r.Log[2]);
         Assert.Equal(4, r.Log.Count(l => l.StartsWith("run")));
         Assert.Equal("a+b c", r.Vars["names"]);
         Assert.Equal(["log sub", "log plain"], r.Log[^2..]);
+    }
+
+    // Administrator rights (docs/plans/executed/39-PLAN-elevated-macros.md 3.2, 3.3): elevate asks once; refused, the error at its
+    // line, with onerror continue $$error and a later elevate asks again; admin_forced, with admin an error.
+    [Fact]
+    public void ElevateAndAdminForced()
+    {
+        var r = Run("""
+            elevate
+            elevate
+            run admin_forced "x.exe"
+            """);
+        Assert.Null(r.Error);
+        Assert.Equal("asked", r.Log[0]);
+        Assert.Equal(1, r.Log.Count(l => l == "asked"));
+        Assert.Contains("\"adminForced\":true", r.Log[1]);
+        Assert.Equal("2: Administrator rights refused", Run("log 1\nelevate\nlog 2", "refuse").Error);
+        var go = Run("onerror continue\nelevate\nset $e = $$error\nelevate", "refuse");
+        Assert.Null(go.Error);
+        Assert.Equal("true", go.Vars["e"]);
+        Assert.Equal(2, go.Log.Count(l => l == "asked"));
+        Assert.Equal("1: elevate: this macro may not have administrator rights (Manage macros: Administrator rights)", Run("elevate", "never").Error);
+        Assert.Equal(["1:10 run takes admin or admin_forced, not both"], Program("run admin admin_forced \"x.exe\"").Problems);
+    }
+
+    // copy and move <items> to <folder> (3.4): a list, an item, a text; replace or noreplace, not both; LexPen's copy
+    // $var refused.
+    [Fact]
+    public void CopyAndMove()
+    {
+        var r = Run("""
+            copy $$selected to "E:\backup" replace
+            move $$focused to $$location & "\old"
+            copy "D:\x.txt" to "E:\" noreplace
+            """);
+        Assert.Null(r.Error);
+        Assert.Equal("""fileCopy {"move":false,"items":["D:\\abc\\a.txt","D:\\abc\\b c.txt","D:\\abc\\sub"],"folder":"E:\\backup","conflict":"replace"}""", r.Log[0]);
+        Assert.Equal("""fileCopy {"move":true,"items":["D:\\abc\\def\\ghi.jkl"],"folder":"D:\\abc\\old","conflict":null}""", r.Log[1]);
+        Assert.Equal("""fileCopy {"move":false,"items":["D:\\x.txt"],"folder":"E:\\","conflict":"noreplace"}""", r.Log[2]);
+        Assert.Single(Program("copy $a to \"E:\\\" replace noreplace").Problems);
+        Assert.Contains("not both", Program("copy $a to \"E:\\\" replace noreplace").Problems[0]);
+        Assert.Contains("to is missing", Program("move $a \"E:\\\"").Problems[0]);
+        Assert.Contains("LexPen's", Program("copy $var").Problems[0]);
     }
 
     // The guide (src/defaults/macros/README.md, plan 34 3.9): every example in it reads without a mistake (a syntax line

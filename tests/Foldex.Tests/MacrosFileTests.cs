@@ -18,9 +18,9 @@ public class MacrosFileTests : IDisposable
     {
         Assert.Empty(MacrosFile.Load(dir));   // not there yet
         var tree = JsonNode.Parse("""
-            [ { "id": "a1", "name": "Notepad", "icon": "C:\\x.ico,2", "key": "ctrl+alt+n", "text": "run \"notepad.exe\" $$focused" },
+            [ { "id": "a1", "name": "Notepad", "icon": "C:\\x.ico,2", "key": "ctrl+alt+n", "elevation": "never", "text": "run \"notepad.exe\" $$focused" },
               { "id": "f1", "folder": "Tools", "items": [
-                  { "id": "f2", "folder": "Deeper", "items": [ { "id": "a2", "name": "Two deep", "text": "log 1" } ] },
+                  { "id": "f2", "folder": "Deeper", "items": [ { "id": "a2", "name": "Two deep", "elevation": "sometimes", "text": "log 1" } ] },
                   { "id": "a1", "name": "  ", "key2": "nonsense key", "text": 5 } ] },
               "a plain string", { "neither": true } ]
             """);
@@ -35,6 +35,9 @@ public class MacrosFileTests : IDisposable
         Assert.Equal("Ctrl+Alt+N", read[0]!["key"]!.GetValue<string>());
         Assert.Equal("run \"notepad.exe\" $$focused", read[0]!["text"]!.GetValue<string>());
         Assert.Equal("Two deep", read[1]!["items"]![0]!["items"]![0]!["name"]!.GetValue<string>());
+        // Administrator rights kept; one that is none left out (it counts as step).
+        Assert.Equal("never", read[0]!["elevation"]!.GetValue<string>());
+        Assert.Null(read[1]!["items"]![0]!["items"]![0]!["elevation"]);
         // The second "a1": a new id; no name: "Macro"; a key that is none and a text that is no text: left out, empty.
         var second = read[1]!["items"]![1]!;
         Assert.NotEqual("a1", second["id"]!.GetValue<string>());

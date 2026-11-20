@@ -734,10 +734,41 @@ sealed class MainForm : Form
             case "macroRun":
             {
                 // A macro's run (plan 34 3.3): started here; the answer once it ended when it waits.
-                var answer = await MacroRun.Run(MacroRun.Request.Of(msg));
+                var answer = await MacroRun.Run(MacroRun.Request.Of(msg), app.Elevated.Ask);
                 answer["event"] = "answer";
                 answer["req"] = msg["req"]?.DeepClone();
                 Post(answer);
+                break;
+            }
+            // A macro's administrator rights (docs/plans/executed/39-PLAN-elevated-macros.md 3.2, 3.4): asked (the helper started,
+            // or running already); while it runs, its file operations follow them; at its end, gone.
+            case "macroElevate":
+            {
+                var a = await app.Elevated.Ask(new JsonObject { ["op"] = "hello" });
+                if (a["error"] is null) app.FileOps.Rights = "elevated";
+                Post(new JsonObject { ["event"] = "answer", ["req"] = msg["req"]?.DeepClone(), ["error"] = a["error"]?.DeepClone() });
+                break;
+            }
+            case "macroRights":
+                app.FileOps.Rights = msg["rights"]?.GetValue<string>() ?? "";
+                break;
+            // copy / move <items> to <folder> (3.4): the answer once done; aborted (cancelled, or refused under never) or
+            // failed is the step's error.
+            case "macroFileOp":
+            {
+                var kind = msg["move"]?.GetValue<bool>() == true ? "move" : "copy";
+                var items = msg["items"]!.AsArray().Select(n => n!.GetValue<string>()).ToList();
+                var folder = msg["folder"]?.GetValue<string>() ?? "";
+                string? error = null;
+                if (!Path.IsPathFullyQualified(folder) || !Directory.Exists(folder)) error = $"{kind}: the folder \"{folder}\" is not there";
+                else if (items.FirstOrDefault(i => !Path.IsPathFullyQualified(i)) is { } part) error = $"{kind}: \"{part}\" is no full path";
+                else if (items.Count > 0)
+                {
+                    var op = app.FileOps.Start(kind, items, folder, Handle, false, null, msg["conflict"]?.GetValue<string>());
+                    await op.Completion.Task;
+                    error = op.Error is { } e ? $"{kind}: {e}" : op.Aborted ? $"{kind}: not done (cancelled, or refused)" : null;
+                }
+                Post(new JsonObject { ["event"] = "answer", ["req"] = msg["req"]?.DeepClone(), ["error"] = error });
                 break;
             }
             case "changedEntries":

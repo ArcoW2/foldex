@@ -170,7 +170,7 @@ function newMenu(at) {
       const name = await askText('Name of the new macro', '');
       if (!name?.trim()) return;
       focusEditor = true;
-      addEntry({ id: newId(), name: name.trim(), text: '' });
+      addEntry({ id: newId(), name: name.trim(), text: '', elevation: 'step' });
     } },
     { label: 'Run a program...', run: () => runForm(null) },
   ]);
@@ -271,7 +271,7 @@ function keyField(m, which) {
   return box;
 }
 
-const MacroWords = new Set([...MACRO_STATEMENTS, ...MACRO_OPERATORS, 'each', 'in', 'true', 'false', 'files', ...MACRO_RUN_WINDOWS, 'admin', 'wait']);
+const MacroWords = new Set([...MACRO_STATEMENTS, ...MACRO_OPERATORS, 'each', 'in', 'true', 'false', 'files', ...MACRO_RUN_WINDOWS, 'admin', 'admin_forced', 'wait', 'to', 'replace', 'noreplace']);
 const MacroFunctions = new Set([...Object.keys(MACRO_BUILTINS), ...Object.keys(MACRO_VALUE_BUILTINS), ...Object.keys(MACRO_ENV_FUNCTIONS)]);
 
 // A line in the language's colours: comments, text, variables, system variables, labels, numbers, words of the
@@ -355,16 +355,34 @@ function drawMacro() {
       keyNote ? el('span', { className: 'fl-warn', textContent: keyNote }) : null),
     el('div', { className: 'fl-row' }, el('span', { className: 'cs-caption', textContent: 'Icon' }), iconOf(m),
       button('Icon...', () => toWindow({ kind: 'icon', id: m.id })), button('Default', () => { changeEntry(m.id, x => { delete x.icon; }); toWindow({ kind: 'icon', id: m.id, clear: true }); }, !!m.icon)),
+    elevationRow(m),
     el('div', { className: 'fl-row mc-texthead' }, el('span', { className: 'cs-caption', textContent: 'Steps' }),
       runLine ? button('Run a program...', () => runForm(m), true, 'This macro is one run line: change it in the form') : null),
     edit, problems);
+}
+
+// Administrator rights (docs/plans/executed/39-PLAN-elevated-macros.md 3.1): when the macro asks for them, if ever.
+const Elevations = [
+  ['step', 'At the step elevate', 'Asked where the macro says elevate; until then it runs as you'],
+  ['start', 'At the start', 'Asked before the first step; the whole macro runs as administrator'],
+  ['never', 'Never', 'Never asked: elevate and run ... admin are errors, and what it starts or copies does not ask for administrator (it fails instead)'],
+];
+function elevationRow(m) {
+  const now = Elevations.find(e => e[0] === m.elevation) ?? Elevations[0];
+  const box = el('select', {}, ...Elevations.map(([value, text, hint]) => el('option', { value, textContent: text, title: hint, selected: value === now[0] })));
+  const note = el('span', { className: 'fl-note', textContent: now[2] });
+  box.addEventListener('change', () => {
+    changeEntry(m.id, x => { x.elevation = box.value; });
+    note.textContent = Elevations.find(e => e[0] === box.value)[2];
+  });
+  return el('div', { className: 'fl-row' }, el('span', { className: 'cs-caption', textContent: 'Administrator rights' }), box, note);
 }
 
 function draw() {
   drawTree();
   drawMacro();
   manage.el.querySelector('.mc-bottom').replaceChildren(
-    button('Run', () => { const m = chosen(); if (m && !isFolder(m)) toWindow({ kind: 'run', name: m.name, text: m.text ?? '' }); },
+    button('Run', () => { const m = chosen(); if (m && !isFolder(m)) toWindow({ kind: 'run', name: m.name, text: m.text ?? '', elevation: m.elevation }); },
       !!chosen() && !isFolder(chosen()), 'The macro chosen, on the active pane of the window'),
     el('span', { className: 'find-gap' }),
     button('Help', () => toWindow({ kind: 'help' }), true, 'The guide to the macro language: every statement, variable, field and function'),
@@ -490,7 +508,7 @@ tree.addEventListener('keydown', e => {
   if (key === 'Ctrl+ArrowUp' || key === 'Ctrl+ArrowDown') { e.preventDefault(); return upDown(key === 'Ctrl+ArrowUp' ? -1 : 1); }
   if (key === 'Delete') { e.preventDefault(); return remove(); }
   if (key === 'F2') { e.preventDefault(); return manage.el.querySelector('.mc-macro input')?.select(); }
-  if (key === 'Enter' && row && !isFolder(row.m)) { e.preventDefault(); return toWindow({ kind: 'run', name: row.m.name, text: row.m.text ?? '' }); }
+  if (key === 'Enter' && row && !isFolder(row.m)) { e.preventDefault(); return toWindow({ kind: 'run', name: row.m.name, text: row.m.text ?? '', elevation: row.m.elevation }); }
   if (key === 'ArrowRight' && isFolder(row?.m)) { e.preventDefault(); manage.closed.delete(row.m.id); return draw(); }
   if (key === 'ArrowLeft' && row) {
     e.preventDefault();

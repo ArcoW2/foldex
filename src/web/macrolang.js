@@ -10,10 +10,10 @@
 // ---------- Words ----------
 const MACRO_STATEMENTS = new Set(['if', 'then', 'elseif', 'else', 'endif', 'switch', 'case', 'endswitch', 'goto', 'gosub',
   'return', 'stop', 'set', 'inc', 'dec', 'append', 'onerror', 'procedure', 'endprocedure', 'function', 'endfunction',
-  'global', 'use', 'run', 'for', 'next']);
+  'global', 'use', 'run', 'for', 'next', 'elevate', 'copy', 'move']);
 const MACRO_OPERATORS = new Set(['and', 'or', 'not', 'contains', 'starts', 'ends', 'matches']);
 // LexPen's statements for its editor and documents, which mean nothing in Foldex: a macro with one is told so.
-const MACRO_LEXPEN_ONLY = new Set(['copy', 'paste', 'type', 'moveto', 'find', 'replace', 'new', 'show', 'open', 'notfound',
+const MACRO_LEXPEN_ONLY = new Set(['paste', 'type', 'moveto', 'find', 'replace', 'new', 'show', 'open', 'notfound',
   'screen', 'opened']);
 const MACRO_BUILTINS = {
   len: [1, s => String(s.length)],
@@ -385,6 +385,27 @@ function macroStatement(text, line) {
       return { k: word, value: v, line };
     }
     case 'run': return macroRun(tokens, p, line);
+    // elevate (plan 39 3.2): the macro asks for administrator rights here, unless it has them.
+    case 'elevate': end(); return { k: 'elevate', line };
+    // copy / move <items> to <folder> [replace | noreplace] (plan 39 3.4); LexPen's copy $var (its editor's selection)
+    // is not Foldex's.
+    case 'copy': case 'move': {
+      if (word === 'copy' && tokens.length === 2 && tokens[1].t === 'var') fail("copy $var is LexPen's (its editor's selection): Foldex copies items: copy <items> to <folder>", first);
+      if (p.at >= tokens.length) fail(`${word} needs what it ${word === 'copy' ? 'copies' : 'moves'}: ${word} <items> to <folder>`, first);
+      const items = expr();
+      if (tokens[p.at]?.t !== 'word' || tokens[p.at].v.toLowerCase() !== 'to') fail(`${word} <items> to <folder>: to is missing`);
+      p.at++;
+      if (p.at >= tokens.length) fail(`${word} needs the folder after to`);
+      const folder = expr();
+      let conflict = null;
+      while (p.at < tokens.length) {
+        const tok = tokens[p.at++], w = tok.t === 'word' ? tok.v.toLowerCase() : null;
+        if (w !== 'replace' && w !== 'noreplace') throw new MacroError(`"${tok.v}" is not an option of ${word} (replace, noreplace)`, line, tok.col);
+        if (conflict && conflict !== w) throw new MacroError(`${word} takes replace or noreplace, not both`, line, tok.col);
+        conflict = w;
+      }
+      return { k: word, items, folder, conflict, line };
+    }
     case 'for': {
       // for each $p in <list> (plan 34 3.4)
       if (tokens[p.at]?.t !== 'word' || tokens[p.at].v.toLowerCase() !== 'each') fail('for is followed by each: for each $p in <list>');
@@ -462,7 +483,7 @@ function macroType(t, line) {
 // hidden, admin, wait. The first expression that is not an option's is what it runs, the next its parameters.
 const MACRO_RUN_WINDOWS = ['minimized', 'maximized', 'hidden'];
 function macroRun(tokens, p, line) {
-  const step = { k: 'run', what: null, params: null, folder: null, window: 'normal', admin: false, wait: false, line };
+  const step = { k: 'run', what: null, params: null, folder: null, window: 'normal', admin: false, adminForced: false, wait: false, line };
   const fail = (message, tok = tokens[p.at]) => { throw new MacroError(message, line, tok?.col); };
   while (p.at < tokens.length) {
     const tok = tokens[p.at], w = tok.t === 'word' ? tok.v.toLowerCase() : null;
@@ -475,9 +496,10 @@ function macroRun(tokens, p, line) {
       if (step.window !== 'normal') fail(`run has one window: ${step.window} or ${w}`, tok);
       p.at++;
       step.window = w;
-    } else if (w === 'admin' || w === 'wait') {
+    } else if (w === 'admin' || w === 'wait' || w === 'admin_forced') {
       p.at++;
-      step[w] = true;
+      step[w === 'admin_forced' ? 'adminForced' : w] = true;
+      if (step.admin && step.adminForced) fail('run takes admin or admin_forced, not both', tok);
     } else if (!step.what) step.what = macroExpression(tokens, p, line);
     else if (!step.params) step.params = macroExpression(tokens, p, line);
     else fail('run takes what it runs and its parameters (join texts with &); this is a third value');
@@ -671,7 +693,7 @@ function macroCheck(program, ctx) {
     const jumps = [];
     let gosubs = 0;
     for (const step of scope.code) {
-      const exprs = [step.cond, step.value, step.item, step.sep, ...(step.args ?? []), step.what, step.params, step.folder, step.list].filter(Boolean);
+      const exprs = [step.cond, step.value, step.item, step.sep, ...(step.args ?? []), step.what, step.params, step.folder, step.list, step.items].filter(Boolean);
       for (const e of exprs) walk(e, x => {
         if (x.k === 'var' && !x.hidden) read.push({ name: x.name, line: step.line });
         if (x.k === 'sys' && sysVars && !sysVars.has(x.name.toLowerCase())) problem('error', `$$${x.name} is not a system variable`, step.line, x.col ?? 0);
@@ -742,8 +764,9 @@ function macroArgs(f, args, line, problem) {
 // Runs a program (without errors) against `env`. Resolves to { ok, stopped, reason, error: { line, message } }.
 // env: action(name, args), sys(name) (text, a number, true / false, an item { pathNameExt, ...fields }, or an array of
 // them; undefined: no such variable), files(pattern) (the active pane's items matching, an array), prop(path, name),
-// run({ what, params, folder, window, admin, wait }) ({ exitCode } or { error }), loadMacro(name), step(line) (after
-// each step: Esc; true to stop). Each may return a promise.
+// run({ what, params, folder, window, admin, adminForced, wait }) ({ exitCode } or { error }), elevate() ({ error } when
+// refused; plan 39), fileCopy({ move, items, folder, conflict }) ({ error } when it failed), loadMacro(name),
+// step(line) (after each step: Esc; true to stop). Each may return a promise.
 // options.pause(info), step by step: before each line of this macro (not of a macro it uses); true stops.
 // info: line, level (the calls and gosubs it is in), vars() (the frame's and the macro's), error, errorText.
 async function runMacro(program, env, options = {}) {
@@ -878,7 +901,7 @@ async function runMacro(program, env, options = {}) {
         const jumped = await exec(step, frame, back, pc);
         if (jumped?.ret !== undefined) return jumped.ret;
         if (jumped?.to !== undefined) { pc = jumped.to; continue; }
-        if (['do', 'run'].includes(step.op)) { state.error = false; state.errorText = ''; }
+        if (['do', 'run', 'elevate', 'copy', 'move'].includes(step.op)) { state.error = false; state.errorText = ''; }
       } catch (e) {
         if (e instanceof MacroError) e.line ??= step.line;   // an error of the environment: at the step's line
         if (!(e instanceof MacroError) || state.onerror === 'stop') throw e;
@@ -924,9 +947,22 @@ async function runMacro(program, env, options = {}) {
       // run (plan 34 3.3): the environment starts it (the host); with wait it gives the exit code.
       case 'run': {
         const r = await env.run({ what: (await v(step.what)).s, params: step.params ? (await v(step.params)).s : '',
-          folder: step.folder ? (await v(step.folder)).s : '', window: step.window, admin: step.admin, wait: step.wait });
+          folder: step.folder ? (await v(step.folder)).s : '', window: step.window, admin: step.admin, adminForced: step.adminForced, wait: step.wait });
         if (r?.error) throw new MacroError(r.error, step.line);
         state.exitCode = step.wait && r?.exitCode != null ? String(r.exitCode) : '';
+        return;
+      }
+      // elevate (plan 39 3.2): the environment asks (or not: the macro has the rights, or may not have them).
+      case 'elevate': {
+        const r = await env.elevate();
+        if (r?.error) throw new MacroError(r.error, step.line);
+        return;
+      }
+      // copy / move (plan 39 3.4): the items' paths to a folder, through the environment (the host's file operations).
+      case 'copy': case 'move': {
+        const items = macroListOf(await v(step.items)).map(x => x.s).filter(Boolean);
+        const r = await env.fileCopy({ move: step.op === 'move', items, folder: (await v(step.folder)).s, conflict: step.conflict });
+        if (r?.error) throw new MacroError(r.error, step.line);
         return;
       }
       // for each (plan 34 3.4): the list once; each turn the next item into the variable, or past next.
