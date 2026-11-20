@@ -47,6 +47,8 @@ public class FiltersTests
         Assert.Equal("""["beach.jpg","old.jpg"]""", Shown("L({ folders: false, cond: { op: 'regex', text: '\\\\.JPG$' } })"));
         Assert.Equal("""["beach.jpg"]""", Shown("L({ cond: { op: 'contains', text: 'EAC' } })"));
         Assert.Equal("""["notes.txt"]""", Shown("L({ cond: { op: 'is', text: 'Notes.TXT' } })"));
+        // As in Windows: ".*" at the end matches a name without a dot too.
+        Assert.Equal("[true,true,false,false]", Run("['KING_568', 'king_1.txt', 'kong_1', 'txt'].map((n, k) => wildTest(k < 3 ? 'king_*.*' : '*.txt')(n))").GetRawText());
     }
 
     // A folder has no size: a line on Size is left out for it (it shows); a drive's Total size is only a drive's.
@@ -163,5 +165,40 @@ public class FiltersTests
              filterLineText(L({ not: true, folders: false, cond: { op: 'wild', text: '*.tmp' } }), id => id === 'name' ? 'Name' : id)]
             """);
         Assert.Equal("""["wait",true,["src","notes.txt","C:"],"Filter","Sources","Not Files, Name matches *.tmp"]""", r.GetRawText());
+    }
+
+    // The full path as one text (wildcards, a regex); folders that pass with what they hold, as deep as it goes, and
+    // with another line for the files in them; Not: none of it; a line of a field the path does not give: as before.
+    [Fact]
+    public void TheFullPathAndFoldersWithWhatTheyHold()
+    {
+        var r = Run("""
+            (() => {
+              const tree = [
+                { id: 'D:\\KING_568', name: 'KING_568', folder: true },
+                { id: 'D:\\KING_568\\src', name: 'src', folder: true },
+                { id: 'D:\\KING_568\\src\\a.pas', name: 'a.pas', folder: false, ext: 'pas' },
+                { id: 'D:\\KING_568\\b.txt', name: 'b.txt', folder: false, ext: 'txt' },
+                { id: 'D:\\other', name: 'other', folder: true },
+                { id: 'D:\\other\\king_9.pas', name: 'king_9.pas', folder: false, ext: 'pas' },
+                { id: '\\\\nas\\share\\king_1\\c.pas', name: 'c.pas', folder: false, ext: 'pas' },
+              ];
+              const pass = lines => tree.filter(x => filterTestOf({ lines }, kindOf, now)(x) === true).map(x => x.name);
+              const king = o => L({ files: false, cond: { op: 'wild', text: 'king_*' }, inside: true, ...o });
+              return [
+                pass([L({ field: 'fullPath', cond: { op: 'wild', text: '*\\king_*\\*' } })]),
+                pass([L({ field: 'fullPath', cond: { op: 'regex', text: '^D:\\\\king_\\d+\\\\[^\\\\]+$' } })]),
+                pass([king()]),
+                pass([king(), L({ field: 'ext', folders: false, cond: { op: 'is', text: 'pas' } }), L({ files: false, cond: { op: 'has' } }, 'or')]),
+                pass([king({ not: true })]),
+                pass([L({ field: 'ext', files: false, cond: { op: 'is', text: 'x' }, inside: true })]),
+                filterLineText(king(), id => id === 'name' ? 'Name' : id),
+                filterAncestors('\\\\nas\\share\\a\\b\\c.txt').map(x => x.id),
+              ];
+            })()
+            """);
+        Assert.Equal("""[["src","a.pas","b.txt","c.pas"],["src","b.txt"],["KING_568","src","a.pas","b.txt","c.pas"],"""
+            + """["KING_568","src","a.pas","other","c.pas"],["other","king_9.pas"],["KING_568","src","other"],"""
+            + "\"Folders, Name matches king_*, with what they hold\"," + """["\\\\nas\\share\\a\\b","\\\\nas\\share\\a"]]""", r.GetRawText());
     }
 }

@@ -299,6 +299,11 @@ function drawEditor() {
     check(`or ${f.title} is empty`, !!line.orEmpty, on => changeLine(l => { l.orEmpty = on; }),
       `An item that could have ${f.title} but has no value for it passes too`)));
   rows.push(cond);
+  // A folder that passes with what it holds: for the fields the folders above an item are known by (filters.js).
+  if (InsideFields.has(line.field))
+    rows.push(el('div', { className: 'fl-row' }, check('Folders that pass, with what they hold', !!line.inside, on => changeLine(l => {
+      if (on) { l.inside = true; l.folders = true; } else delete l.inside;
+    }), 'Every folder and file in a folder that passes passes this line too, as deep as it goes (with Not: none of them)')));
   // Relative by the clock: its results are not kept in the folder cache (plan 36 3.8), so every use is slow again.
   if (filterRelative(line).includes('clock'))
     rows.push(el('div', { className: 'fl-row fl-warn', textContent: 'Minutes or hours from now are not kept: every time this filter is used again '

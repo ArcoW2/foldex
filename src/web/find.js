@@ -23,7 +23,7 @@ async function openFind({ again = null } = {}) {
   if (!again) start.lookIn = lookScrap ? '' : currentFolder() ?? searches.lookIn[0] ?? '';
   // The kept filter sets, for the additional rules (plan 20 3.2), each with its lines in short.
   const ruleSets = filterSets.sets.map(s => ({ name: s.name, lines: s.lines,
-    text: s.lines.map((l, k) => (k ? (l.join === 'or' ? 'Or ' : 'And ') : '') + filterLineText(l, id => id === 'contents' ? 'Contents' : columnInfo(id).title ?? id)) }));
+    text: s.lines.map((l, k) => (k ? (l.join === 'or' ? 'Or ' : 'And ') : '') + filterLineText(l, filterFieldTitle)) }));
   const r = await dialogWindow('Find files or folders', { what: 'find', start, defaults, searches, ruleSets,
     lookScrap: lookScrap && { id: lookScrap.id, title: lookScrap.tabTitle() },
     scraps: scrapViews().map(v => ({ id: v.id, title: v.tabTitle() })), again: again?.id ?? null }, m => {

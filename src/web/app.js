@@ -299,8 +299,8 @@ function openManageFilters(paneId = null) {
 // filter kind and whether they are slow), the pane it is for with its set.
 function filtersForPage(view, paneFirst = false) {
   const field = (id, title, kind) => ({ id, title, kind: filterKind(id, kind), slow: slowField(id) });
-  // Contents (plan 20 3.2): no column, a field of a filter only; whether a file holds a text.
-  const fields = [...OwnColumns.map(c => field(c.id, c.title, c.kind)), field('contents', 'Contents', 'contents'),
+  // Contents (plan 20 3.2) and the full path: no column, fields of a filter only.
+  const fields = [...OwnColumns.map(c => field(c.id, c.title, c.kind)), ...FilterOnlyFields.map(f => field(f.id, f.title, f.kind)),
     ...(propList ?? []).map(p => field(p.name, p.title, p.kind))];
   const p = filtersFor && layout.pane(filtersFor.id) ? filtersFor : null;
   return { kind: 'filters', filters: filterSets, fields, split: layout.pane(view.id)?.split,
@@ -587,7 +587,7 @@ function drawHead(v, branch) {
   filterEl.hidden = !set?.lines?.length;
   filterEl.textContent = set ? `[${filterHeadText(set)}]` : '';
   filterEl.classList.toggle('off', !!set?.off);
-  filterEl.title = set ? `Filter: ${set.lines.map(l => filterLineText(l, f => columnInfo(f).title)).join(' / ')}\n${set.off ? 'Off: a click switches it on' : 'A click switches it off'} (Ctrl+Alt+F)` : '';
+  filterEl.title = set ? `Filter: ${set.lines.map(l => filterLineText(l, filterFieldTitle)).join(' / ')}\n${set.off ? 'Off: a click switches it on' : 'A click switches it off'} (Ctrl+Alt+F)` : '';
   v.el.classList.toggle('pinned', pane.pinned);
   v.el.querySelector('.pin').title = pane.kind === 'scrap'
     ? pane.pinned ? 'Pinned: comes back (empty) after a restart; click to unpin' : 'Pin: keep this scrap after a restart (it comes back empty)'

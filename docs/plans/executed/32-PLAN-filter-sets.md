@@ -261,3 +261,19 @@ None.
 - Not checked: a regex line and an attributes line through the editor (the rules are unit tested); a Windows property
   as a field on a large folder (how long it waits); Git status in a repository; the narrow layout of Manage filters;
   a filter on a scrap.
+- **Added afterwards (2026-11-20, as asked):**
+  - **Full path** (`fullPath`): a field of a filter only, no column (`FilterOnlyFields`, with Contents). The item's full
+    path as one text, so it takes every text condition: wildcards, regex, contains, is. Only for an item on disk or a share.
+  - **Folders that pass, with what they hold** (`inside`): an option on a line of Name or Full path (`InsideFields`). The
+    folders above an item are known by its path alone: an item passes the line when it passes itself, or when a folder
+    it is in passes (as deep as it goes; not the drive or the share). With Not: neither. Checking it checks Folders, so
+    "Folders, Name matches king_*, with what they hold" shows those folders and everything in them, and another line
+    (And Files, Extension is pas) picks the files in them. A tree shows a folder that holds such a folder, as for any
+    filter (dimmed while the host looks under it).
+  - **Wildcards ending in `.*`** match a name without a dot too, as in Windows: `king_*.*` matches KING_568.
+  - Tested: `TheFullPathAndFoldersWithWhatTheyHold` (the full path by wildcards and by a regex, a folder with what it
+    holds, with a second line for the files in it, Not, a field the path does not give, a share's folders) and the
+    `.*` case in `TextByWildcardsRegexContainsAndIs`; `dotnet test` 300 passed. In the test copy, folders KING_568
+    (src, doc), king_569, other\deep\KING_570 and other\plain, filtered on `king_*.*` with what they hold: the list on
+    the folder shows KING_568 and king_569, in KING_568 everything; the tree shows KING_568 with src and doc, king_569,
+    and other > deep > KING_570, not other\plain. The filter window lists Full path, and a Name line has the option.

@@ -6,7 +6,9 @@
 //
 // A set: { name (when kept), temp (the temporary filter: true), lines: [line], off (switched off in its pane) }.
 // A line: { join: 'and' | 'or' (the first line's is not used), open, close (brackets before and after it, counts),
-//   not, folders, files (checks), field (a column's id), cond, orEmpty }.
+//   not, folders, files (checks), field (a column's id), cond, orEmpty, inside (a folder that passes passes with what it
+//   holds, as deep as it goes: an item passes the line when a folder it is in passes; only for the fields a folder
+//   above an item is known by from the item's path, InsideFields) }.
 // A cond by the field's kind (filterKind):
 //   text:  { op: 'wild' | 'regex' | 'contains' | 'is' | 'has' | 'none', text }
 //   size, number: { op: 'range' | 'is' | 'has' | 'none', from, to, value }
@@ -33,6 +35,23 @@ const TortoiseSvg = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" 
   '<path d="M2 10.5a5.5 4.6 0 0 1 11 0zM5.5 6.3l2 2 2-2M7.5 8.3v2.2M4 10.5v2M11 10.5v2M2 10.5l-1.2 1"/><circle cx="14" cy="8.7" r="1.3"/></svg>';
 // Fields only a drive has.
 const DriveFields = new Set(['total', 'free']);
+// The fields a line "with what they hold" (inside) may test: the ones the folders above an item have in its path.
+const InsideFields = new Set(['name', 'fullPath']);
+const isFilePath = id => /^[A-Za-z]:\\|^\\\\/.test(id ?? '');
+const filterInside = line => !!line.inside && line.folders !== false && InsideFields.has(line.field);
+// The fields of a filter that are no column: Contents (plan 20 3.2) and the full path.
+const FilterOnlyFields = [{ id: 'contents', title: 'Contents', kind: 'contents' }, { id: 'fullPath', title: 'Full path', kind: 'text' }];
+const filterFieldTitle = id => FilterOnlyFields.find(f => f.id === id)?.title ?? columnInfo(id).title ?? id;
+
+// The folders an item is in, as items for a line's test ({ folder, name, id }), nearest first; not the drive or the
+// share itself (a name of its own it has not).
+function filterAncestors(id) {
+  const m = /^([A-Za-z]:\\|\\\\[^\\]+\\[^\\]+\\)(.*)$/.exec(id ?? '');
+  if (!m) return [];
+  const parts = m[2].split('\\').filter(Boolean);
+  parts.pop();
+  return parts.map((name, k) => ({ folder: true, name, id: m[1] + parts.slice(0, k + 1).join('\\') })).reverse();
+}
 
 // The kind of a field for its conditions, from its column's kind (columns.js columnInfo; Windows' properties: text,
 // number, date, bool).
@@ -54,11 +73,13 @@ const newFilterLine = (join = 'and') => ({ join, open: 0, close: 0, not: false, 
 const filterOfPattern = pattern => ({ lines: [{ ...newFilterLine(), files: false, cond: { op: 'has' } },
   { ...newFilterLine('or'), folders: false, cond: { op: 'wild', text: pattern } }] });
 
-// Wildcards (`*.cs;*.md`) as one test of a name; empty: none (null).
+// Wildcards (`*.cs;*.md`) as one test of a name; empty: none (null). As in Windows, one ending in `.*` matches a name
+// without a dot too (`king_*.*`: KING_568).
 function wildTest(text) {
   const parts = (text ?? '').split(/[;,]/).map(p => p.trim()).filter(Boolean);
   if (!parts.length) return null;
-  const res = parts.map(p => new RegExp('^' + p.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.') + '$', 'i'));
+  const re = p => p.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.');
+  const res = parts.map(p => new RegExp('^' + (p.endsWith('.*') ? re(p.slice(0, -2)) + '(?:\\..*)?' : re(p)) + '$', 'i'));
   return name => res.some(re => re.test(name));
 }
 
@@ -120,7 +141,8 @@ function filterValue(x, id, kind) {
   } else if (id === 'gps' || id === 'gpsLocation') {
     if (!x.props || !('System.GPS.LatitudeDecimal' in x.props)) return { wait: true };
     v = hasGps(x) ? true : null;
-  } else v = x[id];
+  } else if (id === 'fullPath') v = isFilePath(x.id) ? x.id : null;   // the item's full path, as one text
+  else v = x[id];
   if (v === undefined || v === '') v = null;
   if (DriveFields.has(id) && v == null) return { applies: false };
   if (x.folder && v == null && id !== 'name' && id !== 'git' && id !== 'attributes') return { applies: false };
@@ -132,6 +154,14 @@ const GitWordsOf = s => ({ M: 'Modified', A: 'Added', D: 'Deleted', R: 'Renamed'
 // One line's test of an item: true, false, null (left out: its field is not the item's) or 'wait' (a value not read
 // yet). `kindOf(field)`: the field's filter kind. Throws on a regex that is no regex (the set's check says so first).
 function filterLine(line, x, kindOf, now) {
+  // With what they hold: the item itself as the line says, or a folder it is in that passes (Not: neither).
+  if (filterInside(line)) {
+    const plain = { ...line, inside: false, not: false };
+    const self = filterLine(plain, x, kindOf, now);
+    if (self === 'wait') return 'wait';
+    const pass = self === true || filterAncestors(x.id).some(up => filterLine(plain, up, kindOf, now) === true);
+    return line.not ? !pass : pass;
+  }
   if (x.folder ? !line.folders : !line.files) return line.not ? true : false;
   const kind = kindOf(line.field), c = line.cond ?? {};
   // Contents (plan 20 3.2): whether the file holds the text, as the host found it (x.contents, by the condition's key);
@@ -313,7 +343,8 @@ function filterLineText(line, titleOf) {
     : c.op === 'range' ? [f, c.from != null && c.from !== '' ? `from ${typeof c.from === 'object' ? date(c.from) : c.from}` : '',
       c.to != null && c.to !== '' ? `to ${typeof c.to === 'object' ? date(c.to) : c.to}` : ''].filter(Boolean).join(' ')
     : f;
-  return `${line.not ? 'Not ' : ''}${who}${what}${line.orEmpty && !['has', 'none'].includes(c.op) ? ', or empty' : ''}`;
+  return `${line.not ? 'Not ' : ''}${who}${what}${line.orEmpty && !['has', 'none'].includes(c.op) ? ', or empty' : ''}`
+    + `${filterInside(line) ? ', with what they hold' : ''}`;
 }
 
 // What a pane's head shows of its set: the kept name, "temp" for the temporary filter, or the name's wildcards of a
