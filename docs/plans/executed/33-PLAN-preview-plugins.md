@@ -64,6 +64,10 @@ the bar.
 - **The native viewers** (Windows, LexPen, a plugin) are native windows over the pane. The bar is the page's, so the
   host lays the native window over the pane's area under the bar, not over all of it, and the bar shows for every
   viewer.
+- **Esc in a preview handler** (Windows', LexPen's): the handler has the keys first; Foldex catches none of them. An
+  Esc the handler does not use itself it hands to its site (Foldex's `IPreviewHandlerFrame`, whose accelerator table
+  holds only Esc), and Foldex takes the keyboard back and treats it as Esc in the preview (F3's window closes).
+  prevhost.exe does this for the handlers it runs; LexPen does it itself.
 - **Settings window**: the preview group lists the kept choices, each removable (back to the order), and the lister
   plugins (3.2).
 
@@ -191,6 +195,10 @@ None.
   with arguments or not). The `preview` op asks it for the type's handler; `Viewers.For` then offers "lexpen" first
   and no "windows". `PreviewHost.Show` creates it as any type's handler.
 - A `.md` kept as "windows" from before is no longer offered under that id, so it falls back to the order: LexPen.
+- The site (`PreviewFrame` in `Shell/PreviewHost.cs`): set on every handler before its window, and taken away
+  (`SetSite(null)`) when the preview moves on, which is when LexPen closes its previewer. Tested in the test copy: Esc
+  in the PDF handler (prevhost.exe) came back as Esc in the preview, the keyboard back in Foldex; with LexPen, one
+  previewer window in the panel after each of several `.md` files. Esc in LexPen reaches Foldex once LexPen hands it on.
 
 ### 6.4 Tests
 

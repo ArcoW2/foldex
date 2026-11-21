@@ -21,12 +21,15 @@ sealed class PreviewHost : IDisposable
     Lister? lister;
     IntPtr listerWindow;
     int shows;   // each show and unload: a plugin's answer for an earlier one is not shown
+    readonly PreviewFrame frame;
+    Action? escape;
 
     public PreviewHost(Control parent)
     {
         panel = new Panel { Visible = false, BackColor = SystemColors.Window };
         parent.Controls.Add(panel);
         panel.BringToFront();
+        frame = new PreviewFrame(panel, () => escape?.Invoke());
     }
 
     public bool Visible => panel.Visible;
@@ -44,10 +47,12 @@ sealed class PreviewHost : IDisposable
     }
 
     /// <summary>Shows a file in its preview handler over `bounds` (in the parent's client pixels). The handler and how
-    /// it was started, or an error.</summary>
-    public (string? Handler, string? Error) Show(string path, Rectangle bounds)
+    /// it was started, or an error. `escape`: Esc in the handler's window that the handler did not use (it hands it to
+    /// its site, PreviewFrame).</summary>
+    public (string? Handler, string? Error) Show(string path, Rectangle bounds, Action escape)
     {
         Unload();
+        this.escape = escape;
         if (HandlerFor(path) is not Guid clsid) return (null, "no preview handler for this type");
         // Out of process first (most handlers run in the shell's surrogate, prevhost.exe), else in process.
         var hr = Native.CoCreateInstance(clsid, IntPtr.Zero, Native.ClsctxLocalServer, typeof(IPreviewHandler).GUID, out var ptr);
@@ -63,6 +68,7 @@ sealed class PreviewHost : IDisposable
         try
         {
             how += ", " + Initialize(h, path);
+            if (h is IObjectWithSite withSite) withSite.SetSite(frame);
             panel.Bounds = bounds;
             panel.Visible = true;
             panel.BringToFront();
@@ -76,6 +82,7 @@ sealed class PreviewHost : IDisposable
         catch (Exception ex) when (ex is COMException or InvalidCastException or IOException)
         {
             panel.Visible = false;
+            LetGo(h);
             Marshal.ReleaseComObject(h);
             return (clsid.ToString("B"), ex.Message);
         }
@@ -206,6 +213,7 @@ sealed class PreviewHost : IDisposable
         {
             try { handler.Unload(); }
             catch (COMException) { }
+            LetGo(handler);
             Marshal.ReleaseComObject(handler);
             handler = null;
         }
@@ -213,9 +221,53 @@ sealed class PreviewHost : IDisposable
         panel.Visible = false;
     }
 
+    // The handler's site taken away: the host is done with it (a handler may keep its window until then, as LexPen's).
+    static void LetGo(IPreviewHandler h)
+    {
+        try { if (h is IObjectWithSite withSite) withSite.SetSite(null); }
+        catch (COMException) { }
+    }
+
     public void Dispose()
     {
         Unload();
         panel.Dispose();
     }
+}
+
+/// <summary>
+/// The site Foldex gives a preview handler (IPreviewHandlerFrame): Esc is the one key Foldex wants from it. A handler
+/// hands on a key of the table that it does not use itself (prevhost.exe does so for the handlers it runs; a handler
+/// of its own process, as LexPen's, does so itself), and Foldex treats it as Esc in the preview. Called by COM on the
+/// window's thread; the escape is posted, not run inside the call.
+/// </summary>
+[ComVisible(true), ClassInterface(ClassInterfaceType.None)]
+sealed class PreviewFrame(Control owner, Action escape) : IPreviewHandlerFrame
+{
+    const uint WmKeyDown = 0x100, VkEscape = 0x1B;
+    static readonly IntPtr Keys = CreateAcceleratorTable([new Accel { Virt = 1 /* FVIRTKEY */, Key = (ushort)VkEscape, Cmd = 1 }], 1);
+
+    public int GetWindowContext(IntPtr info)
+    {
+        Marshal.WriteIntPtr(info, Keys);
+        Marshal.WriteInt32(info, IntPtr.Size, 1);
+        return 0;
+    }
+
+    public int TranslateAccelerator(IntPtr pmsg)
+    {
+        var m = Marshal.PtrToStructure<Msg>(pmsg);
+        if (m.Message != WmKeyDown || (uint)m.WParam != VkEscape) return 1;   // S_FALSE: not Foldex's
+        owner.BeginInvoke(escape);
+        return 0;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    struct Accel { public byte Virt; public ushort Key; public ushort Cmd; }
+
+    [StructLayout(LayoutKind.Sequential)]
+    struct Msg { public IntPtr Hwnd; public uint Message; public IntPtr WParam, LParam; public uint Time; public int X, Y; }
+
+    [DllImport("user32.dll")]
+    static extern IntPtr CreateAcceleratorTable(Accel[] accels, int count);
 }

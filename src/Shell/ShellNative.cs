@@ -115,6 +115,22 @@ interface IPreviewHandler
     [PreserveSig] int TranslateAccelerator(IntPtr pmsg);
 }
 
+// The host's side of a preview handler: the keys the host wants (an accelerator table) and the handler handing such
+// a key on (PREVIEWHANDLERFRAMEINFO: haccel, cAccelEntries).
+[ComImport, Guid("fec87aaf-35f9-447a-adb7-20234491401a"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+interface IPreviewHandlerFrame
+{
+    [PreserveSig] int GetWindowContext(IntPtr pinfo);
+    [PreserveSig] int TranslateAccelerator(IntPtr pmsg);
+}
+
+[ComImport, Guid("FC4801A3-2BA9-11CF-A229-00AA003D7352"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+interface IObjectWithSite
+{
+    void SetSite([MarshalAs(UnmanagedType.IUnknown)] object? site);
+    void GetSite(ref Guid riid, out IntPtr site);
+}
+
 [ComImport, Guid("b7d14566-0509-4cce-a71f-0a554233bd9b"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
 interface IInitializeWithFile
 {

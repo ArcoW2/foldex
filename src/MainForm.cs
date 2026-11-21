@@ -949,20 +949,21 @@ sealed class MainForm : Form
                 else
                 {
                     var area = PreviewArea(pane, msg["rect"], msg["top"]?.GetValue<double>() ?? 0);
+                    // Esc in a native viewer that it did not use: back to Foldex, as Esc in the preview (F3's window closes).
+                    void Escape()
+                    {
+                        web.Focus();
+                        Post(new JsonObject { ["event"] = "previewEscape", ["pane"] = pane });
+                    }
                     if (viewer?.StartsWith(Shell.Viewers.ListerPrefix) == true
                         && listers.FirstOrDefault(l => Shell.Viewers.ListerPrefix + l.Name == viewer) is { } lister)
                     {
                         void Stopped() => Post(new JsonObject { ["event"] = "previewStopped", ["pane"] = pane, ["path"] = path,
                             ["text"] = $"The plugin {lister.Name} stopped (it crashed or did not answer)." });
-                        void Escape()
-                        {
-                            web.Focus();
-                            Post(new JsonObject { ["event"] = "previewEscape", ["pane"] = pane });
-                        }
                         (handler, error) = await PreviewOf(pane).ShowLister(app.Listers, lister, path, area, Stopped, Escape);
                         if (previewAsks.GetValueOrDefault(pane) != ask) break;
                     }
-                    else (handler, error) = PreviewOf(pane).Show(path, area);
+                    else (handler, error) = PreviewOf(pane).Show(path, area, Escape);
                     // LexPen or a plugin that fails says why under the bar (another viewer one click away); Windows' as before.
                     plugged = viewer is Shell.Viewers.LexPen || viewer?.StartsWith(Shell.Viewers.ListerPrefix) == true;
                     if (error is not null && reachable && File.Exists(path) && !plugged)
