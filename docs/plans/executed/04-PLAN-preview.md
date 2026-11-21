@@ -61,7 +61,8 @@ Windows handler.
 ### 3.2 Windows preview handlers
 
 - Found through the registry (`shellex\{8895b1c6-b41f-4c1c-a562-0d564250836f}` on the type), created as COM objects
-  (`IPreviewHandler`, initialised with `IInitializeWithStream`, `...WithFile` or `...WithItem`), drawn into a native window
+  (`IPreviewHandler`, initialised with `IInitializeWithItem`, else `...WithFile`, else `...WithStream`: in that order,
+  so a handler that can know the file's path has it), drawn into a native window
   the host owns. Most run out of process in the shell's surrogate (`prevhost.exe`), so a crashing handler does not take
   Foldex down [not yet checked for every handler].
 - A native window over the page covers the page's menus (plan 02, 3.3); the spike of plan 02 decides how that is

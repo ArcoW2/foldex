@@ -91,27 +91,27 @@ sealed class PreviewHost : IDisposable
         }
     }
 
-    // A handler takes a stream, a file or a shell item; the stream first (the one every out-of-process handler takes).
+    // A handler takes a shell item, a file or a stream; in that order, so a handler that can know the file's path
+    // (LexPen: to open it apart, keep its marks) has it, and one that takes only a stream still works.
     static string Initialize(IPreviewHandler h, string path)
     {
-        const uint mode = Native.StgmRead | Native.StgmShareDenyNone;
-        if (h is IInitializeWithStream withStream)
+        if (h is IInitializeWithItem withItem)
         {
-            Native.SHCreateStreamOnFileEx(path, mode, 0, false, IntPtr.Zero, out var stream);
-            withStream.Initialize(stream, Native.StgmRead);
-            return "stream";
+            withItem.Initialize(Native.Item(path), Native.StgmRead);
+            return "item";
         }
         if (h is IInitializeWithFile withFile)
         {
             withFile.Initialize(path, Native.StgmRead);
             return "file";
         }
-        if (h is IInitializeWithItem withItem)
+        if (h is IInitializeWithStream withStream)
         {
-            withItem.Initialize(Native.Item(path), Native.StgmRead);
-            return "item";
+            Native.SHCreateStreamOnFileEx(path, Native.StgmRead | Native.StgmShareDenyNone, 0, false, IntPtr.Zero, out var stream);
+            withStream.Initialize(stream, Native.StgmRead);
+            return "stream";
         }
-        throw new InvalidCastException("the handler takes no stream, file or item");
+        throw new InvalidCastException("the handler takes no item, file or stream");
     }
 
     /// <summary>Shows a file in a lister plugin over `bounds`: the plugin's window, made by the helper in this panel (the
