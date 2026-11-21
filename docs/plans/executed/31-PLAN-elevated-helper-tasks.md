@@ -149,7 +149,7 @@ asks UAC once; the time is a setting, and while it runs the ribbon shows a shiel
   clipboard holds a link source.
 - Made as the items of plan 23 are (inserted into the menu Windows built, with ids past the shell's range), as a
   popup of its own (`MF_POPUP`); the items of plan 23 stay where they are.
-- An own menu of Foldex's, in the place of Explorer's, is plan 40.
+- The menu arranged as the user chooses is Dexmenu (a program of its own); Foldex's side of it is plan 40.
 
 ## 4. Open questions
 
