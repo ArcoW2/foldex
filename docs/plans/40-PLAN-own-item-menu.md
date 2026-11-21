@@ -1,8 +1,9 @@
 # Plan 40: Foldex's right-click menu for items, arranged by Dexmenu
 
-Status: not started; see Status.
+Status: partly executed; see Status.
 
 - 2026-11-20: draft, at the user's request.
+- 2026-11-21: partly executed: Foldex's own items in one submenu.
 
 Builds on plan 02 3.1 (Explorer's menu shown as a native popup, `ShellMenu`), plan 23 3.2 (Foldex's own items at its
 top) and plan 31 3.5 (the Foldex submenu). The menu itself is arranged by Dexmenu, a program of its own for every
@@ -20,7 +21,7 @@ its own items well in it.
 ## 2. The solution, in brief
 
 Foldex keeps building and showing Windows' menu as it does now; Dexmenu, loaded with that menu as with Explorer's,
-arranges it, Foldex's own items included. Foldex gives its own items fixed texts in a submenu of its own, so a layout
+arranges it, Foldex's own items included. Foldex keeps its own items in one submenu with a fixed name, so a layout
 can place them, and checks that its right-click works the same with Dexmenu as without.
 
 ## Status
@@ -29,12 +30,12 @@ can place them, and checks that its right-click works the same with Dexmenu as w
 
 | Part | What | Reference |
 |---|---|---|
+| Foldex's own items | every one in the submenu Foldex, a fixed name a layout places | 3.1; 6.1 |
 
 ### Not yet built
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| Foldex's own items | fixed texts, in the Foldex submenu, so Dexmenu's layout can place them | -- | 3.1 |
 | Foldex with Dexmenu | Foldex's right-click shown arranged; an item chosen does what it does now | Dexmenu plan 01 (Showing it) | 3.2; 3.3 |
 
 Moved out: reading Windows' menu, showing it arranged, running the chosen item, Windows' own menu as a fallback, and
@@ -47,8 +48,9 @@ their tests, to Dexmenu plan 01 (`..\Dexmenu\docs\plans\01-PLAN-dexmenu.md` 3.1-
 - Foldex adds its items to Windows' menu before it is shown (quick access and bookmarks first, then the Foldex
   submenu: plan 31 3.5), so Dexmenu sees them as items like any other and its layout places them by name (Dexmenu 3.3:
   the text without `&`, with its submenu).
-- Their texts stay fixed (not with the item's name in them), so a layout keeps placing them; where a text has to
-  name the item, it goes in a submenu whose name is fixed. Which of the current texts need this: [not yet checked].
+- They all sit in one submenu with a fixed name, Foldex, so a layout places Foldex's items as one. Texts inside it
+  that change with the item or its state (Add to or Remove from quick access, Paste ... to the folder's name) are
+  placed with it, or by a pattern (Dexmenu 3.3).
 
 ### 3.2 Foldex with Dexmenu
 
@@ -68,3 +70,11 @@ their tests, to Dexmenu plan 01 (`..\Dexmenu\docs\plans\01-PLAN-dexmenu.md` 3.1-
 ## 4. Open questions
 
 None.
+
+## 6. As built
+
+### 6.1 Foldex's own items
+
+- Built before this plan took its present form: since 38e7bff every item of Foldex's own is in the submenu Foldex at
+  the top of Windows' menu (`MainForm.ShowMenu`: quick access and bookmarks, then Create link, Take ownership...,
+  Paste ... to ...). Nothing else was needed.
