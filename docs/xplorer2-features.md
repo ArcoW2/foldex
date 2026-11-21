@@ -117,7 +117,7 @@ updated whenever a plan is written, built or closed that touches a feature here.
 | Feature | Edition | Foldex | Prio | Depends on |
 |---|---|---|---|---|
 | Preview: Windows preview handlers | All | built (plan 04); a drop-down of every viewer of a file (LexPen first when its handler is the type's, own, Windows, lister plugins), kept per type (plan 33) | 4 | -- |
-| Explorer's right-click menu, extended verbs | All | built; Foldex's own submenu in it (plan 31); the menu arranged as you choose, every program's items still working: Dexmenu (a program of its own), Foldex's side plan 40 | 4 | -- |
+| Explorer's right-click menu, extended verbs | All | built; Foldex's own submenu in it (plan 31); the menu arranged as you choose, every program's items still working: Dexmenu (a program of its own), Foldex's side built (plan 40) | 4 | -- |
 | Elevated window | P+ | part: list as administrator (plan 05; any folder, with the backup privilege), take ownership, the helper kept for a while with its shield (plan 31); no elevated window by design | 4 | -- |
 | Own viewers: text, hex, images | P+ | built (plan 04: also markdown, HTML, code, PDF, CSV, zip, a folder's summary) | 3 | -- |
 | Full shell namespace (This PC, Recycle Bin, MTP, cloud) | All | built | 3 | -- |
