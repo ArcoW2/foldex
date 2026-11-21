@@ -231,7 +231,8 @@ static class ListerHelper
             return [];
         }
 
-        // Esc in a plugin's window goes back to Foldex (the preview's own Esc: F3's window closes).
+        // Esc in a plugin's window: watched, not taken (the plugin gets it as any key), and Foldex told (the preview
+        // closes). A plugin has no way to say it used a key, as a preview handler has.
         public bool PreFilterMessage(ref Message m)
         {
             if (m.Msg != 0x0100 /* WM_KEYDOWN */ || (int)m.WParam != 0x1B /* VK_ESCAPE */) return false;
@@ -239,7 +240,7 @@ static class ListerHelper
                 if (v.Holder.Handle == m.HWnd || IsChild(v.Holder.Handle, m.HWnd))
                 {
                     tell(new JsonObject { ["event"] = "escape", ["view"] = view });
-                    return true;
+                    break;
                 }
             return false;
         }

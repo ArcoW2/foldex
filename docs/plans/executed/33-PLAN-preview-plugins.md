@@ -105,9 +105,9 @@ the bar.
 - **Hosting.** As a Windows preview handler is (`PreviewHost`): the plugin's window moves and hides with the pane, and
   is unloaded when the preview moves on (plan 04 3.2), so it does not hold the file open. The helper uses
   `ListLoadNextW` when the plugin has it, so a series of files does not make a window per file.
-- **Keys.** The plugin's window has the keyboard once clicked. Esc in it goes back to Foldex: the helper sees it
-  before the plugin does and tells Foldex, which takes the keyboard back and treats it as Esc in the preview (F3's
-  window closes). Other keys stay the plugin's.
+- **Keys.** The plugin's window has the keyboard once clicked, and every key goes to the plugin, Esc too. The helper
+  watches Esc without taking it and tells Foldex, which takes the keyboard back and closes the preview, docked or
+  floating. A plugin has no way to say it used a key, so it cannot keep Esc for itself.
 
 ### 3.3 LexPen as a viewer
 
