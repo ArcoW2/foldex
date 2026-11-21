@@ -1345,11 +1345,12 @@ class TreeView {
   }
 
   // A double-click: a file opens; a folder opens (or closes) in the tree itself as well as in its children; a child
-  // tree opens it only in itself (its parent stays).
+  // tree opens it only in itself (its parent stays). A tree going its own way: executing it opens or closes it here
+  // (Layout.execute); opening it first as well would close it again at once.
   open(n) {
     if (n.folder === false) return execute(this.id, { id: n.id, folder: false });
     if (this.folder) return this.expand(n, !n.expanded);
-    if (!n.expanded) this.expand(n);
+    if (!n.expanded && !layout.ownWay(this.id)) this.expand(n);
     execute(this.id, { id: n.id, folder: true });
   }
 
