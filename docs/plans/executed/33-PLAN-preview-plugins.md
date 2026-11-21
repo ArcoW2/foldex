@@ -67,7 +67,7 @@ the bar.
 - **Esc in a preview handler** (Windows', LexPen's): the handler has the keys first; Foldex catches none of them. An
   Esc the handler does not use itself it hands to its site (Foldex's `IPreviewHandlerFrame`, whose accelerator table
   holds only Esc), and Foldex takes the keyboard back and closes the preview, docked or floating. Esc in Foldex's
-  own viewer stays as it was (F3's window closes).
+  own viewer closes it too, after an open menu or find bar has had it.
   prevhost.exe does this for the handlers it runs; LexPen does it itself.
 - **Settings window**: the preview group lists the kept choices, each removable (back to the order), and the lister
   plugins (3.2).

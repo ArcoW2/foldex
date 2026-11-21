@@ -2897,7 +2897,7 @@ class PreviewView {
     if (m.kind === 'copy' && typeof m.text === 'string') { post({ op: 'copyText', text: m.text }); status('The text is copied.'); }
     if (m.kind === 'showAll' && this.path) this.ask({ all: true });
     if (m.kind === 'download' && this.path) this.ask({ download: true });
-    if (m.kind === 'close' && layout.pane(this.id)?.fixed) closePane(this.id);   // Esc in F3's preview
+    if (m.kind === 'close') closePane(this.id);   // Esc in the preview, docked or floating
     if (m.kind === 'status') status(m.text, m.warn);   // its find bar's word (previewfind.js)
     if (m.kind === 'viewer') this.choose(m.id);   // the bar's drop-down (plan 33 3.1)
     // That drop-down open over a native viewer: the native window hidden meanwhile (a picture of it, as for the

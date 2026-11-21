@@ -590,9 +590,10 @@ function info(groups) {
   rows.replaceChildren(list);
 }
 
-// Esc: an F3 preview's window closes (the window's page decides; plan 14 3.5).
+// Esc: the preview closes, docked or floating (the window's page decides; plan 14 3.5). An open menu has it first
+// (menu.js), the open find bar too (previewfind.js closes it).
 addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
+  if (e.key === 'Escape' && !(pvFind.el && !pvFind.el.hidden)) {
     e.preventDefault();
     toWindow({ kind: 'close' });
   } else if (e.ctrlKey && shown && ZOOM_KINDS.has(shown.kind) && ['+', '=', '-', '0'].includes(e.key)) {
