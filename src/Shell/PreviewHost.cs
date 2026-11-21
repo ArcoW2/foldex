@@ -77,6 +77,9 @@ sealed class PreviewHost : IDisposable
             h.DoPreview();
             handler = h;
             shownPath = path;
+            // A handler that may keep its keys in a process of its own (WebView2's: Edge's PDF, PowerToys'): its Esc
+            // watched, not taken. LexPen's hands Esc on itself when it does not use it.
+            if (!LexPenHandler.Is(clsid)) EscWatch.Add(this);
             return ($"{clsid:B} ({how})", null);
         }
         catch (Exception ex) when (ex is COMException or InvalidCastException or IOException)
@@ -176,6 +179,13 @@ sealed class PreviewHost : IDisposable
         return "data:image/png;base64," + Convert.ToBase64String(stream.ToArray());
     }
 
+    // For EscWatch: the window with the keyboard lies in this preview, and its escape (posted, not run in the hook).
+    internal bool Holds(IntPtr window) => panel.Visible && IsChild(panel.Handle, window);
+    internal void Escaped() { if (escape is { } e) panel.BeginInvoke(e); }
+
+    [DllImport("user32.dll")]
+    static extern bool IsChild(IntPtr parent, IntPtr window);
+
     /// <summary>The native window hidden while a menu of the preview's own page lies over it (plan 33 3.1).</summary>
     public void Hide() => panel.Visible = false;
 
@@ -209,6 +219,7 @@ sealed class PreviewHost : IDisposable
 
     void UnloadHandler()
     {
+        EscWatch.Remove(this);
         if (handler is not null)
         {
             try { handler.Unload(); }
@@ -233,6 +244,62 @@ sealed class PreviewHost : IDisposable
         Unload();
         panel.Dispose();
     }
+}
+
+/// <summary>
+/// Esc pressed while the keyboard is in a watched handler's window (any process, under its preview's panel): the key
+/// goes on to the handler as always (a low-level keyboard hook that only looks), and the preview gets its escape too.
+/// For handlers whose keys never come back through the site. The hook is there only while such a handler is shown.
+/// </summary>
+static class EscWatch
+{
+    static readonly HashSet<PreviewHost> hosts = [];
+    static IntPtr hook;
+    static readonly HookProc Proc = Look;   // kept alive while the hook is set
+
+    public static void Add(PreviewHost host)
+    {
+        hosts.Add(host);
+        if (hook == IntPtr.Zero) hook = SetWindowsHookEx(13 /* WH_KEYBOARD_LL */, Proc, GetModuleHandle(null), 0);
+    }
+
+    public static void Remove(PreviewHost host)
+    {
+        if (!hosts.Remove(host) || hosts.Count > 0 || hook == IntPtr.Zero) return;
+        UnhookWindowsHookEx(hook);
+        hook = IntPtr.Zero;
+    }
+
+    static IntPtr Look(int code, IntPtr message, IntPtr data)
+    {
+        if (code >= 0 && message == 0x100 /* WM_KEYDOWN */ && Marshal.ReadInt32(data) == 0x1B /* VK_ESCAPE */)
+        {
+            var info = new GuiThreadInfo { Size = Marshal.SizeOf<GuiThreadInfo>() };
+            if (GetGUIThreadInfo(0, ref info) && info.Focus != IntPtr.Zero)
+                hosts.FirstOrDefault(h => h.Holds(info.Focus))?.Escaped();
+        }
+        return CallNextHookEx(hook, code, message, data);
+    }
+
+    delegate IntPtr HookProc(int code, IntPtr message, IntPtr data);
+
+    [StructLayout(LayoutKind.Sequential)]
+    struct GuiThreadInfo { public int Size, Flags; public IntPtr Active, Focus, Capture, MenuOwner, MoveSize, Caret; public int L, T, R, B; }
+
+    [DllImport("user32.dll")]
+    static extern IntPtr SetWindowsHookEx(int id, HookProc proc, IntPtr module, uint thread);
+
+    [DllImport("user32.dll")]
+    static extern bool UnhookWindowsHookEx(IntPtr hook);
+
+    [DllImport("user32.dll")]
+    static extern IntPtr CallNextHookEx(IntPtr hook, int code, IntPtr message, IntPtr data);
+
+    [DllImport("user32.dll")]
+    static extern bool GetGUIThreadInfo(uint thread, ref GuiThreadInfo info);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+    static extern IntPtr GetModuleHandle(string? name);
 }
 
 /// <summary>

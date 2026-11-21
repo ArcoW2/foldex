@@ -68,6 +68,11 @@ the bar.
   Esc the handler does not use itself it hands to its site (Foldex's `IPreviewHandlerFrame`, whose accelerator table
   holds only Esc), and Foldex takes the keyboard back and closes the preview, docked or floating. Esc in Foldex's
   own viewer closes it too, after an open menu or find bar has had it.
+- **Handlers that never hand Esc on**: those built on WebView2 (Edge's PDF handler, PowerToys' previews) keep their
+  keys in WebView2's process, out of reach of the site. For every handler but LexPen's, Foldex watches Esc while the
+  keyboard is in the handler's window (`EscWatch`, a low-level keyboard hook that only looks, set only while such a
+  handler is shown): the handler still gets the key, and the preview closes too. Such a handler cannot keep Esc for
+  itself (an open find box in it closes with the preview).
   prevhost.exe does this for the handlers it runs; LexPen does it itself.
 - **Settings window**: the preview group lists the kept choices, each removable (back to the order), and the lister
   plugins (3.2).
@@ -200,7 +205,8 @@ None.
   (`SetSite(null)`) when the preview moves on, which is when LexPen closes its previewer. Tested in the test copy: Esc
   in the PDF handler (prevhost.exe) came back as Esc in the preview, the keyboard back in Foldex; with LexPen, one
   previewer window in the panel after each of several `.md` files; Esc in LexPen, handed on, closed the docked preview.
-  The PDF handler (a third party's) handed Esc on in one try, not in later ones: up to the handler.
+  Edge's PDF handler and PowerToys' text handler (the keyboard in their WebView2 process): Esc closed the preview
+  through `EscWatch`; LexPen's closed it once, through the site only.
 
 ### 6.4 Tests
 
