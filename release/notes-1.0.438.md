@@ -6,7 +6,7 @@ For the full feature overview, see the [README](https://github.com/ArcoW2/foldex
 
 - **Connected panes**: trees, lists, Miller columns, any number of roots; each pane docked or floating, with its own back and forward; window layouts kept as projects.
 - **Lists your way**: every property Windows has as a column, column sets, thumbnails (grid, mosaic, river, cards), filters and filter sets, folder sizes.
-- **Preview**: Foldex's own viewers (text, code, markdown, images, PDF, CSV, zip, hex, a folder's summary), Windows' preview handlers, LexPen, and Total Commander lister plugins; the viewer chosen per type. F3 opens a preview in a window of its own.
+- **Preview**: Foldex's own viewers (text, code, markdown, images, PDF, CSV, zip, hex, a folder's summary), Windows' preview handlers, [LexPen](https://github.com/ArcoW2/LexPen) (a text and code editor with a viewer, by the same author), and Total Commander lister plugins; the viewer chosen per type. F3 opens a preview in a window of its own.
 - **Find**: by name and any property, text in files (also as a regular expression), with Everything or the Windows search index; results in a scrap pane, which also collects items from many folders.
 - **Files**: copy, move, delete and drag and drop as Explorer does them; multi-rename with tokens and a preview; symbolic links, junctions and hard links; administrator rights only for the step that needs them.
 - **Bookmarks and quick access**, with keys and folders of their own.

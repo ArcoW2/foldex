@@ -10,7 +10,8 @@ of their own colour, docked or floating. Built the way LexPen is: a WinForms hos
 - **Lists your way**: every property Windows has as a column, column sets, thumbnails (grid, mosaic, river, cards),
   filters and filter sets, folder sizes.
 - **Preview**: Foldex's own viewers (text, code, markdown, images, PDF, CSV, zip, hex, a folder's summary), Windows'
-  preview handlers, LexPen, and Total Commander lister plugins; the viewer chosen per type. F3 opens a preview in a
+  preview handlers, [LexPen](https://github.com/ArcoW2/LexPen) (a text and code editor with a viewer, by the same
+  author), and Total Commander lister plugins; the viewer chosen per type. F3 opens a preview in a
   window of its own.
 - **Find**: by name and any property, text in files (also as a regular expression), with Everything or the Windows
   search index; results in a scrap pane, which also collects items from many folders.
