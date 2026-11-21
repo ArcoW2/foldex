@@ -11,7 +11,7 @@ For the full feature overview, see the [README](https://github.com/ArcoW2/foldex
 - **Files**: copy, move, delete and drag and drop as Explorer does them; multi-rename with tokens and a preview; symbolic links, junctions and hard links; administrator rights only for the step that needs them.
 - **Bookmarks and quick access**, with keys and folders of their own.
 - **Macros** with keys, and programs run with the selected items.
-- **Ribbon, keys and themes**: every action in F1 and on any key; light and dark themes, a colour per branch, fonts.
+- **Ribbon, keys and themes, all to your liking**: rearrange the ribbon as you like (drag buttons, groups and tabs, add your own; Reset brings the shipped one back); put any action on any key (F1 lists them all); make your own light and dark themes, with a colour per branch, and choose the fonts.
 
 ## Install
 
