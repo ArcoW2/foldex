@@ -43,7 +43,7 @@ static class PaneHosts
             case "openSettingsFile":
                 OpenSettingsFile(app, window);
                 break;
-            // The lister plugins' row (docs/plans/33-PLAN-preview-plugins.md 3.2): each one's name and detect string, read
+            // The lister plugins' row (docs/plans/executed/33-PLAN-preview-plugins.md 3.2): each one's name and detect string, read
             // by the plugin helper the first time; Add... picks a file and adds it to previewListers.
             case "listers":
                 reply(new JsonObject { ["event"] = "listers", ["list"] = await app.Listers.Info(Added()) });

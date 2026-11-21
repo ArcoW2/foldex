@@ -28,7 +28,7 @@ static class SettingsFile
     /// your file sets that itself; written back as the new one, as a renamed one is (null: nothing to keep).</summary>
     static readonly Dictionary<string, (string Name, Func<JsonNode?, JsonNode?> Convert)> Converted = new()
     {
-        // docs/plans/33-PLAN-preview-plugins.md 3.1: the types for Windows' handler, now the viewer kept per type.
+        // docs/plans/executed/33-PLAN-preview-plugins.md 3.1: the types for Windows' handler, now the viewer kept per type.
         ["previewWindowsTypes"] = ("previewViewers", v =>
             Shell.Viewers.FromWindowsTypes(v?.GetValueKind() == JsonValueKind.String ? v.GetValue<string>() : null) is { Count: > 0 } o ? o : null),
     };

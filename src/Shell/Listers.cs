@@ -4,7 +4,7 @@ using System.Text.Json.Nodes;
 namespace Foldex.Shell;
 
 /// <summary>
-/// The lister plugins (docs/plans/33-PLAN-preview-plugins.md 3.2) for every window: the 64-bit ones (.wlx64) in
+/// The lister plugins (docs/plans/executed/33-PLAN-preview-plugins.md 3.2) for every window: the 64-bit ones (.wlx64) in
 /// plugins\wlx\ of Foldex's data folder and the ones added by path (the setting previewListers). Each one's name and
 /// detect string are read once, by the plugin helper, and kept (State\listers.json) until its file changes, so offering
 /// viewers for a file loads no DLL. Their views: each preview's plugin window, made by the helper as a child of the

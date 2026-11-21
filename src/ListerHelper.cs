@@ -11,7 +11,7 @@ using Foldex.Shell;
 namespace Foldex;
 
 /// <summary>
-/// The plugin helper (docs/plans/33-PLAN-preview-plugins.md 3.2): Foldex.exe --lister-helper &lt;pipe&gt; &lt;parent id&gt;,
+/// The plugin helper (docs/plans/executed/33-PLAN-preview-plugins.md 3.2): Foldex.exe --lister-helper &lt;pipe&gt; &lt;parent id&gt;,
 /// unelevated, no WebView2. It loads Total Commander lister plugins (64-bit WLX DLLs) and makes their viewer windows,
 /// each in a window of its own that is a child of the preview's panel in Foldex (across the processes, as a preview
 /// handler in prevhost.exe is): a plugin that crashes or hangs takes this process with it, not Foldex. It serves a pipe

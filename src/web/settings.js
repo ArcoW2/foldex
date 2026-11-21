@@ -59,7 +59,7 @@ function control(def) {
     box.append(input, value);
     return { el: box, show: v => { input.value = v; value.textContent = input.value + def.unit; } };
   }
-  // The viewer kept per type (previewViewers; docs/plans/33-PLAN-preview-plugins.md 3.1): each with Remove (back to the
+  // The viewer kept per type (previewViewers; docs/plans/executed/33-PLAN-preview-plugins.md 3.1): each with Remove (back to the
   // first viewer the type has).
   if (def.kind === 'viewers') {
     const box = Object.assign(document.createElement('div'), { className: 'st-list-box' });

@@ -116,7 +116,7 @@ updated whenever a plan is written, built or closed that touches a feature here.
 
 | Feature | Edition | Foldex | Prio | Depends on |
 |---|---|---|---|---|
-| Preview: Windows preview handlers | All | built (plan 04); a drop-down of every viewer of a file (own, Windows, LexPen, lister plugins), kept per type (plan 33) | 4 | -- |
+| Preview: Windows preview handlers | All | built (plan 04); a drop-down of every viewer of a file (LexPen first when its handler is the type's, own, Windows, lister plugins), kept per type (plan 33) | 4 | -- |
 | Explorer's right-click menu, extended verbs | All | built; Foldex's own submenu in it (plan 31); a menu of Foldex's own with every program's items: plan 40 | 4 | -- |
 | Elevated window | P+ | part: list as administrator (plan 05; any folder, with the backup privilege), take ownership, the helper kept for a while with its shield (plan 31); no elevated window by design | 4 | -- |
 | Own viewers: text, hex, images | P+ | built (plan 04: also markdown, HTML, code, PDF, CSV, zip, a folder's summary) | 3 | -- |

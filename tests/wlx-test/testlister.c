@@ -1,4 +1,4 @@
-// A lister plugin for testing Foldex's plugin helper (docs/plans/33-PLAN-preview-plugins.md 3.5): it takes files with
+// A lister plugin for testing Foldex's plugin helper (docs/plans/executed/33-PLAN-preview-plugins.md 3.5): it takes files with
 // the extension .fxt and shows their name and first bytes in a read-only edit box. A file whose name holds "crash"
 // crashes it, one whose name holds "hang" hangs it. Build (a Visual Studio x64 prompt):
 //   cl /nologo /LD /O2 testlister.c user32.lib /Fe:testlister.wlx64

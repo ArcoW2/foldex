@@ -2905,7 +2905,7 @@ class PreviewView {
     if (m.kind === 'menuOver' && this.native) post({ op: 'previewHide', pane: this.id, hidden: m.on });
   }
 
-  // A viewer chosen for the file shown (docs/plans/33-PLAN-preview-plugins.md 3.1): shown at once, and kept for its
+  // A viewer chosen for the file shown (docs/plans/executed/33-PLAN-preview-plugins.md 3.1): shown at once, and kept for its
   // extension (the setting previewViewers).
   choose(id) {
     if (!this.path || !this.viewers?.some(v => v.id === id)) return;

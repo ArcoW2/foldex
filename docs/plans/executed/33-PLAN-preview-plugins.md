@@ -1,9 +1,10 @@
 # Plan 33: Preview plugins: real viewers next to Foldex's own
 
-Status: partly executed; see Status.
+Status: executed; see Status.
 
 - 2026-11-17: draft.
 - 2026-11-21: partly executed: the viewer choice, lister plugins, and Foldex's side of LexPen's viewer.
+- 2026-11-21: executed.
 
 Builds on plan 04 (executed): the preview shows a file in Foldex's own viewer (LexPen's libraries, in the page) or
 in the Windows preview handler registered for its type (a native window the host lays over the pane, `PreviewHost`).
@@ -19,10 +20,11 @@ xplorer2 has a native and an own view.
 
 ## 2. The solution, in brief
 
-Every viewer that can show the file is offered in a drop-down in the preview's bar: Foldex's own, the Windows preview
-handler of its type, LexPen, and each Total Commander lister plugin that takes it. The choice is kept per type, and an
-action steps to the next viewer. LexPen comes in as a preview handler LexPen registers without taking any type from
-other programs: Foldex asks it by name for the types LexPen lists. Lister plugins run in a helper process of Foldex's,
+Every viewer that can show the file is offered in a drop-down in the preview's bar: LexPen, Foldex's own, the Windows
+preview handler of its type, and each Total Commander lister plugin that takes it. The choice is kept per type, and an
+action steps to the next viewer. LexPen comes in as the Windows preview handler it registers for its types, the
+standard way: when a type's handler is LexPen's, Foldex names it LexPen and offers it first. Lister plugins run in a
+helper process of Foldex's,
 so one that crashes takes only the preview with it. The native viewers are windows the host lays over the pane, under
 the bar.
 
@@ -34,22 +36,18 @@ the bar.
 |---|---|---|
 | Viewer choice | the bar's drop-down of every viewer for the file, kept per type; the action to step through them; replaces `previewWindowsTypes` | 3.1; 6.1 |
 | Lister plugins | Total Commander lister plugins (WLX) found, offered by their detect strings, run in a helper process, hosted over the pane | 3.2; 6.2 |
-| LexPen viewer, Foldex's side | LexPen's handler found by its registration, offered for the types it lists, created by its class | 3.3; 6.3 |
+| LexPen viewer | a type whose Windows preview handler is LexPen's offers it as LexPen, first; shown in the preview | 3.3; 6.3 |
 
 ### Not yet built
-
-| Part | What | Waits for | Reference |
-|---|---|---|---|
-| LexPen viewer in the app | LexPen's handler shown in the preview, tried in the test copy | LexPen's plan (the handler and its registration) | 3.3; 3.5 |
 
 ## 3. Details
 
 ### 3.1 Choosing the viewer
 
 - **Which viewers a file has**, in this order:
+  - **LexPen**: when the type's Windows preview handler is LexPen's (3.3).
   - **Foldex**: its own viewer, when it has one (plan 04 3.1).
-  - **Windows**: the preview handler registered for the type, when there is one.
-  - **LexPen**: when LexPen's handler is installed and lists the type (3.3).
+  - **Windows**: the preview handler registered for the type, when there is one and it is not LexPen's.
   - **Each lister plugin** whose detect string takes the file (3.2), by the plugin's name.
 - **The drop-down** is at the left of the preview's bar and names the viewer shown ("Foldex", "Windows", "LexPen", a
   plugin's name). It is a menu (`menu.js`), so it closes on a second click and closes every other menu. It lists the
@@ -59,7 +57,7 @@ the bar.
   It has no key by default (keys.json can give it one). It is also in F1 and can go on the ribbon.
 - **Kept per extension** in the setting `previewViewers` (`{ ".md": "lexpen", ".log": "lister:LogView",
   ".pdf": "windows" }`). A type without an entry, or whose kept viewer is gone (a plugin removed), keeps plan 04's
-  order: Foldex's own viewer, else Windows' handler, else LexPen, else a plugin, else text, Windows' picture, hex,
+  order: LexPen, else Foldex's own viewer, else Windows' handler, else a plugin, else text, Windows' picture, hex,
   properties.
 - `previewViewers` replaces `previewWindowsTypes`: its extensions become entries with "windows" (`SettingsFile`
   Renamed / Renaming, as other old settings).
@@ -103,44 +101,36 @@ the bar.
 
 ### 3.3 LexPen as a viewer
 
-- **The handler is LexPen's.** LexPen implements a Windows preview handler (`IPreviewHandler`,
-  `IInitializeWithFile`, `IObjectWithSite`) in LexPen.exe itself, as a local COM server (`LocalServer32`), so the
-  preview runs in LexPen's process. It shows a single pane of LexPen, read-only, with LexPen's colouring, language
-  packs and markdown preview. Open in LexPen stays one action away (plan 04 3.4).
-- **Registered without taking a type.** LexPen registers its handler's COM class and lists it with Windows' preview
-  handlers. It does not bind the handler to `.md`, `.cs` and the others under their `shellex` key, so no other
-  program's preview is replaced, in Explorer or Outlook. Under its class it writes the extensions it shows (from its
-  language packs, markdown included): `.md` and `.cs` are in that list, so Foldex offers LexPen for them, while
-  Explorer keeps the handler bound to them.
+- **The handler is LexPen's.** LexPen implements a Windows preview handler (`IPreviewHandler` and the stream
+  initializer) in LexPen.exe itself, as a local COM server (`LocalServer32`), so the preview runs in LexPen's process.
+  It shows a pane of LexPen, read-only, with LexPen's colouring, language packs and markdown preview. Open in LexPen
+  stays one action away (plan 04 3.4). LexPen's own plan (in its repository) covers the handler and its registration.
+- **Registered the standard way.** LexPen binds its handler to each type it shows under the type's `shellex` key
+  (`{8895b1c6-b41f-4c1c-a562-0d564250836f}`) and lists it under `PreviewHandlers`, as every preview handler does; the
+  same handler then shows in Explorer's preview pane too.
 - **Foldex's part.**
-  - It finds LexPen's handler through its registration: the default value of
-    `HKCR\Applications\LexPen.exe\shellex\{8895b1c6-b41f-4c1c-a562-0d564250836f}` (the preview handler's shellex key,
-    under LexPen's application key, so no type is bound) is the handler's CLSID [its value: set in LexPen's plan].
-  - It reads the extensions from the value `PreviewExtensions` under `HKCR\CLSID\{clsid}` (".md;.cs;...") and offers
-    "LexPen" for those types. When LexPen's handler is also bound to a type for Explorer, that type offers it once, as
-    LexPen.
-  - It creates the handler by its class, as `PreviewHost` creates any handler now (`CoCreateInstance`, local server
-    first).
-- **LexPen's work** has its own plan in LexPen's repository: the handler, a fast start, one LexPen process (one
-  WebView2) kept for the next file instead of one per file, and the registration. Binding it to types for Explorer as
-  well can be an option there.
+  - The type's Windows preview handler is found as before (`PreviewHost.HandlerFor`). When the program of its class
+    (`HKCR\CLSID\{clsid}\LocalServer32`) is `LexPen.exe`, it is LexPen's: the drop-down names it "LexPen" instead of
+    "Windows", and offers it first, before Foldex's own viewer.
+  - It creates the handler as `PreviewHost` creates any handler (`CoCreateInstance`, local server first).
 
 ### 3.4 How the viewers sit together
 
 | | Lister plugins | LexPen |
 |---|---|---|
 | Generic | yes: any viewer written for the format | no: only LexPen |
-| Built in | Foldex (detecting, the helper, hosting) | LexPen (the handler); Foldex: finding it and its types |
+| Built in | Foldex (detecting, the helper, hosting) | LexPen (the handler); Foldex: knowing it is LexPen's |
 | Runs in | Foldex's plugin helper | LexPen's process |
-| Offered for | the files their detect strings take | the types LexPen lists |
+| Offered for | the files their detect strings take | the types LexPen binds its handler to |
 
-For a markdown file the drop-down can offer Foldex, Windows (when a handler is bound to `.md`), LexPen and a markdown
-lister plugin; the user picks one once per type, or steps through them with `preview.nextViewer`.
+For a markdown file the drop-down can offer LexPen (or Windows, when another handler is bound to `.md`), Foldex and a
+markdown lister plugin; the user picks one once per type, or steps through them with `preview.nextViewer`.
 
 ### 3.5 Tests
 
 - **Unit:**
-  - the viewers offered for a file (own, Windows, LexPen by its listed types, plugins by detect string);
+  - the viewers offered for a file (LexPen when the type's handler is LexPen's, own, Windows, plugins by detect
+    string); LexPen's handler known by its program;
   - `previewViewers` with the order, and a kept viewer that is gone;
   - `previewWindowsTypes` read as `previewViewers`;
   - parsing detect strings.
@@ -148,7 +138,7 @@ lister plugin; the user picks one once per type, or steps through them with `pre
   - the drop-down for a markdown file and `preview.nextViewer`, the choice kept for the type;
   - a lister plugin showing a file, the next file through `ListLoadNextW`, the pane moved, floated and closed;
   - a plugin that crashes: Foldex stays, the preview says so, the next file works;
-  - LexPen's handler, once LexPen has it.
+  - a markdown file in LexPen's handler, offered first.
 
 ## 4. Open questions
 
@@ -195,15 +185,18 @@ None.
   host) adds to `previewListers`, Remove takes an added one away; the folder's are removed by removing the file.
 - Test plugin: `tests/wlx-test/testlister.c` (takes `.fxt`; a name with "crash" crashes it, with "hang" hangs it).
 
-### 6.3 LexPen viewer, Foldex's side
+### 6.3 LexPen viewer
 
-- `LexPenHandler.Find` reads the registration of 3.3; `PreviewHost.Show` takes the CLSID to create. Not tried in the
-  app: LexPen has no handler yet, and registering a stand-in was not done (it writes to the user's registry).
+- `LexPenHandler.Is` (`Shell/Viewers.cs`): the class's `LocalServer32` command names `LexPen.exe` (quoted or not,
+  with arguments or not). The `preview` op asks it for the type's handler; `Viewers.For` then offers "lexpen" first
+  and no "windows". `PreviewHost.Show` creates it as any type's handler.
+- A `.md` kept as "windows" from before is no longer offered under that id, so it falls back to the order: LexPen.
 
 ### 6.4 Tests
 
-- Unit (`ViewersTests`): the viewers of a file in order (LexPen offered once when its handler is also Windows'), the
-  pick, a kept viewer that is gone, `previewWindowsTypes` read and written back as `previewViewers`, detect strings.
+- Unit (`ViewersTests`): the viewers of a file in order (LexPen first, instead of Windows, when the type's handler is
+  LexPen's), LexPen's handler known by its program, the pick, a kept viewer that is gone, `previewWindowsTypes` read
+  and written back as `previewViewers`, detect strings.
 - In the test copy (a data folder of its own, the test plugin in its `plugins\wlx\`):
   - a `.fxt` shown by the plugin under the bar; the next one in the same helper (ListLoadNextW);
   - `.md`: Foldex and Windows offered; Windows chosen through the drop-down (a real click), kept in settings.json,
@@ -212,5 +205,7 @@ None.
   - a crash: Foldex stays, the preview says the helper stopped, the next file starts a new helper;
   - a hang: after 10 seconds the helper is ended and the preview says so; Foldex's window answered throughout
     (`SendMessageTimeout`, every second); the next file works;
+  - `.md` with LexPen's handler registered: LexPen and Foldex offered, LexPen shown under the bar (its own ribbon
+    and markdown preview); Foldex chosen and kept, LexPen chosen again;
   - Esc in the plugin's window of an F3 preview closes that window;
   - the helper ends a minute after the last view closed.

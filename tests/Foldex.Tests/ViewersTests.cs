@@ -4,26 +4,37 @@ using Foldex.Shell;
 
 namespace Foldex.Tests;
 
-// The preview's viewers (docs/plans/33-PLAN-preview-plugins.md 3.1-3.3): which a file has, which is shown, the old
+// The preview's viewers (docs/plans/executed/33-PLAN-preview-plugins.md 3.1-3.3): which a file has, which is shown, the old
 // setting previewWindowsTypes as previewViewers, and lister plugins' detect strings.
 public class ViewersTests
 {
-    static readonly Guid Office = Guid.Parse("84f66100-ff7c-4fb4-b0c0-02cd7fb668fe"), LexPenClsid = Guid.Parse("11111111-2222-3333-4444-555555555555");
-    static readonly LexPenHandler LexPen = new(LexPenClsid, LexPenHandler.Parse(".md; cs,*.json"));
+    static readonly Guid Office = Guid.Parse("84f66100-ff7c-4fb4-b0c0-02cd7fb668fe");
 
     static string[] Ids(List<Viewers.Viewer> list) => [.. list.Select(v => v.Id)];
 
-    // In this order: Foldex's own, Windows', LexPen's for the types it lists, each plugin whose detect string takes it.
+    // In this order: LexPen when the type's handler is LexPen's, Foldex's own, else Windows', each plugin whose detect
+    // string takes it.
     [Fact]
     public void AFileHasItsViewersInOrder()
     {
         var listers = new[] { new Lister(@"C:\p\md.wlx64", "MdView", "EXT=\"MD\""), new Lister(@"C:\p\log.wlx64", "LogView", "EXT=\"LOG\"") };
-        Assert.Equal(["foldex", "windows", "lexpen", "lister:MdView"], Ids(Viewers.For(@"C:\x\a.md", Office, LexPen, listers)));
-        Assert.Equal(["foldex", "lister:LogView"], Ids(Viewers.For(@"C:\x\a.LOG", null, LexPen, listers)));
-        Assert.Equal(["windows"], Ids(Viewers.For(@"C:\x\a.docx", Office, LexPen, listers)));
-        Assert.Equal(["foldex"], Ids(Viewers.For(@"C:\x\a.md", null, null, [])));
-        // LexPen's handler bound to the type for Explorer as well: once, as LexPen.
-        Assert.Equal(["foldex", "lexpen"], Ids(Viewers.For(@"C:\x\a.cs", LexPenClsid, LexPen, [])));
+        Assert.Equal(["foldex", "windows", "lister:MdView"], Ids(Viewers.For(@"C:\x\a.md", Office, false, listers)));
+        Assert.Equal(["lexpen", "foldex", "lister:MdView"], Ids(Viewers.For(@"C:\x\a.md", Office, true, listers)));
+        Assert.Equal(["foldex", "lister:LogView"], Ids(Viewers.For(@"C:\x\a.LOG", null, false, listers)));
+        Assert.Equal(["windows"], Ids(Viewers.For(@"C:\x\a.docx", Office, false, listers)));
+        Assert.Equal(["foldex"], Ids(Viewers.For(@"C:\x\a.md", null, false, [])));
+    }
+
+    // LexPen's handler: a local server whose program is LexPen.exe, quoted or not, with arguments or not.
+    [Fact]
+    public void LexPensHandlerIsKnownByItsProgram()
+    {
+        Assert.True(LexPenHandler.IsLexPen("\"C:\\Win32App\\LexPen\\LexPen.exe\""));
+        Assert.True(LexPenHandler.IsLexPen("\"C:\\Program Files\\LexPen\\lexpen.EXE\" -Embedding"));
+        Assert.True(LexPenHandler.IsLexPen(@"C:\Program Files\LexPen\LexPen.exe -Embedding"));
+        Assert.False(LexPenHandler.IsLexPen(@"C:\Windows\system32\prevhost.exe"));
+        Assert.False(LexPenHandler.IsLexPen(@"C:\x\NotLexPen.exe"));
+        Assert.False(LexPenHandler.IsLexPen(null));
     }
 
     // The one asked for, else the one kept for the extension, else the first; a kept viewer that is gone (a plugin

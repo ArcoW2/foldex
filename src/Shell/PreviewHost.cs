@@ -7,7 +7,7 @@ namespace Foldex.Shell;
 /// A Windows preview handler (Office and the like, docs/plans/executed/04-PLAN-preview.md 3.2) in a native window of its own,
 /// laid over the page where the page says its preview area is. A native window covers the page's popups
 /// (docs/plans/02-PLAN-ui-technology.md 3.3): while one is open, the page asks for a snapshot, shows that in the
-/// area, and the native window is hidden until the popup closes. A lister plugin's window (docs/plans/33-PLAN-preview-plugins.md
+/// area, and the native window is hidden until the popup closes. A lister plugin's window (docs/plans/executed/33-PLAN-preview-plugins.md
 /// 3.2) lies in the same panel, made by the plugin helper in its own process. On the UI thread.
 /// </summary>
 sealed class PreviewHost : IDisposable
@@ -43,12 +43,12 @@ sealed class PreviewHost : IDisposable
         return Guid.TryParse(new string(buffer, 0, (int)size - 1), out var clsid) ? clsid : null;
     }
 
-    /// <summary>Shows a file in its preview handler over `bounds` (in the parent's client pixels); `given`: that handler
-    /// (LexPen's, plan 33 3.3) instead of the type's. The handler and how it was started, or an error.</summary>
-    public (string? Handler, string? Error) Show(string path, Rectangle bounds, Guid? given = null)
+    /// <summary>Shows a file in its preview handler over `bounds` (in the parent's client pixels). The handler and how
+    /// it was started, or an error.</summary>
+    public (string? Handler, string? Error) Show(string path, Rectangle bounds)
     {
         Unload();
-        if ((given ?? HandlerFor(path)) is not Guid clsid) return (null, "no preview handler for this type");
+        if (HandlerFor(path) is not Guid clsid) return (null, "no preview handler for this type");
         // Out of process first (most handlers run in the shell's surrogate, prevhost.exe), else in process.
         var hr = Native.CoCreateInstance(clsid, IntPtr.Zero, Native.ClsctxLocalServer, typeof(IPreviewHandler).GUID, out var ptr);
         var how = "local server";

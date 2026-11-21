@@ -36,7 +36,7 @@ const fmtDate = ms => ms == null ? '' : shownDate(ms);   // as the date columns 
 // ---------- The bar above an own preview (3.4) ----------
 
 // What the bar has for a kind: Open in LexPen (when it is installed: o.lexPen) and Copy for text the preview reads, zoom for
-// what has a size. At its left the viewer shown (docs/plans/33-PLAN-preview-plugins.md 3.1): with more than one for the
+// what has a size. At its left the viewer shown (docs/plans/executed/33-PLAN-preview-plugins.md 3.1): with more than one for the
 // file, a drop-down of them all; choosing one shows the file in it and keeps it for the type.
 const TEXT_KINDS = new Set(['text', 'code', 'markdown', 'html', 'csv']);
 const ZOOM_KINDS = new Set(['text', 'code', 'markdown', 'html', 'csv', 'zip', 'hex', 'pdf', 'image']);

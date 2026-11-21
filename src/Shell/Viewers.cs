@@ -5,10 +5,10 @@ using Microsoft.Win32;
 namespace Foldex.Shell;
 
 /// <summary>
-/// The viewers a file can be shown in (docs/plans/33-PLAN-preview-plugins.md 3.1), in this order: Foldex's own viewer,
-/// the Windows preview handler of its type, LexPen's preview handler for the types LexPen lists (3.3), and each lister
-/// plugin whose detect string takes the file (3.2). The one shown: the one asked for (the bar's drop-down,
-/// preview.nextViewer), else the one kept for the extension (the setting previewViewers), else the first.
+/// The viewers a file can be shown in (docs/plans/executed/33-PLAN-preview-plugins.md 3.1), in this order: LexPen, when the
+/// Windows preview handler of its type is LexPen's (3.3), Foldex's own viewer, else the Windows preview handler of its
+/// type, and each lister plugin whose detect string takes the file (3.2). The one shown: the one asked for (the bar's
+/// drop-down, preview.nextViewer), else the one kept for the extension (the setting previewViewers), else the first.
 /// </summary>
 static class Viewers
 {
@@ -17,17 +17,14 @@ static class Viewers
     public const string Foldex = "foldex", Windows = "windows", LexPen = "lexpen", ListerPrefix = "lister:";
 
     /// <summary>The viewers of a file. `windows`: the CLSID of its type's preview handler (PreviewHost.HandlerFor);
-    /// `lexPen`: LexPen's handler, when installed; `listers`: the known plugins. Touches the file for a plugin whose
-    /// detect string looks at its contents or size: off the window's thread.</summary>
-    public static List<Viewer> For(string path, Guid? windows, LexPenHandler? lexPen, IEnumerable<Lister> listers)
+    /// `lexPen`: that handler is LexPen's (LexPenHandler.Is); `listers`: the known plugins. Touches the file for a plugin
+    /// whose detect string looks at its contents or size: off the window's thread.</summary>
+    public static List<Viewer> For(string path, Guid? windows, bool lexPen, IEnumerable<Lister> listers)
     {
         var list = new List<Viewer>();
-        var ext = Path.GetExtension(path);
+        if (windows is not null && lexPen) list.Add(new(LexPen, "LexPen"));
         if (OwnPreview.KindOf(path) is not null) list.Add(new(Foldex, "Foldex"));
-        var ours = lexPen is not null && ext.Length > 0 && lexPen.Extensions.Contains(ext);
-        // LexPen's handler bound to the type for Explorer as well: offered once, as LexPen.
-        if (windows is Guid clsid && !(ours && clsid == lexPen!.Clsid)) list.Add(new(Windows, "Windows"));
-        if (ours) list.Add(new(LexPen, "LexPen"));
+        if (windows is not null && !lexPen) list.Add(new(Windows, "Windows"));
         var file = new Lazy<(long Size, byte[] Head)>(() => Head(path));
         foreach (var l in listers)
             if (ListerDetect.Matches(l.Detect, path, () => file.Value.Size, () => file.Value.Head)) list.Add(new(ListerPrefix + l.Name, l.Name));
@@ -35,7 +32,7 @@ static class Viewers
     }
 
     /// <summary>The viewer to show: `asked` when the file has it, else the one `kept` for its extension, else the first
-    /// (Foldex's own, else Windows, else LexPen, else a plugin); null when there is none.</summary>
+    /// (LexPen, else Foldex's own, else Windows, else a plugin); null when there is none.</summary>
     public static string? Pick(IReadOnlyList<Viewer> viewers, string? asked, JsonObject? kept, string path)
     {
         bool Has(string? id) => id is not null && viewers.Any(v => v.Id == id);
@@ -70,24 +67,22 @@ static class Viewers
 }
 
 /// <summary>
-/// LexPen's preview handler (docs/plans/33-PLAN-preview-plugins.md 3.3), as LexPen registers it without binding it to
-/// any type: Applications\LexPen.exe\shellex\{8895b1c6-b41f-4c1c-a562-0d564250836f} names its CLSID, and the value
-/// PreviewExtensions under CLSID\{clsid} lists the extensions it shows (".md;.cs;...").
+/// LexPen's preview handler (docs/plans/executed/33-PLAN-preview-plugins.md 3.3), registered the standard way: the Windows
+/// preview handler of each type it shows, a local server whose program is LexPen.exe (CLSID\{clsid}\LocalServer32).
 /// </summary>
-sealed record LexPenHandler(Guid Clsid, HashSet<string> Extensions)
+static class LexPenHandler
 {
-    const string Key = @"Applications\LexPen.exe\shellex\" + Native.PreviewHandlerKey;
+    public static bool Is(Guid clsid) =>
+        IsLexPen(Registry.ClassesRoot.OpenSubKey($@"CLSID\{clsid:B}\LocalServer32")?.GetValue("") as string);
 
-    public static LexPenHandler? Find()
+    // The command of a local server ("C:\x\LexPen.exe" -Embedding, or unquoted, spaces and all): its program is LexPen.exe.
+    internal static bool IsLexPen(string? command)
     {
-        if (Registry.ClassesRoot.OpenSubKey(Key)?.GetValue("") is not string text || !Guid.TryParse(text, out var clsid)) return null;
-        var list = Registry.ClassesRoot.OpenSubKey($@"CLSID\{clsid:B}")?.GetValue("PreviewExtensions") as string;
-        return new LexPenHandler(clsid, Parse(list));
+        var text = (command ?? "").Trim();
+        var exe = text.IndexOf(".exe", StringComparison.OrdinalIgnoreCase);
+        var program = text.StartsWith('"') ? text[1..].Split('"')[0] : exe >= 0 ? text[..(exe + 4)] : text;
+        return Path.GetFileName(program).Equals("LexPen.exe", StringComparison.OrdinalIgnoreCase);
     }
-
-    internal static HashSet<string> Parse(string? list) =>
-        new((list ?? "").Split([';', ',', ' '], StringSplitOptions.RemoveEmptyEntries).Select(e => "." + e.TrimStart('*', '.')),
-            StringComparer.OrdinalIgnoreCase);
 }
 
 /// <summary>A lister plugin as Foldex knows it (3.2): its DLL, its name (the file's) and its detect string.</summary>

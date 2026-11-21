@@ -136,7 +136,7 @@ sealed class AppHost : ApplicationContext
     });
     ElevatedHelper.Session? elevated;
 
-    /// <summary>The lister plugins and their helper process, for every window (docs/plans/33-PLAN-preview-plugins.md 3.2).</summary>
+    /// <summary>The lister plugins and their helper process, for every window (docs/plans/executed/33-PLAN-preview-plugins.md 3.2).</summary>
     public Shell.Listers Listers => listers ??= new Shell.Listers(DataDir);
     Shell.Listers? listers;
 

@@ -903,7 +903,7 @@ sealed class MainForm : Form
             {
                 var path = msg["path"]!.GetValue<string>();
                 var pane = msg["pane"]?.GetValue<string>() ?? "";
-                // The viewers of the file (docs/plans/33-PLAN-preview-plugins.md 3.1): Foldex's own, Windows' preview
+                // The viewers of the file (docs/plans/executed/33-PLAN-preview-plugins.md 3.1): Foldex's own, Windows' preview
                 // handler, LexPen's, the lister plugins that take it; the one asked for (`viewer`: the bar's drop-down),
                 // else the one kept for its type (`kept`: the setting previewViewers), else the first. Without one, or
                 // when a native viewer fails (docs/plans/executed/04-PLAN-preview.md 3.1): text when the file looks like
@@ -926,12 +926,11 @@ sealed class MainForm : Form
                 var reachable = await NetworkGuard.Reachable(path);
                 var viewers = new List<Shell.Viewers.Viewer>();
                 List<Shell.Lister> listers = [];
-                Shell.LexPenHandler? lexPen = null;
                 if (reachable && File.Exists(path))
                 {
-                    lexPen = Shell.LexPenHandler.Find();
                     listers = await app.Listers.Known(msg["listers"]?.AsArray().Select(n => n?.GetValue<string>() ?? "") ?? []);
                     var windows = Shell.PreviewHost.HandlerFor(path);
+                    var lexPen = windows is Guid clsid && Shell.LexPenHandler.Is(clsid);
                     viewers = await Task.Run(() => Shell.Viewers.For(path, windows, lexPen, listers));
                     viewer = Shell.Viewers.Pick(viewers, msg["viewer"]?.GetValue<string>(), msg["kept"] as JsonObject, path);
                     foreach (var v in viewers) offered.Add(new JsonObject { ["id"] = v.Id, ["name"] = v.Name });
@@ -963,7 +962,7 @@ sealed class MainForm : Form
                         (handler, error) = await PreviewOf(pane).ShowLister(app.Listers, lister, path, area, Stopped, Escape);
                         if (previewAsks.GetValueOrDefault(pane) != ask) break;
                     }
-                    else (handler, error) = PreviewOf(pane).Show(path, area, viewer == Shell.Viewers.LexPen ? lexPen?.Clsid : null);
+                    else (handler, error) = PreviewOf(pane).Show(path, area);
                     // LexPen or a plugin that fails says why under the bar (another viewer one click away); Windows' as before.
                     plugged = viewer is Shell.Viewers.LexPen || viewer?.StartsWith(Shell.Viewers.ListerPrefix) == true;
                     if (error is not null && reachable && File.Exists(path) && !plugged)
