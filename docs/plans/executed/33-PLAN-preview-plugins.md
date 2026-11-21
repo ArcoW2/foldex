@@ -66,7 +66,8 @@ the bar.
   viewer.
 - **Esc in a preview handler** (Windows', LexPen's): the handler has the keys first; Foldex catches none of them. An
   Esc the handler does not use itself it hands to its site (Foldex's `IPreviewHandlerFrame`, whose accelerator table
-  holds only Esc), and Foldex takes the keyboard back and treats it as Esc in the preview (F3's window closes).
+  holds only Esc), and Foldex takes the keyboard back and closes the preview, docked or floating. Esc in Foldex's
+  own viewer stays as it was (F3's window closes).
   prevhost.exe does this for the handlers it runs; LexPen does it itself.
 - **Settings window**: the preview group lists the kept choices, each removable (back to the order), and the lister
   plugins (3.2).
@@ -198,7 +199,8 @@ None.
 - The site (`PreviewFrame` in `Shell/PreviewHost.cs`): set on every handler before its window, and taken away
   (`SetSite(null)`) when the preview moves on, which is when LexPen closes its previewer. Tested in the test copy: Esc
   in the PDF handler (prevhost.exe) came back as Esc in the preview, the keyboard back in Foldex; with LexPen, one
-  previewer window in the panel after each of several `.md` files. Esc in LexPen reaches Foldex once LexPen hands it on.
+  previewer window in the panel after each of several `.md` files; Esc in LexPen, handed on, closed the docked preview.
+  The PDF handler (a third party's) handed Esc on in one try, not in later ones: up to the handler.
 
 ### 6.4 Tests
 

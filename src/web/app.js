@@ -5032,11 +5032,11 @@ const events = {
     v.showNative(m.text);
     previewCoverCheck();
   },
-  // Esc in a plugin's window: as Esc in the preview (F3's window closes).
+  // Esc in a native viewer (a plugin's window, a preview handler that did not use it): the preview closes, docked or
+  // floating.
   previewEscape(m) {
     window.__spike.events.push({ previewEscape: m.pane });
-    const v = views.get(m.pane);
-    if (v instanceof PreviewView) v.receive({ kind: 'close' });
+    if (views.get(m.pane) instanceof PreviewView) closePane(m.pane);
   },
   // The picture of Windows' preview while a dialog or menu is over it (previewCoverCheck).
   previewSnapshot(m) {
