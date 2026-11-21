@@ -430,3 +430,7 @@ FodyWeavers.xsd
 
 # LexPen's own backups of saved files
 *.bak
+
+# release/: the release notes are tracked (the Visual Studio rule [Rr]elease/ above would skip the folder);
+# its own .gitignore keeps the build output and the downloads out
+!/release/

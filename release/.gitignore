@@ -1,0 +1,5 @@
+# Build output and release downloads: published on GitHub Releases, never committed.
+# The release notes (notes-*.md) are tracked.
+bin/
+*.zip
+*.sha256
