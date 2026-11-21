@@ -1,8 +1,30 @@
 # Foldex
 
-A file explorer for Windows, built the way LexPen is: a WinForms host with one WebView2 page as its UI. Panes that
-connect into branches, a preview, search and scrap panes, a ribbon, actions, macros and themes are planned; see
-`docs/plans`.
+A file explorer for Windows with panes that connect: a folder tree drives a list, which drives a preview, in branches
+of their own colour, docked or floating. Built the way LexPen is: a WinForms host with one WebView2 page as its UI.
+
+## Features
+
+- **Connected panes**: trees, lists, Miller columns, any number of roots; each pane docked or floating, with its own
+  back and forward; window layouts kept as projects.
+- **Lists your way**: every property Windows has as a column, column sets, thumbnails (grid, mosaic, river, cards),
+  filters and filter sets, folder sizes.
+- **Preview**: Foldex's own viewers (text, code, markdown, images, PDF, CSV, zip, hex, a folder's summary), Windows'
+  preview handlers, LexPen, and Total Commander lister plugins; the viewer chosen per type. F3 opens a preview in a
+  window of its own.
+- **Find**: by name and any property, text in files (also as a regular expression), with Everything or the Windows
+  search index; results in a scrap pane, which also collects items from many folders.
+- **Files**: copy, move, delete and drag and drop as Explorer does them; multi-rename with tokens and a preview;
+  symbolic links, junctions and hard links; administrator rights only for the step that needs them.
+- **Bookmarks and quick access**, with keys and folders of their own.
+- **Macros** with keys, and programs run with the selected items.
+- **Ribbon, keys and themes**: every action in F1 and on any key; light and dark themes, a colour per branch, fonts.
+
+## Install
+
+Download `Foldex-<version>-win-x64.zip` from [Releases](https://github.com/ArcoW2/foldex/releases) and extract it to
+any folder you can write to (for example `C:\Apps\Foldex`), then run `Foldex.exe`. Settings are kept in
+`%LOCALAPPDATA%\Foldex`, not next to the exe. No installer.
 
 ## Requirements
 
@@ -67,3 +89,13 @@ and the settings window.
 Start the debug build with `FOLDEX_DATA=<scratch folder>` and
 `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9333`, then drive the page through
 `http://127.0.0.1:9333/json` and CDP, as in LexPen. Use a port of its own, not one your own Foldex or LexPen holds.
+
+## Releasing
+
+`release\notes-template.md` describes a release; `release\notes-<version>.md` are the notes of each one (tracked). The
+zip and its SHA-256 go in `release\` too, but only to GitHub Releases, not into git.
+
+## License and support
+
+Copyright (c) 2026 Arco Witter. Released under the [MIT License](LICENSE).
+Like Foldex? [Support me on Ko-fi](https://ko-fi.com/arcowitter).
