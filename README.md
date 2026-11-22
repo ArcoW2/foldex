@@ -87,6 +87,30 @@ focus, links), `hover`, `select` (selected rows), `warning` (problems in the sta
 branch colours of connected panes, in order; a theme without them takes its base's. Problems show in the status line
 and the settings window.
 
+## Right-click menus
+
+A folder or file gets Explorer's own menu, with every installed extension, and a Foldex submenu at the top. So does
+the empty space of a folder on disk, in a list or a tree: Windows' menu for the folder itself (New, Properties, and
+what extensions add there, such as Git or Open with Visual Studio), with New folder, New file and Paste link in the
+Foldex submenu. Shift+right-click shows the extended entries, as in Explorer. Places that are not folders on disk
+(quick access, a scrap pane) get Foldex's own menu only.
+
+Explorer's empty-space menu has entries that its folder view adds, not the folder. Foldex has no Explorer folder view,
+so Windows does not give it these entries, and they are not in Foldex's menu:
+
+| Explorer entry | In Foldex |
+|---|---|
+| View | Views (ribbon): details, icons or thumbnails |
+| Sort by | a click on a column title, or the Sort window |
+| Group by | not available |
+| Refresh | Refresh (F5) |
+| Paste, Paste shortcut | Paste (Ctrl+V); Paste link in the Foldex submenu for links |
+| Undo | not available |
+| Customize this folder... | not available; Properties > Customize does the same |
+
+Windows 11 entries that only its new compact menu shows (such as Open in Terminal, from packaged apps) may be
+missing as well, as they are from Explorer's Show more options menu.
+
 ## Testing the app
 
 Start the debug build with `FOLDEX_DATA=<scratch folder>` and

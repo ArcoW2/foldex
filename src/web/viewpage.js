@@ -124,7 +124,7 @@ for (const type of ['pointerdown', 'pointermove', 'contextmenu'])
 // A place for the host (Windows' menu): on the screen, as the host does not know where this page is.
 const onScreen = msg => Number.isFinite(msg.x)
   ? { ...msg, x: Math.round(msg.x + screenAt.x * devicePixelRatio), y: Math.round(msg.y + screenAt.y * devicePixelRatio), screen: true } : msg;
-post = msg => postHere(msg.op === 'menu' ? onScreen(msg) : msg);
+post = msg => postHere(msg.op === 'menu' || msg.op === 'backgroundMenu' ? onScreen(msg) : msg);
 // Windows' menu for items: asked by the window, which knows the other panes (plan 31 3.5; app.js itemMenu).
 itemMenu = msg => {
   flush();

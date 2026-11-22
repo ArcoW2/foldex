@@ -274,9 +274,20 @@ async function treeShows(tree, id, rename) {
 function emptyMenu() {
   const can = !!currentFolder();
   return [
-    { label: withKey('New folder', 'folder.new'), enabled: can, run: () => newItem('folder') },
-    { label: withKey('New file', 'file.new'), enabled: can, run: () => newItem('file') },
+    { label: withKey('New folder', 'folder.new'), action: 'folder.new', enabled: can, run: () => newItem('folder') },
+    { label: withKey('New file', 'file.new'), action: 'file.new', enabled: can, run: () => newItem('file') },
     // The clipboard's link source pasted here (plan 31 3.2): its kind and item in the text.
-    ...(clipboardLink ? ['-', { label: withKey(pasteLinkTitle(), 'link.paste'), enabled: can, run: () => runAction('link.paste') }] : []),
+    ...(clipboardLink ? ['-', { label: withKey(pasteLinkTitle(), 'link.paste'), action: 'link.paste', enabled: can, run: () => runAction('link.paste') }] : []),
   ];
+}
+
+// A right-click on a pane's empty space: in a folder on disk Windows' menu of the folder's empty space (as Explorer's)
+// with emptyMenu's items in its Foldex submenu at the top (the host runs them as actions: runAction); elsewhere
+// emptyMenu alone. Explorer's own View, Sort by, Group by, Refresh, Paste, Paste shortcut and Undo are not in it: its
+// folder view adds them, not the folder (README, Right-click menus).
+function emptySpaceMenu(e) {
+  const folder = currentFolder();
+  if (!folder) return openMenu(e.clientX, e.clientY, emptyMenu());
+  post({ op: 'backgroundMenu', folder, x: e.clientX * devicePixelRatio, y: e.clientY * devicePixelRatio, extended: e.shiftKey,
+    own: emptyMenu().map(i => i === '-' ? '-' : { label: i.label, action: i.action, enabled: i.enabled }) });
 }

@@ -418,6 +418,17 @@ sealed class MainForm : Form
                 ShowMenu(ids, ToScreen(msg), msg["extended"]?.GetValue<bool>() == true, msg["own"]?.GetValue<bool>() == true, msg["item"]?.GetValue<bool>() == true,
                     msg["bookmark"]?.GetValue<string>(), msg["foldex"] as JsonObject);
                 break;
+            case "backgroundMenu":
+            {
+                var folder = msg["folder"]!.GetValue<string>();
+                if (!await NetworkGuard.Reachable(folder))
+                {
+                    Post(new JsonObject { ["event"] = "menuDone", ["error"] = "the network location is not reachable" });
+                    break;
+                }
+                ShowBackgroundMenu(folder, ToScreen(msg), msg["extended"]?.GetValue<bool>() == true, msg["own"] as JsonArray ?? []);
+                break;
+            }
             case "makeLink":
             {
                 // A link of a kind to `target` in `folder` (plan 31 3.2): named as the item unless a name is given; a name
@@ -1240,6 +1251,34 @@ sealed class MainForm : Form
             {
                 if (items.Count > 0) items.Add(new ShellMenu.OwnItem("-"));
                 items.AddRange(more);
+            }
+            if (items.Count > 0) menu.AddOwn([new ShellMenu.OwnItem("Foldex", true, items)]);
+            var verb = menu.Show(this, screen, out var chosen);
+            if (chosen is { } k && k < runs.Count) runs[k]();
+            Post(new JsonObject { ["event"] = "menuDone", ["verb"] = verb });
+        }
+    }
+
+    // Windows' menu of a folder's empty space, as Explorer's, with the page's own items (web/rename.js emptyMenu: { label,
+    // action, enabled } or "-") in the Foldex submenu at the top; a chosen one runs as the page's action (runAction).
+    void ShowBackgroundMenu(string folder, Point screen, bool extended, JsonArray own)
+    {
+        var (menu, error) = ShellMenu.CreateBackground(folder, extended);
+        if (menu is null)
+        {
+            Post(new JsonObject { ["event"] = "menuDone", ["error"] = error });
+            return;
+        }
+        using (menu)
+        {
+            var items = new List<ShellMenu.OwnItem>();
+            var runs = new List<Action>();
+            foreach (var node in own)
+            {
+                if (node is not JsonObject o) { items.Add(new ShellMenu.OwnItem("-")); continue; }
+                var action = o["action"]!.GetValue<string>();
+                runs.Add(() => Post(new JsonObject { ["event"] = "runAction", ["name"] = action }));
+                items.Add(new ShellMenu.OwnItem(o["label"]!.GetValue<string>(), o["enabled"]?.GetValue<bool>() != false));
             }
             if (items.Count > 0) menu.AddOwn([new ShellMenu.OwnItem("Foldex", true, items)]);
             var verb = menu.Show(this, screen, out var chosen);

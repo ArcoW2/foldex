@@ -170,6 +170,21 @@ public class ShellTests : IDisposable
         });
         Assert.Contains(texts, t => t.Replace("&", "") == "Delete");
     }
+
+    [Fact]
+    public async Task FolderEmptySpaceGetsExplorersBackgroundMenu()
+    {
+        var items = await StaWorker.Once("t", () =>
+        {
+            var (menu, error) = ShellMenu.CreateBackground(dir, false);
+            Assert.Null(error);
+            using (menu) return menu!.TextsAndVerbs();
+        });
+        Assert.Contains(items, i => i.Verb == "properties");
+        Assert.Contains(items, i => i.Text.Replace("&", "") == "New");
+        // Explorer's folder view adds these, not the folder: not in it (README, Right-click menus).
+        Assert.DoesNotContain(items, i => i.Text.Replace("&", "") is "View" or "Sort by" or "Group by" or "Refresh" or "Paste");
+    }
 }
 
 public class ElevatedHelperTests

@@ -197,6 +197,7 @@ static class Native
 {
     public static readonly Guid BhidEnumItems = new("94f60519-2850-4924-aa5a-d15e84868039");
     public static readonly Guid BhidSFUIObject = new("3981e225-f559-11d3-8e3a-00c04f6837d5");
+    public static readonly Guid BhidSFViewObject = new("3981e226-f559-11d3-8e3a-00c04f6837d5");
     public static readonly Guid BhidDataObject = new("b8c0bd9f-ed24-455c-83e6-d5390c4fe8c4");
     public static readonly Guid IidIEnumShellItems = typeof(IEnumShellItems).GUID;
     public static readonly Guid IidIContextMenu = typeof(IContextMenu).GUID;

@@ -731,7 +731,7 @@ class TreeView {
       // A quick access shortcut: its entry too, so the menu's Remove and Edit... are about that one.
       if (n) itemMenu({ op: 'menu', ids: [n.id], own: true, item: n.folder === false, bookmark: n.bm,
         x: e.clientX * devicePixelRatio, y: e.clientY * devicePixelRatio, extended: e.shiftKey });
-      else openMenu(e.clientX, e.clientY, emptyMenu());   // its empty space: a new folder or file (rename.js)
+      else emptySpaceMenu(e);   // its empty space: Windows' menu of the folder with a new folder or file (rename.js)
     });
     dropTarget(this.body, e => {
       const n = this.nodeAt(e.target), q = this.quickAccessDrop(e, n);
@@ -1666,7 +1666,7 @@ class ListView {
     this.body.addEventListener('contextmenu', e => {
       e.preventDefault();
       const x = this.entryAt(e.target);
-      if (!x) return openMenu(e.clientX, e.clientY, emptyMenu());   // its empty space: a new folder or file (rename.js)
+      if (!x) return emptySpaceMenu(e);   // its empty space: Windows' menu of the folder with a new folder or file (rename.js)
       if (x.up) return;   // "..": no menu
       if (!this.selected.has(x.id)) this.select(x, e);
       if (this.ownMenu?.(e)) return;

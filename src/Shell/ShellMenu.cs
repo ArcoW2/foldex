@@ -45,22 +45,58 @@ sealed class ShellMenu : IDisposable
             // GetUIObjectOf and their full ID lists ended in an access violation in coreclr (plan 02 3.7, item 7); not
             // pursued: such a selection gets Foldex's own menu (plan 06).
             if (hr < 0) return (null, $"the shell made no menu for these items (0x{hr:X8})");
-            var cm = (IContextMenu)Marshal.GetObjectForIUnknown(ptr);
-            Marshal.Release(ptr);
-            var hmenu = Native.CreatePopupMenu();
-            hr = cm.QueryContextMenu(hmenu, 0, FirstId, LastId,
-                defaultOnly ? Native.CmfDefaultOnly : Native.CmfNormal | Native.CmfCanRename | (extended ? Native.CmfExtendedVerbs : 0));
-            if (hr < 0)
-            {
-                Native.DestroyMenu(hmenu);
-                Marshal.ReleaseComObject(cm);
-                return (null, $"the menu could not be filled (0x{hr:X8})");
-            }
-            return (new ShellMenu(cm, hmenu), null);
+            return Fill(ptr, defaultOnly ? Native.CmfDefaultOnly : Native.CmfNormal | Native.CmfCanRename | (extended ? Native.CmfExtendedVerbs : 0));
         }
         catch (COMException ex) { return (null, ex.Message); }
         finally { Native.FreeIdLists(pidls); }
     }
+
+    /// <summary>The menu of a folder's empty space, as Explorer's (its background menu: Paste, New, Properties and the
+    /// extensions for it); null and why when the shell cannot make one.</summary>
+    public static (ShellMenu? Menu, string? Error) CreateBackground(string folder, bool extended)
+    {
+        try
+        {
+            var item = Native.Item(folder);
+            var hr = item.BindToHandler(IntPtr.Zero, Native.BhidSFViewObject, Native.IidIContextMenu, out var ptr);
+            Marshal.ReleaseComObject(item);
+            if (hr < 0) return (null, $"the shell made no menu for this folder (0x{hr:X8})");
+            return Fill(ptr, Native.CmfNormal | (extended ? Native.CmfExtendedVerbs : 0));
+        }
+        catch (Exception ex) when (ex is COMException or ArgumentException or IOException or UnauthorizedAccessException) { return (null, ex.Message); }
+    }
+
+    // A shell menu filled from its IContextMenu pointer (released here).
+    static (ShellMenu? Menu, string? Error) Fill(IntPtr ptr, uint flags)
+    {
+        var cm = (IContextMenu)Marshal.GetObjectForIUnknown(ptr);
+        Marshal.Release(ptr);
+        var hmenu = Native.CreatePopupMenu();
+        var hr = cm.QueryContextMenu(hmenu, 0, FirstId, LastId, flags);
+        if (hr < 0)
+        {
+            Native.DestroyMenu(hmenu);
+            Marshal.ReleaseComObject(cm);
+            return (null, $"the menu could not be filled (0x{hr:X8})");
+        }
+        return (new ShellMenu(cm, hmenu), null);
+    }
+
+    /// <summary>The menu's top-level items: text and verb ("" for none or a submenu), for tests and probes.</summary>
+    public List<(string Text, string Verb)> TextsAndVerbs()
+    {
+        var texts = Texts();
+        var list = new List<(string, string)>();
+        for (var i = 0; i < texts.Count; i++)
+        {
+            var id = GetMenuItemID(hmenu, i);
+            list.Add((texts[i], id is >= (int)FirstId and <= (int)LastId ? Verb((uint)id - FirstId) : ""));
+        }
+        return list;
+    }
+
+    [DllImport("user32.dll")]
+    static extern int GetMenuItemID(IntPtr hMenu, int nPos);
 
     /// <summary>The menu's top-level texts, as shown ("&amp;Open", "", "Cu&amp;t", ...); "" is a separator.</summary>
     public List<string> Texts()
