@@ -83,9 +83,9 @@ const keyText = (name, ...params) => keysOf(name, ...params)[0] ?? '';
 // A title with its key, for tooltips: "Copy (Ctrl+C)".
 const withKey = (title, name, ...params) => keyText(name, ...params) ? `${title} (${keyText(name, ...params)})` : title;
 
-// In a text box the keys that edit text are its own: only keys with Alt, function keys and Ctrl keys other than the
-// editing ones run actions there.
-const TEXT_KEYS = /^(Shift\+)?(Backspace|Del|Enter|Home|End|Left|Right|Up|Down|Space|Tab)$|^Ctrl\+(Shift\+)?[ACVXYZ]$|^Ctrl\+(Left|Right|Backspace|Del)$/;
+// In a text box the keys that edit text are its own, and Esc, which ends its editing (a rename cancelled, not the
+// filter cleared): only keys with Alt, function keys and Ctrl keys other than the editing ones run actions there.
+const TEXT_KEYS = /^(Shift\+)?(Backspace|Del|Enter|Esc|Home|End|Left|Right|Up|Down|Space|Tab)$|^Ctrl\+(Shift\+)?[ACVXYZ]$|^Ctrl\+(Left|Right|Backspace|Del)$/;
 const inTextField = () => !!document.activeElement?.matches('input, textarea, [contenteditable]:not([contenteditable=false])');
 
 function setPending(stroke) {
