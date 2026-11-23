@@ -64,6 +64,7 @@ class Layout {
       if (parent.activeKey === colour) parent.activeKey = null;
       if (parent.lastKey === colour) parent.lastKey = null;
     }
+    this.loneBranchFirst();
     return true;
   }
 
@@ -118,7 +119,28 @@ class Layout {
     }
     this.panes.delete(id);
     if (this.root === id) this.root = [...this.panes.values()].find(p => p.source === null)?.id ?? null;
+    this.loneBranchFirst();
     return true;
+  }
+
+  // One branch colour left in the window (the others closed or detached): that branch in the first colour, the theme's
+  // own, as a window's first branch is; what the panes keep per colour (state, history, the colour shown) goes along.
+  loneBranchFirst() {
+    const first = Branches[0];
+    const colours = new Set([...this.panes.values()].filter(p => p.source !== null).map(p => p.colour));
+    if (colours.size !== 1) return;
+    const [lone] = colours;
+    if (lone === first || lone === null) return;
+    for (const p of this.panes.values()) {
+      if (p.colour === lone) p.colour = first;
+      for (const kept of [p.states, p.histories]) {
+        if (!kept || !(lone in kept)) continue;
+        kept[first] = kept[lone];
+        delete kept[lone];
+      }
+      if (p.activeKey === lone) p.activeKey = first;
+      if (p.lastKey === lone) p.lastKey = first;
+    }
   }
 
   // The panes following `id`; with `key`, only those of that colour. A hidden pane (Ctrl+O, `away`) only with `all`: it
@@ -364,6 +386,7 @@ class Layout {
     layout.root = o.root;
     layout.next = o.next;
     for (const p of o.panes) layout.panes.set(p.id, p);
+    layout.loneBranchFirst();   // kept so before (plan 03): a lone branch in another colour
     return layout;
   }
 }

@@ -27,6 +27,41 @@ public class PanesTests
     static string Str(JsonElement e) => e.ValueKind == JsonValueKind.Null ? "null" : e.ToString();
 
     [Fact]
+    public void ALoneBranchLeftTakesTheFirstColourWithItsState()
+    {
+        // A tree with two children (colours 0 and 1); the first closed: the other, alone, in colour 0, its state along.
+        var r = Run("""
+            const l = new Layout();
+            const A = l.add({ kind: 'tree' });
+            const B = l.add({ source: A });
+            const C = l.add({ source: A });
+            l.pane(A).activeKey = l.pane(C).colour;
+            const before = l.pane(C).colour;
+            l.state(A).focus = 'C:/x';
+            l.remove(B);
+            """, "[before, l.pane(C).colour, l.keyOf(A), l.state(A).focus]");
+        Assert.Equal("""[1,0,0,"C:/x"]""", r.GetRawText());
+    }
+
+    [Fact]
+    public void ALoneBranchKeptInAnotherColourIsTheFirstWhenLoaded()
+    {
+        var r = Run("""
+            const l = Layout.fromJSON({ root: 'p1', next: 3, panes: [
+              { id: 'p1', source: null, colour: null, kind: 'tree', states: { 3: { location: null, focus: 'D:/', selection: [] } }, activeKey: 3 },
+              { id: 'p2', source: 'p1', colour: 3, kind: 'list', states: {} } ] });
+            """, "[l.pane('p2').colour, l.keyOf('p1'), l.state('p1').focus]");
+        Assert.Equal("""[0,0,"D:/"]""", r.GetRawText());
+    }
+
+    [Fact]
+    public void TwoBranchesKeepTheirColours()
+    {
+        var r = Run(Example.Replace("'red'", "1").Replace("'blue'", "2") + "l.remove(D);", "[l.pane(B).colour, l.pane(C).colour]");
+        Assert.Equal("[1,2]", r.GetRawText());
+    }
+
+    [Fact]
     public void TheFirstPaneIsTheRoot()
     {
         var r = Run("const l = new Layout(); const A = l.add({ kind: 'tree' }); const B = l.add({ source: A });",
