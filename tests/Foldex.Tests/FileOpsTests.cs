@@ -13,6 +13,23 @@ public class FileOpsTests
     }
 
     [Fact]
+    public void CopyIntoItsOwnFolderMakesACopyByANewName()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "foldex-copy-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(dir, "sub"));
+        File.WriteAllText(Path.Combine(dir, "a.txt"), "abc");
+        try
+        {
+            var op = Wait(new FileOps(_ => { }).Start("copy", [Path.Combine(dir, "a.txt"), Path.Combine(dir, "sub")], dir, IntPtr.Zero, false));
+            Assert.True(op.Finished);
+            Assert.Null(op.Error);
+            Assert.Equal(2, Directory.GetFiles(dir, "a*.txt").Length);
+            Assert.Equal(2, Directory.GetDirectories(dir, "sub*").Length);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
     public void NewFolderAndFileByTheirNames()
     {
         var dir = Path.Combine(Path.GetTempPath(), "foldex-new-" + Guid.NewGuid().ToString("N"));

@@ -78,7 +78,8 @@ sealed class FileOps
         var op = new Operation { Id = ++lastId, Kind = kind, Items = ids.Count, Ids = [.. ids] };
         operations.Add(op);
         changed(op);
-        var flags = FlagsFor(kind, confirmed) | (conflict == "replace" ? Native.FofNoConfirmation : 0) | (Rights == "never" ? Native.FofNoErrorUi : 0);
+        var flags = FlagsFor(kind, confirmed) | (conflict == "replace" ? Native.FofNoConfirmation : 0) | (Rights == "never" ? Native.FofNoErrorUi : 0)
+            | (IntoOwnFolder(kind, ids, target) ? Native.FofRenameOnCollision : 0);
         if (Rights == "elevated" && Helper is { } helper)
         {
             // By the helper (plan 39 3.6): its answer once done; no progress on the way.
@@ -103,6 +104,14 @@ sealed class FileOps
     }
 
     static bool Exists(string path) => File.Exists(path) || Directory.Exists(path);
+
+    // A copy into the folder the items are in (Copy and Paste in the same folder): a copy by a new name ("a - Copy.txt"),
+    // as Explorer makes it, not Windows' "The source and destination file names are the same". Only then: into another
+    // folder a name that is there still asks.
+    static bool IntoOwnFolder(string kind, IReadOnlyList<string> ids, string? target) =>
+        kind == "copy" && target is not null && ids.Count > 0
+        && ids.All(id => string.Equals(Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(id)) is { } parent ? Path.TrimEndingDirectorySeparator(parent) : null,
+            Path.TrimEndingDirectorySeparator(target), StringComparison.OrdinalIgnoreCase));
 
     static uint FlagsFor(string kind, bool confirmed)
     {
