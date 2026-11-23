@@ -441,6 +441,7 @@ function formatSize(n) {
 const layout = new Layout();
 const views = new Map();
 let activePane = null;
+let previousPane = null;   // the pane active before it: the keyboard goes back there when the active one closes (closePane)
 
 function paneElement(id, kind, title) {
   const el = document.createElement('section');
@@ -545,6 +546,7 @@ function activate(id) {
     renderDock();
   }
   if (activePane === id || views.get(id)?.passive) return;   // F1: what it runs works on the pane that was active
+  if (activePane !== null) previousPane = activePane;
   activePane = id;
   queueMicrotask(ribbonRefresh);
   if (!(views.get(id) instanceof PreviewView)) showGlobal(layout.state(id).focus);
@@ -4047,8 +4049,10 @@ function closePane(id) {
   layout.remove(id);
   docks.remove(id);
   renderDock();
-  // The keyboard stays in the active pane when another one closed (the preview off with Alt+P); else the first.
-  const kept = activePane !== id && views.has(activePane) ? activePane : null;
+  // The keyboard stays in the active pane when another one closed (the preview off with Alt+P); the active one closed
+  // (an F3 window with Esc): back to the pane active before it; else the first.
+  const kept = activePane !== id && views.has(activePane) ? activePane
+    : previousPane !== id && views.has(previousPane) ? previousPane : null;
   activePane = null;
   const next = kept ?? docks.panes().find(p => docks.visible(p) && views.get(p));
   if (next) {
