@@ -205,7 +205,14 @@ sealed class MainForm : Form
             var gone = false;
             frames[name] = frame;
             frame.Destroyed += (_, _) => { gone = true; if (frames.GetValueOrDefault(name) == frame) frames.Remove(name); };
-            void Reply(string answer) { if (!gone) frame.PostWebMessageAsJson(answer); }
+            // An answer after the host's own work (awaited): its frame may be going by then (its pane closed, docked or
+            // floating) before Destroyed says so; WebView2 then refuses it (ERROR_INVALID_STATE) and nobody reads it.
+            void Reply(string answer)
+            {
+                if (gone) return;
+                try { frame.PostWebMessageAsJson(answer); }
+                catch (COMException ex) when (ex.HResult == unchecked((int)0x8007139F)) { gone = true; }
+            }
             frame.WebMessageReceived += (_, m) =>
             {
                 var json = m.WebMessageAsJson;
