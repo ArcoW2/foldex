@@ -121,6 +121,8 @@ static class ColumnSetsFile
                 // Give way (columns.js fittedWidths): a whole number, 1 first.
                 if (col["giveWay"]?.GetValueKind() == JsonValueKind.Number && col["giveWay"]!.GetValue<double>() is var way && way >= 1 && way == Math.Floor(way))
                     c["giveWay"] = (int)way;
+                // The first direction a click on its title sorts by (columns.js sortAfterClick): only "desc" is kept.
+                if (col["first"]?.GetValueKind() == JsonValueKind.String && col["first"]!.GetValue<string>() == "desc") c["first"] = "desc";
                 var fit = col["fit"]?.GetValueKind() == JsonValueKind.String ? col["fit"]!.GetValue<string>() : fitAll ? "both" : null;
                 if (fit is not null && FitModes.Contains(fit)) c["fit"] = fit;
                 cols.Add(c);

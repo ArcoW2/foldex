@@ -30,6 +30,7 @@ const saveMine = mine => toWindow({ kind: 'saveMine', mine });
 const saveFolders = folders => toWindow({ kind: 'folders', folders });
 const FitModes = [['never', 'never'], ['manual', 'manual'], ['enlarge', 'auto-enlarge'], ['shrink', 'auto-shrink'], ['both', 'auto-both']];
 const fitOf = col => FitModes.some(([m]) => m === col.fit) ? col.fit : col.id === 'name' ? 'manual' : 'never';
+const firstDescOf = col => col?.first === 'desc';   // as columns.js: its first sort direction
 const EmTip = 'em: the width of the pane font\'s letter M; the column grows and shrinks with the font size';
 
 paneHandlers.sets = m => {
@@ -259,14 +260,18 @@ function columnRow(set, sort, col, k, list) {
   box.addEventListener('change', () => changeChosen(s => { if (box.checked) delete s.columns[k].hidden; else s.columns[k].hidden = true; }));
   // How wide the pane it was opened from shows it now (an auto column fitted), when that pane shows these columns.
   const now = shownWidth(col.id);
-  // The sort cell: none, ascending, descending, none again; its place in the sort when more than one column sorts.
-  const at = sort.findIndex(s => s.id === col.id);
+  // The sort cell: none, the column's first direction, the other one, none again; its place in the sort when more than
+  // one column sorts.
+  const at = sort.findIndex(s => s.id === col.id), firstDesc = firstDescOf(col);
+  const dirName = desc => desc ? 'descending' : 'ascending';
   const sortCell = button(at < 0 ? '-' : `${sort[at].desc ? 'v' : '^'}${sort.length > 1 ? at + 1 : ''}`, () => changeChosen(s => {
     const i = s.sort.findIndex(x => x.id === col.id);
-    if (i < 0) s.sort.push({ id: col.id, desc: false });
-    else if (!s.sort[i].desc) s.sort[i].desc = true;
+    if (i < 0) s.sort.push({ id: col.id, desc: firstDesc });
+    else if (s.sort[i].desc === firstDesc) s.sort[i].desc = !firstDesc;
     else s.sort.splice(i, 1);
-  }), true, at < 0 ? 'Not sorted by; a click: ascending' : sort[at].desc ? 'Descending; a click: not sorted by' : 'Ascending; a click: descending');
+  }), true, at < 0 ? `Not sorted by; a click: ${dirName(firstDesc)}`
+    : sort[at].desc === firstDesc ? `${sort[at].desc ? 'Descending' : 'Ascending'}; a click: ${dirName(!firstDesc)}`
+    : `${sort[at].desc ? 'Descending' : 'Ascending'}; a click: not sorted by`);
   sortCell.className = 'cs-sort';
   const first = Object.assign(document.createElement('div'), { className: 'cs-line' });
   first.append(grip(), box, Object.assign(document.createElement('span'), { className: 'cs-title', textContent: columnInfo(col.id).title, title: col.id }));
@@ -288,12 +293,20 @@ function columnRow(set, sort, col, k, list) {
     if (Number.isInteger(v) && v >= 1) s.columns[k].giveWay = v; else delete s.columns[k].giveWay;
   }));
   giveWay.append(Object.assign(document.createElement('span'), { className: 'cs-caption', textContent: 'give way' }), wayBox);
+  // First (columns.js sortAfterClick): the direction a first click on its title sorts it.
+  const firstWrap = Object.assign(document.createElement('span'), { className: 'cs-size' });
+  const firstBox = document.createElement('select');
+  firstBox.title = 'First: the direction a first click on the column title sorts by it; a second click the other way';
+  firstBox.append(new Option('^ ascending', 'asc'), new Option('v descending', 'desc'));
+  firstBox.value = firstDesc ? 'desc' : 'asc';
+  firstBox.addEventListener('change', () => changeChosen(s => { if (firstBox.value === 'desc') s.columns[k].first = 'desc'; else delete s.columns[k].first; }));
+  firstWrap.append(Object.assign(document.createElement('span'), { className: 'cs-caption', textContent: 'first' }), firstBox);
   const second = Object.assign(document.createElement('div'), { className: 'cs-line cs-fitline' });
   second.append(grip(), Object.assign(document.createElement('span'), { className: 'cs-caption', textContent: 'Fit' }), fit,
     number(col.width ?? columnInfo(col.id).width, (c, v) => { c.width = v ?? columnInfo(col.id).width; },
       `Width asked for; an auto column fits from it (${EmTip})`, false, 'width'),
     number(col.min, (c, v) => { if (v) c.min = v; else delete c.min; }, `Minimum width (${EmTip})`, false, 'min'),
-    number(col.max, (c, v) => { if (v) c.max = v; else delete c.max; }, `Maximum width, empty: none (${EmTip})`, true, 'max'), giveWay, sortCell);
+    number(col.max, (c, v) => { if (v) c.max = v; else delete c.max; }, `Maximum width, empty: none (${EmTip})`, true, 'max'), giveWay, firstWrap, sortCell);
   row.append(first, second);
   return row;
 }

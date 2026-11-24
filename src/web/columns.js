@@ -168,7 +168,7 @@ const columnComparer = (id, kind, desc) => sortComparer([{ id, desc }]);
 const FitModes = ['never', 'manual', 'enlarge', 'shrink', 'both'];
 const fitOf = col => FitModes.includes(col.fit) ? col.fit : col.id === 'name' ? 'manual' : 'never';
 
-// A set's or a pane's columns as plan 28 keeps them (3.9): { columns: [{ id, width, hidden, fit, min, max, giveWay }], sort:
+// A set's or a pane's columns as plan 28 keeps them (3.9): { columns: [{ id, width, hidden, fit, min, max, giveWay, first }], sort:
 // [{ id, desc }] }. Written before: a sort { id, desc } is a list of one, "fit": true (every column fitted after every
 // listing) makes every column fit both ways. A pane's own also `from`: the set they were taken from (its header's
 // Column sets), so that one is checked there.
@@ -525,13 +525,16 @@ function drawColumnHeader(view) {
 }
 
 // A click on a title (plan 28 3.4): the sort after it, or null when the Sort window opens instead (a sort of several
-// columns without this one). A sort of one column (or none): by this one alone, again the other way; of several with
-// this one in it: only this one turned.
-function sortAfterClick(sort, id) {
+// columns without this one). A sort of one column (or none): by this one alone, first in its first direction
+// (`firstDesc`: the column's "first": "desc"), again the other way; of several with this one in it: only this one turned.
+function sortAfterClick(sort, id, firstDesc = false) {
   const at = sort.findIndex(s => s.id === id);
   if (sort.length > 1) return at < 0 ? null : sort.map((s, k) => k === at ? { ...s, desc: !s.desc } : s);
-  return [{ id, desc: at === 0 ? !sort[0].desc : false }];
+  return [{ id, desc: at === 0 ? !sort[0].desc : firstDesc }];
 }
+
+// A column's first direction when sorted by it (a click on its title, Manage sets' sort cell): "first": "desc", else ascending.
+const firstDescOf = col => col?.first === 'desc';
 
 // A pane's sort changed: the header drawn again, the list sorted that way.
 function sortChanged(view, sort) {
@@ -556,7 +559,7 @@ function moveColumn(view, col, e) {
     mine.classList.remove('dragging');
     if (!moved) {
       if (e.ctrlKey) return openSortWindow(view, col.id);
-      const sort = sortAfterClick(view.cols.sort, col.id);
+      const sort = sortAfterClick(view.cols.sort, col.id, firstDescOf(col));
       return sort ? sortChanged(view, sort) : openSortWindow(view, col.id);
     }
     // The place: before the first title whose middle is right of the mouse; any column anywhere, the name too (plan
