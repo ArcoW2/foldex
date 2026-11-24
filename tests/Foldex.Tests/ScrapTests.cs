@@ -171,6 +171,13 @@ public class ScrapTests : IDisposable
     }
 
     [Fact]
+    public void ASearchsScrapIsNamedByItsTextAndItsName()
+    {
+        var r = Js("[searchScrapName('*.pas', 'BOVK'), searchScrapName('*.pas', ''), searchScrapName('', 'BOVK'), searchScrapName('', '')]");
+        Assert.Equal("""["Find \"BOVK\" in \"*.pas\"","Find \"*.pas\"","Find \"BOVK\"","Search"]""", r.GetRawText());
+    }
+
+    [Fact]
     public void ItemsOfOneFolderGetExplorersMenu()
     {
         var r = Js("""[oneFolder(['C:\\x\\a', 'c:\\X\\b']), oneFolder(['C:\\x\\a', 'C:\\y\\b']), oneFolder([]), folderOf('C:\\a.txt'), folderOf('C:\\x\\')]""");

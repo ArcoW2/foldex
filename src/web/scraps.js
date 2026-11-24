@@ -44,6 +44,12 @@ function newScrapName(taken) {
   for (let n = 1; ; n++) if (!used.has(`scrap ${n}`)) return `Scrap ${n}`;
 }
 
+// The name of a search's new scrap: Find "text" in "named"; with only one of them that one (Find "text", Find "named");
+// with neither, Search.
+function searchScrapName(named, text) {
+  return text && named ? `Find "${text}" in "${named}"` : text || named ? `Find "${text || named}"` : 'Search';
+}
+
 // The folder an item is in; for a drive, the drive.
 function folderOf(id) {
   const parent = id.replace(/\\+$/, '').replace(/\\[^\\]*$/, '');

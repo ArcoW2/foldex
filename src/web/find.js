@@ -261,7 +261,7 @@ function remember(o) {
 function runSearch(o, lookScrap, target, clearFirst) {
   const within = lookScrap ? lookScrap.all.map(x => x.id) : null;
   const beside = docks.areaOf(activePane) === 'center' ? activePane : docks.panes().find(p => docks.areaOf(p) === 'center' && docks.visible(p));
-  const scrap = target ?? newScrap(o.named || 'Search', beside ? { pane: beside, side: 'right' } : { area: 'center' });
+  const scrap = target ?? newScrap(searchScrapName(o.named, o.text),beside ? { pane: beside, side: 'right' } : { area: 'center' });
   if (target) {
     showPane(target.id);
     if (clearFirst) target.clear();
