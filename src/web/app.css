@@ -946,8 +946,9 @@ body.connecting, body.connecting * {
 .pane.page > .body { overflow: hidden; }
 .pane.page > .body > .rows { position: absolute; inset: 0; }
 .pane-frame { display: block; width: 100%; height: 100%; border: 0; background: transparent; }
-/* A splitter dragged (app.js splitterDrag): the mouse stays with the window's page. */
-body.splitting .pane-frame { pointer-events: none; }
+/* A splitter, a head or a tab pressed (dragToDock), or a connector (dragConnector) dragged: the mouse stays with the window's
+   page, else the moves and the release went to a pane's frame under it and the drag stuck. */
+body.splitting .pane-frame, body.pane-press .pane-frame, body.connecting .pane-frame { pointer-events: none; }
 
 /* The page of a tree, a list or a scrap (view.html, viewpage.js; plan 14 3.0, stage 6): that pane alone, filling it.
    Docked, its head and ring are its window's page's; floating, its own. */

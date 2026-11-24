@@ -3557,6 +3557,7 @@ function dragToDock(id, e) {
   const x0 = e.clientX, y0 = e.clientY;
   let mark = null, place = null;
   const placeAt = (x, y) => dockPlaceAt(id, x, y);
+  document.body.classList.add('pane-press');   // from the press on, the frames leave the mouse to this page (app.css)
   const move = m => {
     if (!mark) {
       if (Math.hypot(m.clientX - x0, m.clientY - y0) < 10) return;   // a press that moves a little is no drag
@@ -3573,6 +3574,7 @@ function dragToDock(id, e) {
   const up = m => {
     removeEventListener('mousemove', move);
     removeEventListener('mouseup', up);
+    document.body.classList.remove('pane-press');
     if (!mark) return;
     mark.remove();
     document.body.classList.remove('docking');
