@@ -118,6 +118,9 @@ static class ColumnSetsFile
                 foreach (var size in new[] { "width", "min", "max" })
                     if (col[size]?.GetValueKind() == JsonValueKind.Number && col[size]!.GetValue<double>() > 0) c[size] = col[size]!.GetValue<double>();
                 if (col["hidden"]?.GetValueKind() == JsonValueKind.True) c["hidden"] = true;
+                // Give way (columns.js fittedWidths): a whole number, 1 first.
+                if (col["giveWay"]?.GetValueKind() == JsonValueKind.Number && col["giveWay"]!.GetValue<double>() is var way && way >= 1 && way == Math.Floor(way))
+                    c["giveWay"] = (int)way;
                 var fit = col["fit"]?.GetValueKind() == JsonValueKind.String ? col["fit"]!.GetValue<string>() : fitAll ? "both" : null;
                 if (fit is not null && FitModes.Contains(fit)) c["fit"] = fit;
                 cols.Add(c);

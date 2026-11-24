@@ -267,13 +267,13 @@ public class ColumnsTests : IDisposable
         Assert.Equal("""{"name":"Old","columns":[{"id":"name","fit":"both"},{"id":"size","fit":"both"}],"sort":[{"id":"size","desc":true}]}""",
             old[0].ToJsonString());
         ColumnSetsFile.SaveSets(dir, JsonNode.Parse("""
-            [ { "name": "Mine", "columns": [ { "id": "git", "fit": "enlarge", "min": 4, "max": 9 }, { "id": "name" }, { "id": "ext", "hidden": true } ],
+            [ { "name": "Mine", "columns": [ { "id": "git", "fit": "enlarge", "min": 4, "max": 9, "giveWay": 2 }, { "id": "name", "giveWay": 0.5 }, { "id": "ext", "hidden": true } ],
                 "sort": [ { "id": "git" }, { "id": "name", "desc": true } ] } ]
             """)!, JsonNode.Parse("""[ "Git", "Mine" ]"""));
         var r = ColumnSetsFile.Load(dir, Shipped);
         Assert.Empty(r["problems"]!.AsArray());
         Assert.Equal(["Git", "Mine", "Generic", "Dates", "Pictures", "Music", "Films", "Documents"], Names(r));
-        Assert.Equal("""[{"id":"git","min":4,"max":9,"fit":"enlarge"},{"id":"name"},{"id":"ext","hidden":true}]""", r["sets"]![1]!["columns"]!.ToJsonString());
+        Assert.Equal("""[{"id":"git","min":4,"max":9,"giveWay":2,"fit":"enlarge"},{"id":"name"},{"id":"ext","hidden":true}]""", r["sets"]![1]!["columns"]!.ToJsonString());
         Assert.Equal("""[{"id":"git","desc":false},{"id":"name","desc":true}]""", r["sets"]![1]!["sort"]!.ToJsonString());
         // Your sets written again without an order keep it.
         ColumnSetsFile.SaveSets(dir, JsonNode.Parse("""[ { "name": "Mine", "columns": [ { "id": "name" } ] } ]""")!);
