@@ -134,6 +134,32 @@ public class ColumnsTests : IDisposable
         Assert.Equal("[[30,8,12],[20,8,12],[8,8,12]]", r.GetRawText());
     }
 
+    // Give way (3.6): too wide, the fitted columns with a number narrow in its order (1 first), each to its minimum; the
+    // name without a number last; a column not fitted, or without a number, keeps its width; Ctrl+R lets none give way.
+    [Fact]
+    public void FittedColumnsGiveWayInTheirOrderTheNameLast()
+    {
+        var r = Run("""
+            (() => {
+              const cols = [{ id: 'name', width: 22 }, { id: 'size', width: 7, giveWay: 1, min: 5 },
+                { id: 'type', width: 12, giveWay: 2, min: 6 }, { id: 'modified', width: 12 }];
+              const needs = [30, 8, 12, 12];
+              const notFitted = cols.map(c => c.id === 'size' ? { ...c, fit: 'never' } : { ...c, fit: 'both' });
+              return [fittedWidths(cols, needs, 'all', 60), fittedWidths(cols, needs, 'all', 55), fittedWidths(cols, needs, 'all', 40),
+                fittedWidths(cols, needs, 'fit', 40), fittedWidths(notFitted, needs, 'auto', 55)];
+            })()
+            """);
+        Assert.Equal("[[30,6,12,12],[30,5,8,12],[17,5,6,12],[30,7,12,12],[30,7,6,12]]", r.GetRawText());
+    }
+
+    // A drag goes past the minimum and the maximum, which bind fitting only; down to 2 em.
+    [Fact]
+    public void LimitsBindFittingOnly()
+    {
+        var r = Run("[withinLimits({ min: 10, max: 11 }, 4), withinLimits({ min: 10, max: 11 }, 20), DragMinEm]");
+        Assert.Equal("[10,11,2]", r.GetRawText());
+    }
+
     // Fit per column: Ctrl+R fits manual and auto columns (the name alone when all are never), within min and max;
     // auto-enlarge only widens, auto-shrink only narrows; the name can be anywhere.
     [Fact]

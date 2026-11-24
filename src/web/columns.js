@@ -68,8 +68,10 @@ function setFor(folders, path) {
 // Fitting (plan 28 3.6): the new width of each column (em), from its width now and what its values need (`needs`, em).
 // `which`: 'fit' (Ctrl+R) the columns whose Fit is manual or auto, or the name column when every one is never; 'all'
 // (Ctrl+Shift+R) every column; 'auto' (after a listing, values read, the pane resized) the auto ones as their Fit says:
-// enlarge only wider, shrink only narrower. Each within its minimum and maximum; too wide for the room (em), the name
-// column gives way first, down to NameMinEm (not for Ctrl+R: there it gets its whole width, the pane scrolling).
+// enlarge only wider, shrink only narrower. Each within its minimum and maximum; too wide for the room (em), the fitted
+// columns with a Give way number give way in its order (1 first), each down to its minimum, the name column last when
+// it has none and down to NameMinEm at least (not for Ctrl+R: there each gets its whole width, the pane scrolling). A
+// column not fitted does not give way: nothing would widen it again when the room grows.
 function fittedWidths(columns, needs, which, room) {
   const auto = c => ['enlarge', 'shrink', 'both'].includes(fitOf(c));
   let fitted = columns.map(c => which === 'all' || (which === 'fit' ? fitOf(c) !== 'never' : auto(c)));
@@ -79,10 +81,19 @@ function fittedWidths(columns, needs, which, room) {
     const mode = which === 'auto' ? fitOf(c) : 'both';
     return withinLimits(c, mode === 'enlarge' ? Math.max(c.width, needs[k]) : mode === 'shrink' ? Math.min(c.width, needs[k]) : needs[k]);
   });
-  const name = columns.findIndex(c => c.id === 'name');
-  const over = widths.reduce((a, w) => a + w, 0) - room;
-  if (which !== 'fit' && over > 0 && name >= 0 && fitted[name])
-    widths[name] = Math.max(Math.max(columns[name].min ?? 0, NameMinEm), widths[name] - over);
+  let over = widths.reduce((a, w) => a + w, 0) - room;
+  if (which !== 'fit' && over > 0) {
+    const rank = k => giveWayOf(columns[k]) ?? Infinity;   // the name without a number: last
+    const order = columns.map((c, k) => k).filter(k => fitted[k] && (giveWayOf(columns[k]) !== null || columns[k].id === 'name'))
+      .sort((a, b) => rank(a) - rank(b) || a - b);
+    for (const k of order) {
+      if (over <= 0) break;
+      const floor = columns[k].id === 'name' ? Math.max(columns[k].min ?? 0, NameMinEm) : columns[k].min ?? DragMinEm;
+      const cut = Math.min(over, Math.max(0, widths[k] - floor));
+      widths[k] -= cut;
+      over -= cut;
+    }
+  }
   return widths.map((w, k) => fitted[k] ? Math.ceil(w * 10) / 10 : w);
 }
 
@@ -157,7 +168,7 @@ const columnComparer = (id, kind, desc) => sortComparer([{ id, desc }]);
 const FitModes = ['never', 'manual', 'enlarge', 'shrink', 'both'];
 const fitOf = col => FitModes.includes(col.fit) ? col.fit : col.id === 'name' ? 'manual' : 'never';
 
-// A set's or a pane's columns as plan 28 keeps them (3.9): { columns: [{ id, width, hidden, fit, min, max }], sort:
+// A set's or a pane's columns as plan 28 keeps them (3.9): { columns: [{ id, width, hidden, fit, min, max, giveWay }], sort:
 // [{ id, desc }] }. Written before: a sort { id, desc } is a list of one, "fit": true (every column fitted after every
 // listing) makes every column fit both ways. A pane's own also `from`: the set they were taken from (its header's
 // Column sets), so that one is checked there.
@@ -171,8 +182,13 @@ function normalColumns(c) {
   return { columns, sort: sort.filter(s => s?.id).map(s => ({ id: s.id, desc: !!s.desc })), ...(c?.from ? { from: c.from } : {}) };
 }
 
-// A column's width in em kept inside its minimum and maximum (plan 28 3.6).
-const withinLimits = (col, em) => Math.min(col.max ?? Infinity, Math.max(col.min ?? 2, em));
+// A column's width in em kept inside its minimum and maximum (plan 28 3.6): for fitting only; a drag goes past them,
+// down to DragMinEm.
+const DragMinEm = 2;
+const withinLimits = (col, em) => Math.min(col.max ?? Infinity, Math.max(col.min ?? DragMinEm, em));
+
+// Its place in the order in which columns give way when fitted ones are too wide for the pane (1 first); null: none.
+const giveWayOf = col => Number.isInteger(col.giveWay) && col.giveWay >= 1 ? col.giveWay : null;
 
 // ---------- Sets and the pane's columns ----------
 
@@ -557,7 +573,8 @@ function moveColumn(view, col, e) {
   addEventListener('mouseup', up);
 }
 
-// Its edge dragged: the column's width, within its minimum and maximum (plan 28 3.6).
+// Its edge dragged: the column's width, as narrow or wide as dragged (its minimum and maximum are for fitting), down to
+// DragMinEm.
 function resizeColumn(view, col, e) {
   e.preventDefault();
   e.stopPropagation();
@@ -565,7 +582,7 @@ function resizeColumn(view, col, e) {
   const start = e.clientX, from = (col.width ?? columnInfo(col.id).width) * fontPx;
   view.resizing = col.id;   // its edge stays lit while dragged (drawColumnHeader)
   const move = m => {
-    col.width = withinLimits(col, Math.round((from + m.clientX - start) / fontPx * 10) / 10);
+    col.width = Math.max(DragMinEm, Math.round((from + m.clientX - start) / fontPx * 10) / 10);
     view.drawHeader();
     view.render();
   };

@@ -2,9 +2,11 @@
 // here by its name, adds sets, or takes one away ({ "name": "Films", "deleted": true }); Manage sets writes it.
 //
 // A set (docs/plans/executed/28-PLAN-column-sets-window.md 3.9): "name"; "columns", each { "id", "width", "hidden", "fit", "min",
-// "max" } (widths in em of the pane font; any column in any place, the name too; "hidden": true keeps it in the set
-// without showing it; "fit": "never", "manual", "enlarge", "shrink" or "both", without it the name manual and the
-// others never); "sort": [{ "id", "desc" }, ...], sorted by the first, then the second, ... An id is one of Foldex's
+// "max", "giveWay" } (widths in em of the pane font; any column in any place, the name too; "hidden": true keeps it in
+// the set without showing it; "fit": "never", "manual", "enlarge", "shrink" or "both", without it the name manual and
+// the others never; "min" and "max" bind fitting only, a drag goes past them; "giveWay": 1, 2, ...: when the fitted
+// columns are too wide for the pane they narrow in this order, each to its minimum, the name last when it has none);
+// "sort": [{ "id", "desc" }, ...], sorted by the first, then the second, ... An id is one of Foldex's
 // own columns (name, size, type, modified, created, accessed, attributes, ext, target, path, total, free, git, gps) or
 // a property of Windows by its canonical name (System.Media.Duration). Your order of the sets: "order" in yours.
 {

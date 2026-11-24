@@ -221,7 +221,7 @@ function drawChosen() {
   }));
 }
 
-// A column on two lines: the grip, its title, Shown, its width and its sort cell; its Fit, minimum and maximum.
+// A column on two lines: the grip, its title, Shown, its width and its sort cell; its Fit, minimum, maximum and Give way.
 function columnRow(set, sort, col, k, list) {
   const row = Object.assign(document.createElement('div'), { className: 'cs-row cs-colrow' + (k === chosenColumn ? ' selected' : '') });
   row.dataset.i = k;
@@ -272,12 +272,23 @@ function columnRow(set, sort, col, k, list) {
   fit.append(...FitModes.map(([value, text]) => new Option(text, value)));
   fit.value = fitOf(col);
   fit.addEventListener('change', () => changeChosen(s => { s.columns[k].fit = fit.value; }));
+  // Give way (columns.js fittedWidths): its place in the order in which fitted columns narrow when too wide for the pane.
+  const giveWay = Object.assign(document.createElement('span'), { className: 'cs-size' });
+  const wayBox = Object.assign(document.createElement('input'), { type: 'number', min: 1, step: 1, value: col.giveWay ?? '',
+    placeholder: col.id === 'name' ? 'last' : 'none',
+    title: 'Give way: when the fitted columns are too wide for the pane, they narrow in this order (1 first), each down to its minimum; '
+      + 'only while the column is fitted. Empty: it does not give way (the name column: it gives way last)' });
+  wayBox.addEventListener('change', () => changeChosen(s => {
+    const v = Number(wayBox.value);
+    if (Number.isInteger(v) && v >= 1) s.columns[k].giveWay = v; else delete s.columns[k].giveWay;
+  }));
+  giveWay.append(Object.assign(document.createElement('span'), { className: 'cs-caption', textContent: 'give way' }), wayBox);
   const second = Object.assign(document.createElement('div'), { className: 'cs-line cs-fitline' });
   second.append(Object.assign(document.createElement('span'), { className: 'cs-caption', textContent: 'Fit' }), fit,
     number(col.width ?? columnInfo(col.id).width, (c, v) => { c.width = v ?? columnInfo(col.id).width; },
       `Width asked for; an auto column fits from it (${EmTip})`, false, 'width'),
     number(col.min, (c, v) => { if (v) c.min = v; else delete c.min; }, `Minimum width (${EmTip})`, false, 'min'),
-    number(col.max, (c, v) => { if (v) c.max = v; else delete c.max; }, `Maximum width, empty: none (${EmTip})`, true, 'max'), sortCell);
+    number(col.max, (c, v) => { if (v) c.max = v; else delete c.max; }, `Maximum width, empty: none (${EmTip})`, true, 'max'), giveWay, sortCell);
   row.append(first, second);
   return row;
 }
