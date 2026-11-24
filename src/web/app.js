@@ -2954,6 +2954,7 @@ class PreviewView {
     this.path = path;
     if (layout.pane(this.id).fixed) layout.pane(this.id).path = path;   // F3's: its item kept with the layout
     this.el.querySelector('.title').textContent = x?.name ?? path;
+    this.channel.retitle(x?.name ?? path);   // floating: its window's title bar shows it too
     this.message('');
     if (this.away && !this.channel.floating) return;   // a tab not shown: when it is (the ResizeObserver)
     this.ask();
@@ -3050,6 +3051,7 @@ class InfoView extends PreviewView {
     if (!path) return this.message('Select an item to see what is known of it.');
     const x = itemShown(path, views.get(layout.pane(this.id).source));
     this.el.querySelector('.title').textContent = x?.name ?? path;
+    this.channel.retitle(x?.name ?? path);   // floating: its window's title bar shows it too
     if (!isDiskPath(path)) return this.message('Nothing is known of this item.');
     askHost({ op: 'fileInfo', path }).then(m => {
       if (!same(this.path, path)) return;   // another item meanwhile

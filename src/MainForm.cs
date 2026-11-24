@@ -286,6 +286,11 @@ sealed class MainForm : Form
                 Post(new JsonObject { ["event"] = "answer", ["req"] = msg["req"]?.DeepClone(), ["state"] = state });
                 break;
             }
+            // A floating pane's title now (a preview: the file it shows), on its window's title bar.
+            case "paneTitle":
+                if (floating.TryGetValue(msg["pane"]!.GetValue<string>(), out var titled))
+                    titled.Text = $"{msg["title"]?.GetValue<string>() ?? "Pane"} - Foldex";
+                break;
             // A modal floating window (plan 14 3.7): a dialog's page in a window of its own over this one, which waits
             // for it; its answer (the page's `done`) when it closes. Its page talks to this one's meanwhile (fromPane).
             case "dialogOpen":

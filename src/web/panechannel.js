@@ -50,11 +50,17 @@ function paneChannel({ id, page, title, view, state, receive, menu }) {
   // the window; without it, narrow beside the window's right edge. `beside`: the first time outside the window (on
   // another screen when there is one).
   ch.float = (bounds, size = null, { beside = false } = {}) => {
-    if (ch.floating) return post({ op: 'paneFloat', pane: id, page, title });
+    if (ch.floating) return post({ op: 'paneFloat', pane: id, page, title: ch.title });
     ch.floating = true;
     ch.floatReady = false;
     ch.floatQueue = new Map();
-    post({ op: 'paneFloat', pane: id, page, title, bounds, size, beside });
+    post({ op: 'paneFloat', pane: id, page, title: ch.title, bounds, size, beside });
+  };
+
+  // Its title now (a preview: the file it shows): its window's title bar too while it floats, and when it floats later.
+  ch.retitle = text => {
+    ch.title = text;
+    if (ch.floating) post({ op: 'paneTitle', pane: id, title: text });
   };
 
   // Back in this window (Dock, or its window dragged onto this one): in its frame again, showing what
