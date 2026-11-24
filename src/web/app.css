@@ -1414,10 +1414,10 @@ dialog.pick-column { width: 26em; }
 .cs-setrow .cs-name { overflow: hidden; text-overflow: ellipsis; }
 .cs-colrow { border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent); }
 .cs-line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; min-height: 26px; }
-/* A column's two lines: the grip, Shown and the title, how wide the pane shows it (dimmed); under the title its Fit,
-   width, minimum and maximum, its sort at the right. The second line starts where the title does: the grip (8px and
-   2px), a gap, the box (14px), a gap. */
-.cs-fitline { padding-left: calc(8px + 2px + 6px + 14px + 6px); }
+/* A column's two lines: the grip, Shown and the title, how wide the pane shows it (dimmed); its grip again, then under
+   the title its Fit, width, minimum, maximum and Give way, its sort at the right. The second line's fields start where
+   the title does: after its grip (8px) the room of the first line's margin (2px), Shown (14px) and a gap. */
+.cs-fitline .bm-handle { margin-right: calc(2px + 14px + 6px); }
 .cs-fitline .cs-sort { margin-left: auto; }
 .cs-colrow input.cs-shown { flex: none; width: 14px; height: 14px; margin: 0; }
 .cs-title { flex: 1; min-width: 6em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -213,9 +213,9 @@ function pickColumnHere(a) {
     '<div class="pc-list"></div>' +
     '<div class="ask-buttons"><button class="ok">Select</button><button class="cancel">Cancel</button></div>';
   const search = dialog.querySelector('.sc-search'), select = dialog.querySelector('.ok');
-  let picked = null;
+  let picked = null;   // the columns chosen, in the list's order (Ctrl+click and Shift+click choose more)
   const take = () => {
-    picked = list.chosen()[0] ?? null;
+    picked = list.chosen().length ? list.chosen() : null;
     if (picked) dialog.close();
   };
   const list = pickList(dialog.querySelector('.pc-list'), take);

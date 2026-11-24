@@ -196,16 +196,17 @@ function drawChosen() {
   manageEl.querySelector('.cs-set .down').disabled = chosenColumn >= set.columns.length - 1;
   // Remove the column chosen (not the name); a column added, from Foldex's own and Windows' properties.
   const chosen = set.columns[chosenColumn];
-  // The column to add chosen in a window of its own (dialogpage.js pickColumnHere): found by typing, or in the list.
+  // The columns to add chosen in a window of its own (dialogpage.js pickColumnHere): found by typing, or in the list;
+  // one or more, added at the end in the list's order, the last one chosen here.
   const choices = [...ownColumns.map(c => ({ id: c.id, title: c.title })), ...propList.map(p => ({ id: p.name, title: `${p.title} (${p.name})` }))]
     .filter(({ id }) => !set.columns.some(c => c.id === id));
   const add = button('Add a column...', async () => {
-    const id = await askWindowPage({ what: 'column', columns: choices });
-    if (id) changeChosen(s => {
-      s.columns.push({ id, width: columnInfo(id).width });
+    const ids = await askWindowPage({ what: 'column', columns: choices });
+    if (ids?.length) changeChosen(s => {
+      for (const id of ids) if (!s.columns.some(c => c.id === id)) s.columns.push({ id, width: columnInfo(id).width });
       chosenColumn = s.columns.length - 1;
     });
-  }, choices.length > 0, 'A column added to the set: Foldex\'s own or one of Windows\' properties');
+  }, choices.length > 0, 'Columns added to the set: Foldex\'s own or Windows\' properties (Ctrl+click or Shift+click chooses more than one)');
   manageEl.querySelector('.cs-columnbuttons').replaceChildren(
     button('Remove', () => changeChosen(s => s.columns.splice(chosenColumn, 1)), !!chosen && chosen.id !== 'name',
       'The column chosen out of the set (the name column stays)'), add);
@@ -234,11 +235,15 @@ function columnRow(set, sort, col, k, list) {
     manageEl.querySelector('.cs-set .down').disabled = k >= set.columns.length - 1;
     manageEl.querySelector('.cs-columnbuttons button').disabled = col.id === 'name';
   });
-  const handle = Object.assign(document.createElement('span'), { className: 'bm-handle', title: 'Drag to move the column' });
-  handle.addEventListener('mousedown', e => dragRow(e, list, k, (from, to) => changeChosen(s => {
-    moveIn(s.columns, from, to);
-    chosenColumn = to;
-  })));
+  // A grip on each of its two lines: either drags the column.
+  const grip = () => {
+    const handle = Object.assign(document.createElement('span'), { className: 'bm-handle', title: 'Drag to move the column' });
+    handle.addEventListener('mousedown', e => dragRow(e, list, k, (from, to) => changeChosen(s => {
+      moveIn(s.columns, from, to);
+      chosenColumn = to;
+    })));
+    return handle;
+  };
   const number = (value, change, title, empty = false, caption = '') => {
     const box = Object.assign(document.createElement('input'), { type: 'number', min: 1, step: 0.5, value: value ?? '', title,
       placeholder: empty ? 'none' : '' });
@@ -264,7 +269,7 @@ function columnRow(set, sort, col, k, list) {
   }), true, at < 0 ? 'Not sorted by; a click: ascending' : sort[at].desc ? 'Descending; a click: not sorted by' : 'Ascending; a click: descending');
   sortCell.className = 'cs-sort';
   const first = Object.assign(document.createElement('div'), { className: 'cs-line' });
-  first.append(handle, box, Object.assign(document.createElement('span'), { className: 'cs-title', textContent: columnInfo(col.id).title, title: col.id }));
+  first.append(grip(), box, Object.assign(document.createElement('span'), { className: 'cs-title', textContent: columnInfo(col.id).title, title: col.id }));
   if (now != null && !col.hidden) first.append(Object.assign(document.createElement('span'), { className: 'cs-now',
     textContent: `shown ${Math.round(now * 10) / 10} em`, title: `How wide the pane shows it now (${EmTip})` }));
   const fit = document.createElement('select');
@@ -284,7 +289,7 @@ function columnRow(set, sort, col, k, list) {
   }));
   giveWay.append(Object.assign(document.createElement('span'), { className: 'cs-caption', textContent: 'give way' }), wayBox);
   const second = Object.assign(document.createElement('div'), { className: 'cs-line cs-fitline' });
-  second.append(Object.assign(document.createElement('span'), { className: 'cs-caption', textContent: 'Fit' }), fit,
+  second.append(grip(), Object.assign(document.createElement('span'), { className: 'cs-caption', textContent: 'Fit' }), fit,
     number(col.width ?? columnInfo(col.id).width, (c, v) => { c.width = v ?? columnInfo(col.id).width; },
       `Width asked for; an auto column fits from it (${EmTip})`, false, 'width'),
     number(col.min, (c, v) => { if (v) c.min = v; else delete c.min; }, `Minimum width (${EmTip})`, false, 'min'),
