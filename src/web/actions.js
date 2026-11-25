@@ -101,7 +101,7 @@ const pathsOnOneLine = () => activeView() instanceof PreviewView ? (activeView()
 action('item.copyPathsLine', { title: 'Copy path (on one line)', hint: 'the focused item; several selected: comma-separated', group: 'items',
   enabled: () => pathsOnOneLine().length > 0 && pathsOnOneLine().every(id => /^[A-Za-z]:\\|^\\\\/.test(id)),
   run: () => copyPaths(pathsOnOneLine(), ', ') });
-action('item.selectAll', { title: 'Select all', group: 'items', enabled: () => activeView() instanceof ListView,
+action('item.selectAll', { title: 'Select all', group: 'items', enabled: () => activeView() instanceof ListView || activeView() instanceof TreeView,
   run: () => activeView().selectAll() });
 
 // ---------- Scraps and searching (docs/plans/executed/06-PLAN-search-and-scrap.md) ----------

@@ -90,7 +90,8 @@ function flush() {
   const shown = v instanceof ListView ? v.entries.filter(x => v.selected.has(x.id) || same(x.id, focus)).slice(0, 2000) : [];
   const scrap = v instanceof ScrapView;
   const msg = { kind: 'sync', fields, location: v.location ?? null, name: v.name ?? null, title: v.el.querySelector('.title').textContent, crumbs: v.el.querySelector('.title').dataset.path || null,
-    text: v.locationText(), message: v.message ?? null, count: v.itemCount?.() ?? 0, entries: shown, selected: [...(v.selected ?? [])],
+    text: v.locationText(), message: v.message ?? null, count: v.itemCount?.() ?? 0, entries: shown,
+    selected: v instanceof TreeView ? v.chosen() : [...(v.selected ?? [])],   // a tree's in the order of its rows
     all: v.all?.length ?? 0, allIds: scrap ? v.all.map(x => x.id) : undefined, searching: !!v.searching, watch: watchedHere(v),
     tree: v instanceof TreeView ? treeHere(v) : undefined, widths: v.cols ? columnWidthsOf(v.cols) : undefined };
   const text = JSON.stringify(msg);

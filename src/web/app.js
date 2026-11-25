@@ -703,6 +703,11 @@ class TreeView {
     this.nodes = new Map();   // lower-case id -> its home node
     this.places = new Map();  // lower-case id -> every node of it
     this.focusNode = null;
+    // The selected items (ids), apart from the focused row, as a list's: a plain click or move selects the row it goes
+    // to alone; Ctrl+click one in or out, Shift+click or Shift+a move the rows from the anchor. Only rows shown: a row
+    // that goes (its folder closed, filtered out) leaves the selection (flatten).
+    this.selected = new Set();
+    this.anchor = null;
     this.top = [];
     this.flat = [];
     this.folder = layout.pane(id).source !== null;   // a child: its parent's folder
@@ -734,8 +739,12 @@ class TreeView {
       if (n?.bmGroup) return openMenu(e.clientX, e.clientY, bookmarkGroupMenu(n.bmGroup));
       // A folder or file: Windows' menu with Foldex's own items at its top (quick access, bookmarks; plan 26 3.0).
       // A quick access shortcut: its entry too, so the menu's Remove and Edit... are about that one.
-      if (n) itemMenu({ op: 'menu', ids: [n.id], own: true, item: n.folder === false, bookmark: n.bm,
-        x: e.clientX * devicePixelRatio, y: e.clientY * devicePixelRatio, extended: e.shiftKey });
+      // A row of several selected: the menu is for all of them.
+      if (n) {
+        const ids = this.selected.size > 1 && this.selected.has(n.id) ? this.ids() : [n.id];
+        itemMenu({ op: 'menu', ids, own: true, item: ids.length === 1 && n.folder === false, bookmark: ids.length === 1 ? n.bm : undefined,
+          x: e.clientX * devicePixelRatio, y: e.clientY * devicePixelRatio, extended: e.shiftKey });
+      }
       else emptySpaceMenu(e);   // its empty space: Windows' menu of the folder with a new folder or file (rename.js)
     });
     dropTarget(this.body, e => {
@@ -803,6 +812,51 @@ class TreeView {
 
   // The focused node: the place the focus is on.
   focused() { return this.place(layout.state(this.id).focus); }
+
+  // A row that can be selected: not the Quick access head or hint, "..", or a quick access folder (nothing on disk).
+  selectable(n) { return !!n && !n.qa && !n.up && !n.bmGroup; }
+
+  // The selected items in the order of the rows, each once (a folder in two places); a pane's page's stand-in
+  // (pagedviews.js): as its page told them, in that order.
+  chosen() {
+    const ids = this.paged ? [...this.selected] : this.flat.filter(n => this.selected.has(n.id)).map(n => n.id);
+    const seen = new Set();
+    return ids.filter(id => !seen.has(id.toLowerCase()) && seen.add(id.toLowerCase()));
+  }
+
+  // What an action for the selected items works on (selectedIds): the selection, else the focused item.
+  ids() {
+    const ids = this.chosen(), focus = layout.state(this.id).focus;
+    return ids.length ? ids : focus ? [focus] : [];
+  }
+
+  // A click or a move with Ctrl or Shift (as a list's): Ctrl a row in or out of the selection, Shift the rows from the
+  // anchor to it (with Ctrl as well: added to what is selected); the focus to it.
+  pick(n, e) {
+    if (!this.selectable(n)) return this.select(n.id, false, n);
+    const a = e.shiftKey && this.anchor ? this.flat.findIndex(x => same(x.id, this.anchor)) : -1;
+    if (a >= 0) {
+      const b = this.flat.indexOf(n);
+      if (!e.ctrlKey) this.selected.clear();
+      for (let k = Math.min(a, b); k <= Math.max(a, b); k++) if (this.selectable(this.flat[k])) this.selected.add(this.flat[k].id);
+    } else if (e.ctrlKey) {
+      if (this.selected.has(n.id)) this.selected.delete(n.id);
+      else this.selected.add(n.id);
+      this.anchor = n.id;
+    } else {
+      this.selected = new Set([n.id]);
+      this.anchor = n.id;
+    }
+    this.select(n.id, false, n, true);
+  }
+
+  // Ctrl+A: every row shown that can be selected.
+  selectAll() {
+    this.selected = new Set(this.flat.filter(n => this.selectable(n)).map(n => n.id));
+    layout.state(this.id).selection = this.chosen();
+    this.render();
+    ribbonRefresh();
+  }
 
   // A place under its own folder (a top has none above it).
   isHome(n) { return !n.parent || same(n.parent.id, folderOf(n.id)); }
@@ -1141,6 +1195,16 @@ class TreeView {
       }
     };
     walk(this.qaHead ? [this.qaHead, ...this.top] : this.top);
+    // A selected row no longer shown (its folder closed, filtered out, gone) leaves the selection: an action never
+    // works on what cannot be seen.
+    if (this.selected.size) {
+      const shown = new Set(this.flat.map(n => n.id));
+      const kept = [...this.selected].filter(id => shown.has(id));
+      if (kept.length !== this.selected.size) {
+        this.selected = new Set(kept);
+        layout.state(this.id).selection = this.chosen();
+      }
+    }
     const guides = treeGuides(this.flat.map(n => n.depth));
     this.flat.forEach((n, i) => { n.guides = guides[i]; });
     this.render();
@@ -1253,7 +1317,9 @@ class TreeView {
       const n = this.flat[i];
       if (propNames.length && /^[A-Za-z]:\\|^\\\\/.test(n.id) && propsToAsk(n, propNames)) noProps.push(n);
       const row = document.createElement('div');
-      row.className = 'row cols' + (n === focus ? ' selected focused' : '') + (n.hidden ? ' hidden' : '') + (i % 2 ? ' odd' : '')
+      // Selected: in the selection; with nothing selected, the focused row (what an action works on then, ids).
+      const picked = this.selected.size ? this.selected.has(n.id) : n === focus;
+      row.className = 'row cols' + (picked ? ' selected' : '') + (n === focus ? ' focused' : '') + (n.hidden ? ' hidden' : '') + (i % 2 ? ' odd' : '')
         + (isCompanion(this, n.id) ? ' companion' : '') + (n.qa ? ` qa-${n.qa}` : '') + (n.inQa ? ' qa' : '')
         + (n.missing || n.bm && !n.bmGroup && bookmarkMissing(n.id) ? ' missing' : '')
         + (n.filterUnknown ? ' filter-unknown' : '');   // the host not yet knows whether something under it passes (plan 36 3.7)
@@ -1345,7 +1411,7 @@ class TreeView {
     }
     // A double-click is the second press (its count): each press draws the rows anew, so the browser sends no dblclick.
     if (e.detail === 2 && !e.target.classList.contains('twisty')) return this.open(n);
-    if (!e.target.classList.contains('twisty')) return this.select(n.id, false, n);
+    if (!e.target.classList.contains('twisty')) return e.ctrlKey || e.shiftKey ? this.pick(n, e) : this.select(n.id, false, n);
     // The expander only opens or closes its folder; the focus stays, unless closing hides it: then the folder gets it.
     const focus = this.focused();
     const inside = n.expanded && focus && focus !== n && this.contains(n, focus);
@@ -1369,11 +1435,17 @@ class TreeView {
   }
 
   // A row focused: its children follow it (a folder: they show it; a file: a preview shows it). `at`: the place (a row
-  // clicked or walked to); without it the focused place when the focus is on that item, else its home place.
-  select(id, quiet = false, at = null) {
+  // clicked or walked to); without it the focused place when the focus is on that item, else its home place. The
+  // selection: that row alone; `keep`: as it is (pick made it).
+  select(id, quiet = false, at = null, keep = false) {
     const n = at ?? this.place(id);
     if (!n) return;
     this.focusNode = n;
+    if (!keep) {
+      this.selected = new Set(this.selectable(n) ? [n.id] : []);
+      this.anchor = n.id;
+    }
+    layout.state(this.id).selection = this.chosen();
     if (quiet || n.bmGroup) layout.state(this.id).focus = n.id;   // a quick access folder: nothing follows it
     else {
       focusItem(this.id, { id: n.id, folder: n.folder !== false });
@@ -1406,7 +1478,8 @@ class TreeView {
     const to = (k, step = 1) => {
       while (marker(this.flat[k])) k += step;
       if (k < 0 || !this.flat[k]) for (k = i; this.flat[k + step] && marker(this.flat[k + step]); k += step);
-      if (this.flat[k] && !marker(this.flat[k])) this.select(this.flat[k].id, false, this.flat[k]);
+      // With Shift: the rows from the anchor to it selected.
+      if (this.flat[k] && !marker(this.flat[k])) e.shiftKey ? this.pick(this.flat[k], { shiftKey: true }) : this.select(this.flat[k].id, false, this.flat[k]);
       e.preventDefault();
     };
     if (e.key === 'ArrowDown') to(i + 1);
@@ -4729,11 +4802,10 @@ function dragConnector(id, e) {
 
 const activeView = () => views.get(activePane) ?? null;
 
-// The ids selected in the active pane: a list's selection, a tree's focused folder.
+// The ids selected in the active pane: a list's selection, a tree's (its focused item when nothing is selected).
 function selectedIds() {
   const v = activeView();
-  if (v instanceof ListView) return v.ids();
-  if (v instanceof TreeView) return layout.state(v.id).focus ? [layout.state(v.id).focus] : [];
+  if (v instanceof ListView || v instanceof TreeView) return v.ids();
   return [];
 }
 
