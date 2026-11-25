@@ -3,8 +3,9 @@
 // edited in a box over its row: the name selected without its extension, the extension in the box too; Enter or
 // leaving the box renames (a changed extension asks first, as Explorer does), Esc cancels. A file's companions (the
 // files beside it with the same name and another extension: photo.xmp beside photo.jpg) are renamed along when the
-// name changes, as the setting renameCompanions says; Shift+Enter does the other. While the name is edited the
-// companions that would go along are highlighted (holding Shift shows what Shift+Enter would do). A new folder or file gets
+// name changes, as the setting renameCompanions says; Shift+Enter does the other, and F2 in the box turns it round for
+// this rename (again: back). While the name is edited the companions that would go along are highlighted (holding
+// Shift shows what Shift+Enter would do). A new folder or file gets
 // its name first, in a row of its own, and is made with it (newItem).
 
 let renaming = null;   // { view, item, input, asking, companions, shift, own, watch }
@@ -35,7 +36,8 @@ function startRename(view, id, own = null) {
   // at its row when that is drawn; gone when the item is (renamed or deleted elsewhere).
   const watch = new MutationObserver(() => placeRename());
   watch.observe(view.rows, { childList: true });
-  renaming = { view, item, input, asking: false, companions: own ? [] : companionsOf(view, item), shift: false, own, watch };
+  renaming = { view, item, input, asking: false, companions: own ? [] : companionsOf(view, item), shift: false, flip: false, own, watch };
+  input.dataset.ownKeys = 'F2';   // F2 in the box is its own (keys.js), not Rename again
   if (!placeRename()) return;
   view.render();   // the companions highlighted
   selectName(input, own?.item ?? (own ? { folder: true } : item));
@@ -55,6 +57,14 @@ function startRename(view, id, own = null) {
     } else if (e.key === 'Escape') {
       e.preventDefault();
       endRename();
+    } else if (e.key === 'F2') {   // the companions along or not, the other way round each time
+      e.preventDefault();
+      const r = renaming;
+      if (r?.input !== input || !r.companions.length) return;
+      r.flip = !r.flip;
+      view.render();
+      status(companionsAlong(r) ? `Renamed along: ${r.companions.map(c => c.name).join(', ')} (F2: only this file).`
+        : `Only this file is renamed (F2: ${r.companions.map(c => c.name).join(', ')} along).`);
     }
   });
   input.addEventListener('keyup', e => { if (e.key === 'Shift') shift(false); });
@@ -137,8 +147,8 @@ function companionsOf(view, item) {
     && x.name.toLowerCase() !== item.name.toLowerCase());
 }
 
-// Whether the companions go along: the setting, the other way round with Shift.
-const companionsAlong = r => (settings.renameCompanions !== false) !== r.shift;
+// Whether the companions go along: the setting, the other way round with Shift, and again with each F2 in the box.
+const companionsAlong = r => (settings.renameCompanions !== false) !== r.shift !== !!r.flip;
 
 // Whether a row is a companion that goes along with the item being renamed (highlighted, app.css).
 const isCompanion = (view, id) => renaming?.view === view && companionsAlong(renaming) && renaming.companions.some(x => same(x.id, id));

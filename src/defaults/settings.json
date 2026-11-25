@@ -66,7 +66,7 @@
   "previewViewers": {},           // the viewer kept per extension ({ ".md": "lexpen", ".pdf": "windows", ".log": "lister:LogView" }); others: the first they have
   "previewListers": [],           // lister plugins (.wlx64) added by path; the ones in plugins\wlx\ of the data folder are found by themselves
   "renameTokens": "dollar",       // the Rename dialog's tokens: "dollar" ($B, $1, ${Date taken}) or "bracket" ([N], [C], [=Date taken])
-  "renameCompanions": true,       // renaming a file renames the files beside it with the same name and another extension; Shift+Enter: the other
+  "renameCompanions": true,       // renaming a file renames the files beside it with the same name and another extension; Shift+Enter: the other, F2 in the box: the other for this rename (again: back)
   "scrollbarsSlim": true,          // scrollbars drawn slim until the mouse is over their pane
   "scrollbarWidth": 12,             // px, 4 to 30: the vertical scrollbars' width
   "scrollbarHeight": 12,            // px, 4 to 30: the horizontal scrollbars' height

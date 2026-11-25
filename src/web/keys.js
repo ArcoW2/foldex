@@ -87,6 +87,8 @@ const withKey = (title, name, ...params) => keyText(name, ...params) ? `${title}
 // filter cleared): only keys with Alt, function keys and Ctrl keys other than the editing ones run actions there.
 const TEXT_KEYS = /^(Shift\+)?(Backspace|Del|Enter|Esc|Home|End|Left|Right|Up|Down|Space|Tab)$|^Ctrl\+(Shift\+)?[ACVXYZ]$|^Ctrl\+(Left|Right|Backspace|Del)$/;
 const inTextField = () => !!document.activeElement?.matches('input, textarea, [contenteditable]:not([contenteditable=false])');
+// Keys a text box takes for itself besides those (its data-own-keys, as "F2"): the rename box's F2 (rename.js).
+const ownKey = stroke => inTextField() && (document.activeElement.dataset.ownKeys ?? '').split(' ').includes(stroke);
 
 function setPending(stroke) {
   keys.pending = stroke;
@@ -109,7 +111,7 @@ document.addEventListener('keydown', e => {
     if (stroke && stroke !== 'Esc') runKey(`${first}, ${stroke}`, e);
     return;
   }
-  if (!stroke || inTextField() && TEXT_KEYS.test(stroke) && !e.altKey) return;
+  if (!stroke || inTextField() && TEXT_KEYS.test(stroke) && !e.altKey || ownKey(stroke)) return;
   if (keys.prefixes.has(stroke)) {
     e.preventDefault();
     e.stopPropagation();
