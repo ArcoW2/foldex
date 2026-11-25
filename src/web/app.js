@@ -2218,6 +2218,7 @@ class ListView {
     const focus = layout.state(this.id).focus, at = focus ? this.entries.findIndex(x => same(x.id, focus)) : -1;
     if (at >= 0) this.scrollTo(at);
     this.render();
+    this.autoFit();   // other rows shown (a filter typed, changed or emptied): an auto column follows them
     this.askFilterValues();
     if (paneSearch.has(this.id)) status(`${this.entries.length} of ${this.all.length} items`, false, 'verbose');
   }
@@ -2631,6 +2632,7 @@ class ScrapView extends ListView {
     this.selected = new Set([...this.selected].filter(id => this.entries.some(x => x.id === id)));
     layout.state(this.id).selection = [...this.selected];
     this.render();
+    this.autoFit();   // other rows shown (a filter, items added or dropped): an auto column follows them
     tellWatched();
     if (activePane === this.id) this.tellCount();
   }
