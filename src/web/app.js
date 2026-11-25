@@ -1057,12 +1057,13 @@ class TreeView {
   }
 
   // A folder's children (or the top) as `next`: the ones gone forgotten, the focused row kept where it is on screen.
-  // False when nothing changed.
+  // The focused row gone (deleted, moved away): the row now in its place, the next one in line (the last one gone: the
+  // one before), focused as by a move, so its children follow it. False when nothing changed.
   put(n, next) {
     const shown = n ? n.children : this.top;
     if (shown && next.length === shown.length && next.every((c, k) => c === shown[k])) return false;
-    const focus = this.focused();
-    const offset = focus ? this.flat.indexOf(focus) * RowHeight - this.body.scrollTop : 0;
+    const focus = this.focused(), was = focus ? this.flat.indexOf(focus) : -1;
+    const offset = focus ? was * RowHeight - this.body.scrollTop : 0;
     for (const gone of shown ?? []) if (!next.includes(gone)) this.forget(gone);
     if (n) n.children = next;
     else this.top = next;
@@ -1071,6 +1072,9 @@ class TreeView {
     if (i >= 0) {
       this.body.scrollTop = i * RowHeight - offset;
       this.render();
+    } else if (was >= 0 && !this.focused()) {
+      const there = this.flat[Math.min(was, this.flat.length - 1)];
+      if (there) this.select(there.id, false, there);
     }
     return true;
   }
