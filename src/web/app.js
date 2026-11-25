@@ -3421,7 +3421,8 @@ let floatMark = null;
 function floatDrag(m, end) {
   const view = views.get(m.pane);
   setInert(false);   // the dragged window has the focus: this page answers the mouse again, so its places are found
-  const at = view?.channel?.floating && canFloat(m.pane) ? dockPlaceAt(m.pane, m.x, m.y) : null;
+  // Shift held: no place to dock, so the window can be moved over this one and stay floating.
+  const at = view?.channel?.floating && canFloat(m.pane) && !m.shift ? dockPlaceAt(m.pane, m.x, m.y) : null;
   if (end) setInert(!document.hasFocus());
   if (!end && at) {
     if (!floatMark) {
@@ -3602,6 +3603,7 @@ function drawTabs() {
       return tab;
     }));
   }
+  if (landing) placeGap(landing.at, landing.id);   // drawn again during a drag (its pane shown): its gap back
 }
 
 // Where a pane dragged to (x, y) of the page would land (plan 12 3.1): near an edge of the window, that side's area; over
@@ -3652,11 +3654,19 @@ function dockPlaceAt(id, x, y) {
 // Where a dragged pane would land (dockPlaceAt's `at`; null: nowhere), shown: the block `mark` over the place; between
 // two tabs, a gap opened there instead, as wide as the pane's tab, and its own tab out of its strip meanwhile, so the
 // strip looks as it will. `mark` null: the drag is over, every gap closed.
+let landing = null;   // the drag's landing while one is on: { at, id } (drawTabs puts its gap back)
 function showLanding(mark, at, id) {
   if (mark) {
     mark.hidden = !at || !!at.tabs;
     if (at && !at.tabs) Object.assign(mark.style, { left: `${at.rect[0]}px`, top: `${at.rect[1]}px`, width: `${at.rect[2]}px`, height: `${at.rect[3]}px` });
   }
+  landing = mark ? { at, id } : null;
+  placeGap(at, id);
+}
+
+// The gap between two tabs where a dragged pane lands (showLanding), its own tab out of its strip meanwhile; `at`
+// without `tabs`: every gap closed.
+function placeGap(at, id) {
   const tab = document.querySelector(`.dock-tab[data-pane="${id}"]`);
   const width = tab && !tab.classList.contains('moving') ? tab.getBoundingClientRect().width : null;
   for (const t of document.querySelectorAll('.dock-tab.moving')) t.classList.remove('moving');
@@ -3664,7 +3674,8 @@ function showLanding(mark, at, id) {
   if (!at?.tabs) return void gap?.remove();
   if (tab?.parentElement === at.tabs.strip) tab.classList.add('moving');
   if (!gap) {
-    gap = Object.assign(document.createElement('span'), { className: 'dock-tab-gap' });
+    // The pane's tab title in it: which pane lands there.
+    gap = Object.assign(document.createElement('span'), { className: 'dock-tab-gap', textContent: views.get(id)?.tabTitle() ?? '' });
     if (width) gap.style.width = `${width}px`;
   }
   const rest = [...at.tabs.strip.querySelectorAll('.dock-tab')].filter(t => t !== tab);
@@ -3688,7 +3699,7 @@ function dragToDock(id, e) {
       document.body.append(mark);
       document.body.classList.add('docking');
     }
-    const at = placeAt(m.clientX, m.clientY);
+    const at = m.shiftKey ? null : placeAt(m.clientX, m.clientY);   // Shift held: nowhere to dock (only out, floating)
     place = at?.place ?? null;
     showLanding(mark, at, id);
   };
@@ -3703,7 +3714,7 @@ function dragToDock(id, e) {
     // Let go outside the window: a pane that can float floats there, its window's top left near the mouse (plan 14 3.1).
     const outside = m.clientX < 0 || m.clientY < 0 || m.clientX >= innerWidth || m.clientY >= innerHeight;
     if (outside && canFloat(id)) return floatPane(id, { x: Math.round(m.screenX * devicePixelRatio) - 40, y: Math.round(m.screenY * devicePixelRatio) - 12 });
-    if (!place) return;
+    if (!place || m.shiftKey) return;
     docks.add(id, place);
     renderDock();
     showPane(id);

@@ -253,7 +253,9 @@ sealed class PaneForm : Form
             var end = m.Msg == WM_EXITSIZEMOVE;
             dragging = !end;
             var (x, y) = owner.PagePoint(Cursor.Position);
-            owner.Tell(new JsonObject { ["event"] = end ? "paneDragEnd" : "paneDragMove", ["pane"] = Id, ["x"] = x, ["y"] = y });
+            // Shift held: moved over its window without docking there (the page lights no place).
+            owner.Tell(new JsonObject { ["event"] = end ? "paneDragEnd" : "paneDragMove", ["pane"] = Id, ["x"] = x, ["y"] = y,
+                ["shift"] = (ModifierKeys & Keys.Shift) != 0 });
         }
         base.WndProc(ref m);
     }
