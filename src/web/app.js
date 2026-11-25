@@ -3344,11 +3344,12 @@ function floatDrag(m, end) {
       document.body.append(floatMark);
       document.body.classList.add('docking');
     }
-    Object.assign(floatMark.style, { left: `${at.rect[0]}px`, top: `${at.rect[1]}px`, width: `${at.rect[2]}px`, height: `${at.rect[3]}px` });
+    showLanding(floatMark, at, m.pane);   // the block, or a gap between two tabs
     return;
   }
   floatMark?.remove();
   floatMark = null;
+  showLanding(null, null, m.pane);
   document.body.classList.remove('docking');
   if (!end || !at) return;
   layout.pane(m.pane).floating.place = at.place;
@@ -3501,6 +3502,7 @@ function drawTabs() {
       else tab.append(Object.assign(document.createElement('span'), { className: 'tab-name', textContent: layout.paneName(id) ?? '' }),
         Object.assign(document.createElement('span'), { className: 'tab-folder', textContent: layout.paneName(id) ? views.get(id).folderTitle() : views.get(id).tabTitle() }));
       tab.title = layout.paneName(id) ?? '';
+      tab.dataset.pane = id;   // dockPlaceAt: the tabs between which a dragged pane lands
       const pane = layout.pane(id);
       const key = layout.pathColour(id);
       tab.style.setProperty('--branch', key !== null ? `var(--branch-${key})` : '');
@@ -3520,10 +3522,20 @@ function drawTabs() {
 // Where a pane dragged to (x, y) of the page would land (plan 12 3.1): near an edge of the window, that side's area; over
 // a group, its outer quarter at a side beside it there, its middle a tab in it; over an empty center, the center. Its
 // place and the block that shows it, or null. A floating pane's window dragged over the window too (plan 14 3.1).
+// Over a group's tabs (below the top quarter of their strip, which is still above the group): between the two tabs
+// nearest, its own tab moved there when it is one of them; `tabs` then says where (showLanding opens a gap there).
 function dockPlaceAt(id, x, y) {
   const panes = $('panes').getBoundingClientRect();
   const edge = 28;
   if (x < panes.left || x > panes.right || y < panes.top || y > panes.bottom) return null;
+  const strip = document.elementFromPoint(x, y)?.closest('.dock-tabs');
+  const sr = strip?.getBoundingClientRect();
+  if (strip && y >= sr.top + sr.height / 4) {
+    const others = strip.dataset.group.split(' ').filter(p => p !== id && views.get(p));
+    const tabs = [...strip.querySelectorAll('.dock-tab')].filter(t => t.dataset.pane !== id);
+    const at = tabs.filter(t => { const r = t.getBoundingClientRect(); return r.left + r.width / 2 < x; }).length;
+    if (others.length) return { place: { pane: others[0], side: 'tab', at }, tabs: { strip, at } };
+  }
   if (x - panes.left < edge) return { place: { area: 'left' }, rect: [panes.left, panes.top, 120, panes.height] };
   if (panes.right - x < edge) return { place: { area: 'right' }, rect: [panes.right - 120, panes.top, 120, panes.height] };
   if (y - panes.top < edge) return { place: { area: 'top' }, rect: [panes.left, panes.top, panes.width, 100] };
@@ -3552,6 +3564,29 @@ function dockPlaceAt(id, x, y) {
   return { place: { pane: shown, side: 'tab' }, rect: [r.left, r.top, r.width, r.height] };
 }
 
+// Where a dragged pane would land (dockPlaceAt's `at`; null: nowhere), shown: the block `mark` over the place; between
+// two tabs, a gap opened there instead, as wide as the pane's tab, and its own tab out of its strip meanwhile, so the
+// strip looks as it will. `mark` null: the drag is over, every gap closed.
+function showLanding(mark, at, id) {
+  if (mark) {
+    mark.hidden = !at || !!at.tabs;
+    if (at && !at.tabs) Object.assign(mark.style, { left: `${at.rect[0]}px`, top: `${at.rect[1]}px`, width: `${at.rect[2]}px`, height: `${at.rect[3]}px` });
+  }
+  const tab = document.querySelector(`.dock-tab[data-pane="${id}"]`);
+  const width = tab && !tab.classList.contains('moving') ? tab.getBoundingClientRect().width : null;
+  for (const t of document.querySelectorAll('.dock-tab.moving')) t.classList.remove('moving');
+  let gap = document.querySelector('.dock-tab-gap');
+  if (!at?.tabs) return void gap?.remove();
+  if (tab?.parentElement === at.tabs.strip) tab.classList.add('moving');
+  if (!gap) {
+    gap = Object.assign(document.createElement('span'), { className: 'dock-tab-gap' });
+    if (width) gap.style.width = `${width}px`;
+  }
+  const rest = [...at.tabs.strip.querySelectorAll('.dock-tab')].filter(t => t !== tab);
+  const before = rest[at.tabs.at] ?? null;
+  if (gap.parentElement !== at.tabs.strip || gap.nextElementSibling !== before) at.tabs.strip.insertBefore(gap, before);
+}
+
 // Moving a pane by dragging its head or its tab (plan 12 3.1), to a place of dockPlaceAt. A block shows where it lands.
 // It starts once the mouse has moved a few pixels, so a click stays a click.
 function dragToDock(id, e) {
@@ -3570,8 +3605,7 @@ function dragToDock(id, e) {
     }
     const at = placeAt(m.clientX, m.clientY);
     place = at?.place ?? null;
-    mark.hidden = !at;
-    if (at) Object.assign(mark.style, { left: `${at.rect[0]}px`, top: `${at.rect[1]}px`, width: `${at.rect[2]}px`, height: `${at.rect[3]}px` });
+    showLanding(mark, at, id);
   };
   const up = m => {
     removeEventListener('mousemove', move);
@@ -3579,6 +3613,7 @@ function dragToDock(id, e) {
     document.body.classList.remove('pane-press');
     if (!mark) return;
     mark.remove();
+    showLanding(null, null, id);
     document.body.classList.remove('docking');
     // Let go outside the window: a pane that can float floats there, its window's top left near the mouse (plan 14 3.1).
     const outside = m.clientX < 0 || m.clientY < 0 || m.clientX >= innerWidth || m.clientY >= innerHeight;

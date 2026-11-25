@@ -63,6 +63,22 @@ public class DocksTests
         Assert.Equal("\"p1|[p3]\"", r);
     }
 
+    // A tab dropped between two tabs (`at`, among the tabs without it): moved within its own group, or from elsewhere.
+    [Fact]
+    public void ATabDroppedBetweenTabs()
+    {
+        var r = Run(Shape + """
+            d.add('p1', { area: 'center' }); d.add('p2', { pane: 'p1', side: 'tab' }); d.add('p3', { pane: 'p2', side: 'tab' });
+            d.add('p3', { pane: 'p1', side: 'tab', at: 0 });
+            const own = shape(d.areas.center);
+            d.add('p1', { pane: 'p2', side: 'tab', at: 2 });
+            const last = shape(d.areas.center);
+            d.add('p4', { area: 'left' });
+            d.add('p4', { pane: 'p3', side: 'tab', at: 1 });
+            """, "[own, last, shape(d.areas.center), shape(d.areas.left)]");
+        Assert.Equal("""["[p3]|p1|p2","p3|p2|[p1]","p3|[p4]|p2|p1",null]""", r);
+    }
+
     [Fact]
     public void MovingAPaneBetweenGroupsAndAreas()
     {

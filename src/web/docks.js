@@ -34,12 +34,15 @@ class Docks {
 
   // A pane placed: { area } (in that area: alone when empty, else beside what is there: below in the left and right
   // areas, at the right in the others) or { pane, side } (beside that pane's group: 'left', 'right', 'top', 'bottom',
-  // or 'tab' in it). A pane already docked is moved.
+  // or 'tab' in it: after that pane, or at `at` among the group's tabs without the one placed, a drop between two
+  // tabs). A pane already docked is moved (a tab to another place in its own group too).
   add(id, place) {
     if (this.find(id)) this.remove(id);
     const target = place.pane != null ? this.find(place.pane) : null;
     if (target && place.side === 'tab') {
-      target.group.panes.splice(target.group.panes.indexOf(place.pane) + 1, 0, id);
+      const panes = target.group.panes;
+      const at = Number.isInteger(place.at) ? Math.max(0, Math.min(place.at, panes.length)) : panes.indexOf(place.pane) + 1;
+      panes.splice(at, 0, id);
       target.group.shown = id;
       return;
     }

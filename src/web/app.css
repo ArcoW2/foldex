@@ -673,6 +673,17 @@ body.rb-changing .rb-bodies { overflow-x: auto; }
   text-overflow: ellipsis;
 }
 
+/* A pane dragged between two tabs (app.js showLanding): its own tab out of its strip, and a gap where it lands. */
+.dock-tab.moving { display: none; }
+.dock-tab-gap {
+  flex: none;
+  width: 80px;
+  box-sizing: border-box;
+  border: 2px dashed var(--accent);
+  border-radius: 3px 3px 0 0;
+  background: color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
 .dock-tab.on {
   color: var(--fg);
   background: color-mix(in srgb, var(--branch, var(--accent)) calc(45% * var(--head-mix, 1)), var(--bg-bar));
