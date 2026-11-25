@@ -616,6 +616,9 @@ const focusTimers = new Map();
 
 function focusItem(paneId, item) {
   layout.state(paneId).focus = item ? item.id : null;
+  // Its history's step for this folder holds the focus at once, not only once things rest (recordStep): a folder
+  // opened right after the focus moved (a double-click) is gone back to with that focus.
+  layout.keepStep(paneId);
   clearTimeout(focusTimers.get(paneId));
   focusTimers.set(paneId, setTimeout(() => {
     apply(layout.focus(paneId, item));
@@ -2258,7 +2261,11 @@ class ListView {
     const kept = focus && this.entries.find(x => same(x.id, focus));
     const there = focus && this.all.some(x => same(x.id, focus));
     const firstItem = this.entries.find(x => !x.up);
+    // The focused item gone (Back to a folder where it was deleted or moved): the one now in its place in the order.
+    const at = layout.state(this.id).focusAt;
+    const inPlace = focus && !there && Number.isInteger(at) && at >= 0 ? this.entries[Math.min(at, this.entries.length - 1)] : null;
     if (kept) this.select(kept, {}, true);
+    else if (inPlace && !inPlace.up) this.select(inPlace, {}, true);
     else if (!there && firstItem) this.select(firstItem, {}, true);
     itemListed(this);   // an item opened as a bookmark (plan 26 3.12): selected and focused
     const now = layout.state(this.id).focus;
@@ -2347,6 +2354,7 @@ class ListView {
 
   select(x, e, quiet = false) {
     const index = this.entries.indexOf(x);
+    layout.state(this.id).focusAt = index;   // its place in the order, kept with the history: gone on Back, the one there then
     // ".." (plan 26 3.11) is focused, never selected, and nothing follows it.
     if (x.up) {
       this.selected = new Set();

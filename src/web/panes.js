@@ -13,6 +13,9 @@ const HistoryMax = 100;                 // steps per history
 
 // The folder a step shows: a tree's focused folder, a list's location.
 const placeOf = (kind, s) => ((kind === 'tree' ? s.focus : s.location) ?? '').toLowerCase();
+// A step of a pane's history from its state: where it is, its focused item and that one's place in the order (a list's
+// focusAt: gone on Back, the item there then is focused), and its selection.
+const stepOf = s => ({ location: s.location, focus: s.focus, ...(Number.isInteger(s.focusAt) ? { focusAt: s.focusAt } : {}), selection: [...s.selection] });
 
 class Layout {
   constructor() {
@@ -260,8 +263,10 @@ class Layout {
         s.focus = null;
         s.selection = [];
         const was = recall ? this.lastStepIn(f.id, item.id) : null;
+        s.focusAt = null;
         if (was) {
           s.focus = was.focus;
+          s.focusAt = was.focusAt ?? null;
           s.selection = [...was.selection];
           f.recall = true;
         }
@@ -297,7 +302,7 @@ class Layout {
 
   // ---------- History per pane (docs/plans/executed/17-PLAN-history-per-pane.md) ----------
 
-  // A pane's history for the branch it shows now: { steps: [{ location, focus, selection }], at }. Kept on the pane, so
+  // A pane's history for the branch it shows now: { steps: [{ location, focus, focusAt, selection }], at }. Kept on the pane, so
   // it goes with the layout into the project.
   history(id) {
     const pane = this.pane(id);
@@ -312,7 +317,7 @@ class Layout {
     const pane = this.pane(id);
     if (!pane || pane.kind === 'preview') return false;
     const s = this.state(id), h = this.history(id);
-    const step = { location: s.location, focus: s.focus, selection: [...s.selection] };
+    const step = stepOf(s);
     const place = placeOf(pane.kind, step);
     if (!place) return false;
     if (h.at >= 0 && placeOf(pane.kind, h.steps[h.at]) === place) {
@@ -323,6 +328,15 @@ class Layout {
     if (h.steps.length > HistoryMax) h.steps.shift();
     h.at = h.steps.length - 1;
     return true;
+  }
+
+  // The current step updated with the pane's state now (its focus moved), while the pane is still in that step's
+  // place; never a new step (that waits for record, once things rest).
+  keepStep(id) {
+    const pane = this.pane(id);
+    if (!pane || pane.kind === 'preview') return;
+    const h = this.history(id), step = stepOf(this.state(id));
+    if (h.at >= 0 && placeOf(pane.kind, step) && placeOf(pane.kind, h.steps[h.at]) === placeOf(pane.kind, step)) h.steps[h.at] = step;
   }
 
   // Whose history Back and Forward use from a pane: its own without a parent, while pinned or below a scrap (ownWay);
@@ -345,7 +359,7 @@ class Layout {
     const p = this.historyPane(id), h = this.history(p);
     h.at += step;
     const to = h.steps[h.at];
-    Object.assign(this.state(p), { location: to.location, focus: to.focus, selection: [...to.selection] });
+    Object.assign(this.state(p), { location: to.location, focus: to.focus, focusAt: to.focusAt ?? null, selection: [...to.selection] });
     this.pane(p).recall = true;
     return p;
   }

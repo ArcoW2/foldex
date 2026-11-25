@@ -405,6 +405,22 @@ public class PanesTests
         Assert.Equal("""[[true,["a/x"],"a/x"],null,[]]""", r.GetRawText());
     }
 
+    // A focus moved and a folder opened at once (a double-click): the step there holds that focus at once (keepStep, no
+    // new step), and its place in the order; Back brings both back to the child.
+    [Fact]
+    public void AfterBackAChildGetsTheFocusItHadThereWhenItLeftAtOnce()
+    {
+        var r = Run(Histories + """
+            to('a'); l.state(B).focus = 'a/x'; l.state(B).focusAt = 0; l.record(B);
+            l.state(B).focus = 'a/sub'; l.state(B).focusAt = 3; l.keepStep(B);
+            const steps = l.history(B).steps.length;
+            to('b');
+            l.go(A, -1);
+            l.focus(A, { id: 'a', folder: true });
+            """, "[steps, l.state(B).focus, l.state(B).focusAt, places(B)]");
+        Assert.Equal("""[1,"a/sub",3,"a/sub,b@1"]""", r.GetRawText());
+    }
+
     [Fact]
     public void AChildOfAChildGoesBackInTheRoot()
     {
