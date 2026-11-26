@@ -195,6 +195,15 @@ sealed class MainForm : Form
         Shell.OwnPreview.Serve(core);   // the files of Foldex's own preview (before the page is loaded)
         core.ContextMenuRequested += (_, m) => WebFiles.BrowserMenu(m);
         core.PermissionRequested += (_, p) => WebFiles.ClipboardRead(p);
+        // Nothing replaces the page or opens a window of the browser's own: a file dropped where no pane takes it would
+        // be shown there. A link to the web (About's Buy me a coffee, docked) opens in the browser, as in PaneForm.
+        core.NavigationStarting += (_, n) => { if (!n.Uri.StartsWith($"https://{WebFiles.Host}/")) n.Cancel = true; };
+        core.NewWindowRequested += (_, n) =>
+        {
+            n.Handled = true;
+            if (Uri.TryCreate(n.Uri, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps && uri.Host != WebFiles.PaneHost && uri.Host != WebFiles.Host)
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true });
+        };
         // Not inside a WebView2 event handler: dialogs and long work must not run there.
         // Files dropped from Explorer come along as objects that carry their path (docs/plans/02 3.6).
         core.WebMessageReceived += (_, m) =>

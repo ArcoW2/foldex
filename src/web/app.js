@@ -4601,8 +4601,18 @@ const activationEating = () => performance.now() < activation.until;
 // wheel; app.css body[data-inert]); the click that brings it back still reaches the window (above). A drag from
 // another program still lands: while it is over the window, the page answers again.
 const setInert = on => document.body.toggleAttribute('data-inert', on && settings.ignoreActivationClick !== false);
+// Not on dragenter alone: a drag from another program may reach the page with no dragenter at all (seen with Explorer
+// and Outlook); then only its dragover finds the page inert, which, inert, passes it by the panes.
 addEventListener('dragenter', () => setInert(false), true);
+addEventListener('dragover', () => { if (document.body.hasAttribute('data-inert')) setInert(false); }, true);
 addEventListener('dragleave', e => { if (!e.relatedTarget && activation.away) setInert(true); }, true);
+// Files dragged where nothing of the page takes them: no drop (the browser would show the file in a window of its own).
+addEventListener('dragover', e => {
+  if (e.defaultPrevented || !e.dataTransfer?.types.includes('Files')) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'none';
+});
+addEventListener('drop', e => { if (e.dataTransfer?.types.includes('Files')) e.preventDefault(); });
 addEventListener('drop', () => setTimeout(() => setInert(activation.away)), true);
 
 // The host's word: in front or not, how it came there (a click from another program: that press only brings it back;

@@ -569,3 +569,15 @@ None.
 - Tested in the test copy: a list pane's column header menu drawn by the window's page at its place over the pane, its
   items and keys there; Esc closed it there and in the pane, the keyboard back in the pane; Select columns... chosen there
   opened its window from the pane.
+
+### 6.14 A drag from another program onto an inert window
+
+- Not in front, the window's page is inert (ignoreActivationClick, app.css body[data-inert]), so its panes' frames get
+  no mouse. A drag from Explorer or Outlook woke it on dragenter, but such a drag often reaches the page with no
+  dragenter, only dragover; it then passed by the panes and the browser showed the dropped file in a window of its own.
+  The page now wakes on a dragover too (app.js). Files dragged where nothing takes them get no drop (dropEffect none),
+  and the main window, as a floating one, lets nothing replace its page or open a browser window (`MainForm.cs`
+  NavigationStarting, NewWindowRequested).
+- Tested by hand in the test copy with Foldex not in front: .png and .jpg from Explorer and Outlook dropped on a list,
+  each stored; the recorded events showed the page inert at the first dragover and the drag going into the pane's frame
+  after it.
