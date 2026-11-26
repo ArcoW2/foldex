@@ -41,6 +41,7 @@ recreates the page when it fails without stopping work in progress. A spike chec
 | Elevated helper | listing only | 3.4; 6.1, plan 05 |
 | Own processes | the page recreated after a failure, a copy going on meanwhile | 3.5; 6.2 item 8 |
 | Outlook mails | dropped into the page, reporting what came along | 3.6; 6.2 item 9 |
+| Rename from Explorer's menu | its Rename renames the focused item in place, in the pane's own page too (app.js menuDone) | 6.4 |
 
 ### Not yet built
 
@@ -49,7 +50,6 @@ recreates the page when it fails without stopping work in progress. A spike chec
 | Checks by hand | drag out and in, Explorer's menu with the mouse and its submenus, Outlook, listing through UAC | -- | 6.3 |
 | Outlook virtual files | a drop target of the host's own, only if WebView2 does not pass them | the check by hand of Outlook | 3.6 |
 | Closing during a file operation | what happens to a running copy when the last window closes | open question 1 | 6.2 item 8 |
-| Rename from Explorer's menu | | -- | 6.4 |
 | Freeing `pidl:n` tokens | | -- | 6.4 |
 
 Moved out: Explorer's menu for items from different folders (the shell makes none) to Foldex's own menu, plan 06 3.4.
@@ -243,4 +243,4 @@ Start the debug build or `C:\win32app\Foldex\Foldex.exe`, then:
 
 - The selection is kept by position, so a batch arriving after a selection can move it; plan 03's panes keep it by id.
 - Tokens (`pidl:n`) are kept for the session and never freed.
-- Rename from Explorer's menu does nothing yet (plan 03).
+- Rename from Explorer's menu: built later, the focused item renamed in place (app.js menuDone).
