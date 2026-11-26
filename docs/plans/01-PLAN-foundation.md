@@ -3,8 +3,9 @@
 Status: partly executed; see Status and 6. As built.
 
 - 2026-11-10: draft.
-- 2026-11-10: revised.
 - 2026-11-10: partly executed: the host (3.1, 3.2, 3.6); actions, keys, F1 and the ribbon (3.3, 3.4).
+- 2026-11-26: partly executed: the rest of the ribbon, menus, rename, git status, most actions and the icon, through
+  later plans (Status).
 
 The number in the file name is the priority; rename to reorder.
 
@@ -39,18 +40,22 @@ Foldex and LexPen are separate projects and share no code. How the UI is drawn f
 | Pane actions | detach, attach, branch colour, back, forward, next branch | plan 03 |
 | Themes and settings window | | plan 07 |
 | Tests project | | 3.6; 6.3 |
+| Ribbon, the rest | icons, split buttons, drop-down lists, key tips, change mode, shown on demand | plans 19, 30 |
+| Menus | the generic menus and their openers; Foldex's own item menu | plans 12, 40 |
+| Rename, from LexPen | in place, and the Rename dialog for more items | plan 21 |
+| Git status, from LexPen | the Git status column | plan 11 |
+| More actions | new file, rename, delete permanently, filter, sort (by a column header), view mode (Views: details, icons, thumbnails), take ownership | plans 11, 21, 22, 31, 32 |
+| Own icon | `src/img/icon`, the exe's icon | 6.1 |
 
 ### Not yet built
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| Ribbon, the rest | icons, split buttons, drop-down lists, key tips, change mode, collapsing | -- | 3.3 |
-| Menus | | -- | 3.3 |
-| From LexPen | rename, folder compare, git status | the Git status column: plan 11 | 3.3 |
-| The rest of the actions | open with, open in LexPen, new file, rename, delete permanently, select by pattern, filter, sort, view mode, take ownership | take ownership: plan 31 | 3.4 |
-| Own icon | an icon of Foldex's own | -- | 6.1 |
+| Folder compare, from LexPen | LexPen's `FolderCompare.cs` | -- | 3.3 |
+| Open with, Open in LexPen as actions | today Open with is in Explorer's menu, Open in LexPen in the preview's bar (plan 04 3.4) | -- | 3.4 |
+| Select by pattern | | -- | 3.4 |
 
-Moved out: docking to plan 12, the viewers to plan 04, projects and window sessions to plan 15, macros to plan 34. The order of the rest: open question 1.
+Moved out: docking to plan 12, the viewers to plan 04, projects and window sessions to plan 15, macros to plan 34.
 
 ## 3. Details
 
@@ -121,9 +126,7 @@ locations, the theme set; saved continuously, opened from the Projects menu and 
 
 ## 4. Open questions
 
-1. **The order of the rest (Status, Not yet built).** Each part taken out of LexPen's editor page on its own, on
-   top of the host. Suggestion: first the plan 02 spike (it needs only this host); then actions and keys (F1), the
-   ribbon, themes, the settings window, projects, macros, docking; the viewers with plan 04.
+None.
 
 ## 6. As built
 
@@ -131,8 +134,8 @@ locations, the theme set; saved continuously, opened from the Projects menu and 
 
 - `Foldex.sln` with `src/Foldex.csproj` and `tests/Foldex.Tests` in solution folders `src` and `tests`, as LexPen.
 - `Foldex.csproj`: the LexPen settings (net10.0-windows, WinForms, PerMonitorV2, win-x64, framework-dependent, single
-  file, ReadyToRun), the `GitVersion` target, `defaults\` next to the exe, `web\` inside it. No icon yet; the window uses
-  the exe's.
+  file, ReadyToRun), the `GitVersion` target, `defaults\` next to the exe, `web\` inside it, `img\icon\foldex.ico` as
+  the exe's icon (the window uses the exe's).
 - `Program.cs`: one instance per user and exe (mutex and pipe, as LexPen); `-n` / `--new-window` or Shift for a new
   window; the rest are paths, handed to the running instance.
 - `AppHost.cs`: the windows, the pipe listener, the shared browser environment (its data folder in `State\`,
