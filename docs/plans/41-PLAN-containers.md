@@ -23,8 +23,8 @@ settings and everything else Foldex keeps. "Default" is the one that exists from
 now. Each container runs in its own Foldex process with its own data folder, so they stay apart without any part of
 Foldex having to know about containers. The container is shown at the left of the bottom bar, left of the project; a
 click there opens the Containers menu: every container, to open (as a project opens) or close, a new one, rename,
-password, delete. A container can have a password: it is asked when the container opens and not again while Foldex
-has it open anywhere; once it is closed, it is asked again. A container can be switched to never open by itself: it
+password, delete. A container can have a password: it is asked when the container opens, and before any change to it
+while it is closed; not again while Foldex has it open anywhere. Once it is closed, it is asked again. A container can be switched to never open by itself: it
 then opens only when chosen. At start, the containers that were open come back, except those.
 
 ## Status
@@ -42,7 +42,7 @@ then opens only when chosen. At start, the containers that were open come back, 
 | Data folder per container | `DataFolder` resolves a container's folder; Default is the top folder | -- | 3.1 |
 | Process per container | `--container`, a mutex and pipe per container, a launch routed to the right one | Q3 | 3.2, 3.3 |
 | Start and close | which containers come back at start; the never-open switch; closing a container | -- | 3.3 |
-| Password | set, change, remove; asked when a locked container opens | Q1 | 3.4 |
+| Password | set, change, remove; asked when a locked container opens, and before a change to it while closed | Q1 | 3.4 |
 | Bottom bar and Containers menu | the container left of the project; the menu of 3.5 | -- | 3.5 |
 | Dialogs | the name, the password, the delete question | -- | 3.5 |
 | Ribbon and actions | the actions of 3.5, View > Containers | -- | 3.5 |
@@ -102,8 +102,11 @@ then opens only when chosen. At start, the containers that were open come back, 
 
 ### 3.4 Password
 
-- Set, changed or removed from the Containers menu: Set password..., Change password... (asks the old one first),
-  Remove password (asks it first).
+- Set, changed or removed from the Containers menu (3.5): Set password..., Change password..., Remove password.
+- **Changing a closed container asks its password first.** A container with a password that is not open asks it
+  before any change to it: rename, set, change or remove its password, the never-open switch, duplicate, delete. That
+  includes a change made from another container's window: that window asks, in a password dialog over itself, and
+  checks it against the hash. An open container asks nothing for a change, as it asks nothing to be opened again.
 - Kept as a salted PBKDF2 hash (SHA-256) in `containers.json`, never the password itself. The number of iterations is
   [not yet chosen]; high enough that trying passwords is slow, low enough that opening is not.
 - Asked by the container's own process, before it shows any window: a small window of its own with the container's
@@ -119,19 +122,23 @@ then opens only when chosen. At start, the containers that were open come back, 
 
 - The bottom bar shows the container at its left, left of the project, with a lock mark when it has a password. A
   click opens the Containers menu; a click while it is open closes it (the generic opener, `menu.js`).
-- The Containers menu:
-  - every container, the open ones marked; a click opens it (3.3), the current one is checked;
-  - New container..., Duplicate container... (3.6);
-  - Rename container... (not Default);
+- The Containers menu: every container, the open ones marked and the current one checked, each with a submenu, as a
+  project in the Projects menu (plan 15 3.6); then New container... (3.6). A container's submenu:
+  - Open (3.3), first;
+  - Duplicate... (3.6);
+  - Rename... (not Default);
   - Set password... / Change password... / Remove password;
   - Never open by itself (a check);
-  - Close container;
-  - Delete container... (not Default; not while open; asks first, and its password when it has one); its folder goes
-    to the Recycle Bin.
-- The same commands are actions, in the default ribbon under View > Containers, next to Projects. A ribbon is per
-  container, so a ribbon made before this has the group only after Reset or when added by hand (plan 19).
-- Windows (plan 14 3.7): the name dialog, the password window and the delete question are floating only, modal; the
-  menu is a menu. The password window at start has no Foldex window to be over; it stands on its own.
+  - Close (when open);
+  - Delete... (not Default; not while open; asks first); its folder goes to the Recycle Bin.
+
+  Each change of a closed container with a password asks its password first (3.4).
+- The same commands are actions, in the default ribbon under View > Containers, next to Projects; there they work on
+  the current container. A ribbon is per container, so a ribbon made before this has the group only after Reset or
+  when added by hand (plan 19).
+- Windows (plan 14 3.7): the name dialog, both password windows (at start, and before a change) and the delete
+  question are floating only, modal; the menu is a menu. The password window at start has no Foldex window to be
+  over; it stands on its own.
 
 ### 3.6 New and Duplicate
 
@@ -158,8 +165,9 @@ then opens only when chosen. At start, the containers that were open come back, 
 - `DataFolder`: Default is the top folder; another container's folder by its number.
 - `Program`: `--container` parsed; the pipe and mutex names per container.
 - In a test copy (`FOLDEX_DATA`): two containers open at once with different bookmarks and ribbons; a locked container
-  asks once, opening it again while open does not ask, after Close it asks again; a never-open container does not come
-  back at start; a launch goes to the container of 3.3.
+  asks once, opening it again while open does not ask, after Close it asks again; a closed locked container asks its
+  password before a rename, a password change, the never-open switch, a duplicate and a delete, an open one does not;
+  a never-open container does not come back at start; a launch goes to the container of 3.3.
 
 ## 4. Open questions
 
