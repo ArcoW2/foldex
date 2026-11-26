@@ -22,8 +22,9 @@ A container is a complete Foldex of its own: its own projects and layouts, bookm
 settings and everything else Foldex keeps. "Default" is the one that exists from the start; it is the data Foldex has
 now. Each container runs in its own Foldex process with its own data folder, so they stay apart without any part of
 Foldex having to know about containers. The container is shown at the left of the bottom bar, left of the project; a
-click there opens the Containers menu: every container, to open (as a project opens) or close, a new one, a copy,
-rename, password, delete. A container other than Default can have a password: it is asked when the container opens,
+click there opens the Containers menu: every container, to open (as a project opens) or close, copy to a new one (a new
+container is always a copy of another), rename, password, delete. A container other than Default can have a password,
+shown by a lock: it locks the container in Foldex, it does not encrypt its files. It is asked when the container opens,
 and before a change to it while it is closed; not again while Foldex has it open anywhere. Once it is closed, it is
 asked again. Copying a container with a password always asks it; the copy has none. Deleting one asks its password
 and then whether you are sure; without the password it warns first that the container has one. Deleting the current
@@ -44,14 +45,14 @@ except those.
 |---|---|---|---|
 | Container store | `ContainerStore.cs`: the containers, their folders, passwords and switches, in the top `State\containers.json` | -- | 3.1, 3.4 |
 | Data folder per container | `DataFolder` resolves a container's folder; Default is the top folder | -- | 3.1 |
-| Process per container | `--container`, a mutex and pipe per container, a launch routed to the right one | Q3 | 3.2, 3.3 |
+| Process per container | `--container`, a mutex and pipe per container, a launch routed to the right one; none given: Default | -- | 3.2, 3.3 |
 | Start and close | which containers come back at start; the never-open switch; closing a container | -- | 3.3 |
-| Password | set, change, remove (not for Default); asked when a locked container opens, before a change to it while closed, and before a copy | Q1 | 3.4 |
+| Password | set, change, remove (not for Default); asked when a locked container opens, before a change to it while closed, and before a copy; the lock mark | -- | 3.4, 3.5 |
 | Delete | the two flows of 3.6: with the password, or the warning that it has one; then the question; an open container closed first; the current one deleted by Default | -- | 3.6 |
 | Bottom bar and Containers menu | the container left of the project; the menu of 3.5 | -- | 3.5 |
 | Dialogs | the name, the password, the delete warning and question | -- | 3.5, 3.6 |
 | Ribbon and actions | the actions of 3.5, View > Containers | -- | 3.5 |
-| New and Copy | a new container from Foldex's defaults, or a copy of one | Q2 | 3.6 |
+| Copy | a new container as a copy of another | -- | 3.6 |
 | Tests | the store, the routing, the folders; checks in a test copy | -- | 3.8 |
 
 ## 3. Details
@@ -71,7 +72,8 @@ except those.
   name, so a rename moves nothing and any name can be used.
 - The list of containers is the only thing above them: `State\containers.json` in the top folder, written as
   `projects.json` is (whole, to a temporary file that then replaces it). `ContainerStore.cs`, pure apart from that
-  file, as `ProjectStore.cs`.
+  file, as `ProjectStore.cs`. Foldex and LexPen each keep their own list in their own top folder: a "Work" container
+  in one is not one in the other, and each has its own password.
 - Because Default's folder is the top folder, its `State\` holds `containers.json` too. Default's own code never reads
   it; only the container store does.
 - Nothing in Foldex's settings acts on Windows as a whole (checked: no registry writes, no start-with-Windows), so
@@ -82,6 +84,8 @@ except those.
 - Everything Foldex keeps goes through `AppHost.DataDir`, set once per process. A process per container, started with
   `--container <number>`, gets that container's folder as `DataDir`. Every file, cache and helper then belongs to that
   container without a change anywhere else. The elevated helper and the lister helper are already per process.
+- **No container given is Default**: a process started without `--container` is Default's, with the top folder as
+  `DataDir`, as Foldex is now.
 - The single-instance mutex and pipe (`Program.PipeName`) get the container's number, so each container has its own
   running instance, and a launch for it goes to that one.
 - Each container has its own WebView2 profile in its own `State\`, so the containers share no browser state.
@@ -97,12 +101,12 @@ except those.
 - **Open or closed**: a container is open while its process runs. The store keeps per container whether it was open
   when Foldex last ended. A container closed while another still runs is marked closed. The last process to end
   keeps its mark, and so do all processes ending at the same time because Windows shuts down or signs out.
-- **Start** (Foldex launched while no container runs): the containers open when Foldex last ended come back, each in
-  its process and each asking its password when it has one. A container switched to never open by itself does not
-  come back; it opens only when chosen. When none is left to come back, Default opens.
-- **A launch** while containers run (a folder from Explorer, a shortcut, Win+E when Foldex takes it): to the
-  container that was active last, when it is open; else to Default (opened when needed). Only the container named
-  with `--container` changes that. Q3 asks whether it should always go to Default instead.
+- **Start** (Foldex launched while no container runs): the process is Default's (3.2). It starts the containers open
+  when Foldex last ended, each in its process and each asking its password when it has one. A container switched to
+  never open by itself does not come back; it opens only when chosen. Default shows its own window when it was open
+  too, or when none is left to come back; else its process ends once the others have started.
+- **A launch** while containers run (a folder from Explorer, a shortcut, Win+E when Foldex takes it): to Default
+  (opened when needed), unless it names a container with `--container`.
 - Virtual desktops (plan 15 3.5): each container's projects keep their own desktops, as now; a launch picks the
   container first, then that container picks its window on the current desktop.
 
@@ -124,14 +128,15 @@ except those.
 - What it protects: Foldex will not show that container to someone at the PC who does not know the password. It does
   not encrypt the container's files: anyone who can read the user's `%LOCALAPPDATA%` can read its bookmarks and
   settings, and can open the container by removing the hash from `containers.json`. That last part is also the way
-  back from a forgotten password. Q1 asks whether encryption is wanted.
+  back from a forgotten password. Encrypting the folder is not part of this plan.
 
 ### 3.5 Bottom bar, menu, ribbon, dialogs
 
 - The bottom bar shows the container at its left, left of the project, with a lock mark when it has a password. A
   click opens the Containers menu; a click while it is open closes it (the generic opener, `menu.js`).
-- The Containers menu: every container, the open ones marked and the current one checked, each with a submenu of its
-  commands; then New container... (3.6). Unlike the Projects menu (plan 15 3.6), it shows nothing of what a container
+- The Containers menu: every container, the open ones marked, the current one checked and the ones with a password
+  with the lock mark, each with a submenu of its commands. There is no New container: a new one is always a copy
+  (3.6). Unlike the Projects menu (plan 15 3.6), it shows nothing of what a container
   holds: no projects, windows, panes or folders, of no container, the current one included (its projects are in the
   Projects menu). A container's submenu:
   - Open (3.3), first;
@@ -150,16 +155,13 @@ except those.
   and the delete question are floating only, modal; the menu is a menu. The password window at start has no Foldex window to be
   over; it stands on its own.
 
-### 3.6 New, Copy and Delete
+### 3.6 Copy and Delete
 
-- **New container**: an empty folder, so it starts as Foldex does on a new PC: Foldex's defaults, the bookmarks from
-  Explorer's pinned folders, one project.
+- **A new container is always a copy** of an existing one; there is no empty new container.
 - **Copy to a new container**: a new container with a copy of the source's folder without its `State\` (no projects,
   caches or browser profile). Its settings, ribbon, themes, bookmarks, column sets, filters, macros and keys are
   copied. A source with a password asks it first, also when it is open (the copy takes everything that is in it).
-  The password is not copied: the new container has none.
-- Q2 asks whether New should start from the current container's look (settings, ribbon, themes) rather than from the
-  defaults.
+  The password is not copied: the new container has none. Its name is asked first (the name dialog, 3.5).
 - **Delete**, two flows for a container with a password, both asked by the window it is chosen in:
   1. The password entered (also when the container is open): then the question below.
   2. The password box left empty (Delete pressed without it): first "This container has a password. Are you sure you
@@ -197,24 +199,17 @@ except those.
   container asks its password open or closed, and the copy has no password; Default offers no password; both delete
   flows (password, then the question; no password, the warning, then the question), an open container closed
   before its folder goes; the current container deleted: the question says its window closes and Default opens,
-  Default comes up (also when it was not running) and removes the folder after the process has ended; a never-open container does not come back at start; a launch goes to the container of 3.3.
+  Default comes up (also when it was not running) and removes the folder after the process has ended; a never-open
+  container does not come back at start; a launch without `--container` goes to Default; the lock mark in the bottom
+  bar and the menu for a container with a password.
 
 ## 4. Open questions
 
-1. **Password: a lock or encryption?** The plan locks a container in Foldex only (3.4): its files stay readable on
-   disk. Encrypting them means every file, cache and the WebView2 profile of a container stays encrypted at rest, and
-   a forgotten password loses that container. That would be a much larger plan of its own. The lock is the
-   recommendation.
-2. **A new container: defaults or the current look?** The plan starts a new one from Foldex's defaults (3.6), with
-   Copy for a full copy. The alternative: a new one takes the current container's settings, ribbon and themes,
-   but none of its bookmarks or projects.
-3. **A launch without `--container`**: to the container active last (3.3, the recommendation) or always to Default?
-4. **The name**: "container" or "space"? The plan uses "container". Foldex's own scrap is called scrap in the UI, so
-   neither name clashes there; xplorer2 calls its scrap a "scrap container", which only `docs/xplorer2-features.md`
-   mentions.
-5. **Foldex and LexPen: one list of containers or one each?** Once LexPen has containers too, they can be the same
-   (a "Work" container in both, its password asked once for both) or each program its own. The same list needs a
-   place both read, outside either program's data folder. The plan does not decide it yet; it keeps the list in
-   Foldex's own folder (3.1).
+1. **The name**: "container", "space" or "profile"? The plan uses "container". "Profile" fits the mechanism best:
+   browsers use it for exactly this (own data folder, own process, own settings, an optional lock), so users know
+   it; but Windows has user profiles too. "Container" says "kept apart" (Firefox uses it for that) and clashes with
+   nothing in Foldex's UI; xplorer2's "scrap container" is mentioned only in `docs/xplorer2-features.md`. "Space"
+   reads as a place, close to a virtual desktop or a project's layout. The recommendation: "profile", else
+   "container".
 
 ## 5. (not used)
