@@ -82,6 +82,8 @@
     { "name": "Customize", "groups": [
       { "name": "Bookmarks", "corners": { "left": "bookmarks.manage", "right": "bookmarks.menu" }, "items": [
         { "action": "bookmarks.add", "label": "Add current folder" } ] },
+      { "name": "Columns", "items": [
+        { "action": "columns.manage", "label": "Column sets" } ] },
       { "name": "Bars", "items": [
         { "action": "bars.change", "label": "Change bars" },
         { "action": "bars.reset", "label": "Reset bars", "stack": true },
@@ -101,7 +103,6 @@
         { "action": "macros.menu", "size": "large", "label": "Macros" } ] },
       { "name": "Manage", "items": [
         { "action": "bookmarks.manage", "label": "Bookmarks" }, { "action": "filters.manage", "label": "Filters", "stack": true },
-        { "action": "columns.manage", "label": "Column sets", "stack": true },
         { "action": "projects.manage", "label": "Projects" }, { "action": "macros.manage", "label": "Macros", "stack": true },
         { "action": "profiles.manage", "label": "Profiles", "stack": true } ] },
       { "name": "Foldex", "items": [

@@ -308,10 +308,10 @@ None.
   macro's id: a variant per macro, so F1 lists "Macro: Tools / Deeper / Hello" with its key and a ribbon button can be
   one. `macros.menu` (the tree as submenus, then Manage macros...), `macros.manage`. Their icons LexPen's (Play, the
   list of steps with Play). The shipped ribbon's Tools tab has a Macros group (the list; corners Manage and the
-  list, as Bookmarks) and, as the user asked afterwards, a Manage group with every Manage window (Bookmarks, Filters,
-  Column sets, Projects, Macros): the Manage buttons left the groups that have them in a corner (Projects, Bookmarks;
-  Customize's Column sets group, which held only that, is gone). A ribbon.json of your own keeps its tabs until
-  Reset or Change the ribbon.
+  list, as Bookmarks) and, as the user asked afterwards, a Manage group with the Manage windows (Bookmarks, Filters,
+  Projects, Macros, Profiles): the Manage buttons left the groups that have them in a corner (Projects, Bookmarks).
+  Column sets is on the Customize tab, in a Columns group of its own, as the user asked. A ribbon.json of your own
+  keeps its tabs until Reset or Change the ribbon.
 - Tested in the test copy (on a list pane in its own page): `go` twice, `select "*.txt;*.pdf"`, `$$count`, `for each`
   over the selection with a `run` of cmd that wrote each item's name, size and path to a file, `focus` and the focused
   folder's fields, `count(files "*")`, `$$exitCode` 4, an error on line 13 on the status line; a macro two folders
