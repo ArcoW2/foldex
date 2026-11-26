@@ -122,8 +122,10 @@ then opens only when chosen. At start, the containers that were open come back, 
 
 - The bottom bar shows the container at its left, left of the project, with a lock mark when it has a password. A
   click opens the Containers menu; a click while it is open closes it (the generic opener, `menu.js`).
-- The Containers menu: every container, the open ones marked and the current one checked, each with a submenu, as a
-  project in the Projects menu (plan 15 3.6); then New container... (3.6). A container's submenu:
+- The Containers menu: every container, the open ones marked and the current one checked, each with a submenu of its
+  commands; then New container... (3.6). Unlike the Projects menu (plan 15 3.6), it shows nothing of what a container
+  holds: no projects, windows, panes or folders, of no container, the current one included (its projects are in the
+  Projects menu). A container's submenu:
   - Open (3.3), first;
   - Duplicate... (3.6);
   - Rename... (not Default);
