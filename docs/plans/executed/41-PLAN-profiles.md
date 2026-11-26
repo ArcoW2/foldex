@@ -151,7 +151,7 @@ except those.
   A change of a closed profile with a password asks its password first; Copy and Delete ask it always (3.4).
 - **Manage profiles**, as Manage projects (plan 15 3.7): a pane with every profile in a list, Default first, then by
   name: its name with the lock mark, open, closed or this window, never open by itself (a checkbox that switches it),
-  created, last opened. Its buttons (Open, Copy..., Rename..., Password..., Close, Delete...) and a row's context
+  created, last opened. Its buttons (Open, Copy..., Rename..., Password..., Close profile, Delete...; not just Close, which in a pane such as Column sets closes the pane) and a row's context
   menu are the submenu's commands for the row with the focus, with the same passwords asked. Enter opens, F2
   renames, Space switches never open by itself, Del deletes, Esc goes back. Also the action `profiles.manage`: the
   Profiles group's left corner and Tools > Manage in the ribbon.
