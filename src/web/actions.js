@@ -208,6 +208,17 @@ action('pane.toSide', { title: 'To the pane at a side', hint: 'the keyboard to t
 
 // ---------- View ----------
 
+// Light / dark (as LexPen's Day / night; the button at the right of the ribbon's tabs): the other mode. When that is
+// the mode Windows has, Foldex follows Windows again (followWindows on), so it changes when Windows does; else that
+// mode is kept (followWindows off, theme). Every window follows.
+function toggleMode() {
+  const want = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  setSetting('theme', want);
+  setSetting('followWindows', want === (darkQuery.matches ? 'dark' : 'light'));
+}
+action('theme.toggle', { title: 'Light / dark', hint: 'the other mode for every window; the mode Windows has: following Windows again',
+  group: 'view', checked: () => document.documentElement.dataset.theme === 'dark', run: () => toggleMode() });
+
 // The ribbon itself (ribbon.js; docs/plans/executed/19-PLAN-ribbon-change-mode.md 3.14).
 action('ribbon.change', { title: 'Change the ribbon', hint: 'its change mode: drag actions from F1 onto it, buttons, groups and tabs around and off it; right-click a button for its size, label and more; Esc or Done ends it',
   group: 'view', checked: () => rb.changing, enabled: () => !!rb.model, run: () => rbChangeMode(!rb.changing) });

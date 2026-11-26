@@ -140,6 +140,7 @@ const RIBBON_ICONS = (() => {
     'macro.run': ['Run a macro', p('M4.5 2.5l8.5 5.5-8.5 5.5z')],
     'macros.menu': ['Macros', p('M2 3.5h8M2 7h8M2 10.5h5M10.5 9.5l4 2.5-4 2.5z')],
     // Foldex
+    'theme.toggle': ['Light / dark', p('M13 10.5A5.5 5.5 0 1 1 6 2.8a4.5 4.5 0 0 0 7 7.7z')],
     about: ['About Foldex', '<circle cx="8" cy="8" r="6.5"/>' + t(5.3, 11.3, 9, '?', 700)],
   };
   // The panes and windows: per one the drawing for 32 px (at 0.66 in the frame) and one drawn for 16 px in the frame's

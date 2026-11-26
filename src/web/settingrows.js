@@ -16,7 +16,7 @@ const SETTING_TABS = [
 
 const SETTING_ROWS = [
   { tab: 'App', group: 'Theme', name: 'followWindows', kind: 'toggle', title: 'Light or dark as Windows is',
-    hint: 'Follows Settings > Personalization > Colors at once; off: the mode below.' },
+    hint: 'Follows Settings > Personalization > Colors at once; off: the mode below. The sun / moon at the right of the ribbon\'s tabs switches: to the mode Windows has, this goes on again.' },
   { tab: 'App', group: 'Theme', name: 'theme', kind: 'choice', title: 'Mode', options: [['light', 'Light'], ['dark', 'Dark']],
     hint: 'Light or dark when not following Windows.' },
   { tab: 'App', group: 'Theme', name: 'themeLight', kind: 'theme', title: 'Theme in light mode',

@@ -119,7 +119,11 @@ function renderRibbon() {
     (rb.changing ? '<button class="rb-tab rb-new" data-new-tab tabindex="-1">New...</button>' : '') +
     // The elevated helper runs (plan 31 3.3): a shield in the warning colour; a click ends it.
     `<button class="rb-shield" tabindex="-1"${helperShown() ? '' : ' hidden'} title="Administrator rights: the elevated helper runs (Windows asked once). A click ends it; the next task that needs it asks again.">` +
-    '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M8 1.5l5.5 2v4c0 3.5-2.4 6-5.5 7-3.1-1-5.5-3.5-5.5-7v-4z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M8 4.5v4.5M8 11.3h0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>';
+    '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M8 1.5l5.5 2v4c0 3.5-2.4 6-5.5 7-3.1-1-5.5-3.5-5.5-7v-4z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M8 4.5v4.5M8 11.3h0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>' +
+    // Light / dark (as LexPen's Day / night): a moon in light mode, a sun in dark mode (app.css shows the one); app.js toggleMode.
+    '<button class="rb-mode" tabindex="-1" title="Light / dark: the other mode. The same as Windows has: following Windows again">' +
+    '<svg class="rb-moon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M13 10.5A5.5 5.5 0 1 1 6 2.8a4.5 4.5 0 0 0 7 7.7z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>' +
+    '<svg class="rb-sun" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6L13 13M3 13l1.4-1.4M11.6 4.4L13 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>';
   // Every tab's groups (one shown): a tab name dragged over shows its tab without taking away the dragged button.
   bodies.innerHTML = tabs.map((t, ti) => `<div class="rb-body" data-body="${ti}"${t.name === rb.tab ? '' : ' hidden'}>` +
     t.groups.map((g, gi) => rbGroupHtml(ti, gi, g)).join('') +
@@ -379,6 +383,7 @@ async function rbClick(e) {
   }
   if (el.matches('.rb-collapse')) return runAction('ribbon.onDemand', [], { from: 'ribbon' });
   if (el.matches('.rb-shield')) return runAction('helper.end', [], { from: 'ribbon' });
+  if (el.matches('.rb-mode')) return runAction('theme.toggle', [], { from: 'ribbon' });
   if (el.matches('[data-new-tab]')) return rbNewTab();
   if (el.matches('.rb-done')) return rbChangeMode(false);
   if (el.matches('.rb-more')) { const r = el.getBoundingClientRect(); return openMenu(r.left, r.bottom, rbOverflowItems()); }

@@ -35,6 +35,7 @@ once in every Foldex window.
 | Applying | `themeLight` and `themeDark`, the host resolving every chain, a change applied at once in every window, problems in the status line | 3.3 |
 | Shipped themes | every LexPen theme, `light` and `dark` as the roots | 3.4 |
 | Settings window | | 3.5 |
+| Light / dark switch | the sun / moon at the right of the ribbon's tabs; to the mode Windows has: following Windows again | 3.3; 6.1 |
 
 ### Not yet built
 
@@ -84,6 +85,11 @@ replaces a shipped one (as LexPen's `ThemeFile`).
 - A change of settings.json or of a theme file in the data folder (by hand, or by the settings window) is sent to
   every window again, and applies at once.
 - Problems (a wrong base, name or value) show in the status line with the settings' problems.
+- **The light / dark switch** (as LexPen's Day / night): a moon in light mode, a sun in dark mode, at the right of the
+  ribbon's tabs; also the action `theme.toggle`. A click gives every window the other mode. When that is the mode
+  Windows has, `followWindows` goes on again, so Foldex changes with Windows from then on; else `followWindows` goes
+  off and `theme` keeps the mode. Unlike LexPen, where the switch while following Windows lasts only until Windows
+  changes mode and is not kept.
 
 ### 3.4 Shipped themes
 
@@ -158,5 +164,7 @@ None.
   dropped in the test copy's `themes\` showed in the list as "My test (yours)" without a restart; chosen, the heads of
   two branches took its first two branch colours; followWindows off switched to light and back on to dark.
   `PrintWindow` of the main window showed the ocean colours, the tree on its side colour, and the two branch colours.
+- The light / dark switch in a test copy, Windows dark: a click went light with `followWindows` off, the moon shown;
+  a second click went dark with `followWindows` on again, the sun shown; the button at the right end of the tab row.
 - Not tried: the settings window drawn (the shot helper takes the main window only), "open settings.json" (it starts
   your editor).

@@ -388,6 +388,12 @@ body.bar-dragging .bars {
 #ribbon .rb-shield { margin-left: auto; align-self: center; padding: 1px 4px; border: 0; background: none; color: var(--warning); cursor: pointer; }
 #ribbon .rb-shield:hover { background: var(--hover); }
 #ribbon .rb-shield[hidden] { display: none; }
+/* Light / dark at the far right (after the shield, when it shows): a moon in light mode, a sun in dark mode. */
+#ribbon .rb-mode { margin-left: auto; align-self: center; padding: 1px 4px; border: 0; background: none; color: var(--fg-dim); cursor: pointer; display: flex; }
+#ribbon .rb-shield:not([hidden]) ~ .rb-mode { margin-left: 4px; }
+#ribbon .rb-mode:hover { background: var(--hover); color: var(--fg); }
+#ribbon .rb-mode .rb-sun, :root[data-theme=dark] #ribbon .rb-mode .rb-moon { display: none; }
+:root[data-theme=dark] #ribbon .rb-mode .rb-sun { display: block; }
 .rb-tab { padding: 3px 10px; position: relative; border-radius: 4px 4px 0 0; }
 .rb-tab:hover { background: var(--hover); }
 .rb-tab.on { color: var(--accent); box-shadow: inset 0 -2px var(--accent); }
