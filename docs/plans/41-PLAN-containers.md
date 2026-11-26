@@ -22,10 +22,13 @@ A container is a complete Foldex of its own: its own projects and layouts, bookm
 settings and everything else Foldex keeps. "Default" is the one that exists from the start; it is the data Foldex has
 now. Each container runs in its own Foldex process with its own data folder, so they stay apart without any part of
 Foldex having to know about containers. The container is shown at the left of the bottom bar, left of the project; a
-click there opens the Containers menu: every container, to open (as a project opens) or close, a new one, rename,
-password, delete. A container can have a password: it is asked when the container opens, and before any change to it
-while it is closed; not again while Foldex has it open anywhere. Once it is closed, it is asked again. A container can be switched to never open by itself: it
-then opens only when chosen. At start, the containers that were open come back, except those.
+click there opens the Containers menu: every container, to open (as a project opens) or close, a new one, a copy,
+rename, password, delete. A container other than Default can have a password: it is asked when the container opens,
+and before a change to it while it is closed; not again while Foldex has it open anywhere. Once it is closed, it is
+asked again. Copying a container with a password always asks it; the copy has none. Deleting one asks its password
+and then whether you are sure; without the password it warns first that the container has one. A container can be
+switched to never open by itself: it then opens only when chosen. At start, the containers that were open come back,
+except those.
 
 ## Status
 
@@ -42,11 +45,12 @@ then opens only when chosen. At start, the containers that were open come back, 
 | Data folder per container | `DataFolder` resolves a container's folder; Default is the top folder | -- | 3.1 |
 | Process per container | `--container`, a mutex and pipe per container, a launch routed to the right one | Q3 | 3.2, 3.3 |
 | Start and close | which containers come back at start; the never-open switch; closing a container | -- | 3.3 |
-| Password | set, change, remove; asked when a locked container opens, and before a change to it while closed | Q1 | 3.4 |
+| Password | set, change, remove (not for Default); asked when a locked container opens, before a change to it while closed, and before a copy | Q1 | 3.4 |
+| Delete | the two flows of 3.6: with the password, or the warning that it has one; then the question; an open container closed first | Q6 | 3.6 |
 | Bottom bar and Containers menu | the container left of the project; the menu of 3.5 | -- | 3.5 |
-| Dialogs | the name, the password, the delete question | -- | 3.5 |
+| Dialogs | the name, the password, the delete warning and question | -- | 3.5, 3.6 |
 | Ribbon and actions | the actions of 3.5, View > Containers | -- | 3.5 |
-| New and Duplicate | a new container from Foldex's defaults, or a copy of one | Q2 | 3.6 |
+| New and Copy | a new container from Foldex's defaults, or a copy of one | Q2 | 3.6 |
 | Tests | the store, the routing, the folders; checks in a test copy | -- | 3.8 |
 
 ## 3. Details
@@ -54,7 +58,8 @@ then opens only when chosen. At start, the containers that were open come back, 
 ### 3.1 What a container is, and where it lives
 
 - A container has a number (never reused), a name, the time it was created and last opened, an optional password
-  (3.4) and the never-open switch (3.3). "Default" cannot be deleted or renamed; it can have a password.
+  (3.4) and the never-open switch (3.3). "Default" cannot be deleted or renamed, and has no password: Foldex must
+  always be able to start, and Default is what opens when nothing else does (3.3).
 - Its data folder is a complete Foldex data folder (`DataFolder`): `settings.json`, `bookmarks.json`, `ribbon.json`,
   `bars.json`, `keys.json`, `columnsets.json`, `filters.json`, `macros.json`, `searches.json`, `renames.json`,
   `listers.json`, `themes\`, and `State\` with its projects, folder use, the folder cache, the thumbnails and the
@@ -102,11 +107,13 @@ then opens only when chosen. At start, the containers that were open come back, 
 
 ### 3.4 Password
 
-- Set, changed or removed from the Containers menu (3.5): Set password..., Change password..., Remove password.
+- Set, changed or removed from the Containers menu (3.5): Set password..., Change password..., Remove password. Not
+  for Default (3.1).
 - **Changing a closed container asks its password first.** A container with a password that is not open asks it
-  before any change to it: rename, set, change or remove its password, the never-open switch, duplicate, delete. That
-  includes a change made from another container's window: that window asks, in a password dialog over itself, and
-  checks it against the hash. An open container asks nothing for a change, as it asks nothing to be opened again.
+  before a change to it: rename, set, change or remove its password, the never-open switch. That includes a change
+  made from another container's window: that window asks, in a password dialog over itself, and checks it against
+  the hash. An open container asks nothing for these, as it asks nothing to be opened again.
+- **Copy and Delete ask it always**, open or not (3.6).
 - Kept as a salted PBKDF2 hash (SHA-256) in `containers.json`, never the password itself. The number of iterations is
   [not yet chosen]; high enough that trying passwords is slow, low enough that opening is not.
 - Asked by the container's own process, before it shows any window: a small window of its own with the container's
@@ -127,30 +134,42 @@ then opens only when chosen. At start, the containers that were open come back, 
   holds: no projects, windows, panes or folders, of no container, the current one included (its projects are in the
   Projects menu). A container's submenu:
   - Open (3.3), first;
-  - Duplicate... (3.6);
+  - Copy to a new container... (3.6);
   - Rename... (not Default);
-  - Set password... / Change password... / Remove password;
+  - Set password... / Change password... / Remove password (not Default);
   - Never open by itself (a check);
   - Close (when open);
-  - Delete... (not Default; not while open; asks first); its folder goes to the Recycle Bin.
+  - Delete... (not Default; 3.6).
 
-  Each change of a closed container with a password asks its password first (3.4).
+  A change of a closed container with a password asks its password first; Copy and Delete ask it always (3.4).
 - The same commands are actions, in the default ribbon under View > Containers, next to Projects; there they work on
   the current container. A ribbon is per container, so a ribbon made before this has the group only after Reset or
   when added by hand (plan 19).
-- Windows (plan 14 3.7): the name dialog, both password windows (at start, and before a change) and the delete
-  question are floating only, modal; the menu is a menu. The password window at start has no Foldex window to be
+- Windows (plan 14 3.7): the name dialog, both password windows (at start, and before a change), the delete warning
+  and the delete question are floating only, modal; the menu is a menu. The password window at start has no Foldex window to be
   over; it stands on its own.
 
-### 3.6 New and Duplicate
+### 3.6 New, Copy and Delete
 
 - **New container**: an empty folder, so it starts as Foldex does on a new PC: Foldex's defaults, the bookmarks from
   Explorer's pinned folders, one project.
-- **Duplicate container**: a copy of a container's folder without its `State\` (no projects, caches or browser
-  profile). Its settings, ribbon, themes, bookmarks, column sets, filters, macros and keys are copied; its password
-  is not.
+- **Copy to a new container**: a new container with a copy of the source's folder without its `State\` (no projects,
+  caches or browser profile). Its settings, ribbon, themes, bookmarks, column sets, filters, macros and keys are
+  copied. A source with a password asks it first, also when it is open (the copy takes everything that is in it).
+  The password is not copied: the new container has none.
 - Q2 asks whether New should start from the current container's look (settings, ribbon, themes) rather than from the
   defaults.
+- **Delete**, two flows for a container with a password, both asked by the window it is chosen in:
+  1. The password entered (also when the container is open): then the question below.
+  2. The password box left empty (Delete pressed without it): first "This container has a password. Are you sure you
+     want to delete it?", then the question below. A wrong password is not this flow: it says so and asks again.
+
+  A container without a password goes to the question at once. The question: "Delete container <name>? This cannot
+  be undone: its projects, layouts, ribbon, themes, bookmarks, quick access, settings and everything else in it are
+  removed." Yes deletes it.
+- Deleting removes the container's folder permanently, not to the Recycle Bin, as the question says, and takes it out
+  of `containers.json`. An open container is closed first: the window that deletes it tells its process to close
+  (over its pipe), waits until it has ended, then removes the folder. Q6 asks about the current container.
 
 ### 3.7 What stays the same
 
@@ -168,8 +187,10 @@ then opens only when chosen. At start, the containers that were open come back, 
 - `Program`: `--container` parsed; the pipe and mutex names per container.
 - In a test copy (`FOLDEX_DATA`): two containers open at once with different bookmarks and ribbons; a locked container
   asks once, opening it again while open does not ask, after Close it asks again; a closed locked container asks its
-  password before a rename, a password change, the never-open switch, a duplicate and a delete, an open one does not;
-  a never-open container does not come back at start; a launch goes to the container of 3.3.
+  password before a rename, a password change and the never-open switch, an open one does not; a copy of a locked
+  container asks its password open or closed, and the copy has no password; Default offers no password; both delete
+  flows (password, then the question; no password, the warning, then the question), an open container closed
+  before its folder goes; a never-open container does not come back at start; a launch goes to the container of 3.3.
 
 ## 4. Open questions
 
@@ -178,7 +199,7 @@ then opens only when chosen. At start, the containers that were open come back, 
    a forgotten password loses that container. That would be a much larger plan of its own. The lock is the
    recommendation.
 2. **A new container: defaults or the current look?** The plan starts a new one from Foldex's defaults (3.6), with
-   Duplicate for a full copy. The alternative: a new one takes the current container's settings, ribbon and themes,
+   Copy for a full copy. The alternative: a new one takes the current container's settings, ribbon and themes,
    but none of its bookmarks or projects.
 3. **A launch without `--container`**: to the container active last (3.3, the recommendation) or always to Default?
 4. **The name**: "container" or "space"? The plan uses "container". Foldex's own scrap is called scrap in the UI, so
@@ -188,5 +209,9 @@ then opens only when chosen. At start, the containers that were open come back, 
    (a "Work" container in both, its password asked once for both) or each program its own. The same list needs a
    place both read, outside either program's data folder. The plan does not decide it yet; it keeps the list in
    Foldex's own folder (3.1).
+6. **Deleting the current container** (the one of the window it is chosen in): its own window would have to close
+   while deleting itself. The recommendation: Delete is not offered for the current container; it is deleted from a
+   window of another container (Default is always there to open). The alternative: its windows close, and a short
+   process of its own removes the folder once they are gone.
 
 ## 5. (not used)
