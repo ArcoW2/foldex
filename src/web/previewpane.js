@@ -83,11 +83,14 @@ function viewerChoice(b, v) {
 
 // A menu of this page (the viewers' drop-down) opens over the area a native viewer covers: the window is told while
 // one is open, so the native window is a picture of itself (docked) or hidden (floating) meanwhile.
+// Docked, its menus are drawn by the window (menu.js menuInWindow): open while their stand-in is.
 let menuOver = false;
-new MutationObserver(() => {
-  const now = !!document.querySelector('.menu');
+function menuOverNow() {
+  const now = !!document.querySelector('.menu') || openMenus.some(m => m.serial);
   if (now !== menuOver) toWindow({ kind: 'menuOver', on: menuOver = now });
-}).observe(document.body, { childList: true });
+}
+new MutationObserver(menuOverNow).observe(document.body, { childList: true });
+addEventListener('panemenu', menuOverNow);
 
 function setZoom(z) {
   zoom = Math.min(5, Math.max(0.25, Math.round(z * 100) / 100));

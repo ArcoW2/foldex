@@ -21,7 +21,58 @@ let menuSwallow = null; // the opener clicked to close: the click that follows d
 const MenuOpenerTime = 1500;   // ms from that mousedown to the menu, as for a menu that waits for the host
 
 function closeMenus(from = 0) {
-  for (const m of openMenus.splice(from)) m.el.remove();
+  for (const m of openMenus.splice(from)) {
+    m.el.remove();
+    m.closed?.();
+  }
+}
+
+// A docked pane's page is a frame as large as its pane: a menu drawn there would have to fit inside it. So its menus
+// are drawn by its window's page, over the whole window (panechannel.js menuHere): the items go there with an id for
+// each command, a choice comes back (menuRun) and runs here. Here a stand-in stays in openMenus while it is open, so
+// the opener closes it again, the keys go to it (passed on to the window) and closeMenus closes it there too. A
+// floating pane's page is its own window and draws its own.
+const menusInWindow = () => typeof toWindow === 'function' && parent !== window;
+let paneMenuRuns = [], paneMenuSerial = 0;
+function menuInWindow(x, y, items, focus) {
+  const runs = [];
+  const flat = list => list.map(item => item === '-' ? '-' : {
+    label: item.label, checked: !!item.checked, enabled: item.enabled !== false, key: item.key, title: item.title,
+    swatch: item.swatch, indent: item.indent, guides: item.guides, mark: item.mark?.outerHTML,
+    icon: item.icon ? { src: item.icon.src, className: item.icon.className } : undefined,
+    items: item.items ? flat(item.items) : undefined, context: item.context ? flat(item.context) : undefined,
+    id: item.run ? (runs.push(item.run), runs.length - 1) : undefined,
+  });
+  const sent = flat(items);
+  closeMenus();
+  paneMenuRuns = runs;
+  const serial = ++paneMenuSerial;
+  const stand = {
+    el: { remove: () => {} }, rows: [],
+    closed: () => { if (stand.shown) { stand.shown = false; toWindow({ kind: 'menuClose', serial }); } dispatchEvent(new Event('panemenu')); },
+    key: e => { toWindow({ kind: 'menuKey', key: e.key, shiftKey: e.shiftKey }); return true; },
+    shown: true, serial,
+  };
+  openMenus.push(stand);
+  menuOpener = menuDown && performance.now() - menuDown.time < MenuOpenerTime ? menuDown.target : null;
+  menuDown = null;
+  toWindow({ kind: 'menuShow', x, y, items: sent, focus, serial });
+  dispatchEvent(new Event('panemenu'));
+  return stand;
+}
+// What the window says of a menu it draws for this page: closed there (a choice, Esc, a click elsewhere), or a
+// choice to run. True when it was one of those.
+function paneMenuMessage(m) {
+  if (m.kind === 'menuClosed') {
+    const stand = openMenus[0];
+    if (stand?.serial === m.serial) { stand.shown = false; closeMenus(); }
+    return true;
+  }
+  if (m.kind === 'menuRun') {
+    if (m.serial === paneMenuSerial) paneMenuRuns[m.id]?.();
+    return true;
+  }
+  return false;
 }
 
 // One menu open in the whole window (CLAUDE.md, Menus): its panes are pages of their own (frames, floating windows),
@@ -50,9 +101,10 @@ function wheelHere({ x, y, dx, dy, mode }) {
   document.scrollingElement?.scrollBy(dx * unit, dy * unit);
 }
 
-function openMenu(x, y, items, level = 0, back = null, { focus = true } = {}) {
+function openMenu(x, y, items, level = 0, back = null, { focus = true, others = true } = {}) {
+  if (level === 0 && menusInWindow()) return menuInWindow(x, y, items, focus);
   closeMenus(level);
-  if (level === 0) closeOtherMenus();
+  if (level === 0 && others) closeOtherMenus();
   const el = document.createElement('div');
   el.className = 'menu';
   el.tabIndex = -1;

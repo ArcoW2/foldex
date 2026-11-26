@@ -84,6 +84,29 @@ function paneChannel({ id, page, title, view, state, receive, menu }) {
     ch.send({ kind: 'menu', key: 'menu', x, y, items: sent });
   };
 
+  // A menu of its page while docked (menu.js menuInWindow), drawn here over the whole window, so it is not held inside
+  // the pane: at its place in the frame, a choice sent back to run there; closed, its page is told and gets the
+  // keyboard back.
+  ch.menuHere = ({ x, y, items, focus, serial }) => {
+    const html = s => { const t = document.createElement('template'); t.innerHTML = s; return t.content.firstElementChild; };
+    const own = list => list.map(item => item === '-' ? '-' : {
+      ...item, mark: item.mark ? html(item.mark) : undefined,
+      icon: item.icon ? Object.assign(document.createElement('img'), item.icon) : undefined,
+      items: item.items && own(item.items), context: item.context && own(item.context),
+      run: item.id === undefined ? undefined : () => ch.send({ kind: 'menuRun', key: `menuRun:${serial}:${item.id}`, id: item.id, serial }),
+    });
+    const r = ch.frameEl().getBoundingClientRect();
+    closeMenus();
+    closePanesMenus(ch);
+    const menu = openMenu(r.left + ch.frame.clientLeft + x, r.top + ch.frame.clientTop + y, own(items), 0, null, { focus, others: false });
+    Object.assign(menu, { pane: ch, serial });
+    menu.closed = () => {
+      ch.send({ kind: 'menuClosed', key: `menuClosed:${serial}`, serial });
+      // The keyboard back to its page, unless a press elsewhere took it.
+      if (focus && (!document.activeElement || document.activeElement === document.body)) ch.focus();
+    };
+  };
+
   ch.receive = (m, from) => {
     if ((from === 'float') !== ch.floating) return;   // not the one shown now
     if (m.kind === 'ready') {
@@ -107,6 +130,10 @@ function paneChannel({ id, page, title, view, state, receive, menu }) {
         closeMenus();
         return closePanesMenus(ch);
       case 'menuPick': return ch.runs?.[m.id]?.();
+      // Its page's own menu, drawn here (ch.menuHere); closed or keyed from there.
+      case 'menuShow': return !ch.floating && ch.menuHere(m);
+      case 'menuClose': return openMenus[0]?.pane === ch && openMenus[0].serial === m.serial && closeMenus();
+      case 'menuKey': return openMenus[0]?.pane === ch && openMenus.at(-1).key({ key: m.key, shiftKey: m.shiftKey });
       // Ctrl+F4 or Alt+F4 in a floating pane's window (pane.js, viewpage.js): that window's pane closed, nothing else.
       case 'closeFloating': return ch.floating && views.has(id) && closePane(id);
       case 'ribbonAlt': return rbAlt(m.letter);   // Alt alone or Alt+a free letter there: the ribbon's key tips

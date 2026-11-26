@@ -75,6 +75,7 @@ before plan 19 (the ribbon), which needs F1 as a floating pane; the floating scr
 | A floating scrap | drops, its search, its dashed ring; gone after a restart unless pinned (then back empty) | 3.3; 6.12 |
 | Speed after stage 6 | the start, the memory, opening a folder of 5150 items, moving the cursor: main before plan 14 and this branch after stage 6 | 3.0; 6.11 |
 | Stage 6 merged | on main as it is | 3.0; 6.11 |
+| A docked pane's menus over the window | drawn by the window's page, not held inside the pane's frame | 6.13 |
 
 ### Not yet built
 
@@ -553,3 +554,18 @@ None.
   (single runs, test copy); the scripts in it cost little (a CPU profile of the panes' renderer).
 - Not addressed: a floating pane in the saved layout held the docked frames' loading about 470 ms while its window was
   made (one run); each pane's page asks the host again at init what its window has (drives, bookmarks, entries, look).
+
+### 6.13 A docked pane's menus over the window
+
+- A docked pane's page is a frame as large as its pane, so a menu it drew itself (a column header's, a row's) had to
+  fit inside the pane, which a small pane made awkward. Its menus are drawn by the window's page now, over the whole
+  window (`menu.js` menuInWindow, `panechannel.js` menuHere): the items go there with an id for each command, at their
+  place in the frame; a choice comes back (menuRun) and runs in the pane's page. There a stand-in stays in its open
+  menus while it is open, so its opener closes it again, its keys are passed on to the window and closing it there
+  closes it in the window too. Each menu has a number, so a menu closed late does not close the next one. Closed, the
+  pane's page gets the keyboard back, unless a press elsewhere took it. The preview tells its window a menu is open, as
+  before, so a native viewer steps aside for it.
+- A floating pane's page is a window of its own and still draws its own menus: they are held inside that window.
+- Tested in the test copy: a list pane's column header menu drawn by the window's page at its place over the pane, its
+  items and keys there; Esc closed it there and in the pane, the keyboard back in the pane; Select columns... chosen there
+  opened its window from the pane.
