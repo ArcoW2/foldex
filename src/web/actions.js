@@ -369,6 +369,8 @@ action('project.rename', { title: 'Rename project', hint: 'the name of the proje
 // Profiles (docs/plans/executed/41-PLAN-profiles.md 3.5; projectmenu.js): the menu, and its commands for this window's profile.
 action('profiles.menu', { title: 'Profiles', hint: 'every profile, as at the profile in the bottom bar', group: 'profiles',
   dropDownOnly: true, dropDown: () => profileListItems(), run: () => profilesMenu() });
+action('profiles.manage', { title: 'Manage profiles', hint: 'every profile in a list: open, copy, rename, password, close, delete', group: 'profiles',
+  run: () => openOnePane('profiles') });
 action('profile.copy', { title: 'Copy profile', hint: 'a new profile as a copy of this window\'s: its settings, ribbon, themes, bookmarks; no projects, no password',
   group: 'profiles', run: () => runProfileItem('copy') });
 action('profile.rename', { title: 'Rename profile', hint: 'the name of this window\'s profile', group: 'profiles',
@@ -376,7 +378,8 @@ action('profile.rename', { title: 'Rename profile', hint: 'the name of this wind
 action('profile.password', { title: 'Profile password', hint: 'set or change the password of this window\'s profile', group: 'profiles',
   enabled: () => profile.number !== 0, run: () => runProfileItem('password') });
 action('profile.close', { title: 'Close profile', hint: 'every window of this profile closes; they come back when it opens again', group: 'profiles',
-  run: () => runProfileItem('close') });action('layout.saveDefault', { title: 'Save layout as default', group: 'projects',
+  run: () => runProfileItem('close') });
+action('layout.saveDefault', { title: 'Save layout as default', group: 'projects',
   hint: 'the panes and docks of this window become the layout a new project starts with', run: () => saveLayoutAsDefault() });
 action('layout.resetDefault', { title: 'Reset layout to default', group: 'projects',
   hint: 'this window back to the default layout, at the folder it shows', run: () => post({ op: 'layoutReset', path: currentFolder() }) });

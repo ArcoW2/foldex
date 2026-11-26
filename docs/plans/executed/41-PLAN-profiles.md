@@ -46,6 +46,7 @@ except those.
 | Password | set, change, remove (not for Default); asked at start, before a change while closed, before a copy; the lock mark | 3.4, 3.5; 6.1 |
 | Delete | the two flows; an open profile closed first; the current one removed by Default | 3.6; 6.1 |
 | Bottom bar and Profiles menu | the profile left of the project; the menu of 3.5 | 3.5 |
+| Manage profiles | a pane, docked or floating: every profile in a list with the menu's commands | 3.5; 6.1 |
 | Dialogs | the name (askText), the passwords, the delete warning and question (AskForm) | 3.5, 3.6; 6.1 |
 | Ribbon and actions | View > Profiles: Profiles, Copy, Rename, Password, Close | 3.5; 6.1 |
 | Copy | a new profile as a copy of another | 3.6 |
@@ -138,7 +139,7 @@ except those.
   with the lock mark, each with a submenu of its commands. There is no New profile: a new one is always a copy
   (3.6). Unlike the Projects menu (plan 15 3.6), it shows nothing of what a profile
   holds: no projects, windows, panes or folders, of no profile, the current one included (its projects are in the
-  Projects menu). A profile's submenu:
+  Projects menu). As the Projects menu, it starts with Manage profiles..., then the profiles. A profile's submenu:
   - Open (3.3), first;
   - Copy to a new profile... (3.6);
   - Rename... (not Default);
@@ -148,10 +149,15 @@ except those.
   - Delete... (not Default; 3.6).
 
   A change of a closed profile with a password asks its password first; Copy and Delete ask it always (3.4).
+- **Manage profiles**, as Manage projects (plan 15 3.7): a pane with every profile in a list, Default first, then by
+  name: its name with the lock mark, open, closed or this window, never open by itself, created, last opened. Its
+  buttons (Open, Copy..., Rename..., Password..., Close, Delete...) and a row's context menu are the submenu's
+  commands for the row with the focus, with the same passwords asked. Enter opens, F2 renames, Del deletes, Esc goes
+  back. Also the action `profiles.manage`: the Profiles group's left corner and Tools > Manage in the ribbon.
 - The same commands are actions, in the default ribbon under View > Profiles, next to Projects; there they work on
   the current profile. A ribbon is per profile, so a ribbon made before this has the group only after Reset or
   when added by hand (plan 19).
-- Windows (plan 14 3.7): the name dialog, both password windows (at start, and before a change), the delete warning
+- Windows (plan 14 3.7): Manage profiles is a pane, docked or floating, floating the first time; the name dialog, both password windows (at start, and before a change), the delete warning
   and the delete question are floating only, modal; the menu is a menu. The password window at start has no Foldex window to be
   over; it stands on its own.
 
@@ -239,6 +245,11 @@ None.
 - **An unknown `--profile`** says so in an error window and starts nothing.
 - **The menu's lock** is a `mark` of a menu item (`menu.js`), an element after its label; the bottom bar shows the
   same lock after the name.
+- **Manage profiles** is `profiles.html` and `profilespane.js` (with `projects.css` and its own `profiles.css`),
+  answered by `PaneHosts.Profiles`, its commands `AppHost.ProfileCommand` as the menu's. No checkboxes and no search,
+  unlike Manage projects: the commands work on one profile, each with its own password. A profile's process opening
+  or ending tells no other process, so the pane reads the list again every few seconds while it is shown; a change
+  made in this process tells it at once.
 - **The window title** names the profile when it is not Default, without Foldex's version (that is in F1's About):
   `Foldex - Work/Project 1`; in Default `Foldex - Project 1`. A rename of the profile retitles its windows.
 
@@ -258,4 +269,7 @@ None.
   Delete without a password asks the question only; with the box empty the warning, then the question, the open
   profile closed and its folder removed; the current profile deleted with Default closed: the question says this
   window closes and Default opens, Default starts and removes the folder.
+- Manage profiles in a test copy: Manage profiles... first in the Profiles menu; the pane lists Default (this
+  window) and the other profile with their dates; Never open by itself switched from it shows at once; Open starts
+  the other profile and the list shows it open, Close closes it and the list shows it closed.
 - Not checked in the app: the never-open switch at start (the store test has it), marks kept at a Windows shutdown.

@@ -1,0 +1,6 @@
+/* The Manage profiles pane (profiles.html, profilespane.js; docs/plans/executed/41-PLAN-profiles.md 3.5): projects.css's
+   layout, its own columns: name, state, never open by itself, created, last opened. */
+.pf-grid { grid-template-columns: minmax(160px, 1.5fr) 7em 10em 7.5em 10.5em; }
+.pf-name { display: flex; align-items: center; gap: 6px; }
+.pf-name .lock-mark { width: 12px; height: 12px; flex: none; color: var(--fg-dim); }
+.pf-never { text-align: left; }

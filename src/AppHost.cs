@@ -814,6 +814,7 @@ sealed class AppHost : ApplicationContext
     {
         ["number"] = p.Number, ["name"] = p.Name, ["isDefault"] = p.Number == ProfileStore.Default, ["current"] = p.Number == Profile,
         ["open"] = p.Number == Profile || ProfileProcesses.Running(p.Number), ["locked"] = p.Locked, ["neverOpen"] = p.NeverOpen,
+        ["created"] = p.Created.ToString("o"), ["opened"] = p.Opened?.ToString("o"),
     }).ToArray());
 
     /// <summary>Before a change (3.4): a profile with a password asks it when it is closed; with `always` (Copy) also
@@ -933,6 +934,7 @@ sealed class AppHost : ApplicationContext
         {
             w.Retitle();
             w.Tell(new JsonObject { ["event"] = "profile", ["profile"] = info.DeepClone() });
+            w.Tell(new JsonObject { ["event"] = "profiles" });   // for a Manage profiles pane in it
         }
     }
 

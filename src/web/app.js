@@ -388,7 +388,7 @@ function makeView(id) {
   return kind === 'tree' ? new TreeView(id) : kind === 'log' ? new LogView(id) : kind === 'bookmarks' ? new BookmarksView(id)
     : kind === 'columnsets' ? new ColumnSetsView(id) : kind === 'filters' ? new FiltersView(id) : kind === 'palette' ? new PaletteView(id)
     : kind === 'macros' ? new MacrosView(id)
-    : kind === 'settings' ? new SettingsView(id) : kind === 'projects' ? new ProjectsView(id)
+    : kind === 'settings' ? new SettingsView(id) : kind === 'projects' ? new ProjectsView(id) : kind === 'profiles' ? new ProfilesView(id)
     : kind === 'preview' ? (layout.pane(id).info ? new InfoView(id) : new PreviewView(id))
     : kind === 'scrap' ? new ScrapView(id) : new ListView(id);
 }
@@ -3325,6 +3325,13 @@ class ProjectsView extends HostPageView {
     this.kindName = 'projects';
   }
 }
+// Manage profiles (its page profiles.html, profilespane.js; docs/plans/executed/41-PLAN-profiles.md 3.5).
+class ProfilesView extends HostPageView {
+  constructor(id) {
+    super(id, 'profiles', 'profiles.html', 'Manage profiles');
+    this.kindName = 'profiles';
+  }
+}
 
 // Manage filters (its page filters.html, filterspane.js; plan 32 3.3): the kept sets and the editor; opened by Filter...
 // for a pane, that pane's set with it.
@@ -3351,9 +3358,9 @@ class FiltersView extends PageView {
 
 // Opened again it comes forward; opened after it was closed, where it was last (docked at its place, or floating where
 // its window was, kept with the window's layout); the first time floating beside the window.
-const OnePanes = new Set(['bookmarks', 'columnsets', 'filters', 'palette', 'settings', 'projects', 'macros']);
+const OnePanes = new Set(['bookmarks', 'columnsets', 'filters', 'palette', 'settings', 'projects', 'profiles', 'macros']);
 // The first size of a floating one, when the default (narrow, beside the window) is too small for it: CSS px.
-const FirstSizes = { columnsets: [980, 620], filters: [1000, 640], settings: [760, 620], projects: [900, 600], macros: [1000, 640] };
+const FirstSizes = { columnsets: [980, 620], filters: [1000, 640], settings: [760, 620], projects: [900, 600], profiles: [820, 420], macros: [1000, 640] };
 const paneHomes = {};   // kind -> where it was when last closed: { floating, place, bounds }
 const paneOfKind = kind => [...views.values()].find(v => layout.pane(v.id)?.kind === kind) ?? null;
 function openOnePane(kind) {
@@ -5016,6 +5023,7 @@ const events = {
   // The window's profile renamed or its password changed; the Profiles menu's list (plan 41 3.5).
   profile(m) { showProfile(m.profile); },
   profileList(m) { profileListCame(m.list); },
+  profiles(m) { paneOfKind('profiles')?.fromHost(m); },   // for a Manage profiles pane in it
   // The Settings and Manage projects panes (plan 14 3.7): the host's answer to one, and what it tells them unasked.
   paneHost(m) { views.get(m.pane)?.fromHost?.(m.msg); },
   projects(m) { paneOfKind('projects')?.fromHost(m); },
@@ -5033,6 +5041,7 @@ const events = {
     settingsProblems(m);
     paneOfKind('settings')?.fromHost(m);
     paneOfKind('projects')?.fromHost(m);
+    paneOfKind('profiles')?.fromHost(m);
     logPane?.render();   // its lines as logDetail says
   },
   open(m) {

@@ -925,7 +925,9 @@ sealed class MainForm : Form
                 var pane = msg["pane"]!.GetValue<string>();
                 void Reply(JsonObject answer) { if (!IsDisposed) Post(new JsonObject { ["event"] = "paneHost", ["pane"] = pane, ["msg"] = answer }); }
                 var asked = (JsonObject)msg["msg"]!.DeepClone();
-                if (msg["page"]?.GetValue<string>() == "settings") PaneHosts.Settings(app, this, asked, Reply);
+                var page = msg["page"]?.GetValue<string>();
+                if (page == "settings") PaneHosts.Settings(app, this, asked, Reply);
+                else if (page == "profiles") PaneHosts.Profiles(app, this, asked, Reply);
                 else PaneHosts.Projects(app, this, asked, Reply);
                 break;
             }

@@ -139,4 +139,35 @@ static class PaneHosts
                 throw new InvalidOperationException($"Unknown request '{op}'.");
         }
     }
+
+    /// <summary>The Manage profiles pane (docs/plans/executed/41-PLAN-profiles.md 3.5): as Manage projects, its requests
+    /// answered with { id, result } or { id, error }; the commands are the Profiles menu's (AppHost.ProfileCommand).</summary>
+    public static void Profiles(AppHost app, MainForm window, JsonObject msg, Action<JsonObject> reply)
+    {
+        var answer = new JsonObject { ["id"] = msg["id"]!.GetValue<int>() };
+        try
+        {
+            answer["result"] = (msg["op"]?.GetValue<string>() ?? "") switch
+            {
+                "init" => new JsonObject { ["look"] = AppHost.Look(), ["list"] = AppHost.ProfileList() },
+                "list" => AppHost.ProfileList(),
+                // Before a change: the password of a closed profile that has one; always for Copy (3.4).
+                "unlock" => app.ProfileUnlock(window, msg["profile"]!.GetValue<int>(), msg["always"]?.GetValue<bool>() == true),
+                "command" => Command(),
+                "confirm" => AskForm.Confirm(app, window, msg, msg["look"] as JsonObject),
+                var op => throw new InvalidOperationException($"Unknown request '{op}'."),
+            };
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or IOException or UnauthorizedAccessException)
+        {
+            answer["error"] = ex.Message;
+        }
+        reply(answer);
+
+        JsonNode Command()
+        {
+            app.ProfileCommand(window, msg["kind"]!.GetValue<string>(), msg);
+            return true;
+        }
+    }
 }

@@ -70,7 +70,7 @@
       { "name": "Projects", "corners": { "left": "projects.manage", "right": "projects.menu" }, "items": [
         { "action": "projects.menu", "size": "large", "label": "Projects" },
         { "action": "project.new", "label": "New" }, { "action": "project.rename", "label": "Rename", "stack": true } ] },
-      { "name": "Profiles", "corners": { "right": "profiles.menu" }, "items": [
+      { "name": "Profiles", "corners": { "left": "profiles.manage", "right": "profiles.menu" }, "items": [
         { "action": "profiles.menu", "size": "large", "label": "Profiles" },
         { "action": "profile.copy", "label": "Copy" }, { "action": "profile.rename", "label": "Rename", "stack": true },
         { "action": "profile.password", "label": "Password" }, { "action": "profile.close", "label": "Close", "stack": true } ] },
@@ -102,7 +102,8 @@
       { "name": "Manage", "items": [
         { "action": "bookmarks.manage", "label": "Bookmarks" }, { "action": "filters.manage", "label": "Filters", "stack": true },
         { "action": "columns.manage", "label": "Column sets", "stack": true },
-        { "action": "projects.manage", "label": "Projects" }, { "action": "macros.manage", "label": "Macros", "stack": true } ] },
+        { "action": "projects.manage", "label": "Projects" }, { "action": "macros.manage", "label": "Macros", "stack": true },
+        { "action": "profiles.manage", "label": "Profiles", "stack": true } ] },
       { "name": "Foldex", "items": [
         { "action": "settings.open", "size": "large", "label": "Settings" },
         { "action": "palette", "label": "All actions" },

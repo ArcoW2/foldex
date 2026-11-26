@@ -162,11 +162,16 @@ function profileCommands(p) {
   ];
 }
 
+// As the Projects menu: Manage first, then the profiles.
 function profileMenuItems(list) {
-  return list.map(p => ({
-    label: p.name + (p.current ? '  (this window)' : ''), checked: p.open, mark: p.locked ? lockMark() : null,
-    items: profileCommands(p),
-  }));
+  return [
+    { label: 'Manage profiles...', run: () => openOnePane('profiles') },
+    '-',
+    ...list.map(p => ({
+      label: p.name + (p.current ? '  (this window)' : ''), checked: p.open, mark: p.locked ? lockMark() : null,
+      items: profileCommands(p),
+    })),
+  ];
 }
 
 // A command of this window's profile, for the actions (actions.js profile.*).

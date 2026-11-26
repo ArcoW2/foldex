@@ -112,7 +112,8 @@ const RIBBON_ICONS = (() => {
     'profile.copy': ['Copy profile', '<circle cx="6" cy="4.5" r="2.5"/>' + p('M1.5 12c0-2.7 2-4.5 4.5-4.5') + p('M8.5 8.5h6v6h-6z')],
     'profile.rename': ['Rename profile', '<circle cx="6" cy="4.5" r="2.5"/>' + p('M1.5 13c0-2.9 2-5 4.5-5') + p(pencil)],
     'profile.password': ['Profile password', p('M4 7.5h8v7H4z') + p('M5.5 7.5V5a2.5 2.5 0 0 1 5 0v2.5') + dot(8, 11)],
-    'profile.close': ['Close profile', '<circle cx="6" cy="4.5" r="2.5"/>' + p('M1.5 13c0-2.9 2-5 4.5-5') + p('M10 9.5l4 4M14 9.5l-4 4')],    'layout.saveDefault': ['Save layout as default', p('M2.5 2.5h9l2 2v9h-11zM5 2.5v3.5h5.5V2.5M4.5 13.5V9.5h7v4')],
+    'profile.close': ['Close profile', '<circle cx="6" cy="4.5" r="2.5"/>' + p('M1.5 13c0-2.9 2-5 4.5-5') + p('M10 9.5l4 4M14 9.5l-4 4')],
+    'layout.saveDefault': ['Save layout as default', p('M2.5 2.5h9l2 2v9h-11zM5 2.5v3.5h5.5V2.5M4.5 13.5V9.5h7v4')],
     'layout.resetDefault': ['Reset layout', p(undo)],
     'layout.preset default': ['Default', win + p('M6 2.5v11M6 8h8.5')],
     'layout.preset dual': ['Dual', win + p('M5.5 2.5v11M10 2.5v11')],
@@ -154,6 +155,8 @@ const RIBBON_ICONS = (() => {
     // of the font's box counted.
     commands: ['All actions and keys', t(0.44, 13.37, 15.12, 'F1', 700), t(2.58, 13.1, 10.85, 'F1', 700)],
     projects: ['Manage projects', p(projects), p('M3.2 6h3l1 1h5.3v5.8H3.2zM5 10.2h6')],
+    profiles: ['Manage profiles', '<circle cx="8" cy="5" r="3"/>' + p('M2.5 14.5c0-3.2 2.4-5.5 5.5-5.5s5.5 2.3 5.5 5.5'),
+      '<circle cx="8" cy="7.6" r="1.6"/>' + p('M5 12.8c0-1.9 1.3-3.2 3-3.2s3 1.3 3 3.2')],
     macros: ['Manage macros', p('M2 3.5h8M2 7h8M2 10.5h5M10.5 9.5l4 2.5-4 2.5z'), p('M3.6 6.2h5.6M3.6 9.2h5.6M3.6 12.2h3M9.4 10l3 1.6-3 1.6z')],
     filters: ['Manage filters', p('M2 3h12l-4.5 5.5V13l-3 1.5V8.5z'), p('M3.6 6h8.8l-3.3 3.6v2.6l-2.2 1V9.6z')],
   };
@@ -163,7 +166,7 @@ const RIBBON_ICONS = (() => {
 // The actions that show a pane or open a window: its icon (plan 14 3.7's list of panes and windows).
 const RIBBON_PANEL_ACTIONS = { 'preview.toggle': 'preview', 'info.toggle': 'info', 'log.toggle': 'log', palette: 'commands',
   'settings.open': 'settings', 'projects.manage': 'projects', 'columns.manage': 'cols', 'bookmarks.manage': 'bm', 'filters.manage': 'filters',
-  'macros.manage': 'macros' };
+  'macros.manage': 'macros', 'profiles.manage': 'profiles' };
 
 function ribbonIconSvg(body, size, panel, small) {
   const px = size === 'large' ? 32 : 16, w = size === 'large' ? 1 : 1.4;
