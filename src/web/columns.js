@@ -68,11 +68,9 @@ function setFor(folders, path) {
 // Fitting (plan 28 3.6): the new width of each column (em), from its width now and what its values need (`needs`, em).
 // `which`: 'fit' (Ctrl+R) the columns whose Fit is manual or auto, or the name column when every one is never; 'all'
 // (Ctrl+Shift+R) every column; 'auto' (after a listing, values read, the pane resized) the auto ones as their Fit says:
-// enlarge only wider, shrink only narrower. Each within its minimum and maximum; too wide for the room (em), the fitted
-// columns with a Give way number give way in its order (1 first), each down to its minimum, the name column last when
-// it has none and down to NameMinEm at least (not for Ctrl+R: there each gets its whole width, the pane scrolling). A
-// column not fitted does not give way: nothing would widen it again when the room grows.
-function fittedWidths(columns, needs, which, room) {
+// enlarge only wider, shrink only narrower. Each within its minimum and maximum. Too wide for the pane, Give way
+// narrows them as they are drawn (giveWayWidths), not here.
+function fittedWidths(columns, needs, which) {
   const auto = c => ['enlarge', 'shrink', 'both'].includes(fitOf(c));
   let fitted = columns.map(c => which === 'all' || (which === 'fit' ? fitOf(c) !== 'never' : auto(c)));
   if (which === 'fit' && !fitted.some(Boolean)) fitted = columns.map(c => c.id === 'name');
@@ -81,20 +79,44 @@ function fittedWidths(columns, needs, which, room) {
     const mode = which === 'auto' ? fitOf(c) : 'both';
     return withinLimits(c, mode === 'enlarge' ? Math.max(c.width, needs[k]) : mode === 'shrink' ? Math.min(c.width, needs[k]) : needs[k]);
   });
-  let over = widths.reduce((a, w) => a + w, 0) - room;
-  if (which !== 'fit' && over > 0) {
-    const rank = k => giveWayOf(columns[k]) ?? Infinity;   // the name without a number: last
-    const order = columns.map((c, k) => k).filter(k => fitted[k] && (giveWayOf(columns[k]) !== null || columns[k].id === 'name'))
-      .sort((a, b) => rank(a) - rank(b) || a - b);
-    for (const k of order) {
-      if (over <= 0) break;
-      const floor = columns[k].id === 'name' ? Math.max(columns[k].min ?? 0, NameMinEm) : columns[k].min ?? DragMinEm;
-      const cut = Math.min(over, Math.max(0, widths[k] - floor));
-      widths[k] -= cut;
-      over -= cut;
-    }
-  }
   return widths.map((w, k) => fitted[k] ? Math.ceil(w * 10) / 10 : w);
+}
+
+// Give way (plan 28 3.6): the columns as drawn (em) when their widths (`widths`, em) are too wide for the room (em). A
+// column's Give way is a weight: the columns with one narrow together, each by a share of what is too much in
+// proportion to 1 / its weight (the higher the weight, the less it narrows), and stops at its minimum (its min, else
+// DragMinEm), what it would have given going to the others. Then the name column, when it has no weight, down to
+// NameMinEm (or its min when more); a column without a weight keeps its width; what still does not fit scrolls. Only as
+// drawn: its own width stays, so it is whole again when the room grows. `except`: a column being dragged, kept as it is.
+function giveWayWidths(columns, widths, room, except = null) {
+  const shown = [...widths];
+  let over = shown.reduce((a, w) => a + w, 0) - room;
+  const floor = k => columns[k].id === 'name' && giveWayOf(columns[k]) === null ? Math.max(columns[k].min ?? 0, NameMinEm)
+    : Math.max(columns[k].min ?? 0, DragMinEm);
+  const weighted = columns.map((c, k) => k).filter(k => giveWayOf(columns[k]) !== null && columns[k].id !== except);
+  for (let pass = 0; over > 1e-6 && pass < columns.length; pass++) {
+    const left = weighted.filter(k => shown[k] > floor(k) + 1e-6);
+    if (!left.length) break;
+    const total = left.reduce((a, k) => a + 1 / giveWayOf(columns[k]), 0);
+    let cutNow = 0;
+    for (const k of left) {
+      const cut = Math.min(over * (1 / giveWayOf(columns[k])) / total, shown[k] - floor(k));
+      shown[k] -= cut;
+      cutNow += cut;
+    }
+    over -= cutNow;
+  }
+  const name = columns.findIndex(c => c.id === 'name' && giveWayOf(c) === null && c.id !== except);
+  if (over > 1e-6 && name >= 0) shown[name] -= Math.min(over, Math.max(0, shown[name] - floor(name)));
+  return shown.map(w => Math.round(w * 100) / 100);
+}
+
+// A list's or a tree's shown columns as drawn (em): their widths, Give way applied to its pane's width now.
+function shownWidths(view) {
+  const cols = shownColumns(view.cols);
+  const widths = cols.map(c => c.width ?? columnInfo(c.id).width);
+  const room = (view.body.clientWidth - 2) / view.fontPx();
+  return room > 0 ? giveWayWidths(cols, widths, room, view.resizing) : widths;
 }
 
 // Text in natural order (file2 before file10), case not counting.
@@ -187,7 +209,7 @@ function normalColumns(c) {
 const DragMinEm = 2;
 const withinLimits = (col, em) => Math.min(col.max ?? Infinity, Math.max(col.min ?? DragMinEm, em));
 
-// Its place in the order in which columns give way when fitted ones are too wide for the pane (1 first); null: none.
+// Its Give way weight (giveWayWidths): a whole number, 1 or more; null: none.
 const giveWayOf = col => Number.isInteger(col.giveWay) && col.giveWay >= 1 ? col.giveWay : null;
 
 // ---------- Sets and the pane's columns ----------
@@ -448,7 +470,7 @@ function fitViewColumns(view, items, marks, which) {
     return (widest + pad) / fontPx;
   });
   const now = cols.map(c => ({ ...c, width: c.width ?? columnInfo(c.id).width }));
-  const widths = fittedWidths(now, needs, which, (view.body.clientWidth - 2) / fontPx);
+  const widths = fittedWidths(now, needs, which);
   let changed = false;
   cols.forEach((col, k) => {
     if (widths[k] === now[k].width) return;
@@ -471,11 +493,13 @@ function drawColumnHeader(view) {
   inner.className = 'colhead-inner';
   const fontPx = view.fontPx(), sort = view.cols.sort;
   let before = null;   // the column shown before this one: its edge is also grabbed at this one's left
-  for (const col of shownColumns(view.cols)) {
+  const drawn = shownWidths(view);   // Give way applied
+  view.drawnWidths = drawn.join();
+  for (const [k, col] of shownColumns(view.cols).entries()) {
     const info = columnInfo(col.id);
     const cell = document.createElement('div');
     cell.className = 'colcell' + (RightAligned.has(info.kind) ? ' right' : '');
-    cell.style.width = `${(col.width ?? info.width) * fontPx}px`;
+    cell.style.width = `${drawn[k] * fontPx}px`;
     // The title in a part of its own (it gives way, with ...), the sort's arrow and place after it, never over it.
     cell.append(Object.assign(document.createElement('span'), { className: 'coltitle', textContent: info.title }));
     cell.title = info.title + (info.id.includes('.') ? ` (${info.id})` : '');
@@ -582,7 +606,9 @@ function resizeColumn(view, col, e) {
   e.preventDefault();
   e.stopPropagation();
   const fontPx = view.fontPx();
-  const start = e.clientX, from = (col.width ?? columnInfo(col.id).width) * fontPx;
+  // From its width as drawn (it may have given way); while dragged it gives way no more (shownWidths).
+  const k = shownColumns(view.cols).findIndex(c => c.id === col.id);
+  const start = e.clientX, from = (shownWidths(view)[k] ?? col.width ?? columnInfo(col.id).width) * fontPx;
   view.resizing = col.id;   // its edge stays lit while dragged (drawColumnHeader)
   const move = m => {
     col.width = Math.max(DragMinEm, Math.round((from + m.clientX - start) / fontPx * 10) / 10);

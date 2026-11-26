@@ -170,6 +170,13 @@ with the set's settings for it. The menu also has the fits and the sets. Ctrl+R 
   resizing it by hand in the header.
 - Ctrl+R (Fit columns) fits every column whose Fit is manual or auto-*; when every column is never, it fits the Name
   column. Ctrl+Shift+R (Fit all columns) fits every column, whatever its Fit, each within its minimum and maximum.
+- **Give way**, per column: a weight (a whole number, 1 or more), for when the columns are too wide for the pane.
+  Those with a weight narrow together, each by a share of what is too much in proportion to 1 / its weight: the
+  higher the weight, the less it narrows (1 narrows ten times as much as 10). Each stops at its minimum, and what it
+  would have given goes to the others. Then the Name column, when it has no weight, down to 8 em; a column without a
+  weight keeps its width; what still does not fit scrolls. Only as drawn (columns.js giveWayWidths): each column keeps
+  its own width, so it is whole again as the pane grows. It works for every column with a weight, whatever its Fit, at
+  every resize of the pane, after fitting too; a column being dragged does not give way meanwhile.
 - What "fitted" measures is as now (plan 11 3.4): the title and the values of the items listed; values of Windows'
   properties count once they are read (they are read for the rows in view), so an auto column can widen as they come.
 - Defaults: a new column, and a column of a set or pane written before, is never, the Name column manual. The set's

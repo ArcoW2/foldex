@@ -790,6 +790,8 @@ class TreeView {
     new ResizeObserver(() => {
       const before = height;
       height = this.body.clientHeight;
+      // Give way (columns.js shownWidths): the columns as drawn follow the pane's width.
+      if (this.drawnWidths !== undefined && shownWidths(this).join() !== this.drawnWidths) { this.drawHeader(); this.render(); }
       if (this.flat.length) this.autoFit();
       if (height >= before) return;
       const i = this.flat.indexOf(this.focused());
@@ -1305,7 +1307,8 @@ class TreeView {
   render() {
     placeNewRow(this, this.flat);   // a new folder or file's row while its name is asked (rename.js)
     const fontPx = this.fontPx();
-    const cols = shownColumns(this.cols).map(c => ({ ...columnInfo(c.id), width: (c.width ?? columnInfo(c.id).width) * fontPx }));
+    const drawn = shownWidths(this);   // Give way applied (columns.js)
+    const cols = shownColumns(this.cols).map((c, k) => ({ ...columnInfo(c.id), width: drawn[k] * fontPx }));
     const sorted = new Set(this.cols.sort.map(s => s.id));
     this.rows.style.height = `${this.flat.length * RowHeight}px`;
     this.rows.style.width = `${cols.reduce((a, c) => a + c.width, 0)}px`;
@@ -1766,6 +1769,8 @@ class ListView {
     });
     dropTarget(this.body, e => this.dropAt(e));
     new ResizeObserver(() => {
+      // Give way (columns.js shownWidths): the columns as drawn follow the pane's width.
+      if (this.drawnWidths !== undefined && shownWidths(this).join() !== this.drawnWidths) this.drawHeader();
       this.render();
       if (this.entries.length) this.autoFit();
     }).observe(this.body);
@@ -2386,7 +2391,8 @@ class ListView {
     // The rows as wide as the columns (a scroll bar sideways when wider than the pane), each column shown a cell at its
     // width; the first holds the icon (and a link's mark) before its value, whichever column it is (plan 28 3.3).
     const fontPx = this.fontPx();
-    const cols = shownColumns(this.cols).map(c => ({ ...columnInfo(c.id), width: (c.width ?? columnInfo(c.id).width) * fontPx }));
+    const drawn = shownWidths(this);   // Give way applied (columns.js)
+    const cols = shownColumns(this.cols).map((c, k) => ({ ...columnInfo(c.id), width: drawn[k] * fontPx }));
     const sorted = new Set(this.cols.sort.map(s => s.id));
     this.rows.style.height = `${this.entries.length * RowHeight}px`;
     this.rows.style.width = `${cols.reduce((a, c) => a + c.width, 0)}px`;

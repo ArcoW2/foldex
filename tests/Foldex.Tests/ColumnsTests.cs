@@ -120,36 +120,42 @@ public class ColumnsTests : IDisposable
             "b file10 file1 file2 v w", "b w v file1 file2 file10"], r.EnumerateArray().Select(x => x.GetString()));
     }
 
-    // Fitting all (Ctrl+Shift+R; docs/plans/executed/28-PLAN-column-sets-window.md 3.6): needs of 30, 8 and 12 em; room enough:
-    // as needed; 10 too little: the name 20; far too little: the name at NameMinEm (8), the rest scrolls.
+    // Fitting all (Ctrl+Shift+R; docs/plans/executed/28-PLAN-column-sets-window.md 3.6): each as wide as its values need,
+    // whatever the room; drawn, the name without a weight gives way: 10 too little, the name 20; far too little, the
+    // name at NameMinEm (8), the rest scrolls.
     [Fact]
-    public void FittingLetsTheNameGiveWayFirst()
+    public void FittingTakesWhatTheValuesNeedTheNameGivesWayAsDrawn()
     {
         var r = Run("""
             (() => {
               const cols = [{ id: 'name', width: 22 }, { id: 'size', width: 7 }, { id: 'type', width: 12 }];
-              return [60, 40, 25].map(room => fittedWidths(cols, [30, 8, 12], 'all', room));
+              const fitted = fittedWidths(cols, [30, 8, 12], 'all');
+              return [fitted, ...[60, 40, 25].map(room => giveWayWidths(cols, fitted, room))];
             })()
             """);
-        Assert.Equal("[[30,8,12],[20,8,12],[8,8,12]]", r.GetRawText());
+        Assert.Equal("[[30,8,12],[30,8,12],[20,8,12],[8,8,12]]", r.GetRawText());
     }
 
-    // Give way (3.6): too wide, the fitted columns with a number narrow in its order (1 first), each to its minimum; the
-    // name without a number last; a column not fitted, or without a number, keeps its width; Ctrl+R lets none give way.
+    // Give way (3.6) is a weight: the columns with one narrow together, each by a share in proportion to 1 / its
+    // weight, and stop at their minimum, the rest going to the others; then the name without a weight; a column without
+    // one keeps its width. The user's set: name 100, size 50, modified 1, type 5.
     [Fact]
-    public void FittedColumnsGiveWayInTheirOrderTheNameLast()
+    public void ColumnsGiveWayByTheirWeightsEachStoppingAtItsMinimum()
     {
         var r = Run("""
             (() => {
-              const cols = [{ id: 'name', width: 22 }, { id: 'size', width: 7, giveWay: 1, min: 5 },
-                { id: 'type', width: 12, giveWay: 2, min: 6 }, { id: 'modified', width: 12 }];
-              const needs = [30, 8, 12, 12];
-              const notFitted = cols.map(c => c.id === 'size' ? { ...c, fit: 'never' } : { ...c, fit: 'both' });
-              return [fittedWidths(cols, needs, 'all', 60), fittedWidths(cols, needs, 'all', 55), fittedWidths(cols, needs, 'all', 40),
-                fittedWidths(cols, needs, 'fit', 40), fittedWidths(notFitted, needs, 'auto', 55)];
+              const cols = [{ id: 'name', width: 30, giveWay: 100, min: 10 }, { id: 'size', width: 8, giveWay: 50, min: 5 },
+                { id: 'modified', width: 14, giveWay: 1, min: 6 }, { id: 'type', width: 12, giveWay: 5, min: 6 }];
+              const widths = cols.map(c => c.width);   // 64 em
+              const noName = cols.map(c => c.id === 'name' ? { id: 'name', width: 30 } : c);
+              const plain = cols.map(c => c.id === 'type' ? { id: 'type', width: 12 } : c);
+              return [giveWayWidths(cols, widths, 70), giveWayWidths(cols, widths, 58), giveWayWidths(cols, widths, 50),
+                giveWayWidths(cols, widths, 30), giveWayWidths(noName, widths, 40), giveWayWidths(plain, widths, 58),
+                giveWayWidths(cols, widths, 58, 'modified')];
             })()
             """);
-        Assert.Equal("[[30,6,12,12],[30,5,8,12],[17,5,6,12],[30,7,12,12],[30,7,6,12]]", r.GetRawText());
+        Assert.Equal("[[30,8,14,12],[29.95,7.9,9.12,11.02],[29.74,7.48,6,6.78],[13,5,6,6],[23,5,6,6],[29.94,7.88,8.17,12],[29.74,7.48,14,6.78]]",
+            r.GetRawText());
     }
 
     // A drag goes past the minimum and the maximum, which bind fitting only; down to 2 em.

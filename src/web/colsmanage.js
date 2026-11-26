@@ -282,12 +282,13 @@ function columnRow(set, sort, col, k, list) {
   fit.append(...FitModes.map(([value, text]) => new Option(text, value)));
   fit.value = fitOf(col);
   fit.addEventListener('change', () => changeChosen(s => { s.columns[k].fit = fit.value; }));
-  // Give way (columns.js fittedWidths): its place in the order in which fitted columns narrow when too wide for the pane.
+  // Give way (columns.js giveWayWidths): a weight; the higher, the less it narrows when the columns are too wide for the pane.
   const giveWay = Object.assign(document.createElement('span'), { className: 'cs-size' });
   const wayBox = Object.assign(document.createElement('input'), { type: 'number', min: 1, step: 1, value: col.giveWay ?? '',
     placeholder: col.id === 'name' ? 'last' : 'none',
-    title: 'Give way: when the fitted columns are too wide for the pane, they narrow in this order (1 first), each down to its minimum; '
-      + 'only while the column is fitted. Empty: it does not give way (the name column: it gives way last)' });
+    title: 'Give way: a weight. When the columns are too wide for the pane, those with a weight narrow together, the higher '
+      + 'the weight the less (1 narrows ten times as much as 10), each down to its minimum; wider again as the pane grows. '
+      + 'Empty: it does not give way (the name column: it gives way last, after those with a weight)' });
   wayBox.addEventListener('change', () => changeChosen(s => {
     const v = Number(wayBox.value);
     if (Number.isInteger(v) && v >= 1) s.columns[k].giveWay = v; else delete s.columns[k].giveWay;
