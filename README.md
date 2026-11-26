@@ -7,6 +7,8 @@ of their own colour, docked or floating. Built the way LexPen is: a WinForms hos
 
 - **Connected panes**: trees, lists, Miller columns, any number of roots; each pane docked or floating, with its own
   back and forward; window layouts kept as projects.
+- **Profiles**: separate Foldex worlds, each with its own projects, settings and bookmarks, its own process and an
+  optional password; switched from the Profiles menu at the bottom left.
 - **Lists your way**: every property Windows has as a column, column sets, thumbnails (grid, mosaic, river, cards),
   filters and filter sets, folder sizes.
 - **Preview**: Foldex's own viewers (text, code, markdown, images, PDF, CSV, zip, hex, a folder's summary), Windows'
@@ -21,7 +23,8 @@ of their own colour, docked or floating. Built the way LexPen is: a WinForms hos
 - **Macros** with keys, and programs run with the selected items.
 - **Ribbon, keys and themes, all to your liking**: rearrange the ribbon as you like (drag buttons, groups and tabs,
   add your own; Reset brings the shipped one back); put any action on any key (F1 lists them all); make your own
-  light and dark themes, with a colour per branch, and choose the fonts.
+  light and dark themes, with a colour per branch, and choose the fonts; the sun / moon at the top right switches
+  between light and dark, or follows Windows.
 
 ## Install
 
