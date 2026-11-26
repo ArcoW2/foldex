@@ -239,7 +239,8 @@ None.
 - **An unknown `--profile`** says so in an error window and starts nothing.
 - **The menu's lock** is a `mark` of a menu item (`menu.js`), an element after its label; the bottom bar shows the
   same lock after the name.
-- **Not built**: the window title does not name the profile, so two profiles' windows look alike in the taskbar.
+- **The window title** names the profile when it is not Default, without Foldex's version (that is in F1's About):
+  `Foldex - Work/Project 1`; in Default `Foldex - Project 1`. A rename of the profile retitles its windows.
 
 ### 6.2 Tests
 

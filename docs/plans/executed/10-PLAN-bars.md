@@ -41,7 +41,7 @@ shows the limits as coloured marks on the bar, and Foldex writes your copy.
 | Overflow | per bar: `more` or `scroll` | 3.1; 6.1 |
 | Path bar | | 3.2; 6.1 |
 | Drives bar | with drives that come and go | 3.2; 6.1 |
-| Name and version | in the window title and F1's About; the default first row | 3.2; 6.1 |
+| Name and version | the name in the window title, the version in F1's About (plan 41 6.1); the default first row | 3.2; 6.1 |
 | `bars.json` and changing bars | dragging, the bar's menu | 3.3; 6.1 |
 | Code | `BarsFile.cs` and `web/bars.js` | 3.4; 6.1 |
 
@@ -97,7 +97,7 @@ shows the limits as coloured marks on the bar, and Foldex writes your copy.
   left or right it is a column of drives that grows down as drives come in, up to its maximum.
 - Later kinds, each with its own plan when chosen (`docs/xplorer2-features.md`): bookmarks, a quick filter, user
   commands, the status line.
-- The name and version move to the window title and F1's About; the strip they are in now becomes the default first
+- The name moves to the window title, the version to F1's About; the strip they are in now becomes the default first
   row: drives, path.
 
 ### 3.3 The file and changing it in the window
@@ -164,8 +164,8 @@ None.
   Overflow, Free space, Add a bar, Remove this bar; Side was taken out on 2026-11-12, dragging does it); dragging by the grip (the place it lands marked: before or
   after a bar, or a new line at a side) and by its end (the normal size); the Size window (not modal, so the window can
   be resized while the marks follow).
-- The strip with the name, version and location box is gone: the version is in the window title
-  (`Foldex 1.0.n - project`) and at the top of F1's list; the location box is the path bar. View > Bars on the ribbon:
+- The strip with the name, version and location box is gone: the name is in the window title
+  (`Foldex - project`, plan 41 6.1), the version at the top of F1's list; the location box is the path bar. View > Bars on the ribbon:
   Add path bar, Add drives bar, Reset bars (also in F1), so a window without bars can get them back.
 - Decided while building:
   - A size in buttons includes the bar's grip and padding, and the `>>` when there are more buttons than that: the

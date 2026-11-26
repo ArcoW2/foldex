@@ -798,10 +798,14 @@ sealed class AppHost : ApplicationContext
 
     bool closingProfile;
 
+    /// <summary>This process's profile's name, for the window titles (MainForm.ShowProject); read anew by ProfileInfo.</summary>
+    public static string ProfileName { get; private set; } = ProfileStore.Load(ProfilesPath).Get(Profile)?.Name ?? ProfileStore.DefaultName;
+
     /// <summary>This process's profile for the bottom bar: its number, name and whether it has a password.</summary>
     public static JsonObject ProfileInfo()
     {
         var p = ProfileStore.Load(ProfilesPath).Get(Profile);
+        ProfileName = p?.Name ?? ProfileName;
         return new JsonObject { ["number"] = Profile, ["name"] = p?.Name ?? ProfileStore.DefaultName, ["locked"] = p?.Locked == true };
     }
 
@@ -925,7 +929,11 @@ sealed class AppHost : ApplicationContext
     void TellProfile()
     {
         var info = ProfileInfo();
-        foreach (var w in windows) w.Tell(new JsonObject { ["event"] = "profile", ["profile"] = info.DeepClone() });
+        foreach (var w in windows)
+        {
+            w.Retitle();
+            w.Tell(new JsonObject { ["event"] = "profile", ["profile"] = info.DeepClone() });
+        }
     }
 
     /// <summary>One setting for the Manage window (projectsSort), without telling every page.</summary>

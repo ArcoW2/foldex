@@ -82,13 +82,20 @@ sealed class MainForm : Form
     /// <summary>Becomes another window of the projects (a closed one opened again in its place).</summary>
     public void Rekey(int key) => Key = key;
 
-    /// <summary>The title: Foldex, its version (docs/plans/executed/10-PLAN-bars.md 3.2: no longer in a strip of the page) and
-    /// the window's project.</summary>
+    string projectDisplay = "";
+
+    /// <summary>The title: Foldex, then the window's profile when it is not Default (docs/plans/executed/41-PLAN-profiles.md
+    /// 3.5) and its project: "Foldex - Work/Project 1", "Foldex - Project 1" in Default.</summary>
     public void ShowProject(string display)
     {
-        var name = $"Foldex {AppHost.Version().Version}";
-        Text = display.Length > 0 ? $"{name} - {display}" : name;
+        projectDisplay = display;
+        var profile = AppHost.Profile == ProfileStore.Default ? "" : AppHost.ProfileName;
+        var what = profile.Length > 0 && display.Length > 0 ? $"{profile}/{display}" : profile + display;
+        Text = what.Length > 0 ? $"Foldex - {what}" : "Foldex";
     }
+
+    /// <summary>The profile renamed: the title again.</summary>
+    public void Retitle() => ShowProject(projectDisplay);
 
     void AddBrowser()
     {
