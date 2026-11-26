@@ -4972,6 +4972,7 @@ const events = {
     for (const o of m.ops) logOp(o);
     settingsProblems(m);
     showProject(m.project);
+    showProfile(m.profile);
     runId = m.run;
     searches = m.searches;
     renames = m.renames ?? renames;
@@ -5012,6 +5013,9 @@ const events = {
   // A pane chosen in the Projects menu (plan 15 3.6): the focus to it, its tab shown.
   focusPane(m) { if (views.has(m.pane)) focusPane(m.pane); },
   projectList(m) { projectListCame(m.list); },
+  // The window's profile renamed or its password changed; the Profiles menu's list (plan 41 3.5).
+  profile(m) { showProfile(m.profile); },
+  profileList(m) { profileListCame(m.list); },
   // The Settings and Manage projects panes (plan 14 3.7): the host's answer to one, and what it tells them unasked.
   paneHost(m) { views.get(m.pane)?.fromHost?.(m.msg); },
   projects(m) { paneOfKind('projects')?.fromHost(m); },

@@ -107,7 +107,12 @@ const RIBBON_ICONS = (() => {
     'projects.menu': ['Projects', p(projects)],
     'project.new': ['New project', p('M1.5 3.5h4.5l1.5 1.5h7V8M1.5 3.5v10H9M4 9h4') + plus(12, 12)],
     'project.rename': ['Rename project', p('M1.5 3.5h4.5l1.5 1.5h7V7M1.5 3.5v10H7M4 9h4') + p(pencil)],
-    'layout.saveDefault': ['Save layout as default', p('M2.5 2.5h9l2 2v9h-11zM5 2.5v3.5h5.5V2.5M4.5 13.5V9.5h7v4')],
+    // Profiles (docs/plans/executed/41-PLAN-profiles.md 3.5): a person, small at the left where something is added.
+    'profiles.menu': ['Profiles', '<circle cx="8" cy="5" r="3"/>' + p('M2.5 14.5c0-3.2 2.4-5.5 5.5-5.5s5.5 2.3 5.5 5.5')],
+    'profile.copy': ['Copy profile', '<circle cx="6" cy="4.5" r="2.5"/>' + p('M1.5 12c0-2.7 2-4.5 4.5-4.5') + p('M8.5 8.5h6v6h-6z')],
+    'profile.rename': ['Rename profile', '<circle cx="6" cy="4.5" r="2.5"/>' + p('M1.5 13c0-2.9 2-5 4.5-5') + p(pencil)],
+    'profile.password': ['Profile password', p('M4 7.5h8v7H4z') + p('M5.5 7.5V5a2.5 2.5 0 0 1 5 0v2.5') + dot(8, 11)],
+    'profile.close': ['Close profile', '<circle cx="6" cy="4.5" r="2.5"/>' + p('M1.5 13c0-2.9 2-5 4.5-5') + p('M10 9.5l4 4M14 9.5l-4 4')],    'layout.saveDefault': ['Save layout as default', p('M2.5 2.5h9l2 2v9h-11zM5 2.5v3.5h5.5V2.5M4.5 13.5V9.5h7v4')],
     'layout.resetDefault': ['Reset layout', p(undo)],
     'layout.preset default': ['Default', win + p('M6 2.5v11M6 8h8.5')],
     'layout.preset dual': ['Dual', win + p('M5.5 2.5v11M10 2.5v11')],

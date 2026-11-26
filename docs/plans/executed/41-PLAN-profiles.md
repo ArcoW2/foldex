@@ -1,8 +1,9 @@
 # Plan 41: Profiles
 
-Status: not started; see Status.
+Status: executed; see Status and 6.
 
 - 2026-11-26: draft.
+- 2026-11-26: executed.
 
 Above projects (plan 15) and their virtual desktops. LexPen has nothing like it yet: Foldex leads here, and LexPen
 takes the same over once it is built in Foldex. So the parts that are not Foldex's own (the profile store, the
@@ -38,23 +39,22 @@ except those.
 
 | Part | What | Reference |
 |---|---|---|
+| Profile store | `ProfileStore.cs`: the profiles, their folders, passwords and switches, in the top `State\profiles.json` | 3.1, 3.4; 6.1 |
+| Data folder per profile | `DataFolder.ProfileDir`; Default is the top folder | 3.1 |
+| Process per profile | `--profile`, a mutex and pipe per profile (`ProfileProcesses`), none given: Default | 3.2, 3.3; 6.1 |
+| Start and close | which profiles come back at start; the never-open switch; Close profile | 3.3; 6.1 |
+| Password | set, change, remove (not for Default); asked at start, before a change while closed, before a copy; the lock mark | 3.4, 3.5; 6.1 |
+| Delete | the two flows; an open profile closed first; the current one removed by Default | 3.6; 6.1 |
+| Bottom bar and Profiles menu | the profile left of the project; the menu of 3.5 | 3.5 |
+| Dialogs | the name (askText), the passwords, the delete warning and question (AskForm) | 3.5, 3.6; 6.1 |
+| Ribbon and actions | View > Profiles: Profiles, Copy, Rename, Password, Close | 3.5; 6.1 |
+| Copy | a new profile as a copy of another | 3.6 |
+| Tests | `ProfileStoreTests`, `DataFolderTests`, `ProgramTests`; checks in a test copy | 3.8; 6.2 |
 
 ### Not yet built
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| Profile store | `ProfileStore.cs`: the profiles, their folders, passwords and switches, in the top `State\profiles.json` | -- | 3.1, 3.4 |
-| Data folder per profile | `DataFolder` resolves a profile's folder; Default is the top folder | -- | 3.1 |
-| Process per profile | `--profile`, a mutex and pipe per profile, a launch routed to the right one; none given: Default | -- | 3.2, 3.3 |
-| Start and close | which profiles come back at start; the never-open switch; closing a profile | -- | 3.3 |
-| Password | set, change, remove (not for Default); asked when a locked profile opens, before a change to it while closed, and before a copy; the lock mark | -- | 3.4, 3.5 |
-| Delete | the two flows of 3.6: with the password, or the warning that it has one; then the question; an open profile closed first; the current one deleted by Default | -- | 3.6 |
-| Bottom bar and Profiles menu | the profile left of the project; the menu of 3.5 | -- | 3.5 |
-| Dialogs | the name, the password, the delete warning and question | -- | 3.5, 3.6 |
-| Ribbon and actions | the actions of 3.5, View > Profiles | -- | 3.5 |
-| Copy | a new profile as a copy of another | -- | 3.6 |
-| Tests | the store, the routing, the folders; checks in a test copy | -- | 3.8 |
-
 ## 3. Details
 
 ### 3.1 What a profile is, and where it lives
@@ -208,3 +208,53 @@ except those.
 None.
 
 ## 5. (not used)
+
+## 6. As built
+
+### 6.1 What differs or was decided
+
+- **Where it lives**: `ProfileStore.cs` (the list, pure apart from its file), `ProfileProcesses.cs` (running, starting,
+  telling a profile's process; its passwords; copying and removing its folder), `Program.cs` (`--profile`, the
+  password at start, the start of 3.3), `AppHost.cs` (the commands, the pipe's `close`, `profileChanged` and
+  `removeDeleted`), `projectmenu.js` (the bottom bar and the menu), `actions.js`, `ribbonicons.js`,
+  `defaults\ribbon.json`.
+- **The profile of a process** is `FOLDEX_PROFILE`, set by `Program` from `--profile` before `AppHost.DataDir` is
+  read; the helpers a profile's process starts (the lister helper) inherit it. Default keeps the pipe and mutex name
+  Foldex had before, so nothing changes for it.
+- **Every process writes `profiles.json`**: a change reads it anew and writes it under a named mutex
+  (`ProfileStore.Change`). Whether a profile is open is not stored: its mutex exists while its process runs.
+- **The passwords** are asked by the host in Foldex's own question window (`AskForm`, given a password box), over the
+  window they are asked from; at start on its own. PBKDF2 with SHA-256 at 600,000 iterations (OWASP's Password Storage
+  Cheat Sheet for that hash), kept per profile with its salt so a later count does not break the ones set before. A
+  new password is typed twice; an empty one is refused (Remove password takes it away). The name of a copy or a rename
+  is asked in the page (`askText`), after the password.
+- **Close profile** closes every window as Windows does: its projects stay open and come back when the profile opens
+  again. Its process ends with its last window; closed while another profile still runs, it is marked not to come
+  back at start.
+- **Delete** marks the profile deleted at once (it is no longer listed or opened), then the folder is removed once its
+  process has ended, tried again for a while (WebView2's own processes can hold files a bit after). A folder that still
+  cannot go stays marked, and Default removes it at its next start. Deleting the current profile shows Default (started
+  with `--profile 0` when it is not running) and tells it over its pipe to remove it.
+- **Never open by itself** is offered for Default too: at start Default then opens only when nothing else comes back.
+- **An unknown `--profile`** says so in an error window and starts nothing.
+- **The menu's lock** is a `mark` of a menu item (`menu.js`), an element after its label; the bottom bar shows the
+  same lock after the name.
+- **Not built**: the window title does not name the profile, so two profiles' windows look alike in the taskbar.
+
+### 6.2 Tests
+
+- `ProfileStoreTests`: Default only without a file; numbers never reused, free names; Default cannot be renamed,
+  deleted or get a password; the hash, never the password, in the file, checked and removed; a deleted profile not
+  listed or found; found by number or name; what start opens (never-open, none left: Default); a copy without
+  `State\` and the other profiles. `DataFolderTests`: the folders per profile. `ProgramTests`: `--profile` taken out;
+  Default's pipe name as before, another profile's its own.
+- In a test copy (`FOLDEX_DATA`), each profile's page through its own debugging port and the dialogs through UI
+  Automation: Default on the existing data shows "Default" left of the project; a copy has the settings, not `State\`;
+  the copy opens as its own process with its own WebView2 data, and a setting changed there stays out of Default; both
+  come back at the next start; a password set (typed twice) shows the lock; Close from Default closes it and marks it
+  closed; a change of it closed asks the password (a wrong one says so); opening it asks at start (Cancel keeps it
+  closed), opening it again while open asks nothing; Copy asks the password while it is open, the copy has none;
+  Delete without a password asks the question only; with the box empty the warning, then the question, the open
+  profile closed and its folder removed; the current profile deleted with Default closed: the question says this
+  window closes and Default opens, Default starts and removes the folder.
+- Not checked in the app: the never-open switch at start (the store test has it), marks kept at a Windows shutdown.

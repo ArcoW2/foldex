@@ -34,9 +34,12 @@ sealed class AskForm : Form
         public string? Default { get; init; }
         public string? Details { get; init; }
         public Point? Near { get; init; }
+        /// <summary>A password box under the text (docs/plans/executed/41-PLAN-profiles.md 3.4): its characters hidden.</summary>
+        public bool Secret { get; init; }
     }
 
     readonly List<ButtonBase> picks = [];
+    readonly TextBox? secret;
     readonly Point? near;
     string? answer;
 
@@ -86,6 +89,15 @@ sealed class AskForm : Form
         // The text, then one empty line.
         if (q.Text.Length > 0)
             layout.Controls.Add(new Label { Text = q.Text, UseMnemonic = false, AutoSize = true, MaximumSize = new Size(width, 0), Margin = new Padding(0, 0, 0, Font.Height) });
+        if (q.Secret)
+        {
+            secret = new TextBox
+            {
+                UseSystemPasswordChar = true, Width = width, BorderStyle = BorderStyle.FixedSingle,
+                BackColor = Mix(bg, fg, .06), ForeColor = fg, Margin = new Padding(0, 0, 0, Font.Height / 2),
+            };
+            layout.Controls.Add(secret);
+        }
         foreach (var (value, label) in q.Boxes)
             Pick(new Box(Mix(bg, fg, .45), accent, Mix(bg, fg, .7)) { Text = label, Tag = value, Checked = true });
         foreach (var (value, label, on) in q.Choices)
@@ -204,28 +216,43 @@ sealed class AskForm : Form
     protected override void OnShown(EventArgs e)
     {
         base.OnShown(e);
-        (AcceptButton as Control ?? CancelButton as Control)?.Focus();
+        (secret as Control ?? AcceptButton as Control ?? CancelButton as Control)?.Focus();
     }
 
     /// <summary>Asks over `owner`, the window the question comes from; when there is none (or it is gone or hidden), over the
     /// window last worked in. In `look` (the page's, look.js hostLook), else in the look the window last worked in
     /// told (MainForm.Look). Gives the value of the button chosen (null: Cancel, Esc or closed) and the values of the
     /// checked boxes or the choice.</summary>
-    public static (string? Answer, List<string> Checked) Ask(AppHost app, IWin32Window? owner, Question q, JsonObject? look = null)
+    public static (string? Answer, List<string> Checked) Ask(AppHost? app, IWin32Window? owner, Question q, JsonObject? look = null)
+    {
+        var (answer, picked, _) = Show(app, owner, q, look);
+        return (answer, picked);
+    }
+
+    // Without an app: at start, before any window (a profile's password, docs/plans/executed/41-PLAN-profiles.md 3.4), on its own.
+    static (string? Answer, List<string> Checked, string Secret) Show(AppHost? app, IWin32Window? owner, Question q, JsonObject? look)
     {
         var over = owner as Form;
-        if (over is null || over.IsDisposed || !over.Visible) over = app.LastActive;
-        look ??= (over as MainForm ?? app.LastActive)?.Look;
+        if (over is null || over.IsDisposed || !over.Visible) over = app?.LastActive;
+        look ??= (over as MainForm ?? app?.LastActive)?.Look;
         using var form = new AskForm(over, look, q);
         if (over is null) form.ShowDialog(); else form.ShowDialog(over);
-        return (form.answer, form.picks.Where(p => p is CheckBox { Checked: true } or RadioButton { Checked: true }).Select(p => (string)p.Tag!).ToList());
+        return (form.answer, form.picks.Where(p => p is CheckBox { Checked: true } or RadioButton { Checked: true }).Select(p => (string)p.Tag!).ToList(),
+            form.secret?.Text ?? "");
+    }
+
+    /// <summary>A question with a password box (Question.Secret set): the button chosen and what was typed.</summary>
+    public static (string? Answer, string Secret) AskSecret(AppHost? app, IWin32Window? owner, Question q, JsonObject? look = null)
+    {
+        var (answer, _, typed) = Show(app, owner, q, look);
+        return (answer, typed);
     }
 
     /// <summary>The button chosen, nothing else to check: Ask's answer alone.</summary>
-    public static string? Answer(AppHost app, IWin32Window? owner, Question q, JsonObject? look = null) => Ask(app, owner, q, look).Answer;
+    public static string? Answer(AppHost? app, IWin32Window? owner, Question q, JsonObject? look = null) => Ask(app, owner, q, look).Answer;
 
     /// <summary>A message with OK.</summary>
-    public static void Tell(AppHost app, IWin32Window? owner, Sign sign, string text) =>
+    public static void Tell(AppHost? app, IWin32Window? owner, Sign sign, string text) =>
         Ask(app, owner, new Question { Sign = sign, Text = text, Buttons = [("ok", "OK", null)] });
 
     /// <summary>A yes / no question of a page (askYes): its title, then its lines after an empty line; true for Yes.</summary>

@@ -11,6 +11,23 @@ public class ProgramTests
     }
 
     [Fact]
+    public void TheProfileIsTakenOut()
+    {
+        var (profile, rest) = Program.ParseProfile(["-n", "--profile", "Work", @"C:\Temp"]);
+        Assert.Equal("Work", profile);
+        Assert.Equal(["-n", @"C:\Temp"], rest);
+        (profile, rest) = Program.ParseProfile([@"C:\Temp"]);
+        Assert.Null(profile);
+        Assert.Equal([@"C:\Temp"], rest);
+    }
+    [Fact]
+    public void DefaultKeepsThePipeNameItHadAnotherProfileHasItsOwn()
+    {
+        var before = Program.PipeName(@"C:\Foldex\Foldex.exe", "S-1-5-21");
+        Assert.Equal(before, Program.PipeName(@"C:\Foldex\Foldex.exe", "S-1-5-21", 0));
+        Assert.Equal(before + "-p2", Program.PipeName(@"C:\Foldex\Foldex.exe", "S-1-5-21", 2));
+    }
+    [Fact]
     public void WithoutSwitchesEverythingIsAPath()
     {
         var (newWindow, paths) = Program.ParseArgs([@"C:\Temp"]);

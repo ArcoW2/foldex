@@ -233,6 +233,7 @@ function keepForPages(m) {
   else if (m.event === 'helper') pageHello.helper = m.running;
   else if (m.event === 'bars') pageHello.bars = m.bars;
   else if (m.event === 'project') pageHello.project = m.project;
+  else if (m.event === 'profile') pageHello.profile = m.profile;
 }
 
 // An event of the host for the panes' pages too (PageEvents).

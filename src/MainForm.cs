@@ -897,6 +897,20 @@ sealed class MainForm : Form
             case "projectCommand":
                 app.ProjectCommand(this, msg["kind"]!.GetValue<string>(), msg);
                 break;
+            // The Profiles menu (docs/plans/executed/41-PLAN-profiles.md 3.5): its list, a password before a change, a command.
+            case "profiles":
+                Post(new JsonObject { ["event"] = "profileList", ["list"] = AppHost.ProfileList() });
+                break;
+            case "profileUnlock":
+                Post(new JsonObject
+                {
+                    ["event"] = "answer", ["req"] = msg["req"]?.DeepClone(),
+                    ["yes"] = app.ProfileUnlock(this, msg["profile"]!.GetValue<int>(), msg["always"]?.GetValue<bool>() == true),
+                });
+                break;
+            case "profileCommand":
+                app.ProfileCommand(this, msg["kind"]!.GetValue<string>(), msg);
+                break;
             // What a Settings or Manage projects pane of this window asks of the host (PaneHosts; plan 14 3.7): the
             // answers back to that pane through this window's page.
             case "paneHost":
@@ -1379,6 +1393,7 @@ sealed class MainForm : Form
             ["bars"] = BarsFile.Load(AppHost.DataDir, Path.Combine(AppHost.DefaultsDir, BarsFile.Name)),
             ["columnSets"] = AppHost.ColumnSets(),
             ["project"] = app.ProjectInfo(this),
+            ["profile"] = AppHost.ProfileInfo(),
             ["ops"] = new JsonArray(app.FileOps.All.Select(o => (JsonNode)o.ToJson()).ToArray()),
             ["searches"] = SearchesFile.Load(AppHost.DataDir),
             ["filters"] = FiltersFile.Load(AppHost.DataDir),

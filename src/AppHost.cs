@@ -13,9 +13,16 @@ namespace Foldex;
 /// </summary>
 sealed class AppHost : ApplicationContext
 {
-    // FOLDEX_DATA points a test run somewhere else, away from the real state.
-    public static readonly string DataDir = DataFolder.Resolve(System.Environment.GetEnvironmentVariable("FOLDEX_DATA"),
+    // FOLDEX_DATA points a test run somewhere else, away from the real state. The top folder holds Default's data and
+    // the list of profiles (docs/plans/executed/41-PLAN-profiles.md 3.1).
+    public static readonly string TopDir = DataFolder.Resolve(System.Environment.GetEnvironmentVariable("FOLDEX_DATA"),
         System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData));
+    /// <summary>This process's profile: FOLDEX_PROFILE, which Program sets from --profile before anything reads it (and
+    /// the helpers this process starts inherit); none: Default.</summary>
+    public static readonly int Profile = int.TryParse(System.Environment.GetEnvironmentVariable(ProfileVariable), out var n) ? n : ProfileStore.Default;
+    public const string ProfileVariable = "FOLDEX_PROFILE";
+    public static readonly string DataDir = DataFolder.ProfileDir(TopDir, Profile);
+    public static string ProfilesPath => DataFolder.ProfilesPath(TopDir);
     static string StatePath => DataFolder.StatePath(DataDir, "state.json");
 
     public const string DefaultsFolder = "defaults";
@@ -255,6 +262,8 @@ sealed class AppHost : ApplicationContext
         if (!restored)
         {
             restored = true;
+            // Default removes the folders of the profiles deleted (plan 41 3.6), once their processes have ended.
+            if (Profile == ProfileStore.Default) _ = ProfileProcesses.RemoveDeleted(TopDir);
             foreach (var (_, entry) in projects.StartWindows()) Open([], entry.Key, toDesktop: true);
             SaveProjects();
             // Only once they are on their own desktops does "a window on this desktop" mean anything.
@@ -572,7 +581,8 @@ sealed class AppHost : ApplicationContext
         // Closed by hand, the last window too: its project closes (ProjectStore.CloseByHand) and comes back when Foldex
         // starts on that desktop (LastClosedOn). Windows closing it (log-off, shutdown, Task Manager): the windows stay
         // open in their projects and all come back at the next start, each on its desktop.
-        if (reason is not (CloseReason.WindowsShutDown or CloseReason.TaskManagerClosing)) projects.CloseByHand(w.Key);
+        // Close profile (docs/plans/executed/41-PLAN-profiles.md 3.3) closes them all as Windows does: they come back when it opens.
+        if (reason is not (CloseReason.WindowsShutDown or CloseReason.TaskManagerClosing) && !closingProfile) projects.CloseByHand(w.Key);
         // The place for a window without one of its own (plan 15 3.8).
         var b = w.WindowState == FormWindowState.Normal ? w.Bounds : w.RestoreBounds;
         SaveState(new AppState
@@ -583,6 +593,13 @@ sealed class AppHost : ApplicationContext
         ProjectsChanged();
         if (windows.Count == 0)
         {
+            // Closed while another profile still runs: it does not come back at the next start; the last one to end
+            // (and every one Windows ends) keeps its mark (plan 41 3.3).
+            if (reason is not (CloseReason.WindowsShutDown or CloseReason.TaskManagerClosing))
+                ProfileStore.Change(ProfilesPath, s =>
+                {
+                    if (s.Get(Profile) is { } me && s.Listed.Any(p => p.Number != Profile && ProfileProcesses.Running(p.Number))) me.WasOpen = false;
+                });
             listers?.Dispose();   // the plugin helper goes too
             ExitThread();
         }
@@ -777,6 +794,140 @@ sealed class AppHost : ApplicationContext
         ProjectsChanged();
     }
 
+    // ---------- Profiles (docs/plans/executed/41-PLAN-profiles.md 3.3 - 3.6) ----------
+
+    bool closingProfile;
+
+    /// <summary>This process's profile for the bottom bar: its number, name and whether it has a password.</summary>
+    public static JsonObject ProfileInfo()
+    {
+        var p = ProfileStore.Load(ProfilesPath).Get(Profile);
+        return new JsonObject { ["number"] = Profile, ["name"] = p?.Name ?? ProfileStore.DefaultName, ["locked"] = p?.Locked == true };
+    }
+
+    /// <summary>The Profiles menu: every profile, Default first; nothing of what one holds (3.5).</summary>
+    public static JsonArray ProfileList() => new(ProfileStore.Load(ProfilesPath).Listed.Select(p => (JsonNode)new JsonObject
+    {
+        ["number"] = p.Number, ["name"] = p.Name, ["isDefault"] = p.Number == ProfileStore.Default, ["current"] = p.Number == Profile,
+        ["open"] = p.Number == Profile || ProfileProcesses.Running(p.Number), ["locked"] = p.Locked, ["neverOpen"] = p.NeverOpen,
+    }).ToArray());
+
+    /// <summary>Before a change (3.4): a profile with a password asks it when it is closed; with `always` (Copy) also
+    /// when it is open. True when it may go on.</summary>
+    public bool ProfileUnlock(MainForm w, int number, bool always)
+    {
+        if (ProfileStore.Load(ProfilesPath).Get(number) is not { } p) return false;
+        if (!p.Locked || !always && (number == Profile || ProfileProcesses.Running(number))) return true;
+        return ProfileProcesses.Unlock(this, w, p, always ? "Its password is needed for this, also while it is open." : "It is closed: its password is needed to change it.");
+    }
+
+    /// <summary>The Profiles menu's commands; the page asked the password (ProfileUnlock) and a name before.</summary>
+    public async void ProfileCommand(MainForm w, string kind, JsonNode msg)
+    {
+        var number = msg["profile"]!.GetValue<int>();
+        var name = msg["name"]?.GetValue<string>() ?? "";
+        if (ProfileStore.Load(ProfilesPath).Get(number) is not { } p) return;
+        switch (kind)
+        {
+            case "open":
+                if (number == Profile) BringToFront(LastActive ?? w);
+                else ProfileProcesses.Show(number);
+                return;
+            case "copy":
+                var made = ProfileStore.Change(ProfilesPath, s => s.Add(name.Length > 0 ? name : p.Name));
+                try { ProfileProcesses.CopyFolder(DataFolder.ProfileDir(TopDir, number), DataFolder.ProfileDir(TopDir, made.Number)); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    ProfileStore.Change(ProfilesPath, s => { if (s.Get(made.Number) is { } m) s.MarkDeleted(m); });
+                    _ = ProfileProcesses.RemoveDeleted(TopDir);
+                    AskForm.Tell(this, w, AskForm.Sign.Error, $"The profile could not be copied: {ex.Message}");
+                }
+                break;
+            case "rename":
+                ProfileStore.Change(ProfilesPath, s => { if (s.Get(number) is { } r) s.Rename(r, name); });
+                break;
+            case "password":
+                if (ProfileProcesses.AskNew(this, w, p) is not { } password) return;
+                ProfileStore.Change(ProfilesPath, s => { if (s.Get(number) is { } r) s.SetPassword(r, password); });
+                break;
+            case "removePassword":
+                ProfileStore.Change(ProfilesPath, s => { if (s.Get(number) is { } r) s.SetPassword(r, null); });
+                break;
+            case "neverOpen":
+                ProfileStore.Change(ProfilesPath, s => { if (s.Get(number) is { } r) r.NeverOpen = !r.NeverOpen; });
+                break;
+            case "close":
+                if (number == Profile) CloseProfile();
+                else ProfileProcesses.Send(number, new JsonObject { ["op"] = "close" });
+                return;
+            case "delete":
+                await DeleteProfile(w, p);
+                return;
+        }
+        TellProfile();
+        if (number != Profile && ProfileProcesses.Running(number)) ProfileProcesses.Send(number, new JsonObject { ["op"] = "profileChanged" });
+    }
+
+    // Delete (3.6): with a password, it or the warning that it has one; then the question. The current profile is
+    // removed by Default: this window closes, Default opens.
+    async Task DeleteProfile(MainForm w, ProfileStore.Profile p)
+    {
+        if (p.Number == ProfileStore.Default) return;
+        while (p.Locked)
+        {
+            var (answer, typed) = AskForm.AskSecret(this, w, new AskForm.Question
+            {
+                Heading = $"Delete profile {p.Name}", Text = "This profile has a password. Password:", Secret = true,
+                Buttons = [("delete", "Delete", null), (null, "Cancel", null)],
+            });
+            if (answer is null) return;
+            if (typed.Length == 0)
+            {
+                if (AskForm.Answer(this, w, new AskForm.Question
+                {
+                    Sign = AskForm.Sign.Warning, Text = "This profile has a password. Are you sure you want to delete it?",
+                    Buttons = [("yes", "Yes", null), (null, "No", null)],
+                }) != "yes") return;
+                break;
+            }
+            if (ProfileStore.Check(p, typed)) break;
+            AskForm.Tell(this, w, AskForm.Sign.Error, "That is not the password.");
+        }
+        var current = p.Number == Profile;
+        var text = $"Delete profile {p.Name}? This cannot be undone: its projects, layouts, ribbon, themes, bookmarks, quick access, settings and everything else in it are removed.";
+        if (current) text += "\n\nThis window closes and Default opens.";
+        if (AskForm.Answer(this, w, new AskForm.Question
+        {
+            Sign = AskForm.Sign.Warning, Text = text, Buttons = [("yes", "Yes", null), (null, "No", null)],
+        }) != "yes") return;
+        ProfileStore.Change(ProfilesPath, s => { if (s.Get(p.Number) is { } d) s.MarkDeleted(d); });
+        if (current)
+        {
+            ProfileProcesses.Show(ProfileStore.Default);
+            ProfileProcesses.Send(ProfileStore.Default, new JsonObject { ["op"] = "removeDeleted" });
+            CloseProfile();
+            return;
+        }
+        if (ProfileProcesses.Running(p.Number)) ProfileProcesses.Send(p.Number, new JsonObject { ["op"] = "close" });
+        TellProfile();
+        await ProfileProcesses.RemoveDeleted(TopDir);
+    }
+
+    /// <summary>Close profile: every window of this profile closes, as Windows closes them (they come back when it opens
+    /// again); the process ends with its last window.</summary>
+    void CloseProfile()
+    {
+        closingProfile = true;
+        foreach (var w in windows.ToList()) w.Close();
+    }
+
+    /// <summary>The profile's name or password changed: the bottom bar of every window.</summary>
+    void TellProfile()
+    {
+        var info = ProfileInfo();
+        foreach (var w in windows) w.Tell(new JsonObject { ["event"] = "profile", ["profile"] = info.DeepClone() });
+    }
+
     /// <summary>One setting for the Manage window (projectsSort), without telling every page.</summary>
     public static void SetQuietly(string name, JsonNode? value) => SettingsFile.Write(DataDir, name, value);
 
@@ -794,8 +945,17 @@ sealed class AppHost : ApplicationContext
                 var msg = JsonNode.Parse(await reader.ReadLineAsync() ?? "{}")!;
                 await using var writer = new StreamWriter(server, leaveOpen: true) { AutoFlush = true };
                 await writer.WriteLineAsync("ok");
-                var paths = msg["paths"]?.AsArray().Select(p => p!.GetValue<string>()).ToList() ?? [];
-                Launch(paths, msg["shift"]?.GetValue<bool>() == true);
+                // Another profile's process asking (plan 41 3.5, 3.6), else a launch.
+                switch (msg["op"]?.GetValue<string>())
+                {
+                    case "close": CloseProfile(); break;
+                    case "profileChanged": TellProfile(); break;
+                    case "removeDeleted": _ = ProfileProcesses.RemoveDeleted(TopDir); break;
+                    default:
+                        var paths = msg["paths"]?.AsArray().Select(p => p!.GetValue<string>()).ToList() ?? [];
+                        Launch(paths, msg["shift"]?.GetValue<bool>() == true);
+                        break;
+                }
             }
             catch (Exception ex) when (ex is IOException or JsonException) { }
         }

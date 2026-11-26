@@ -90,6 +90,119 @@ function projectListCame(list) {
   document.querySelector('.menu')?.focus();
 }
 
+// ---------- Profiles (docs/plans/executed/41-PLAN-profiles.md 3.5) ----------
+
+// The window's profile left of its project; a click there (or the action profiles.menu) opens the Profiles menu:
+// every profile with a submenu of its commands, nothing of what one holds. The host keeps them (AppHost,
+// ProfileStore) and asks the passwords itself (AskForm); a name is asked here (askText).
+
+let profile = { number: 0, name: 'Default', locked: false };
+let profileMenuAt = null;
+let profileListWaiting = null;
+
+// A small lock: a profile with a password.
+function lockMark() {
+  const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  s.setAttribute('viewBox', '0 0 16 16');
+  s.setAttribute('class', 'lock-mark');
+  s.innerHTML = '<rect x="3" y="7" width="10" height="7" rx="1.5" fill="currentColor"/>'
+    + '<path d="M5.2 7V5.2a2.8 2.8 0 0 1 5.6 0V7" fill="none" stroke="currentColor" stroke-width="1.6"/>';
+  return s;
+}
+
+function showProfile(p) {
+  profile = p ?? profile;
+  const el = document.getElementById('profile');
+  if (!el) return;
+  el.replaceChildren(document.createTextNode(profile.name), ...(profile.locked ? [lockMark()] : []));
+  el.title = `This window's profile: ${profile.name}${profile.locked ? ' (it has a password)' : ''}. Click for the Profiles menu.`;
+}
+
+function profilesMenu(at = null) {
+  profileMenuAt = at;
+  post({ op: 'profiles' });
+}
+
+function profileListItems() {
+  return new Promise(resolve => {
+    profileListWaiting = resolve;
+    post({ op: 'profiles' });
+  });
+}
+
+const profileCommand = (p, kind, args = {}) => post({ op: 'profileCommand', kind, profile: p.number, ...args });
+
+// The host asks the password of a closed profile that has one (always: also when it is open, for Copy; 3.4).
+async function profileUnlock(p, always = false) {
+  if (!p.locked) return true;
+  return !!(await askHost({ op: 'profileUnlock', profile: p.number, always })).yes;
+}
+
+// A profile's commands (its submenu); `id`: what the actions run (runProfileItem).
+function profileCommands(p) {
+  const then = (kind, always = false) => async () => { if (await profileUnlock(p, always)) profileCommand(p, kind); };
+  return [
+    { id: 'open', label: p.open ? 'Show' : 'Open', enabled: !p.current, run: () => profileCommand(p, 'open') },
+    { id: 'copy', label: 'Copy to a new profile...', run: async () => {
+      if (!await profileUnlock(p, true)) return;
+      const name = await askText('Name of the new profile', `Copy of ${p.name}`);
+      if (name !== null) profileCommand(p, 'copy', { name });
+    } },
+    { id: 'rename', label: 'Rename...', enabled: !p.isDefault, run: async () => {
+      if (!await profileUnlock(p)) return;
+      const name = await askText('Name of the profile', p.name);
+      if (name) profileCommand(p, 'rename', { name });
+    } },
+    ...(p.isDefault ? [] : p.locked
+      ? [{ id: 'password', label: 'Change password...', run: then('password') }, { id: 'removePassword', label: 'Remove password', run: then('removePassword') }]
+      : [{ id: 'password', label: 'Set password...', run: then('password') }]),
+    { id: 'neverOpen', label: 'Never open by itself', checked: p.neverOpen, run: then('neverOpen') },
+    ...(p.open ? [{ id: 'close', label: 'Close', run: () => profileCommand(p, 'close') }] : []),
+    ...(p.isDefault ? [] : ['-', { id: 'delete', label: 'Delete...', run: () => profileCommand(p, 'delete') }]),
+  ];
+}
+
+function profileMenuItems(list) {
+  return list.map(p => ({
+    label: p.name + (p.current ? '  (this window)' : ''), checked: p.open, mark: p.locked ? lockMark() : null,
+    items: profileCommands(p),
+  }));
+}
+
+// A command of this window's profile, for the actions (actions.js profile.*).
+let profileRawWaiting = null;
+async function runProfileItem(id) {
+  const list = await new Promise(resolve => { profileRawWaiting = resolve; post({ op: 'profiles' }); });
+  const mine = list.find(p => p.current);
+  if (mine) profileCommands(mine).find(c => c.id === id && c.enabled !== false)?.run();
+}
+// The list came: the menu opens (at the bottom bar, upward, above the profile's name), or the ribbon's list gets it.
+function profileListCame(list) {
+  if (profileRawWaiting) {
+    const resolve = profileRawWaiting;
+    profileRawWaiting = null;
+    return resolve(list);
+  }
+  if (profileListWaiting) {
+    const resolve = profileListWaiting;
+    profileListWaiting = null;
+    return resolve(profileMenuItems(list));
+  }
+  const r = document.getElementById('profile').getBoundingClientRect();
+  const at = profileMenuAt ?? { x: r.left, y: r.top };
+  openMenu(at.x, at.y, profileMenuItems(list));
+  if (!profileMenuAt) {
+    const el = document.querySelector('.menu');
+    if (el) el.style.top = `${Math.max(0, r.top - el.offsetHeight - 2)}px`;
+  }
+  document.querySelector('.menu')?.focus();
+}
+
+document.getElementById('profile')?.addEventListener('mousedown', e => {
+  e.preventDefault();
+  profilesMenu();
+});
+
 // ---------- A small dialog of the page: a text, or yes / no ----------
 
 // A text, or null for Cancel / Esc. Asked in a modal floating window of its own (plan 14 3.7), so it can be moved.

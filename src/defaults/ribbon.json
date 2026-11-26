@@ -70,6 +70,10 @@
       { "name": "Projects", "corners": { "left": "projects.manage", "right": "projects.menu" }, "items": [
         { "action": "projects.menu", "size": "large", "label": "Projects" },
         { "action": "project.new", "label": "New" }, { "action": "project.rename", "label": "Rename", "stack": true } ] },
+      { "name": "Profiles", "corners": { "right": "profiles.menu" }, "items": [
+        { "action": "profiles.menu", "size": "large", "label": "Profiles" },
+        { "action": "profile.copy", "label": "Copy" }, { "action": "profile.rename", "label": "Rename", "stack": true },
+        { "action": "profile.password", "label": "Password" }, { "action": "profile.close", "label": "Close", "stack": true } ] },
       { "name": "Columns", "items": [
         { "action": "columns.fitName", "label": "Fit columns" },
         { "action": "columns.fit", "label": "Fit all columns", "stack": true },

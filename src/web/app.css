@@ -1574,7 +1574,8 @@ footer {
   overflow-y: auto;
 }
 
-/* The window's project at the left (projectmenu.js; a click: the Projects menu), then the status text. */
+/* The window's profile and project at the left (projectmenu.js; a click: the Profiles or Projects menu), then the
+   status text. */
 #statusline {
   position: relative;
   display: flex;
@@ -1582,7 +1583,7 @@ footer {
   gap: 10px;
 }
 
-#project, #hidden-panes, #log-button {
+#profile, #project, #hidden-panes, #log-button {
   flex: none;
   font: inherit;
   color: var(--fg);
@@ -1595,7 +1596,11 @@ footer {
 
 #hidden-panes[hidden] { display: none; }
 
-#project:hover, #hidden-panes:hover, #log-button:hover {
+/* A profile with a password (projectmenu.js lockMark): a small lock after its name, in the bar and the menu. */
+.lock-mark { width: 11px; height: 11px; margin-left: 4px; vertical-align: -1px; flex: none; }
+.menu-item .lock-mark { margin-left: 6px; align-self: center; }
+
+#profile:hover, #project:hover, #hidden-panes:hover, #log-button:hover {
   background: var(--hover);
   border-color: var(--border);
 }
@@ -1731,7 +1736,7 @@ dialog.ask form {
    places at the right, the light in the corner. */
 #statusline { gap: 0; align-items: center; }
 #statusline > * + * { border-left: 1px solid var(--border); }
-#project, #hidden-panes, #log-button { margin: 0 6px; }
+#profile, #project, #hidden-panes, #log-button { margin: 0 6px; }
 #status-area { position: relative; flex: 1; min-width: 0; align-self: stretch; display: flex; align-items: center; padding: 0 8px; }
 #status { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-width: 0; }
 #free { flex: none; width: 17ch; padding: 0 8px; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;

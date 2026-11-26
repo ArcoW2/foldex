@@ -16,6 +16,13 @@ public class DataFolderTests
     }
 
     [Fact]
+    public void DefaultIsTheTopFolderAnotherProfileIsUnderProfilesByNumber()
+    {
+        Assert.Equal(@"C:\data", DataFolder.ProfileDir(@"C:\data", 0));
+        Assert.Equal(@"C:\data\Profiles\3", DataFolder.ProfileDir(@"C:\data", 3));
+        Assert.Equal(@"C:\data\State\profiles.json", DataFolder.ProfilesPath(@"C:\data"));
+    }
+    [Fact]
     public void StateFilesAreInState()
     {
         Assert.Equal(@"C:\data\State\state.json", DataFolder.StatePath(@"C:\data", "state.json"));

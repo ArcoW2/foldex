@@ -9,7 +9,8 @@
 // or after an answer of the host).
 //
 // An item: '-' (a line) or { label, run, enabled (default true), checked, swatch (a CSS colour), items (a submenu),
-// indent (steps in, for a tree), guides (its tree lines, panes.js treeGuides), icon (an <img>, in the check mark's
+// indent (steps in, for a tree), guides (its tree lines, panes.js treeGuides), mark (an element right of the label: a
+// profile's lock, projectmenu.js), icon (an <img>, in the check mark's
 // column), key (shown at the right), title (its tooltip), context (items: its own menu, opened beside it as a submenu
 // by a right-click on it, or the menu key or Shift+F10 while it is lit) }.
 
@@ -83,6 +84,7 @@ function openMenu(x, y, items, level = 0, back = null, { focus = true } = {}) {
     // 26 px in (padding 8, the check mark 10, the gap 8).
     if (item.guides) row.append(...guideElements(item.guides, k => 30 + 14 * k, 8));
     row.append(check, label);
+    if (item.mark) row.append(item.mark);
     if (item.key) row.append(Object.assign(document.createElement('span'), { className: 'menu-key', textContent: item.key }));
     row.addEventListener('mouseenter', () => hover(rows.indexOf(row)));
     row.addEventListener('mousedown', e => {
