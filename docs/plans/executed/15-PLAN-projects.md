@@ -77,7 +77,7 @@ once. A named project stays until deleted; of the unnamed ones only the last clo
   tested without windows. The file keeps LexPen's shape, a list of windows per project, holding one. What LexPen has
   for several windows per project (moving a window, merging projects, a new window in a project), for documents and
   drafts and for theme sets is left out.
-- The title bar shows the project: `Foldex - <name>`.
+- The title bar shows the project: `<name> - Foldex`.
 
 ### 3.2 A window's session; a new window
 
@@ -230,7 +230,7 @@ None.
   `WindowPlaceChanged` on move, resize, activation and a 5 s desktop check; `projects.json` written a second after the
   last change. `ProjectList`, `ProjectCommand`, `CloseProjects`, `DeleteProjects` (asking with a MessageBox).
 - `MainForm`: a `Key`; the page starts in `OnShown`, after `WindowShown`, so the layout it gets is its project's; the
-  title `Foldex - <project>`; ops `projects`, `projectCommand`, `openProjects`, `layoutReset` (the page reloaded on the
+  title `<project> - Foldex`; ops `projects`, `projectCommand`, `openProjects`, `layoutReset` (the page reloaded on the
   default layout, or on its own default with `freshLayout`).
 - Page: `projectmenu.js` (the project in the bottom bar, the menu on `menu.js`, the dialog `ask`); `actions.js` group
   Projects; `app.js` `saveLayoutAsDefault` and `windowLayout`; View > Projects in `ribbon.json`.

@@ -165,7 +165,7 @@ None.
   after a bar, or a new line at a side) and by its end (the normal size); the Size window (not modal, so the window can
   be resized while the marks follow).
 - The strip with the name, version and location box is gone: the name is in the window title
-  (`Foldex - project`, plan 41 6.1), the version at the top of F1's list; the location box is the path bar. View > Bars on the ribbon:
+  (`project - Foldex`, plan 41 6.1), the version at the top of F1's list; the location box is the path bar. View > Bars on the ribbon:
   Add path bar, Add drives bar, Reset bars (also in F1), so a window without bars can get them back.
 - Decided while building:
   - A size in buttons includes the bar's grip and padding, and the `>>` when there are more buttons than that: the

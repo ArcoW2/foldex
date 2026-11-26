@@ -85,13 +85,13 @@ sealed class MainForm : Form
     string projectDisplay = "";
 
     /// <summary>The title: Foldex, then the window's profile when it is not Default (docs/plans/executed/41-PLAN-profiles.md
-    /// 3.5) and its project: "Foldex - Work/Project 1", "Foldex - Project 1" in Default.</summary>
+    /// 3.5) and its project: "Work/Project 1 - Foldex", "Project 1 - Foldex" in Default.</summary>
     public void ShowProject(string display)
     {
         projectDisplay = display;
         var profile = AppHost.Profile == ProfileStore.Default ? "" : AppHost.ProfileName;
         var what = profile.Length > 0 && display.Length > 0 ? $"{profile}/{display}" : profile + display;
-        Text = what.Length > 0 ? $"Foldex - {what}" : "Foldex";
+        Text = what.Length > 0 ? $"{what} - Foldex" : "Foldex";
     }
 
     /// <summary>The profile renamed: the title again.</summary>

@@ -252,7 +252,7 @@ None.
   or ending tells no other process, so the pane reads the list again every few seconds while it is shown; a change
   made in this process tells it at once.
 - **The window title** names the profile when it is not Default, without Foldex's version (that is in F1's About):
-  `Foldex - Work/Project 1`; in Default `Foldex - Project 1`. A rename of the profile retitles its windows.
+  `Work/Project 1 - Foldex`; in Default `Project 1 - Foldex`. A rename of the profile retitles its windows.
 
 ### 6.2 Tests
 
