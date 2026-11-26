@@ -4,7 +4,8 @@
 // never open by itself, created and last opened. The buttons and a row's context menu are the Profiles menu's commands
 // for the row with the focus; the host does the work and asks the passwords (AppHost.ProfileCommand, ProfileUnlock).
 // Profiles open and close in their own processes, which tell nobody: the list is read again every few seconds.
-// Keys: Up / Down / Home / End move, Enter opens, F2 renames, Del deletes, Esc goes back.
+// Never open by itself is a checkbox in its row. Keys: Up / Down / Home / End move, Enter opens, F2 renames, Space
+// switches Never open by itself, Del deletes, Esc goes back.
 
 const $ = s => document.querySelector(s);
 
@@ -46,7 +47,8 @@ function rowHtml(p) {
   return `<div class="${cls}" data-number="${p.number}">` +
     `<span class="pv-name pf-name" title="${escapeHtml(p.name)}${p.locked ? ' (it has a password)' : ''}">${escapeHtml(p.name)}${p.locked ? LOCK : ''}</span>` +
     `<span class="pv-state${p.open ? ' pv-open-now' : ''}">${state}</span>` +
-    `<span class="pv-date pf-never">${p.neverOpen ? 'yes' : ''}</span>` +
+    `<span class="pf-never"><input type="checkbox" class="pf-never-box" tabindex="-1"${p.neverOpen ? ' checked' : ''}${view.busy ? ' disabled' : ''} ` +
+    `title="Never open by itself: at start it does not come back; it opens only when chosen"></span>` +
     `<span class="pv-date">${dateText(p.created, false)}</span>` +
     `<span class="pv-date">${dateText(p.opened, true)}</span></div>`;
 }
@@ -127,9 +129,13 @@ view.el.addEventListener('mousedown', e => {
   const row = rowOf(e);
   if (!row) return;
   view.focus = +row.dataset.number;
+  // Its Never open by itself box: switched for that row (its password first when it is closed and has one).
+  if (e.button === 0 && e.target.closest('.pf-never-box')) { e.preventDefault(); return run('neverOpen'); }
   draw();
 });
-view.el.addEventListener('dblclick', e => { if (rowOf(e)) run('open'); });
+view.el.addEventListener('dblclick', e => { if (rowOf(e) && !e.target.closest('.pf-never-box')) run('open'); });
+// The box is drawn again from the list once switched, not by the click.
+view.el.addEventListener('click', e => { if (e.target.closest('.pf-never-box')) e.preventDefault(); });
 view.el.addEventListener('contextmenu', e => {
   const row = rowOf(e);
   if (!row) return;
@@ -170,6 +176,7 @@ document.addEventListener('keydown', e => {
   else if (e.key === 'End') moveFocus(1e9);
   else if (e.key === 'Enter') run('open');
   else if (e.key === 'F2') { if (!focused()?.isDefault) run('rename'); }
+  else if (e.key === ' ') run('neverOpen');
   else if (e.key === 'Delete') { if (!focused()?.isDefault) run('delete'); }
   else return;
   e.preventDefault();

@@ -150,10 +150,11 @@ except those.
 
   A change of a closed profile with a password asks its password first; Copy and Delete ask it always (3.4).
 - **Manage profiles**, as Manage projects (plan 15 3.7): a pane with every profile in a list, Default first, then by
-  name: its name with the lock mark, open, closed or this window, never open by itself, created, last opened. Its
-  buttons (Open, Copy..., Rename..., Password..., Close, Delete...) and a row's context menu are the submenu's
-  commands for the row with the focus, with the same passwords asked. Enter opens, F2 renames, Del deletes, Esc goes
-  back. Also the action `profiles.manage`: the Profiles group's left corner and Tools > Manage in the ribbon.
+  name: its name with the lock mark, open, closed or this window, never open by itself (a checkbox that switches it),
+  created, last opened. Its buttons (Open, Copy..., Rename..., Password..., Close, Delete...) and a row's context
+  menu are the submenu's commands for the row with the focus, with the same passwords asked. Enter opens, F2
+  renames, Space switches never open by itself, Del deletes, Esc goes back. Also the action `profiles.manage`: the
+  Profiles group's left corner and Tools > Manage in the ribbon.
 - The same commands are actions, in the default ribbon under View > Profiles, next to Projects; there they work on
   the current profile. A ribbon is per profile, so a ribbon made before this has the group only after Reset or
   when added by hand (plan 19).
@@ -246,8 +247,8 @@ None.
 - **The menu's lock** is a `mark` of a menu item (`menu.js`), an element after its label; the bottom bar shows the
   same lock after the name.
 - **Manage profiles** is `profiles.html` and `profilespane.js` (with `projects.css` and its own `profiles.css`),
-  answered by `PaneHosts.Profiles`, its commands `AppHost.ProfileCommand` as the menu's. No checkboxes and no search,
-  unlike Manage projects: the commands work on one profile, each with its own password. A profile's process opening
+  answered by `PaneHosts.Profiles`, its commands `AppHost.ProfileCommand` as the menu's. No checkboxes to select
+  several and no search, unlike Manage projects: the commands work on one profile, each with its own password. A profile's process opening
   or ending tells no other process, so the pane reads the list again every few seconds while it is shown; a change
   made in this process tells it at once.
 - **The window title** names the profile when it is not Default, without Foldex's version (that is in F1's About):
@@ -270,6 +271,6 @@ None.
   profile closed and its folder removed; the current profile deleted with Default closed: the question says this
   window closes and Default opens, Default starts and removes the folder.
 - Manage profiles in a test copy: Manage profiles... first in the Profiles menu; the pane lists Default (this
-  window) and the other profile with their dates; Never open by itself switched from it shows at once; Open starts
-  the other profile and the list shows it open, Close closes it and the list shows it closed.
+  window) and the other profile with their dates; Never open by itself switched from it, and by its checkbox on and
+  off again, shows at once; Open starts the other profile and the list shows it open, Close closes it and the list shows it closed.
 - Not checked in the app: the never-open switch at start (the store test has it), marks kept at a Windows shutdown.
