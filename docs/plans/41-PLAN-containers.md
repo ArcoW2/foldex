@@ -26,7 +26,8 @@ click there opens the Containers menu: every container, to open (as a project op
 rename, password, delete. A container other than Default can have a password: it is asked when the container opens,
 and before a change to it while it is closed; not again while Foldex has it open anywhere. Once it is closed, it is
 asked again. Copying a container with a password always asks it; the copy has none. Deleting one asks its password
-and then whether you are sure; without the password it warns first that the container has one. A container can be
+and then whether you are sure; without the password it warns first that the container has one. Deleting the current
+container closes its window and opens Default, which removes the folder. A container can be
 switched to never open by itself: it then opens only when chosen. At start, the containers that were open come back,
 except those.
 
@@ -46,7 +47,7 @@ except those.
 | Process per container | `--container`, a mutex and pipe per container, a launch routed to the right one | Q3 | 3.2, 3.3 |
 | Start and close | which containers come back at start; the never-open switch; closing a container | -- | 3.3 |
 | Password | set, change, remove (not for Default); asked when a locked container opens, before a change to it while closed, and before a copy | Q1 | 3.4 |
-| Delete | the two flows of 3.6: with the password, or the warning that it has one; then the question; an open container closed first | Q6 | 3.6 |
+| Delete | the two flows of 3.6: with the password, or the warning that it has one; then the question; an open container closed first; the current one deleted by Default | -- | 3.6 |
 | Bottom bar and Containers menu | the container left of the project; the menu of 3.5 | -- | 3.5 |
 | Dialogs | the name, the password, the delete warning and question | -- | 3.5, 3.6 |
 | Ribbon and actions | the actions of 3.5, View > Containers | -- | 3.5 |
@@ -166,10 +167,15 @@ except those.
 
   A container without a password goes to the question at once. The question: "Delete container <name>? This cannot
   be undone: its projects, layouts, ribbon, themes, bookmarks, quick access, settings and everything else in it are
-  removed." Yes deletes it.
+  removed." Yes deletes it. For the current container (the one of the window it is chosen in) the question adds:
+  "This window closes and Default opens."
 - Deleting removes the container's folder permanently, not to the Recycle Bin, as the question says, and takes it out
   of `containers.json`. An open container is closed first: the window that deletes it tells its process to close
-  (over its pipe), waits until it has ended, then removes the folder. Q6 asks about the current container.
+  (over its pipe), waits until it has ended, then removes the folder.
+- **The current container** is deleted by Default: its window asks Default to delete it (over Default's pipe, starting
+  Default when it is not running), then closes every window of the container. Default comes to the front, waits until
+  the deleted container's process has ended, then removes its folder and takes it out of `containers.json`. Default
+  marks it deleted at once, so it is not opened again while the folder is still there.
 
 ### 3.7 What stays the same
 
@@ -190,7 +196,8 @@ except those.
   password before a rename, a password change and the never-open switch, an open one does not; a copy of a locked
   container asks its password open or closed, and the copy has no password; Default offers no password; both delete
   flows (password, then the question; no password, the warning, then the question), an open container closed
-  before its folder goes; a never-open container does not come back at start; a launch goes to the container of 3.3.
+  before its folder goes; the current container deleted: the question says its window closes and Default opens,
+  Default comes up (also when it was not running) and removes the folder after the process has ended; a never-open container does not come back at start; a launch goes to the container of 3.3.
 
 ## 4. Open questions
 
@@ -209,9 +216,5 @@ except those.
    (a "Work" container in both, its password asked once for both) or each program its own. The same list needs a
    place both read, outside either program's data folder. The plan does not decide it yet; it keeps the list in
    Foldex's own folder (3.1).
-6. **Deleting the current container** (the one of the window it is chosen in): its own window would have to close
-   while deleting itself. The recommendation: Delete is not offered for the current container; it is deleted from a
-   window of another container (Default is always there to open). The alternative: its windows close, and a short
-   process of its own removes the folder once they are gone.
 
 ## 5. (not used)
