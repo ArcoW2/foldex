@@ -51,11 +51,10 @@ Foldex and LexPen are separate projects and share no code. How the UI is drawn f
 
 | Part | What | Waits for | Reference |
 |---|---|---|---|
-| Folder compare, from LexPen | LexPen's `FolderCompare.cs` | -- | 3.3 |
 | Open with, Open in LexPen as actions | today Open with is in Explorer's menu, Open in LexPen in the preview's bar (plan 04 3.4) | -- | 3.4 |
 | Select by pattern | | -- | 3.4 |
 
-Moved out: docking to plan 12, the viewers to plan 04, projects and window sessions to plan 15, macros to plan 34.
+Moved out: docking to plan 12, the viewers to plan 04, projects and window sessions to plan 15, macros to plan 34, folder compare to plan 42.
 
 ## 3. Details
 
